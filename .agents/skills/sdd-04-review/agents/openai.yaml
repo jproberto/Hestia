@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDD Review"
+  short_description: "Revisa entregas contra spec e plano"
+  default_prompt: "Use $sdd-review para revisar uma entrega contra a spec, o plano e os testes."

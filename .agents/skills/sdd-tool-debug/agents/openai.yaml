@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDD Debug"
+  short_description: "Investiga falhas de forma sistematica"
+  default_prompt: "Use $sdd-debug para diagnosticar uma falha antes de alterar o codigo."

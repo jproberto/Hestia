@@ -1,7 +1,13 @@
-| ID | Tarefa                                     | Status    |
-|----|--------------------------------------------|-----------|
-| 1  | Inicializar o Projeto Next.js              | Pendente  |
-| 2  | Configurar Shadcn/UI                       | Pendente  |
-| 3  | Instalar e Configurar o Supabase           | Pendente  |
+| ID | Tarefa                                     | Status       |
+|----|--------------------------------------------|--------------|
+| 1  | Inicializar o Projeto Next.js              | Em Andamento |
+| 2  | Configurar Shadcn/UI                       | Pendente     |
+| 3  | Instalar e Configurar o Supabase           | Pendente     |
 
 [2024-07-12 14:30:00] - INFO: Início da execução do plano '2024-07-12-initial-project-setup'.
+[2024-07-12 14:31:00] - INFO: Tarefa 'Inicializar o Projeto Next.js' em andamento.
+[2024-07-12 14:45:00] - WARN: Tentativa de execução do `create-next-app` falhou. Motivo: O nome do projeto não pode conter letras maiúsculas ("Hestia").
+[2024-07-12 14:50:00] - ERROR: A criação manual do `package.json` não resolveu o problema. O `create-next-app` continua a falhar devido ao nome do diretório pai. A Tarefa 1 foi bloqueada.
+[2024-07-12 15:00:00] - INFO: O diretório do projeto foi renomeado para 'hestia'. Retomando a Tarefa 1.
+[2024-07-12 15:01:00] - WARN: `create-next-app` agora falha porque o diretório não está vazio.
+[2024-07-12 15:02:00] - INFO: Novo plano para a Tarefa 1: Limpar o diretório, executar o instalador e restaurar os arquivos com Git.

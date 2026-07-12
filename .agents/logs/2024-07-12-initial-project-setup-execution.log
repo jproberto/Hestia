@@ -1,0 +1,7 @@
+| ID | Tarefa                                     | Status    |
+|----|--------------------------------------------|-----------|
+| 1  | Inicializar o Projeto Next.js              | Pendente  |
+| 2  | Configurar Shadcn/UI                       | Pendente  |
+| 3  | Instalar e Configurar o Supabase           | Pendente  |
+
+[2024-07-12 14:30:00] - INFO: Início da execução do plano '2024-07-12-initial-project-setup'.

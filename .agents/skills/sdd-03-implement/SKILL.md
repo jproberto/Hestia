@@ -60,6 +60,7 @@ Depois que todas as tarefas estiverem concluídas e verificadas:
 
 **PARE a execução imediatamente quando:**
 - Encontrar um bloqueador (dependência ausente, teste falhando sem causa óbvia, instrução pouco clara).
+- Um passo do plano exigir a execução de um comando de shell (ex: `npm install`, `npx ...`) e a ferramenta para isso não estiver disponível.
 - O plano tiver lacunas críticas que impeçam o início ou a continuação.
 - Você não entender uma instrução, mesmo após reler.
 - A verificação falhar repetidamente — mesmo erro após 2-3 tentativas de correção.
@@ -79,6 +80,7 @@ Depois que todas as tarefas estiverem concluídas e verificadas:
 - Verifique a baseline (testes passando) antes de começar — sem isso você não sabe se uma falha depois é sua ou pré-existente.
 - Revise o plano criticamente primeiro — procure lacunas, ambiguidades e inconsistências, não só leia por cima.
 - Siga os passos do plano exatamente.
+- Se um passo exigir um comando de shell que você não pode executar, prepare o comando exato, anuncie o bloqueio e peça ao parceiro humano para executá-lo.
 - Não pule verificações, nem mesmo as que parecem redundantes.
 - Rode a suíte completa antes de declarar o trabalho concluído, não só os testes da tarefa atual.
 - Faça referência a outras skills quando o plano solicitar.

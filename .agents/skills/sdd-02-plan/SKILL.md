@@ -251,6 +251,7 @@ Nesses casos, pare e pergunte. Um plano que preenche lacunas com suposição tra
 - Paths exatos sempre.
 - Código completo em cada passo que muda código.
 - Comandos exatos com output esperado.
+- Se o agente executor não tiver permissão para rodar um comando, ele deve preparar o comando exato, anunciar o bloqueio e pedir ao parceiro humano para executá-lo.
 - DRY.
 - YAGNI.
 - TDD.

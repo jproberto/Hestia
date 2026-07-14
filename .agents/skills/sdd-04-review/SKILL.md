@@ -108,6 +108,16 @@ Só chegue aqui quando "Pronto para prosseguir" for **sim** no Passo 5, sem Crit
 2. **AGENTS.md**: se a mudança revisada alterou arquitetura, convenção, estrutura de diretórios ou comando de build/teste, sinalize isso ao final da review. A atualização em si é responsabilidade da skill `sdd-writer-agents` (Modo Atualização) — não edite `AGENTS.md` diretamente aqui, para evitar duas skills escrevendo o mesmo arquivo com critérios diferentes.
 3. **Commit**: a preparação de commits é responsabilidade da skill `sdd-tool-commit`, não desta. Ao final de uma review aprovada, indique que o próximo passo natural é chamar `sdd-tool-commit` — essa skill decide granularidade, escreve a mensagem e sempre pede confirmação humana antes de qualquer `push`. Não rode `git add`/`git commit` dentro da review.
 
+### Passo 8: Melhorar o Processo (Retrospectiva)
+
+Depois que a entrega for aprovada e antes de finalizar, faça uma pausa para refletir sobre o processo.
+
+1.  **Identifique Falhas no Processo:** A execução da tarefa revelou alguma fraqueza em nossas skills? O plano era otimista demais? A especificação era ambígua? A revisão pegou algo que deveria ter sido evitado antes?
+2.  **Proponha Melhorias:** Se uma falha foi identificada, proponha uma melhoria concreta na skill correspondente.
+3.  **Execute a Melhoria:** Use a skill `sdd-writer-skills` para aplicar a melhoria imediatamente. Este é o momento de maior contexto para corrigir o processo.
+
+Este passo garante que o sistema aprenda e melhore a cada ciclo de desenvolvimento.
+
 ## Quando Parar e Pedir Ajuda
 
 - Achado Critical ou Important conflita diretamente com o que o plano mandava fazer — não descarte o achado nem ignore o plano por conta própria; peça decisão humana.

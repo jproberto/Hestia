@@ -26,6 +26,7 @@ Antes de revisar o plano ou tocar em código:
 
 1. Leia o arquivo do plano **completo**, do início ao fim, antes de tocar em qualquer código.
 2. Revise criticamente. Procure especificamente por:
+   - **Análise de Riscos:** O plano considera os riscos de ferramentas externas e tem planos de contingência?
    - **Lacunas de execução** — dependências não resolvidas, arquivos referenciados que não existem, passos que assumem algo que ainda não foi criado.
    - **Ambiguidade** — instruções que podem ser interpretadas de mais de um jeito.
    - **Inconsistência entre tarefas** — nomes de funções, assinaturas ou tipos definidos numa tarefa e usados de forma diferente em outra (ex: `getUser()` na tarefa 2 vs `fetchUser()` na tarefa 5).
@@ -85,13 +86,4 @@ Depois que todas as tarefas estiverem concluídas e verificadas:
 - Rode a suíte completa antes de declarar o trabalho concluído, não só os testes da tarefa atual.
 - Faça referência a outras skills quando o plano solicitar.
 - Pare quando estiver bloqueado, não adivinhe.
-- Nunca inicie a implementação na branch main ou develop sem o consentimento explícito do usuário.
-
-## Integração
-
-**Skills do fluxo SDD:**
-- **sdd-01-brainstorm** — refina a ideia e gera a especificação/design.
-- **sdd-02-plan** — produz o plano de tarefas a partir da especificação, salvo em `.agents/plans/YYYY-MM-DD-<topico>-plan.md`.
-- **sdd-03-implement** (esta skill) — executa o plano tarefa por tarefa.
-- **sdd-04-review** — revisa o trabalho depois que todas as tarefas estão concluídas. (A ser definida: uma etapa de fechamento após o review — commit, changelog — ainda não tem skill própria.)
-- **sdd-tool-debug** — utilitário sob demanda, não sequencial. Chame quando um bloqueio não for óbvio (teste falhando sem causa clara, comportamento inesperado), em vez de tentar resolver por tentativa e erro dentro desta skill.
+- Nunca inicie a implementação na branch `main` ou `develop` sem o consentimento explícito do usuário.

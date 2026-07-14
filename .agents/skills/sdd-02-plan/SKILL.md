@@ -219,6 +219,7 @@ Esta é uma checklist que você executa diretamente. Não despache subagente par
 3. **Consistência.** Verifique se tipos, assinaturas, nomes de métodos, props, eventos, paths e schemas usados em tasks posteriores batem com o que foi definido em tasks anteriores (ex: Task 3 cria `clearLayers()`, Task 7 chama `clearFullLayers()` — bug de plano). Corrija o plano diretamente.
 4. **Ordem de execução.** Confira se nenhuma task depende de código, tipo, config ou arquivo ainda não criado. Se a ordem estiver errada, reordene as tasks ou mova a criação da interface para a task anterior.
 5. **Qualidade de verificação.** Confira se cada task termina com verificação objetiva: teste específico, comando exato, resultado esperado, falha esperada na etapa red, comando final de regressão quando necessário. Se a verificação é "olhar manualmente", explique exatamente o que observar.
+6. **Riscos de Ferramentas Externas.** O plano depende de CLIs (`npx`, `npm`, etc.)? Se sim, o plano considera pré-requisitos (ex: diretório vazio), interatividade e rotas de recuperação caso o comando falhe? O plano assume um "caminho feliz" irrealista?
 
 ### Passo 8: Entregar o Plano
 
@@ -248,9 +249,11 @@ Nesses casos, pare e pergunte. Um plano que preenche lacunas com suposição tra
 
 ## Lembre-se
 
+- **Planeje defensivamente:** Antecipe falhas em comandos de CLI. Tenha planos de recuperação e não assuma o "caminho feliz".
 - Paths exatos sempre.
 - Código completo em cada passo que muda código.
 - Comandos exatos com output esperado.
+- Se o agente executor não tiver permissão para rodar um comando, ele deve preparar o comando exato, anunciar o bloqueio e pedir ao parceiro humano para executá-lo.
 - DRY.
 - YAGNI.
 - TDD.

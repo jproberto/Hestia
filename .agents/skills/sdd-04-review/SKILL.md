@@ -13,7 +13,11 @@ Revisar cedo e com contexto preciso. O reviewer avalia o produto do trabalho —
 
 ## O Processo
 
-### Passo 1: Confirmar que É Hora de Revisar
+### Passo 1: Verificar Conformidade do Processo (Novo)
+
+Antes de qualquer outra ação, invoque a `sdd-tool-guardian` para garantir que esta skill está sendo chamada no momento correto do fluxo.
+
+### Passo 2: Confirmar que É Hora de Revisar
 
 Obrigatório revisar:
 
@@ -30,7 +34,7 @@ Também vale a pena revisar:
 
 Nunca pule esta etapa por a mudança parecer simples — trivialidade percebida não é critério de dispensa.
 
-### Passo 2: Reunir as Entradas
+### Passo 3: Reunir as Entradas
 
 Reúna antes de avaliar:
 
@@ -43,7 +47,7 @@ Reúna antes de avaliar:
 
 Não passe o histórico longo da sessão para o reviewer, e não diga a ele o que ignorar — isso enviesa a avaliação. Se alguma entrada essencial estiver faltando (sem diff, sem testes rodados, sem spec/plano de referência), pare e peça antes de revisar com informação incompleta.
 
-### Passo 3: Avaliar contra a Rubrica
+### Passo 4: Avaliar contra a Rubrica
 
 Avalie a entrega procurando:
 
@@ -57,7 +61,7 @@ Avalie a entrega procurando:
 - Código difícil de manter por acoplamento, duplicação ou responsabilidade confusa.
 - Divergência entre implementação e plano.
 
-### Passo 4: Classificar Severidade
+### Passo 5: Classificar Severidade
 
 Classifique cada achado:
 
@@ -65,7 +69,7 @@ Classifique cada achado:
 - **Important**: precisa corrigir antes de prosseguir.
 - **Minor**: pode ser registrado para depois, mas não deve ser esquecido.
 
-### Passo 5: Reportar os Achados
+### Passo 6: Reportar os Achados
 
 Use este formato:
 
@@ -91,24 +95,24 @@ Pronto para prosseguir: sim/não
 
 Nunca aprove sem mencionar lacunas de teste, mesmo quando todos os testes existentes passam — teste passando não é prova de que todos os requisitos foram cobertos.
 
-### Passo 6: Agir Sobre os Achados
+### Passo 7: Agir Sobre os Achados
 
 - **Critical**: corrija imediatamente. Volte para `sdd-03-implement` para a correção; se a causa do problema não estiver clara, use `sdd-tool-debug` para investigar antes de corrigir.
 - **Important**: mesma rota de volta (`sdd-03-implement` ou `sdd-tool-debug`), mas antes de avançar para a próxima tarefa.
 - **Minor**: registre no ledger/backlog do projeto — não descarte, mas não bloqueia o fechamento.
-- Depois de qualquer correção de um achado Critical ou Important, **repita a review a partir do Passo 3** sobre o diff atualizado. Nunca aprove com base no diff anterior à correção.
+- Depois de qualquer correção de um achado Critical ou Important, **repita a review a partir do Passo 4** sobre o diff atualizado. Nunca aprove com base no diff anterior à correção.
 - Se você, como reviewer, acha que um achado seu está errado depois de contestação, responda com evidência técnica — não recue só por insistência.
 - Se um achado conflita com o que o próprio plano mandava fazer, não descarte o achado unilateralmente nem ignore o plano — pare e peça uma decisão humana (ver "Quando Parar e Pedir Ajuda").
 
-### Passo 7: Fechar a Revisão
+### Passo 8: Fechar a Revisão
 
-Só chegue aqui quando "Pronto para prosseguir" for **sim** no Passo 5, sem Critical ou Important em aberto.
+Só chegue aqui quando "Pronto para prosseguir" for **sim** no Passo 6, sem Critical ou Important em aberto.
 
 1. **Changelog**: se o projeto mantém um `CHANGELOG.md`, adicione uma entrada para a mudança revisada, seguindo o formato já usado no arquivo — não invente um formato novo.
 2. **AGENTS.md**: se a mudança revisada alterou arquitetura, convenção, estrutura de diretórios ou comando de build/teste, sinalize isso ao final da review. A atualização em si é responsabilidade da skill `sdd-writer-agents` (Modo Atualização) — não edite `AGENTS.md` diretamente aqui, para evitar duas skills escrevendo o mesmo arquivo com critérios diferentes.
 3. **Commit**: a preparação de commits é responsabilidade da skill `sdd-tool-commit`, não desta. Ao final de uma review aprovada, indique que o próximo passo natural é chamar `sdd-tool-commit` — essa skill decide granularidade, escreve a mensagem e sempre pede confirmação humana antes de qualquer `push`. Não rode `git add`/`git commit` dentro da review.
 
-### Passo 8: Melhorar o Processo (Retrospectiva)
+### Passo 9: Melhorar o Processo (Retrospectiva)
 
 Depois que a entrega for aprovada e antes de finalizar, faça uma pausa para refletir sobre o processo.
 
@@ -130,7 +134,8 @@ Este passo garante que o sistema aprenda e melhore a cada ciclo de desenvolvimen
 - O reviewer avalia o produto do trabalho, não a narrativa da conversa.
 - Nunca pule review por a mudança parecer simples.
 - Nunca ignore um achado Critical ou Important.
-- Nunca prossiga sem re-review depois de uma correção relevante — o Passo 6 sempre volta ao Passo 3.
+- Nunca prossiga sem re-review depois de uma correção relevante — o Passo 7 sempre volta ao Passo 4.
 - Teste passando não é prova de que todos os requisitos foram atendidos; nunca aprove sem mencionar lacunas de teste.
 - Correção de achados não acontece dentro desta skill — ela volta para `sdd-03-implement`/`sdd-tool-debug` e retorna para nova review.
 - Fechamento não inclui rodar git — isso é `sdd-tool-commit`, chamado depois da aprovação, sempre com confirmação humana antes de `push`.
+- **A revisão só termina de verdade depois da retrospectiva (Passo 9).**

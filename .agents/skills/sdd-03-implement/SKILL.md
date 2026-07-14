@@ -15,14 +15,18 @@ Carregue o plano, revise criticamente, execute todas as tarefas na ordem, e repo
 
 ## O Processo
 
-### Passo 1: Preparar o Ambiente
+### Passo 1: Verificar Conformidade do Processo (Novo)
+
+Antes de qualquer outra ação, invoque a `sdd-tool-guardian` para garantir que esta skill está sendo chamada no momento correto do fluxo.
+
+### Passo 2: Preparar o Ambiente
 
 Antes de revisar o plano ou tocar em código:
 
 1. **Verifique a baseline.** Execute os testes do projeto conforme `references/testing.md`. Confirme que a suíte já passa *antes* de você começar. Se algo já estiver quebrado, pare e avise o parceiro humano — não é seu trabalho corrigir problemas pré-existentes dentro desta skill, e você precisa dessa baseline para saber depois se uma falha foi causada pela sua implementação.
 2. **Confirme a branch.** Se você não estiver em uma branch com o nome no estilo `feature/<nome-descritivo>`, peça confirmação antes de continuar. Caso o parceiro humano, confirme a branch, continue o trabalho normalmente. Caso contrário, crie e mude para uma branch nova antes de continuar (`git checkout -b feature/<nome-descritivo>`). Isso é automático — não precisa de confirmação do parceiro humano para criar a branch em si, mas **nunca implemente diretamente na main ou develop sem consentimento explícito**.
 
-### Passo 2: Carregar e Revisar o Plano
+### Passo 3: Carregar e Revisar o Plano
 
 1. Leia o arquivo do plano **completo**, do início ao fim, antes de tocar em qualquer código.
 2. Revise criticamente. Procure especificamente por:
@@ -34,7 +38,7 @@ Antes de revisar o plano ou tocar em código:
 3. **Se houver preocupações:** apresente-as ao parceiro humano antes de começar. Não prossiga tentando adivinhar a intenção.
 4. **Se não houver preocupações:** crie um TODO para cada item do plano e prossiga.
 
-### Passo 3: Executar Tarefas
+### Passo 4: Executar Tarefas
 
 Para cada tarefa, na ordem em que aparece no plano:
 
@@ -49,7 +53,7 @@ Para cada tarefa, na ordem em que aparece no plano:
 
 Não pule verificações para "economizar tempo" — uma tarefa marcada como concluída sem verificação passada é uma tarefa não concluída.
 
-### Passo 4: Concluir
+### Passo 5: Concluir
 
 Depois que todas as tarefas estiverem concluídas e verificadas:
 
@@ -70,7 +74,7 @@ Depois que todas as tarefas estiverem concluídas e verificadas:
 
 ## Quando Retornar aos Passos Anteriores
 
-**Volte para o Passo 2 (Revisão do Plano) quando:**
+**Volte para o Passo 3 (Revisão do Plano) quando:**
 - O parceiro atualizar o plano com base no seu feedback.
 - A abordagem fundamental precisar ser repensada (não apenas um ajuste pontual numa tarefa).
 

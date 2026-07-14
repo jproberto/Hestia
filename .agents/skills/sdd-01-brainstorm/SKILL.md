@@ -106,15 +106,13 @@ Ao desenhar a arquitetura, divida o sistema em unidades menores com responsabili
 
 ### Passo 7: Documentar
 
-**Confirme a branch antes de escrever qualquer arquivo:**
+Confirme a branch antes de escrever qualquer arquivo:
 
-1. Se você já estiver numa branch que não seja main/develop, pergunte ao parceiro humano se essa é a branch correta para este trabalho.
-    - Se confirmar: continue nela.
-    - Se não, ou se preferir uma nova: crie uma branch nova (veja abaixo).
-2. Se estiver em main/develop, crie uma branch nova automaticamente — não precisa de confirmação para criar, mas **nunca commite direto na main/develop**.
-3. Ao criar, escolha o prefixo pelo tipo de trabalho definido no design (`feature/`, `fix/`, `chore/`, `docs/`, `refactor/`, etc.) seguido de um nome descritivo, ex: `feature/<nome-descritivo>`, `fix/<nome-descritivo>`.
+1.  A regra principal é: toda nova branch de feature deve ser criada a partir da `develop`.
+2.  Se você estiver em `main` ou `develop`, peça ao parceiro humano para criar uma nova branch a partir da `develop`. O nome deve seguir o padrão `feature/<nome-descritivo>`. Nunca commite direto em `main` ou `develop`.
+3.  Se você já estiver em uma branch de feature, pergunte ao parceiro humano se é a branch correta. Se não for, peça para criar uma nova a partir da `develop`.
 
-**Depois, escreva a spec:**
+Depois, escreva a spec:
 
 O padrão deste projeto é salvar em:
 
@@ -209,7 +207,7 @@ Esses sinais indicam risco de suposição não validada. Peça esclarecimento ao
 - Validação incremental: apresentar, confirmar e ajustar.
 - Design antes de implementação: não pular o gate, mesmo em projetos pequenos.
 - Escopo pequeno: decompor antes de tentar resolver tudo.
-- Confirmar ou criar a branch antes do primeiro commit da spec — nunca commitar direto na main/develop.
+- Confirmar ou criar a branch a partir da `develop` antes do primeiro commit da spec.
 - Flexibilidade: voltar e esclarecer quando algo não fecha.
 
 ## Saída Esperada

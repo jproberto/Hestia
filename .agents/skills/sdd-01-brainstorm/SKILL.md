@@ -106,13 +106,13 @@ Ao desenhar a arquitetura, divida o sistema em unidades menores com responsabili
 
 ### Passo 7: Documentar
 
-**Confirme a branch antes de escrever qualquer arquivo:**
+Confirme a branch antes de escrever qualquer arquivo:
 
-1.  **A regra principal é: toda nova branch de feature deve ser criada a partir da `develop`.**
-2.  Se você estiver em `main` ou `develop`, peça ao parceiro humano para criar uma nova branch a partir da `develop`. O nome deve seguir o padrão `feature/<nome-descritivo>`. **Nunca commite direto em `main` ou `develop`.**
+1.  A regra principal é: toda nova branch de feature deve ser criada a partir da `develop`.
+2.  Se você estiver em `main` ou `develop`, peça ao parceiro humano para criar uma nova branch a partir da `develop`. O nome deve seguir o padrão `feature/<nome-descritivo>`. Nunca commite direto em `main` ou `develop`.
 3.  Se você já estiver em uma branch de feature, pergunte ao parceiro humano se é a branch correta. Se não for, peça para criar uma nova a partir da `develop`.
 
-**Depois, escreva a spec:**
+Depois, escreva a spec:
 
 O padrão deste projeto é salvar em:
 

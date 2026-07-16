@@ -8,10 +8,10 @@ Estas skills formam o pipeline principal de desenvolvimento, executadas em ordem
 
 | Skill | Responsabilidade Central | Saídas Principais | Quando Usar |
 |---|---|---|---|
-| `sdd-01-brainstorm` | Refinar a solicitação inicial, explorar os requisitos e definir o escopo. | Um artefato de especificação (`.agents/specs/...-spec.md`) | No início do fluxo, para transformar uma ideia vaga em uma especificação clara. |
+| `sdd-01-brainstorm` | Refinar a solicitação a partir do backlog, explorar requisitos e definir o escopo. | Um artefato de especificação (`.agents/specs/...-spec.md`) e status do backlog atualizado. | No início do fluxo, selecionando o próximo item do backlog para especificar. |
 | `sdd-02-plan` | Quebrar a especificação em um plano de implementação detalhado e acionável. | Um artefato de plano (`.agents/plans/...-plan.md`) com tarefas discretas. | Após a `spec` ser aprovada, para criar o roteiro de implementação. |
 | `sdd-03-implement` | Executar as tarefas de um plano de implementação, uma a uma. | Código-fonte modificado, testes, e outros artefatos técnicos. | Quando um plano de implementação está pronto para ser executado. |
-| `sdd-04-review` | Revisar as mudanças de código para garantir qualidade, consistência e aderência à `spec`. | Comentários de revisão, aprovação ou solicitação de mudanças. | Após a conclusão da implementação, antes de integrar as mudanças. |
+| `sdd-04-review` | Revisar o código contra a spec/plano e marcar a funcionalidade no backlog como Concluída. | Relatório de revisão e atualização de status no `.agents/backlog.md`. | Após a conclusão da implementação, antes de integrar as mudanças. |
 
 ## Skills de Manutenção de Artefatos (Writers)
 
@@ -30,4 +30,5 @@ Estas são skills utilitárias que podem ser chamadas sob demanda em várias eta
 |---|---|---|---|
 | `sdd-tool-commit` | Realizar o commit das mudanças de código seguindo as convenções do projeto. | Um novo commit na branch atual. | Após a aprovação da revisão de código, ou quando for necessário salvar o progresso. |
 | `sdd-tool-debug` | Ajudar na investigação e diagnóstico de erros ou comportamentos inesperados. | Análise da causa raiz, logs, e sugestões de correção. | Quando um teste falha ou um bug é encontrado durante a implementação ou teste. |
+| `sdd-tool-guardian` | Garantir a adesão ao processo SDD validando transições entre as skills executadas. | Validação silenciosa ou interrupção de fluxo caso haja transição inválida. | No início de outras skills do fluxo para verificação automatizada. |
 | `sdd-tool-tracking` | Manter um log de execução detalhado para um plano de tarefas. | Um arquivo de log (`.agents/logs/...-execution.log`). | Durante a execução de um plano, para registrar o início, o progresso de cada tarefa, e quaisquer impedimentos. |

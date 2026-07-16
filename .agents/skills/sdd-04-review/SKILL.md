@@ -111,7 +111,8 @@ Só chegue aqui quando "Pronto para prosseguir" for **sim** no Passo 6, sem Crit
 
 1. **Changelog**: se o projeto mantém um `CHANGELOG.md`, adicione uma entrada para a mudança revisada, seguindo o formato já usado no arquivo — não invente um formato novo.
 2. **AGENTS.md**: se a mudança revisada alterou arquitetura, convenção, estrutura de diretórios ou comando de build/teste, sinalize isso ao final da review. A atualização em si é responsabilidade da skill `sdd-writer-agents` (Modo Atualização) — não edite `AGENTS.md` diretamente aqui, para evitar duas skills escrevendo o mesmo arquivo com critérios diferentes.
-3. **Commit**: a preparação de commits é responsabilidade da skill `sdd-tool-commit`, não desta. Ao final de uma review aprovada, indique que o próximo passo natural é chamar `sdd-tool-commit` — essa skill decide granularidade, escreve a mensagem e sempre pede confirmação humana antes de qualquer `push`. Não rode `git add`/`git commit` dentro da review.
+3. **Backlog**: atualize o status da funcionalidade correspondente no arquivo `.agents/backlog.md` para `Concluído`.
+4. **Commit**: a preparação de commits é responsabilidade da skill `sdd-tool-commit`, não desta. Ao final de uma review aprovada, indique que o próximo passo natural é chamar `sdd-tool-commit` — essa skill decide granularidade, escreve a mensagem e sempre pede confirmação humana antes de qualquer `push`. Não rode `git add`/`git commit` dentro da review.
 
 ### Passo 9: Melhorar o Processo (Retrospectiva)
 

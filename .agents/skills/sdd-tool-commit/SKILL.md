@@ -46,11 +46,23 @@ Transforme mudanças já verificadas em commits git bem formados: revise o diff,
 1. Liste os arquivos que pretende adicionar (`git status`) e, para cada commit, faça o `git add <arquivos>` explícito — evite `git add .` às cegas quando houver arquivos fora de escopo no diff.
 2. Rode `git commit` com a mensagem definida.
 3. Repita para cada commit planejado, na ordem lógica (dependências antes de quem depende delas).
-4. **Nunca rode `git push`** a menos que o parceiro humano peça explicitamente nesta conversa.
 
-### Passo 6: Reportar
+### Passo 6: Perguntar sobre o Push (Novo)
 
-Resuma para o parceiro humano: quantos commits foram criados, o hash e resumo de cada um, e qualquer arquivo que ficou de fora do commit (e por quê).
+1. Após finalizar o commit, **pergunte explicitamente ao parceiro humano se ele deseja realizar o `git push`** das alterações.
+2. Identifique se a branch atual é nova ou se já existe no repositório remoto. Se o parceiro humano aprovar o push:
+   - Se for uma branch local nova (que não existe no remoto), execute o push definindo o upstream:
+     ```bash
+     git push -u origin <nome-da-branch-atual>
+     ```
+   - Se a branch já existir no remoto, execute o comando padrão:
+     ```bash
+     git push
+     ```
+
+### Passo 7: Reportar
+
+Resuma para o parceiro humano: quantos commits foram criados, o hash e resumo de cada um, se o push foi realizado com sucesso (caso aprovado) e qualquer arquivo que ficou de fora do commit (e por quê).
 
 ## Quando Parar e Pedir Ajuda
 
@@ -67,5 +79,6 @@ Resuma para o parceiro humano: quantos commits foram criados, o hash e resumo de
 - Siga a convenção de mensagem que já existe no projeto; não invente uma nova.
 - Prefira commits atômicos alinhados às tarefas do plano, quando houver plano.
 - Nunca misture propósitos diferentes num mesmo commit.
-- Nunca dê `push` sem pedido explícito do parceiro humano na conversa.
+- **Sempre pergunte sobre o push** após commitar, preparando o comando apropriado se a branch for nova (upstream) ou existente.
+- Nunca dê `push` sem obter a aprovação explícita do parceiro humano na conversa.
 - Nunca commite segredos ou dados sensíveis — pare e avise se notar algo assim.

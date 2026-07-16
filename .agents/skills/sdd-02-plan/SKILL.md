@@ -25,7 +25,7 @@ Princípios: DRY, YAGNI, TDD e commits frequentes.
 
 **Anuncie no início:** "Estou usando a skill sdd-02-plan para criar o plano de implementação."
 
-**Onde salvar o plano:** `.agents/plans/YYYY-MM-DD-<topico>-plan.md`, salvo se o usuário ou o projeto já tiver outra convenção — nesse caso, use a convenção existente.
+**Onde salvar o plano:** `.agents/plans/<ID>-<slug>-plan.md` *(Onde <ID> é o ID da funcionalidade no backlog e <slug> é o nome curto em inglês. Exemplo: `01-contas-plan.md`)*, salvo se o usuário ou o projeto já tiver outra convenção — nesse caso, use a convenção existente.
 
 ## O Processo
 
@@ -235,6 +235,9 @@ Plano completo e salvo em `<path>`.
 
 Agora vamos à implementação, task por task. Podemos começar?
 ```
+
+**Atualização do Backlog:**
+Ao finalizar e salvar o plano, atualize o status da funcionalidade correspondente no arquivo `.agents/backlog.md` para `Em Desenvolvimento` e adicione o link para o plano gerado na tabela.
 
 - Use `sdd-03-implement`.
 - Execute task por task nesta sessão.

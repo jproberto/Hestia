@@ -18,9 +18,10 @@ Transforme mudanças já verificadas em commits git bem formados: revise o diff,
 ### Passo 1: Levantar o Estado Atual
 
 1. Rode `git status` e `git diff` (staged e unstaged) para ver exatamente o que mudou.
-2. Rode `git log --oneline -20` para observar a convenção de mensagens já usada neste projeto (Conventional Commits, imperativo simples, prefixo de ticket, etc.). Siga o que já existe — não introduza uma convenção nova por conta própria.
-3. Confirme que a branch atual não é `main` ou `develop`. Se for, pare e avise o parceiro humano — não commite diretamente nas branches principais sem consentimento explícito.
-4. Se houver mudanças no diff que não fazem parte do escopo do que foi implementado (arquivos tocados por acidente, artefatos de build, arquivos de configuração local), sinalize e confirme com o parceiro humano antes de incluir ou excluir do commit.
+2. **Segurança Crítica de `.env`:** Caso apareça no `git status` qualquer arquivo com o padrão `.env*` (mesmo templates inofensivos como `.env.local.example`), o agente **deve relatar explicitamente na conversa** a presença desses arquivos e sua finalidade, confirmando com o parceiro humano antes de executar o `git add` ou `git commit`. Arquivos locais contendo credenciais reais (como `.env.local`) **nunca** devem ser adicionados.
+3. Rode `git log --oneline -20` para observar a convenção de mensagens já usada neste projeto (Conventional Commits, imperativo simples, prefixo de ticket, etc.). **Observe com atenção o idioma das mensagens anteriores (ex: se são escritas em Português ou Inglês) e siga rigorosamente o mesmo idioma.** Não introduza uma convenção ou idioma novo por conta própria.
+4. Confirme que a branch atual não é `main` ou `develop`. Se for, pare e avise o parceiro humano — não commite diretamente nas branches principais sem consentimento explícito.
+5. Se houver mudanças no diff que não fazem parte do escopo do que foi implementado (arquivos tocados por acidente, artefatos de build, arquivos de configuração local), sinalize e confirme com o parceiro humano antes de incluir ou excluir do commit.
 
 ### Passo 2: Confirmar a Baseline
 
@@ -36,13 +37,13 @@ Transforme mudanças já verificadas em commits git bem formados: revise o diff,
 
 ### Passo 4: Escrever as Mensagens
 
-1. Siga a convenção observada no Passo 1. Na ausência de qualquer padrão claro no histórico, use por padrão: linha de resumo no imperativo, até ~72 caracteres, corpo opcional explicando o porquê (não só o quê) quando a mudança não for óbvia.
+1. Siga a convenção e o idioma observados no Passo 1. Na ausência de qualquer padrão claro no histórico, use por padrão o idioma predominante das últimas 20 mensagens no histórico. Linha de resumo no imperativo, até ~72 caracteres, corpo opcional explicando o porquê (não só o quê) quando a mudança não for óbvia.
 2. A mensagem deve refletir o que a mudança faz, não parafrasear o nome da tarefa do plano.
 3. Nunca inclua no commit informação sensível (segredos, chaves, dados de cliente) — se notar algo assim no diff, pare e avise antes de commitar.
 
 ### Passo 5: Commitar
 
-1. Stage apenas os arquivos definidos no Passo 1/3 (`git add <arquivos>` explícito — evite `git add .` às cegas quando houver arquivos fora de escopo no diff).
+1. Liste os arquivos que pretende adicionar (`git status`) e, para cada commit, faça o `git add <arquivos>` explícito — evite `git add .` às cegas quando houver arquivos fora de escopo no diff.
 2. Rode `git commit` com a mensagem definida.
 3. Repita para cada commit planejado, na ordem lógica (dependências antes de quem depende delas).
 4. **Nunca rode `git push`** a menos que o parceiro humano peça explicitamente nesta conversa.

@@ -29,7 +29,11 @@ Princípios: DRY, YAGNI, TDD e commits frequentes.
 
 ## O Processo
 
-### Passo 1: Levantar as Entradas
+### Passo 1: Verificar Conformidade do Processo (Novo)
+
+Antes de qualquer outra ação, invoque a `sdd-tool-guardian` para garantir que esta skill está sendo chamada no momento correto do fluxo.
+
+### Passo 2: Levantar as Entradas
 
 Use esta skill depois de uma spec aprovada, normalmente criada por `sdd-01-brainstorm`.
 
@@ -45,7 +49,7 @@ Fontes úteis:
 
 Preferências explícitas do usuário ou do projeto sobrescrevem os caminhos padrão. Se nenhuma spec, requisito claro ou design aprovado existir, não invente escopo (ver "Quando Parar e Pedir Ajuda").
 
-### Passo 2: Scope Check
+### Passo 3: Scope Check
 
 Verifique se a spec cobre múltiplos subsistemas independentes.
 
@@ -62,7 +66,7 @@ Exemplos de sinais de plano grande demais:
 
 Quando isso acontecer, não force um plano gigante. Proponha divisão e peça aprovação antes de continuar.
 
-### Passo 3: Mapear a Estrutura de Arquivos
+### Passo 4: Mapear a Estrutura de Arquivos
 
 Antes de definir tarefas, mapeie quais arquivos serão criados ou modificados e qual será a responsabilidade de cada um.
 
@@ -88,7 +92,7 @@ Regras:
 
 A estrutura de arquivos deve informar a decomposição das tarefas. Cada tarefa deve produzir uma mudança autocontida que faça sentido de forma independente.
 
-### Passo 4: Dimensionar as Tarefas
+### Passo 5: Dimensionar as Tarefas
 
 Uma tarefa é a menor unidade que:
 
@@ -103,6 +107,7 @@ Ao definir fronteiras:
 - Não crie tasks soltas de "setup" se o setup não entrega valor verificável sozinho.
 - Divida apenas quando um reviewer conseguir avaliar uma tarefa separadamente da outra.
 - Cada tarefa deve terminar com algo testável.
+- **Atualização de Versão (SemVer):** Para qualquer plano que implemente uma nova funcionalidade (feature) ou correção significativa, certifique-se de incluir no planejamento de tarefas (tipicamente na última tarefa de implementação do plano) um passo ou tarefa dedicada a atualizar a versão do projeto no campo `"version"` do arquivo `package.json`, seguindo a convenção de Versionamento Semântico (ex: minor para features, patch para correções).
 
 Dentro de cada tarefa, cada passo deve ser uma ação única, de 2-5 minutos.
 
@@ -123,7 +128,7 @@ Passos ruins:
 - "Ajustar frontend e backend."
 - "Finalizar feature."
 
-### Passo 5: Escrever o Cabeçalho do Plano
+### Passo 6: Escrever o Cabeçalho do Plano
 
 Todo plano deve começar com este cabeçalho:
 
@@ -149,7 +154,7 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 
 Não use o cabeçalho como formalidade vazia. Ele precisa conter informação suficiente para orientar o executor.
 
-### Passo 6: Escrever Cada Tarefa
+### Passo 7: Escrever Cada Tarefa
 
 Use este formato para cada tarefa:
 
@@ -208,19 +213,20 @@ Adapte linguagem, framework e comandos ao projeto. Preserve a estrutura.
 
 **Sem placeholders:** cada passo deve conter o conteúdo real de que o executor precisa. São falhas de plano: `TBD`, `TODO`, "implementar depois", "preencher detalhes", "adicionar error handling apropriado", "adicionar validação", "tratar edge cases", "escrever testes para o código acima", "similar à Task N", passos que dizem o que fazer sem mostrar como, ou referências a tipos/funções/métodos não definidos em nenhuma tarefa. Quando um passo altera código, inclua o código ou um patch suficientemente específico. Quando um passo executa comando, inclua comando exato, diretório quando relevante, resultado esperado, e falha esperada quando for etapa red do TDD. Repita detalhes necessários mesmo que pareça redundante — o executor pode ler tasks fora de ordem ou com contexto reduzido.
 
-### Passo 7: Self-Review
+### Passo 8: Self-Review
 
 Depois de escrever o plano completo, revise a spec com olhar fresco e confira o plano contra ela.
 
 Esta é uma checklist que você executa diretamente. Não despache subagente para isso.
 
 1. **Cobertura da spec.** Percorra cada seção e requisito da spec. Para cada um, responda: qual task implementa isso, qual teste ou verificação prova isso, alguma restrição global foi esquecida. Liste lacunas e corrija o plano. Se um requisito da spec não tem task, adicione uma task.
-2. **Busca por placeholders.** Procure os padrões proibidos do Passo 6 (`TBD`, `TODO`, "similar", "apropriado", "edge cases", "validar", "implementar depois"). Corrija inline — não deixe observações vagas para o executor resolver.
+2. **Busca por placeholders.** Procure os padrões proibidos do Passo 7 (`TBD`, `TODO`, "similar", "apropriado", "edge cases", "validar", "implementar depois"). Corrija inline — não deixe observações vagas para o executor resolver.
 3. **Consistência.** Verifique se tipos, assinaturas, nomes de métodos, props, eventos, paths e schemas usados em tasks posteriores batem com o que foi definido em tasks anteriores (ex: Task 3 cria `clearLayers()`, Task 7 chama `clearFullLayers()` — bug de plano). Corrija o plano diretamente.
 4. **Ordem de execução.** Confira se nenhuma task depende de código, tipo, config ou arquivo ainda não criado. Se a ordem estiver errada, reordene as tasks ou mova a criação da interface para a task anterior.
 5. **Qualidade de verificação.** Confira se cada task termina com verificação objetiva: teste específico, comando exato, resultado esperado, falha esperada na etapa red, comando final de regressão quando necessário. Se a verificação é "olhar manualmente", explique exatamente o que observar.
+6. **Riscos de Ferramentas Externas.** O plano depende de CLIs (`npx`, `npm`, etc.)? Se sim, o plano considera pré-requisitos (ex: diretório vazio), interatividade e rotas de recuperação caso o comando falhe? O plano assume um "caminho feliz" irrealista?
 
-### Passo 8: Entregar o Plano
+### Passo 9: Entregar o Plano
 
 Depois de salvar o plano, informe o início da execução:
 
@@ -239,18 +245,20 @@ Não comece a implementação dentro desta skill. O estado final de `sdd-02-plan
 ## Quando Parar e Pedir Ajuda
 
 - Não há spec, requisitos ou design aprovado — peça para rodar `sdd-01-brainstorm` ou fornecer os requisitos, em vez de inventar escopo.
-- A spec cobre múltiplos subsistemas independentes demais para um único plano (Passo 2) — proponha a divisão e espere aprovação antes de escrever qualquer plano.
+- A spec cobre múltiplos subsistemas independentes demais para um único plano (Passo 3) — proponha a divisão e espere aprovação antes de escrever qualquer plano.
 - Um requisito da spec é ambíguo o suficiente para que decompor em tasks exigiria adivinhar uma decisão de produto ou arquitetura — pergunte em vez de assumir.
 - O projeto não tem convenção de testes, build ou commit discernível (nem em `AGENTS.md`, nem no código, nem no histórico) e a lacuna afeta a task — pergunte a convenção em vez de inventar uma.
-- O Self-Review (Passo 7) encontra uma lacuna que só pode ser fechada inventando comportamento não especificado na spec — volte à spec com o parceiro humano em vez de preencher com suposição.
+- O Self-Review (Passo 8) encontra uma lacuna que só pode ser fechada inventando comportamento não especificado na spec — volte à spec com o parceiro humano em vez de preencher com suposição.
 
 Nesses casos, pare e pergunte. Um plano que preenche lacunas com suposição transfere o problema para quem for executar, quando o ponto desta skill é justamente eliminar essa ambiguidade antes da implementação.
 
 ## Lembre-se
 
+- **Planeje defensivamente:** Antecipe falhas em comandos de CLI. Tenha planos de recuperação e não assuma o "caminho feliz".
 - Paths exatos sempre.
 - Código completo em cada passo que muda código.
 - Comandos exatos com output esperado.
+- Se o agente executor não tiver permissão para rodar um comando, ele deve preparar o comando exato, anunciar o bloqueio e pedir ao parceiro humano para executá-lo.
 - DRY.
 - YAGNI.
 - TDD.

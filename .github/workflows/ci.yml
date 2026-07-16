@@ -13,7 +13,7 @@ on:
 
 permissions:
   pull-requests: write
-  contents: read
+  contents: write  # Alterado de 'read' para 'write' para permitir push de tags e criação de releases
 
 jobs:
   validate-and-pr:
@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Garante histórico completo para o git tag e ls-remote
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -45,15 +47,13 @@ jobs:
         run: npm test
 
       # Abre o Pull Request se as validações passarem e for um push em branch feature/*
-      - name: Auto Create Pull Request
+      - name: Auto Create Feature Pull Request
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feature/')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BRANCH_NAME="${{ github.ref_name }}"
           echo "Verificando se já existe PR aberto para $BRANCH_NAME..."
-          
-          # Verifica se há PR aberto da branch atual para develop
           PR_EXISTS=$(gh pr list --head "$BRANCH_NAME" --base develop --state open --json number --jq '.[0].number')
           
           if [ -z "$PR_EXISTS" ]; then
@@ -65,4 +65,54 @@ jobs:
               --body "Este Pull Request foi criado automaticamente pelo pipeline de CI após a aprovação de todas as validações de linter, tipos, build e testes."
           else
             echo "PR #$PR_EXISTS já está aberto para a branch $BRANCH_NAME."
+          fi
+
+      # Abre/Atualiza o PR de develop para main no push da develop
+      - name: Auto Create Promotion Pull Request
+        if: github.event_name == 'push' && github.ref_name == 'develop'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Verificando se já existe PR aberto de develop para main..."
+          PR_EXISTS=$(gh pr list --head develop --base main --state open --json number --jq '.[0].number')
+          
+          if [ -z "$PR_EXISTS" ]; then
+            echo "Criando Pull Request de promoção (develop -> main)..."
+            gh pr create \
+              --base main \
+              --head develop \
+              --title "Release: develop -> main" \
+              --body "Este Pull Request foi criado automaticamente pelo pipeline de CI para promover as alterações de develop para a main (Produção)."
+          else
+            echo "PR #$PR_EXISTS de develop para main já está aberto."
+          fi
+
+      # Cria a Tag Git e a GitHub Release no push da main (merge de release)
+      - name: Create Tag and GitHub Release
+        if: github.event_name == 'push' && github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          TAG="v$VERSION"
+          echo "Versão identificada no package.json: $VERSION"
+          
+          echo "Verificando se a tag $TAG já existe no repositório..."
+          TAG_EXISTS=$(git ls-remote --tags origin refs/tags/$TAG)
+          
+          if [ -z "$TAG_EXISTS" ]; then
+            echo "A tag $TAG não existe. Configurando Git..."
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            
+            echo "Criando tag local $TAG..."
+            git tag "$TAG"
+            
+            echo "Empurrando tag $TAG para a origin..."
+            git push origin "$TAG"
+            
+            echo "Criando Release no GitHub..."
+            gh release create "$TAG" --generate-notes
+          else
+            echo "A tag $TAG já existe no repositório. Nenhuma nova release será gerada."
           fi

@@ -60,6 +60,7 @@ Avalie a entrega procurando:
 - Teste fraco, ausente, ou que testa mock em vez de comportamento.
 - Código difícil de manter por acoplamento, duplicação ou responsabilidade confusa.
 - Divergência entre implementação e plano.
+- **Versionamento Semântico Ausente/Incorreto:** Verifique se o campo `"version"` no `package.json` foi atualizado de forma correspondente ao impacto das alterações (SemVer), caso o plano de implementação envolva uma nova funcionalidade (feature) ou correção relevante.
 
 ### Passo 5: Classificar Severidade
 

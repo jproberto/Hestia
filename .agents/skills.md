@@ -30,4 +30,5 @@ Estas são skills utilitárias que podem ser chamadas sob demanda em várias eta
 |---|---|---|---|
 | `sdd-tool-commit` | Realizar o commit das mudanças de código seguindo as convenções do projeto. | Um novo commit na branch atual. | Após a aprovação da revisão de código, ou quando for necessário salvar o progresso. |
 | `sdd-tool-debug` | Ajudar na investigação e diagnóstico de erros ou comportamentos inesperados. | Análise da causa raiz, logs, e sugestões de correção. | Quando um teste falha ou um bug é encontrado durante a implementação ou teste. |
+| `sdd-tool-guardian` | Garantir a adesão ao processo SDD validando transições entre as skills executadas. | Validação silenciosa ou interrupção de fluxo caso haja transição inválida. | No início de outras skills do fluxo para verificação automatizada. |
 | `sdd-tool-tracking` | Manter um log de execução detalhado para um plano de tarefas. | Um arquivo de log (`.agents/logs/...-execution.log`). | Durante a execução de um plano, para registrar o início, o progresso de cada tarefa, e quaisquer impedimentos. |

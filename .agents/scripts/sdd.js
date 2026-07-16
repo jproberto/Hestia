@@ -74,7 +74,7 @@ function cmdStart(slug) {
   }
 
   // Verifica se existe especificação correspondente (regra de fluxo)
-  const specName = path.basename(planPath).replace("-plan.md", "-design.md");
+  const specName = path.basename(planPath).replace("-plan.md", "-spec.md");
   const specPath = path.join(SPECS_DIR, specName);
   if (!fs.existsSync(specPath)) {
     logWarn(`Transição Irregular: Spec '${specName}' não encontrada em .agents/specs/. O fluxo SDD exige spec antes de plano.`);

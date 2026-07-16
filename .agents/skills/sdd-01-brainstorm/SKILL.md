@@ -21,14 +21,21 @@ Projetos pequenos são justamente onde suposições não examinadas mais geram r
 
 ## O Processo
 
-### Passo 1: Verificar Conformidade do Processo (Novo)
+### Passo 1: Verificar Conformidade do Processo
 
 Antes de qualquer outra ação, invoque a `sdd-tool-guardian` para garantir que esta skill está sendo chamada no momento correto do fluxo.
 
-### Passo 2: Explorar o Contexto do Projeto
+### Passo 2: Consultar e Atualizar o Backlog
+
+Antes de iniciar as discussões, localize a funcionalidade correspondente no arquivo `.agents/backlog.md`:
+- Altere seu status para `Em Especificação`.
+- Use o ID desse item do backlog como prefixo para a futura spec e planos (ex: `01-contas-spec.md`).
+
+### Passo 3: Explorar o Contexto do Projeto
 
 Antes de fazer perguntas detalhadas, verifique o estado atual do projeto:
 
+- O arquivo de backlog `.agents/backlog.md` para entender as restrições globais e dependências.
 - Arquivos e pastas existentes.
 - Documentação disponível.
 - Specs, planos ou tasks anteriores.
@@ -117,10 +124,14 @@ Depois, escreva a spec:
 O padrão deste projeto é salvar em:
 
 ```text
-.agents/specs/YYYY-MM-DD-<topico>-design.md
+.agents/specs/<ID>-<slug>-spec.md
 ```
+*(Onde <ID> é o número do item no backlog e <slug> é o nome curto em inglês da funcionalidade. Exemplo: `01-contas-spec.md`)*
 
 Preferências explícitas do usuário ou do projeto sobrescrevem esse caminho. Se já existir uma convenção local para specs, use a convenção local.
+
+**Atualização do Backlog:**
+Ao finalizar e commitar a especificação, certifique-se de adicionar o link para a spec e mudar o status do item correspondente no `.agents/backlog.md` para `Especificado` após a aprovação do usuário.
 
 Use escrita clara, objetiva e curta. Consulte references/writing-the-spec.md para o critério de quando um item está específico o suficiente para ser útil (especialmente problema, comportamento esperado e critérios de aceite). A spec não deve tentar impressionar por volume; ela deve preservar decisões importantes, reduzir ambiguidade e permitir que a próxima etapa escreva um plano de implementação confiável.
 
@@ -216,7 +227,8 @@ Ao terminar esta skill, deve existir:
 
 - Design aprovado em conversa.
 - Branch confirmada ou criada, com prefixo adequado ao tipo de trabalho.
-- Spec salva em `.agents/specs/...` ou caminho definido pelo usuário, commitada se houver git.
+- Spec salva em `.agents/specs/<ID>-<slug>-spec.md`, commitada no Git.
+- O arquivo `.agents/backlog.md` atualizado com o status `Especificado` para a feature correspondente, com o link para o arquivo da spec.
 - Auto-revisão executada.
 - Aprovação do usuário para seguir.
 - Próximo passo claro: `sdd-02-plan`.

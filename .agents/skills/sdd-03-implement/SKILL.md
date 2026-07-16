@@ -24,7 +24,8 @@ Antes de qualquer outra ação, invoque a `sdd-tool-guardian` para garantir que 
 Antes de revisar o plano ou tocar em código:
 
 1. **Verifique a baseline.** Execute os testes do projeto conforme `references/testing.md`. Confirme que a suíte já passa *antes* de você começar. Se algo já estiver quebrado, pare e avise o parceiro humano — não é seu trabalho corrigir problemas pré-existentes dentro desta skill, e você precisa dessa baseline para saber depois se uma falha foi causada pela sua implementação.
-2. **Confirme a branch.** Se você não estiver em uma branch com o nome no estilo `feature/<nome-descritivo>`, peça confirmação antes de continuar. Caso o parceiro humano, confirme a branch, continue o trabalho normalmente. Caso contrário, crie e mude para uma branch nova antes de continuar (`git checkout -b feature/<nome-descritivo>`). Isso é automático — não precisa de confirmação do parceiro humano para criar a branch em si, mas **nunca implemente diretamente na main ou develop sem consentimento explícito**.
+2. **Confirme a branch.** Se você não estiver em uma branch com o nome no estilo `feature/<nome-descritivo>`, peça confirmação antes de continuar. Caso o parceiro humano confirme a branch, continue o trabalho normalmente. Caso contrário, crie e mude para uma branch nova antes de continuar (`git checkout -b feature/<nome-descritivo>`). Isso é automático — não precisa de confirmação do parceiro humano para criar a branch em si, mas **nunca implemente diretamente na main ou develop sem consentimento explícito**.
+3. **Inicialize o log de execução.** Chame ativamente a skill `sdd-tool-tracking` para registrar o início da tarefa em `.agents/logs/`.
 
 ### Passo 3: Carregar e Revisar o Plano
 
@@ -42,14 +43,18 @@ Antes de revisar o plano ou tocar em código:
 
 Para cada tarefa, na ordem em que aparece no plano:
 
-1. Marque como `in_progress`.
+1. Marque como `in_progress` no TODO e registre o status via `sdd-tool-tracking`.
 2. Siga cada passo exatamente como escrito (o plano tem passos curtos e diretos — não improvise além do que está pedido).
-3. Quando a tarefa envolver lógica testável (funções, regras de negócio, transformações de dados — não se aplica a config, estilo visual ou glue code trivial), siga o ciclo TDD:
+3. **Gerenciamento de Processos em Background:** Ao iniciar servidores locais (ex: `npm run dev`) ou utilitários em segundo plano para testes:
+   - Use sempre tempos limite de espera síncrona curtos (`WaitMsBeforeAsync` máximo de 3000ms) para não prender o terminal.
+   - Finalize (mate) os processos de segundo plano imediatamente após concluir a verificação da tarefa para evitar inatividade do terminal e processos zumbis.
+   - Comunique verbalmente cada mudança de estado.
+4. Quando a tarefa envolver lógica testável (funções, regras de negócio, transformações de dados — não se aplica a config, estilo visual ou glue code trivial), siga o ciclo TDD:
    - **Red**: escreva o teste primeiro e rode-o. Confirme que ele falha, e que falha pelo motivo esperado (não por erro de sintaxe ou setup).
    - **Green**: implemente o mínimo necessário para o teste passar. Não adicione funcionalidade que o teste não está cobrindo.
    - **Refactor**: com o teste passando, limpe a implementação se necessário (nomes, duplicação, clareza) e rode o teste de novo para confirmar que continua passando.
-4. Execute as verificações especificadas na tarefa (testes, lint, build, etc.). Não avance para a próxima tarefa sem elas passarem.
-5. Marque como `completed`.
+5. Execute as verificações especificadas na tarefa (testes, lint, build, etc.). Não avance para a próxima tarefa sem elas passarem.
+6. Marque como `completed` no TODO e via `sdd-tool-tracking`.
 
 Não pule verificações para "economizar tempo" — uma tarefa marcada como concluída sem verificação passada é uma tarefa não concluída.
 
@@ -59,7 +64,9 @@ Depois que todas as tarefas estiverem concluídas e verificadas:
 
 1. Rode a suíte de testes completa do projeto (conforme `references/testing.md`) — não apenas os testes da última tarefa.
 2. Confirme que nenhum TODO ficou pendente ou esquecido.
-3. Resuma para o parceiro humano: o que foi feito, o que foi verificado, e qualquer desvio em relação ao plano original (mesmo pequeno).
+3. Registre o encerramento no log da tarefa via `sdd-tool-tracking`.
+4. Resuma para o parceiro humano: o que foi feito, o que foi verificado, e qualquer desvio em relação ao plano original (mesmo pequeno).
+5. **Invoque obrigatoriamente a skill `sdd-04-review`** para realizar a revisão final do código antes de prosseguir com merges ou encerramentos.
 
 ## Quando Parar e Pedir Ajuda
 

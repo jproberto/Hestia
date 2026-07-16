@@ -6,10 +6,6 @@ on:
       - 'feature/*'
       - develop
       - main
-  pull_request:
-    branches:
-      - develop
-      - main
 
 permissions:
   pull-requests: write

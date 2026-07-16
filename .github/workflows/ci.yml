@@ -1,0 +1,68 @@
+name: CI & Auto Pull Request
+
+on:
+  push:
+    branches:
+      - 'feature/*'
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  validate-and-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Linter
+        run: npm run lint
+
+      - name: Run TypeScript Typecheck
+        run: npx tsc --noEmit
+
+      - name: Run Build
+        run: npm run build
+
+      - name: Run Tests
+        run: npm test
+
+      # Abre o Pull Request se as validações passarem e for um push em branch feature/*
+      - name: Auto Create Pull Request
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feature/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME="${{ github.ref_name }}"
+          echo "Verificando se já existe PR aberto para $BRANCH_NAME..."
+          
+          # Verifica se há PR aberto da branch atual para develop
+          PR_EXISTS=$(gh pr list --head "$BRANCH_NAME" --base develop --state open --json number --jq '.[0].number')
+          
+          if [ -z "$PR_EXISTS" ]; then
+            echo "Nenhum PR aberto encontrado. Criando Pull Request para develop..."
+            gh pr create \
+              --base develop \
+              --head "$BRANCH_NAME" \
+              --title "PR Auto: $BRANCH_NAME" \
+              --body "Este Pull Request foi criado automaticamente pelo pipeline de CI após a aprovação de todas as validações de linter, tipos, build e testes."
+          else
+            echo "PR #$PR_EXISTS já está aberto para a branch $BRANCH_NAME."
+          fi

@@ -12,7 +12,10 @@ describe("Serviço de Categorias", () => {
   });
 
   it("deve retornar o ID se a categoria ja existir no banco", async () => {
-    mockSupabase.from.mockReturnValue({
+    const fromMock = mockSupabase.from as unknown as {
+      mockReturnValue: (val: unknown) => unknown;
+    };
+    fromMock.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           maybeSingle: vi.fn().mockResolvedValue({ data: { id: "cat-123" }, error: null })
@@ -39,7 +42,10 @@ describe("Serviço de Categorias", () => {
       })
     });
 
-    mockSupabase.from.mockImplementation((table: string) => {
+    const fromMock = mockSupabase.from as unknown as {
+      mockImplementation: (fn: (table: string) => unknown) => unknown;
+    };
+    fromMock.mockImplementation((table: string) => {
       if (table === "categories") {
         return {
           select: selectMock,

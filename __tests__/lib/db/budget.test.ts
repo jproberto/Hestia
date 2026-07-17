@@ -28,7 +28,10 @@ describe("Serviço de Orçamento", () => {
       }
     ];
 
-    mockSupabase.from.mockReturnValue({
+    const fromMock = mockSupabase.from as unknown as {
+      mockReturnValue: (val: unknown) => unknown;
+    };
+    fromMock.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           lte: vi.fn().mockReturnValue({

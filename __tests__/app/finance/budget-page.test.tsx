@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import BudgetPage from "@/app/finance/budget/page";
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
-import { getBudgetRevision, getBudgets, getBudgetAdjustments, createBudgetAdjustment } from "@/lib/db/budget";
+import { getBudgetAdjustment, getBudgets, getBudgetAdjustments, createBudgetAdjustment } from "@/lib/db/budget";
 import { useSearchParams } from "next/navigation";
 
 vi.mock("@/utils/supabase/client", () => ({
@@ -13,7 +13,7 @@ vi.mock("@/utils/supabase/client", () => ({
 }));
 
 vi.mock("@/lib/db/budget", () => ({
-  getBudgetRevision: vi.fn(),
+  getBudgetAdjustment: vi.fn(),
   initBudget: vi.fn(),
   getBudgets: vi.fn(),
   adjustBudgetItem: vi.fn(),
@@ -38,7 +38,7 @@ describe("Pagina de Orcamento Anual /finance/budget (Revisada por Ajustes)", () 
 
   it("deve exibir estado vazio e botao de iniciar orcamento se nenhuma revisao existir", async () => {
     (useSearchParams as Mock).mockReturnValue(new URLSearchParams(""));
-    (getBudgetRevision as Mock).mockResolvedValue(null);
+    (getBudgetAdjustment as Mock).mockResolvedValue(null);
     (getBudgetAdjustments as Mock).mockResolvedValue([]);
     (getBudgets as Mock).mockResolvedValue([]);
 
@@ -58,7 +58,7 @@ describe("Pagina de Orcamento Anual /finance/budget (Revisada por Ajustes)", () 
       { id: "rev-agosto", year: 2026, start_month: 8, description: "Ajuste de Agosto", created_by: "teste" }
     ];
 
-    (getBudgetRevision as Mock).mockResolvedValue({ id: "rev-inicial", year: 2026, start_month: 1 });
+    (getBudgetAdjustment as Mock).mockResolvedValue({ id: "rev-inicial", year: 2026, start_month: 1 });
     (getBudgetAdjustments as Mock).mockResolvedValue(mockAdjs);
     (getBudgets as Mock).mockResolvedValue([
       { category_id: "cat-1", category_name: "Alimentação", category_type: "despesa", amount: 1000, start_month: 1 }

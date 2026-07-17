@@ -3,13 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import {
-  getBudgetRevision,
+  getBudgetAdjustment,
   initBudget,
   getBudgets,
   adjustBudgetItem,
   getBudgetAdjustments,
   createBudgetAdjustment,
-  BudgetRevision,
   BudgetAdjustment,
   BudgetItem
 } from "@/lib/db/budget";
@@ -26,7 +25,7 @@ export default function BudgetPage() {
   const [adjustments, setAdjustments] = useState<BudgetAdjustment[]>([]);
   const [selectedAdjustmentId, setSelectedAdjustmentId] = useState<string | null>(null);
   const [activeAdjustment, setActiveAdjustment] = useState<BudgetAdjustment | null>(null);
-  const [revision, setRevision] = useState<BudgetRevision | null>(null);
+  const [revision, setRevision] = useState<BudgetAdjustment | null>(null);
   const [budgets, setBudgets] = useState<BudgetItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -72,7 +71,7 @@ export default function BudgetPage() {
       }
 
       // Busca a revisão de Janeiro para saber se o orçamento anual foi iniciado
-      const activeRevision = await getBudgetRevision(supabase, year);
+      const activeRevision = await getBudgetAdjustment(supabase, year);
       setRevision(activeRevision);
 
       if (activeRevision) {

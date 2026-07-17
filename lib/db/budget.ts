@@ -1,7 +1,8 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getOrCreateCategory } from "./categories";
 
-export interface BudgetRevision {
+// Linguagem Ubíqua: BudgetAdjustment substitui o termo técnico anterior BudgetRevision
+export interface BudgetAdjustment {
   id: string;
   year: number;
   start_month: number;
@@ -17,9 +18,9 @@ export interface BudgetItem {
   start_month: number;
 }
 
-export async function getBudgetRevision(supabase: SupabaseClient, year: number): Promise<BudgetRevision | null> {
+export async function getBudgetAdjustment(supabase: SupabaseClient, year: number): Promise<BudgetAdjustment | null> {
   const { data, error } = await supabase
-    .from("budget_revisions")
+    .from("budget_adjustments")
     .select("*")
     .eq("year", year)
     .eq("start_month", 1)
@@ -31,7 +32,7 @@ export async function getBudgetRevision(supabase: SupabaseClient, year: number):
 
 export async function initBudget(supabase: SupabaseClient, year: number, email: string): Promise<string> {
   const { data, error } = await supabase
-    .from("budget_revisions")
+    .from("budget_adjustments")
     .insert({
       year,
       start_month: 1,
@@ -52,12 +53,12 @@ export async function getBudgets(supabase: SupabaseClient, year: number, month: 
       amount,
       category_id,
       categories (name, type),
-      budget_revisions!inner (year, start_month)
+      budget_adjustments!inner (year, start_month)
     `)
-    .eq("budget_revisions.year", year)
-    .lte("budget_revisions.start_month", month)
+    .eq("budget_adjustments.year", year)
+    .lte("budget_adjustments.start_month", month)
     .order("category_id")
-    .order("start_month", { referencedTable: "budget_revisions", ascending: false });
+    .order("start_month", { referencedTable: "budget_adjustments", ascending: false });
 
   if (error) {
     console.error("getBudgets error:", error);
@@ -69,12 +70,12 @@ export async function getBudgets(supabase: SupabaseClient, year: number, month: 
     amount: string;
     category_id: string;
     categories: { name: string; type: "receita" | "despesa" } | null;
-    budget_revisions: { start_month: number } | null;
+    budget_adjustments: { start_month: number } | null;
   }>;
   rows.forEach((row) => {
     const cat = row.categories;
-    const rev = row.budget_revisions;
-    if (!cat || !rev) return;
+    const adj = row.budget_adjustments;
+    if (!cat || !adj) return;
 
     if (!uniqueItems[row.category_id]) {
       uniqueItems[row.category_id] = {
@@ -82,7 +83,7 @@ export async function getBudgets(supabase: SupabaseClient, year: number, month: 
         category_name: cat.name,
         category_type: cat.type,
         amount: parseFloat(row.amount),
-        start_month: rev.start_month
+        start_month: adj.start_month
       };
     }
   });
@@ -92,39 +93,29 @@ export async function getBudgets(supabase: SupabaseClient, year: number, month: 
 
 export async function addOrUpdateBudgetItem(
   supabase: SupabaseClient,
-  revisionId: string,
+  adjustmentId: string,
   categoryName: string,
   categoryType: "receita" | "despesa",
   amount: number,
   email: string
 ): Promise<void> {
-  // 1. Resolve ID da categoria (cria inline se não existir) via serviço dedicado
   const categoryId = await getOrCreateCategory(supabase, categoryName, categoryType, email);
 
-  // 2. Upsert no budget_items
   const { error: upsertError } = await supabase
     .from("budget_items")
     .upsert({
-      revision_id: revisionId,
+      adjustment_id: adjustmentId,
       category_id: categoryId,
       amount,
       created_by: email
-    }, { onConflict: "revision_id,category_id" });
+    }, { onConflict: "adjustment_id,category_id" });
 
   if (upsertError) throw upsertError;
 }
 
-export interface BudgetAdjustment {
-  id: string;
-  year: number;
-  start_month: number;
-  description: string;
-  created_by: string;
-}
-
 export async function getBudgetAdjustments(supabase: SupabaseClient, year: number): Promise<BudgetAdjustment[]> {
   const { data, error } = await supabase
-    .from("budget_revisions")
+    .from("budget_adjustments")
     .select("*")
     .eq("year", year)
     .order("start_month", { ascending: true });
@@ -140,7 +131,7 @@ export async function createBudgetAdjustment(
   email: string
 ): Promise<string> {
   const { data: existing, error: selectError } = await supabase
-    .from("budget_revisions")
+    .from("budget_adjustments")
     .select("id")
     .eq("year", year)
     .eq("start_month", month)
@@ -153,7 +144,7 @@ export async function createBudgetAdjustment(
   const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
   const { data: newAdj, error: insertError } = await supabase
-    .from("budget_revisions")
+    .from("budget_adjustments")
     .insert({
       year,
       start_month: month,
@@ -183,12 +174,11 @@ export async function adjustBudgetItem(
   const { error: upsertError } = await supabase
     .from("budget_items")
     .upsert({
-      revision_id: adjustmentId,
+      adjustment_id: adjustmentId,
       category_id: categoryId,
       amount,
       created_by: email
-    }, { onConflict: "revision_id,category_id" });
+    }, { onConflict: "adjustment_id,category_id" });
 
   if (upsertError) throw upsertError;
 }
-

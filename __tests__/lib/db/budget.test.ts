@@ -1,30 +1,29 @@
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
-import { getBudgets, adjustBudgetItem, getBudgetAdjustments, createBudgetAdjustment } from "@/lib/db/budget";
+import { getBudgets, adjustBudgetItem, getBudgetAdjustments, createBudgetAdjustment, getBudgetAdjustment } from "@/lib/db/budget";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 const mockSupabase = {
   from: vi.fn(),
 } as unknown as SupabaseClient;
 
-describe("Serviço de Orçamento", () => {
+describe("Serviço de Orçamento (Revisado por Ajustes)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("deve carregar o orçamento ativo da categoria respeitando a vigência acumulada", async () => {
-    // Simulamos a estrutura retornada pelo join do Supabase com categories e budget_revisions
     const mockData = [
       {
         amount: 1000.0,
         category_id: "cat-1",
         categories: { name: "Alimentação", type: "despesa" },
-        budget_revisions: { start_month: 4 }
+        budget_adjustments: { start_month: 4 }
       },
       {
         amount: 500.0,
         category_id: "cat-2",
         categories: { name: "Lazer", type: "despesa" },
-        budget_revisions: { start_month: 1 }
+        budget_adjustments: { start_month: 1 }
       }
     ];
 
@@ -46,13 +45,11 @@ describe("Serviço de Orçamento", () => {
     const budgets = await getBudgets(mockSupabase, 2026, 8);
     expect(budgets).toHaveLength(2);
     
-    // Alimentação com start_month = 4
     const alimentacao = budgets.find((b) => b.category_name === "Alimentação");
     expect(alimentacao).toBeDefined();
     expect(alimentacao?.amount).toBe(1000.0);
     expect(alimentacao?.start_month).toBe(4);
 
-    // Lazer com start_month = 1
     const lazer = budgets.find((b) => b.category_name === "Lazer");
     expect(lazer).toBeDefined();
     expect(lazer?.amount).toBe(500.0);
@@ -60,7 +57,7 @@ describe("Serviço de Orçamento", () => {
   });
 
   describe("adjustBudgetItem", () => {
-    it("deve criar uma nova revisão e inserir o item se a revisão para o mês não existir", async () => {
+    it("deve criar uma nova revisão e inserir o item se o ajuste para o mês não existir", async () => {
       const selectCategoryMock = vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           maybeSingle: vi.fn().mockResolvedValue({ data: { id: "cat-123" }, error: null })
@@ -91,7 +88,7 @@ describe("Serviço de Orçamento", () => {
         if (table === "categories") {
           return { select: selectCategoryMock };
         }
-        if (table === "budget_revisions") {
+        if (table === "budget_adjustments") {
           return {
             select: selectRevisionMock,
             insert: insertRevisionMock
@@ -113,7 +110,6 @@ describe("Serviço de Orçamento", () => {
         "teste@hestia.com"
       );
 
-      // Verifica se tentou criar a revisão do mês 4
       expect(insertRevisionMock).toHaveBeenCalledWith({
         year: 2026,
         start_month: 4,
@@ -121,16 +117,15 @@ describe("Serviço de Orçamento", () => {
         created_by: "teste@hestia.com"
       });
 
-      // Verifica se inseriu o item apontando para a nova revisão
       expect(upsertItemMock).toHaveBeenCalledWith({
-        revision_id: "new-rev-123",
+        adjustment_id: "new-rev-123",
         category_id: "cat-123",
         amount: 800.0,
         created_by: "teste@hestia.com"
-      }, { onConflict: "revision_id,category_id" });
+      }, { onConflict: "adjustment_id,category_id" });
     });
 
-    it("deve usar a revisão existente e apenas fazer upsert do item se a revisão do mês já existir", async () => {
+    it("deve usar o ajuste existente e apenas fazer upsert do item se o ajuste do mês já existir", async () => {
       const selectCategoryMock = vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           maybeSingle: vi.fn().mockResolvedValue({ data: { id: "cat-123" }, error: null })
@@ -156,7 +151,7 @@ describe("Serviço de Orçamento", () => {
         if (table === "categories") {
           return { select: selectCategoryMock };
         }
-        if (table === "budget_revisions") {
+        if (table === "budget_adjustments") {
           return {
             select: selectRevisionMock,
             insert: insertRevisionMock
@@ -178,16 +173,14 @@ describe("Serviço de Orçamento", () => {
         "teste@hestia.com"
       );
 
-      // Não deve ter tentado criar nova revisão
       expect(insertRevisionMock).not.toHaveBeenCalled();
 
-      // Deve ter feito o upsert com a revisão existente
       expect(upsertItemMock).toHaveBeenCalledWith({
-        revision_id: "existing-rev-789",
+        adjustment_id: "existing-rev-789",
         category_id: "cat-123",
         amount: 950.0,
         created_by: "teste@hestia.com"
-      }, { onConflict: "revision_id,category_id" });
+      }, { onConflict: "adjustment_id,category_id" });
     });
   });
 
@@ -223,7 +216,7 @@ describe("Serviço de Orçamento", () => {
       });
 
       (mockSupabase.from as Mock).mockImplementation((table: string) => {
-        if (table === "budget_revisions") {
+        if (table === "budget_adjustments") {
           return { select: selectMock };
         }
         return {} as never;
@@ -233,5 +226,27 @@ describe("Serviço de Orçamento", () => {
       expect(id).toBe("existing-id");
     });
   });
-});
 
+  describe("getBudgetAdjustment", () => {
+    it("deve buscar o ajuste de Janeiro do ano informado", async () => {
+      const selectMock = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: { id: "adj-jan" }, error: null })
+          })
+        })
+      });
+
+      (mockSupabase.from as Mock).mockImplementation((table: string) => {
+        if (table === "budget_adjustments") {
+          return { select: selectMock };
+        }
+        return {} as never;
+      });
+
+      const adj = await getBudgetAdjustment(mockSupabase, 2026);
+      expect(adj).toBeDefined();
+      expect(adj?.id).toBe("adj-jan");
+    });
+  });
+});

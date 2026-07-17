@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 
+export const dynamic = "force-dynamic";
+
 export default function DashboardPage() {
   const router = useRouter();
   const supabase = createClient();

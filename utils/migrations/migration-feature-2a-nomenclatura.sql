@@ -61,5 +61,5 @@ VALUES (
     '02a',
     'Ajuste de Orçamento - Correção/Patch',
     'migration-feature-2a-nomenclatura.sql',
-    'admin@hestia.com'
+    'joaopsroberto@gmail.com'
 ) ON CONFLICT (script_name) DO NOTHING;

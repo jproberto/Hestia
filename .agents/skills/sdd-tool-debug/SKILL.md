@@ -65,8 +65,13 @@ Esta skill termina aqui. Se você foi chamado a partir de `sdd-03-implement` ou 
 
 ## Quando Parar e Pedir Ajuda
 
+- Se uma verificação (compilação, linter ou teste) falhar repetidamente com o mesmo sintoma após 2 tentativas de correção, **PARE IMEDIATAMENTE**. Não tente uma terceira correção às cegas. Apresente ao usuário um relatório contendo:
+  1. O erro detalhado e a mensagem exata do console.
+  2. As hipóteses de causa formuladas.
+  3. As tentativas de correção já realizadas e seus respectivos resultados.
+  4. Os possíveis caminhos alternativos identificados para exploração.
 - Não foi possível reproduzir o problema de forma confiável depois de tentativas razoáveis.
-- Três hipóteses testadas e refutadas sem uma causa clara emergindo.
+- - Três hipóteses testadas e refutadas sem uma causa clara emergindo.
 - A causa raiz aponta para uma decisão de arquitetura ou produto (não uma correção técnica local) — corrigir exigiria mudar um comportamento que outra parte do sistema depende, ou reverter uma escolha deliberada.
 - A causa está numa dependência externa ou serviço fora do controle do projeto.
 - A correção mínima do Passo 6 exigiria tocar em código fora do escopo do bloqueio original.

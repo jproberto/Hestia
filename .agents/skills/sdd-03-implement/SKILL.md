@@ -76,7 +76,7 @@ Depois que todas as tarefas estiverem concluídas e verificadas:
 - Um passo do plano exigir a execução de um comando de shell (ex: `npm install`, `npx ...`) e a ferramenta para isso não estiver disponível.
 - O plano tiver lacunas críticas que impeçam o início ou a continuação.
 - Você não entender uma instrução, mesmo após reler.
-- A verificação falhar repetidamente — mesmo erro após 2-3 tentativas de correção.
+- A verificação falhar repetidamente — mesmo erro após 2-3 tentativas de correção. **PARE IMEDIATAMENTE** e apresente ao parceiro humano um relatório contendo: (1) O erro detalhado, (2) As hipóteses formuladas, (3) As tentativas já feitas, e (4) Os caminhos alternativos identificados de exploração.
 
 **Peça esclarecimentos em vez de tentar adivinhar.** Adivinhar e seguir em frente custa mais tempo do que parar e perguntar.
 

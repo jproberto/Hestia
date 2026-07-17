@@ -14,6 +14,7 @@ import { getCategories, Category } from "@/lib/db/categories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSearchParams } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -38,12 +39,12 @@ export default function BudgetPage() {
   const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
 
   const supabase = createClient();
+  const searchParams = useSearchParams();
 
-  // Obter o mês aberto de forma segura (suportando mockMonth em desenvolvimento)
+  // Obter o mês aberto de forma segura (suportando mockMonth em desenvolvimento e testes)
   const getOpenMonth = useCallback(() => {
-    if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-      const urlParams = new URLSearchParams(window.location.search);
-      const mockMonthParam = urlParams.get("mockMonth");
+    if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
+      const mockMonthParam = searchParams.get("mockMonth");
       if (mockMonthParam) {
         const parsed = parseInt(mockMonthParam, 10);
         if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) {
@@ -52,7 +53,7 @@ export default function BudgetPage() {
       }
     }
     return new Date().getMonth() + 1;
-  }, []);
+  }, [searchParams]);
 
   const openMonth = getOpenMonth();
   const isEditable = month >= openMonth;
@@ -264,12 +265,16 @@ export default function BudgetPage() {
           </div>
 
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold">Previsões Cadastradas</h2>
-              {!isEditable && (
-                <p className="text-xs text-rose-500 font-medium mt-0.5">
-                  Este mês está fechado para edições orçamentárias.
-                </p>
+              {!isEditable ? (
+                <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+                  Fechado
+                </span>
+              ) : (
+                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                  Aberto
+                </span>
               )}
             </div>
             {isEditable && (
@@ -373,8 +378,12 @@ export default function BudgetPage() {
                                 onBlur={() => handleSaveInline(b.category_id, b.category_name, b.category_type)}
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
                                     handleSaveInline(b.category_id, b.category_name, b.category_type);
                                   } else if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
                                     setEditingCategoryId(null);
                                   }
                                 }}
@@ -433,8 +442,12 @@ export default function BudgetPage() {
                                 onBlur={() => handleSaveInline(b.category_id, b.category_name, b.category_type)}
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
                                     handleSaveInline(b.category_id, b.category_name, b.category_type);
                                   } else if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
                                     setEditingCategoryId(null);
                                   }
                                 }}

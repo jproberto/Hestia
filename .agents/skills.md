@@ -21,6 +21,7 @@ Estas skills são responsáveis por criar e manter artefatos específicos do pro
 |---|---|---|---|
 | `sdd-writer-agents` | Manter a documentação dos agentes (`AGENTS.md`). | O arquivo `AGENTS.md` atualizado. | Sob demanda, quando a documentação de um agente precisa ser criada ou atualizada. |
 | `sdd-writer-skills` | Manter as definições de skills (`SKILL.md`) e este catálogo (`skills.md`). | Arquivos `SKILL.md` e `skills.md` atualizados. | Sob demanda, para criar, refatorar ou documentar uma skill. |
+| `sdd-writer-changelog` | Manter o changelog do projeto (`CHANGELOG.md`) e guias do `README.md`. | Arquivos `CHANGELOG.md` e `README.md` atualizados. | Sempre após fechar uma feature ou correção relevante, para documentar publicamente as alterações e novos guias. |
 
 ## Skills de Ferramenta (Tools)
 

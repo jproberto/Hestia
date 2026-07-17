@@ -7,11 +7,12 @@
 | 1 | Refatoração da Camada de Serviços (lib/db/budget.ts) e Testes Unitários | - [x] Concluída |
 | 2 | Refatoração da UI (app/finance/budget/page.tsx) e Regras de Editabilidade | - [x] Concluída |
 | 3 | Testes de UI Automatizados e Incremento de Versão (Patch) | - [x] Concluída |
-| 4 | Refatoração Física das Tabelas do Supabase no Código Next.js | - [ ] Pendente |
+| 4 | Refatoração Física das Tabelas do Supabase no Código Next.js | - [x] Concluída |
 <!-- TABLE_END -->
 
 ## Diário de Bordo e Decisões Técnicas
 <!-- EVENTS -->
+- **[2026-07-17 20:06:00] (INFO)**: Tarefa 4 concluída. Refatorado o código-fonte Next.js e asserções de testes para apontar para `budget_adjustments` e `adjustment_id`. Suíte de testes local passando com 12/12 sucessos no Vitest.
 - **[2026-07-17 19:48:00] (DECISÃO)**: Adicionado o escopo de refatoração física das tabelas do Supabase. Gerado o script de migração `migration-feature-2a-nomenclatura.sql` para renomeação de tabelas e chaves de `revisions` para `adjustments`. Plano e diário atualizados com a nova Tarefa 4.
 - **[2026-07-17 18:39:00] (INFO)**: Tarefa 3 concluída. Reescritos os testes de UI em `budget-page.test.tsx` para focar nas regras de vigência e interações de Ajustes. Incrementada a versão do projeto para `0.3.1` (Patch). Suíte de testes local e validação estática passando perfeitamente.
 - **[2026-07-17 18:35:00] (INFO)**: Tarefa 2 concluída. Refatorada a interface gráfica para expor a navegação baseada em Ajustes cadastrados e o botão "Criar Novo Ajuste" quando somente-leitura. Implementada a regra de bloqueio se start_month !== openMonth. Corrigido incidente de hoisting no hook de estado `revision` pego pelo ESLint.
@@ -26,3 +27,5 @@
 - **[2026-07-17 18:35:10] (INFO)**: Tarefa 2 concluída com sucesso.
 - **[2026-07-17 18:37:35] (INFO)**: Tarefa 3 iniciada.
 - **[2026-07-17 18:39:04] (INFO)**: Tarefa 3 concluída com sucesso.
+- **[2026-07-17 20:02:32] (INFO)**: Tarefa 4 iniciada.
+- **[2026-07-17 20:04:44] (INFO)**: Tarefa 4 concluída com sucesso.

@@ -67,19 +67,75 @@ function cmdStart(slug) {
   }
 
   logInfo(`Verificando conformidade da transição (sdd-tool-guardian)...`);
+
+  // 1. Checagem da Branch Git
+  let branchName = "";
+  try {
+    branchName = runCmd("git rev-parse --abbrev-ref HEAD").trim();
+    if (branchName === "main" || branchName === "develop") {
+      logError(`VIOLAÇÃO DE PROCESSO: Você está na branch principal '${branchName}'.`);
+      logError("Crie uma nova branch de feature a partir da 'develop' antes de iniciar o desenvolvimento.");
+      logError("Exemplo: git checkout develop && git pull && git checkout -b feature/nome-da-feature");
+      process.exit(1);
+    }
+    logInfo(`Branch Git ativa válida: '${branchName}'`);
+  } catch (error) {
+    logWarn("Não foi possível validar a branch git ativa. Continuando...");
+  }
+
   const planPath = findPlanFile(slug);
   if (!planPath) {
     logError(`Plano de implementação para o slug '${slug}' não foi encontrado em .agents/plans/`);
     process.exit(1);
   }
 
-  // Verifica se existe especificação correspondente (regra de fluxo)
+  // 2. Verifica se existe especificação correspondente (regra de fluxo)
   const specName = path.basename(planPath).replace("-plan.md", "-spec.md");
   const specPath = path.join(SPECS_DIR, specName);
   if (!fs.existsSync(specPath)) {
-    logWarn(`Transição Irregular: Spec '${specName}' não encontrada em .agents/specs/. O fluxo SDD exige spec antes de plano.`);
+    logError(`VIOLAÇÃO DE PROCESSO: Arquivo de especificação '${specName}' não foi encontrado em .agents/specs/.`);
+    logError("O fluxo SDD exige que a especificação seja concluída, aprovada pelo usuário e salva antes de iniciar o plano.");
+    process.exit(1);
   } else {
-    logInfo(`Guardian: Transição válida! Spec correspondente encontrada.`);
+    logInfo(`Guardian: Spec correspondente encontrada.`);
+  }
+
+  // 3. Checagem do status no backlog.md
+  const backlogPath = path.join(ROOT_DIR, ".agents/backlog.md");
+  if (fs.existsSync(backlogPath)) {
+    const backlogContent = fs.readFileSync(backlogPath, "utf8");
+    const matchId = slug.match(/^(\d+)/);
+    if (matchId) {
+      const id = parseInt(matchId[1], 10);
+      const lines = backlogContent.split("\n");
+      let featureRow = null;
+      for (const line of lines) {
+        // Encontra a linha que começa com | <id> |
+        const regex = new RegExp(`^\\s*\\|\\s*${id}\\s*\\|`);
+        if (regex.test(line)) {
+          featureRow = line;
+          break;
+        }
+      }
+
+      if (featureRow) {
+        const columns = featureRow.split("|").map(col => col.trim());
+        if (columns.length >= 5) {
+          const status = columns[4]; // O status está na 5ª coluna (index 4)
+          logInfo(`Status da feature ${id} no backlog: '${status}'`);
+          if (status !== "Especificado" && status !== "Em Desenvolvimento") {
+            logError(`VIOLAÇÃO DE PROCESSO: O status da feature ${id} no backlog é '${status}'.`);
+            logError("Para iniciar a execução de um plano, o status da feature deve ser 'Especificado'.");
+            logError("Certifique-se de que a fase de Brainstorming (sdd-01) foi concluída e aprovada pelo usuário.");
+            process.exit(1);
+          }
+        }
+      } else {
+        logWarn(`Feature ID ${id} não encontrada na tabela do backlog.md.`);
+      }
+    }
+  } else {
+    logWarn("Arquivo .agents/backlog.md não encontrado. Pulando checagem de status.");
   }
 
   const logFileName = path.basename(planPath).replace("-plan.md", "-tracker.md");

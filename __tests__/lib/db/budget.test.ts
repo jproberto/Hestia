@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getBudgets } from "@/lib/db/budget";
+import { getBudgets, adjustBudgetItem } from "@/lib/db/budget";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 const mockSupabase = {
@@ -58,4 +58,137 @@ describe("Serviço de Orçamento", () => {
     expect(lazer?.amount).toBe(500.0);
     expect(lazer?.start_month).toBe(1);
   });
+
+  describe("adjustBudgetItem", () => {
+    it("deve criar uma nova revisão e inserir o item se a revisão para o mês não existir", async () => {
+      const selectCategoryMock = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({ data: { id: "cat-123" }, error: null })
+        })
+      });
+
+      const selectRevisionMock = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
+          })
+        })
+      });
+
+      const insertRevisionMock = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: { id: "new-rev-123" }, error: null })
+        })
+      });
+
+      const upsertItemMock = vi.fn().mockResolvedValue({ error: null });
+
+      const fromMock = mockSupabase.from as unknown as {
+        mockImplementation: (fn: (table: string) => unknown) => unknown;
+      };
+
+      fromMock.mockImplementation((table: string) => {
+        if (table === "categories") {
+          return { select: selectCategoryMock };
+        }
+        if (table === "budget_revisions") {
+          return {
+            select: selectRevisionMock,
+            insert: insertRevisionMock
+          };
+        }
+        if (table === "budget_items") {
+          return { upsert: upsertItemMock };
+        }
+        return {} as never;
+      });
+
+      await adjustBudgetItem(
+        mockSupabase,
+        2026,
+        4,
+        "Alimentação",
+        "despesa",
+        800.0,
+        "teste@hestia.com"
+      );
+
+      // Verifica se tentou criar a revisão do mês 4
+      expect(insertRevisionMock).toHaveBeenCalledWith({
+        year: 2026,
+        start_month: 4,
+        description: "Ajuste de Orçamento - 4/2026",
+        created_by: "teste@hestia.com"
+      });
+
+      // Verifica se inseriu o item apontando para a nova revisão
+      expect(upsertItemMock).toHaveBeenCalledWith({
+        revision_id: "new-rev-123",
+        category_id: "cat-123",
+        amount: 800.0,
+        created_by: "teste@hestia.com"
+      }, { onConflict: "revision_id,category_id" });
+    });
+
+    it("deve usar a revisão existente e apenas fazer upsert do item se a revisão do mês já existir", async () => {
+      const selectCategoryMock = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({ data: { id: "cat-123" }, error: null })
+        })
+      });
+
+      const selectRevisionMock = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: { id: "existing-rev-789" }, error: null })
+          })
+        })
+      });
+
+      const insertRevisionMock = vi.fn();
+      const upsertItemMock = vi.fn().mockResolvedValue({ error: null });
+
+      const fromMock = mockSupabase.from as unknown as {
+        mockImplementation: (fn: (table: string) => unknown) => unknown;
+      };
+
+      fromMock.mockImplementation((table: string) => {
+        if (table === "categories") {
+          return { select: selectCategoryMock };
+        }
+        if (table === "budget_revisions") {
+          return {
+            select: selectRevisionMock,
+            insert: insertRevisionMock
+          };
+        }
+        if (table === "budget_items") {
+          return { upsert: upsertItemMock };
+        }
+        return {} as never;
+      });
+
+      await adjustBudgetItem(
+        mockSupabase,
+        2026,
+        4,
+        "Alimentação",
+        "despesa",
+        950.0,
+        "teste@hestia.com"
+      );
+
+      // Não deve ter tentado criar nova revisão
+      expect(insertRevisionMock).not.toHaveBeenCalled();
+
+      // Deve ter feito o upsert com a revisão existente
+      expect(upsertItemMock).toHaveBeenCalledWith({
+        revision_id: "existing-rev-789",
+        category_id: "cat-123",
+        amount: 950.0,
+        created_by: "teste@hestia.com"
+      }, { onConflict: "revision_id,category_id" });
+    });
+  });
 });
+

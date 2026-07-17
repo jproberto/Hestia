@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getBudgets, adjustBudgetItem } from "@/lib/db/budget";
+import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
+import { getBudgets, adjustBudgetItem, getBudgetAdjustments, createBudgetAdjustment } from "@/lib/db/budget";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 const mockSupabase = {
@@ -117,7 +117,7 @@ describe("Serviço de Orçamento", () => {
       expect(insertRevisionMock).toHaveBeenCalledWith({
         year: 2026,
         start_month: 4,
-        description: "Ajuste de Orçamento - 4/2026",
+        description: "Ajuste de Abril/2026",
         created_by: "teste@hestia.com"
       });
 
@@ -188,6 +188,49 @@ describe("Serviço de Orçamento", () => {
         amount: 950.0,
         created_by: "teste@hestia.com"
       }, { onConflict: "revision_id,category_id" });
+    });
+  });
+
+  describe("getBudgetAdjustments", () => {
+    it("deve retornar todos os orcamentos/ajustes do ano ordenados por start_month", async () => {
+      const mockData = [
+        { id: "rev-1", year: 2026, start_month: 1, description: "Inicial", created_by: "user" },
+        { id: "rev-2", year: 2026, start_month: 5, description: "Maio", created_by: "user" }
+      ];
+
+      const selectMock = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({ data: mockData, error: null })
+        })
+      });
+
+      (mockSupabase.from as Mock).mockReturnValue({ select: selectMock });
+
+      const adjustments = await getBudgetAdjustments(mockSupabase, 2026);
+      expect(adjustments).toHaveLength(2);
+      expect(adjustments[0].start_month).toBe(1);
+    });
+  });
+
+  describe("createBudgetAdjustment", () => {
+    it("deve retornar o ID do ajuste existente se ele ja estiver cadastrado", async () => {
+      const selectMock = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: { id: "existing-id" }, error: null })
+          })
+        })
+      });
+
+      (mockSupabase.from as Mock).mockImplementation((table: string) => {
+        if (table === "budget_revisions") {
+          return { select: selectMock };
+        }
+        return {} as never;
+      });
+
+      const id = await createBudgetAdjustment(mockSupabase, 2026, 8, "user@test.com");
+      expect(id).toBe("existing-id");
     });
   });
 });

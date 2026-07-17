@@ -114,6 +114,59 @@ export async function addOrUpdateBudgetItem(
   if (upsertError) throw upsertError;
 }
 
+export interface BudgetAdjustment {
+  id: string;
+  year: number;
+  start_month: number;
+  description: string;
+  created_by: string;
+}
+
+export async function getBudgetAdjustments(supabase: SupabaseClient, year: number): Promise<BudgetAdjustment[]> {
+  const { data, error } = await supabase
+    .from("budget_revisions")
+    .select("*")
+    .eq("year", year)
+    .order("start_month", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createBudgetAdjustment(
+  supabase: SupabaseClient,
+  year: number,
+  month: number,
+  email: string
+): Promise<string> {
+  const { data: existing, error: selectError } = await supabase
+    .from("budget_revisions")
+    .select("id")
+    .eq("year", year)
+    .eq("start_month", month)
+    .maybeSingle();
+
+  if (selectError) throw selectError;
+  if (existing?.id) return existing.id;
+
+  const monthName = new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(new Date(year, month - 1, 1));
+  const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+  const { data: newAdj, error: insertError } = await supabase
+    .from("budget_revisions")
+    .insert({
+      year,
+      start_month: month,
+      description: `Ajuste de ${capitalizedMonth}/${year}`,
+      created_by: email
+    })
+    .select("id")
+    .single();
+
+  if (insertError) throw insertError;
+  return newAdj.id;
+}
+
 export async function adjustBudgetItem(
   supabase: SupabaseClient,
   year: number,
@@ -123,43 +176,14 @@ export async function adjustBudgetItem(
   amount: number,
   email: string
 ): Promise<void> {
-  // 1. Resolve ID da categoria
   const categoryId = await getOrCreateCategory(supabase, categoryName, categoryType, email);
 
-  // 2. Verificar se a revisão existe para o ano e o mês
-  const { data: revision, error: selectError } = await supabase
-    .from("budget_revisions")
-    .select("id")
-    .eq("year", year)
-    .eq("start_month", month)
-    .maybeSingle();
+  const adjustmentId = await createBudgetAdjustment(supabase, year, month, email);
 
-  if (selectError) throw selectError;
-
-  let revisionId = revision?.id;
-
-  // 3. Criar a revisão se não existir
-  if (!revisionId) {
-    const { data: newRev, error: insertError } = await supabase
-      .from("budget_revisions")
-      .insert({
-        year,
-        start_month: month,
-        description: `Ajuste de Orçamento - ${month}/${year}`,
-        created_by: email
-      })
-      .select("id")
-      .single();
-
-    if (insertError) throw insertError;
-    revisionId = newRev.id;
-  }
-
-  // 4. Fazer upsert no budget_items
   const { error: upsertError } = await supabase
     .from("budget_items")
     .upsert({
-      revision_id: revisionId,
+      revision_id: adjustmentId,
       category_id: categoryId,
       amount,
       created_by: email

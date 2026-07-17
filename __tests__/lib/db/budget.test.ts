@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getBudgets } from "@/lib/db/budget";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 const mockSupabase = {
   from: vi.fn(),
-} as any;
+} as unknown as SupabaseClient;
 
 describe("Serviço de Orçamento", () => {
   beforeEach(() => {

@@ -62,7 +62,13 @@ export async function getBudgets(supabase: SupabaseClient, year: number, month: 
   if (error) throw error;
 
   const uniqueItems: Record<string, BudgetItem> = {};
-  (data as any[] || []).forEach((row) => {
+  const rows = (data || []) as unknown as Array<{
+    amount: string;
+    category_id: string;
+    categories: { name: string; type: "receita" | "despesa" } | null;
+    budget_revisions: { start_month: number } | null;
+  }>;
+  rows.forEach((row) => {
     const cat = row.categories;
     const rev = row.budget_revisions;
     if (!cat || !rev) return;

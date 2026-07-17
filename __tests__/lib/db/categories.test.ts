@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getOrCreateCategory, getCategories } from "@/lib/db/categories";
+import { getOrCreateCategory } from "@/lib/db/categories";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 const mockSupabase = {
   from: vi.fn(),
-} as any;
+} as unknown as SupabaseClient;
 
 describe("Serviço de Categorias", () => {
   beforeEach(() => {
@@ -45,7 +46,7 @@ describe("Serviço de Categorias", () => {
           insert: insertMock,
         };
       }
-      return {} as any;
+      return {} as never;
     });
 
     const id = await getOrCreateCategory(mockSupabase, "Saúde", "despesa", "teste@hestia.com");

@@ -52,14 +52,17 @@ export async function getBudgets(supabase: SupabaseClient, year: number, month: 
       amount,
       category_id,
       categories (name, type),
-      budget_revisions (start_month)
+      budget_revisions!inner (year, start_month)
     `)
     .eq("budget_revisions.year", year)
     .lte("budget_revisions.start_month", month)
     .order("category_id")
-    .order("budget_revisions.start_month", { ascending: false });
+    .order("start_month", { referencedTable: "budget_revisions", ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.error("getBudgets error:", error);
+    throw error;
+  }
 
   const uniqueItems: Record<string, BudgetItem> = {};
   const rows = (data || []) as unknown as Array<{

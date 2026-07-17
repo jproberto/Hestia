@@ -53,8 +53,9 @@ Para cada tarefa, na ordem em que aparece no plano:
    - **Red**: escreva o teste primeiro e rode-o. Confirme que ele falha, e que falha pelo motivo esperado (não por erro de sintaxe ou setup).
    - **Green**: implemente o mínimo necessário para o teste passar. Não adicione funcionalidade que o teste não está cobrindo.
    - **Refactor**: com o teste passando, limpe a implementação se necessário (nomes, duplicação, clareza) e rode o teste de novo para confirmar que continua passando.
-5. Execute as verificações especificadas na tarefa (testes, lint, build, etc.). Não avance para a próxima tarefa sem elas passarem.
-6. Marque como `completed` no TODO e via `sdd-tool-tracking`.
+5. Execute localmente os validadores para garantir que não há erros de qualidade antes do fechamento (`npm run test`, `npx eslint .`, `npx tsc --noEmit`). Não avance sem que tudo passe localmente.
+6. Marque a tarefa como concluída (`completed` no TODO, no CLI via `task-complete`, e no log do `sdd-tool-tracking`).
+7. Execute o commit seguro do trabalho via CLI: `node .agents/scripts/sdd.js commit "<mensagem-em-portugues>"`. **Nunca faça commits antes da execução bem-sucedida do task-complete**.
 
 Não pule verificações para "economizar tempo" — uma tarefa marcada como concluída sem verificação passada é uma tarefa não concluída.
 

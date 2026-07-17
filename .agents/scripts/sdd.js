@@ -270,10 +270,33 @@ function cmdTaskStart(taskId) {
     logError("Forneça o ID da tarefa. Ex: node sdd.js task-start 1");
     process.exit(1);
   }
+
+  // Valida se há especificações ou planos não commitados no Git
+  try {
+    const gitStatus = runCmd("git status --porcelain");
+    const lines = gitStatus.split("\n");
+    const uncommittedDocs = lines.filter(line => {
+      const trimmed = line.trim();
+      return (
+        trimmed.includes(".agents/specs/") ||
+        trimmed.includes(".agents/plans/")
+      );
+    });
+
+    if (uncommittedDocs.length > 0) {
+      logError("Abortando: Existem arquivos de especificação ou planejamento modificados ou não commitados no Git!");
+      console.log(gitStatus);
+      logWarn("Por favor, comite os arquivos de design (.agents/specs/ e .agents/plans/) antes de iniciar o desenvolvimento das tarefas.");
+      process.exit(1);
+    }
+  } catch (error) {
+    // Caso ocorra falha ou não seja repositório git, prossegue
+  }
+
   const { logPath, content } = loadActiveLog();
   updateLog(logPath, content, taskId, "- [/] Em Andamento", `Tarefa ${taskId} iniciada.`);
   logInfo(`Tarefa ${taskId} marcada como Em Andamento no CLI.`);
-  logWarn("Atenção, Agente: Você deve abrir o diário de bordo (.agents/logs/...-tracker.md) e detalhar MANUALMENTE os incidentes de linter/testes e as decisões técnicas de engenharia, conforme a skill sdd-tool-tracking.");
+  logWarn("Lembre-se de documentar no diário de bordo (.agents/logs/...) as decisões de design e caminhos iniciais da tarefa!");
 }
 
 // Comando: task-complete

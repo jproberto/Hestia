@@ -25,17 +25,25 @@ Projetos pequenos são justamente onde suposições não examinadas mais geram r
 
 Antes de qualquer outra ação, invoque a `sdd-tool-guardian` para garantir que esta skill está sendo chamada no momento correto do fluxo.
 
-### Passo 2: Consultar e Atualizar o Backlog
+### Passo 2: Confirmar ou Criar a Branch de Trabalho
+
+Antes de alterar, criar ou commitar qualquer arquivo (incluindo o backlog, specs ou código), confirme a branch Git ativa:
+1. A regra principal é: toda nova branch de feature deve ser criada a partir da `develop`.
+2. Se você estiver em `main` ou `develop`, crie uma nova branch a partir da `develop`. O nome deve seguir o padrão `feature/<nome-descritivo>`. Nunca commite direto em `main` ou `develop`.
+3. Se você já estiver em uma branch de feature, pergunte ao parceiro humano se é a branch correta para a feature que está iniciando. Se não for, crie uma nova a partir da `develop`.
+
+### Passo 3: Consultar e Atualizar o Backlog
 
 Antes de iniciar as discussões, localize a funcionalidade correspondente no arquivo `.agents/backlog.md`:
 - Altere seu status para `Em Especificação`.
 - Use o ID desse item do backlog como prefixo para a futura spec e planos (ex: `01-contas-spec.md`).
 
-### Passo 3: Explorar o Contexto do Projeto
+### Passo 4: Explorar o Contexto do Projeto
 
 Antes de fazer perguntas detalhadas, verifique o estado atual do projeto:
 
 - O arquivo de backlog `.agents/backlog.md` para entender as restrições globais e dependências.
+- O guia de diretrizes de banco de dados `.agents/skills/sdd-01/brainstorm/references/db-preferences.md` (se existir) para convenções de modelagem.
 - Arquivos e pastas existentes.
 - Documentação disponível.
 - Specs, planos ou tasks anteriores.
@@ -43,7 +51,7 @@ Antes de fazer perguntas detalhadas, verifique o estado atual do projeto:
 - Convenções de UI, testes e dados.
 - Histórico de git quando houver repositório.
 
-### Passo 3: Avaliar o Escopo
+### Passo 5: Avaliar o Escopo
 
 Antes de refinar detalhes, avalie o tamanho do pedido. Se ele descreve várias partes independentes, pare e diga isso cedo.
 
@@ -65,7 +73,7 @@ Quando o escopo estiver grande demais:
 
 Cada subprojeto deve ter sua própria sequência: spec → plan → tasks → implementação → review.
 
-### Passo 4: Fazer Perguntas de Esclarecimento
+### Passo 6: Fazer Perguntas de Esclarecimento
 
 Para projetos com escopo adequado, faça perguntas uma por vez.
 
@@ -90,11 +98,11 @@ Perguntas úteis:
 - Que comportamento não pode quebrar?
 - Que decisão você já tomou e não quer rediscutir?
 
-### Passo 5: Explorar Abordagens
+### Passo 7: Explorar Abordagens
 
 Antes de fechar o design, apresente 2-3 abordagens diferentes, com trade-offs e recomendação. Consulte `references/exploring-approaches.md` para o que incluir em cada abordagem e como conduzir a comparação.
 
-### Passo 6: Apresentar o Design
+### Passo 8: Apresentar o Design
 
 Quando entender o que será construído, apresente o design.
 
@@ -107,19 +115,13 @@ Dimensione cada seção à complexidade:
 
 Cubra, quando relevante: objetivo, usuários e cenários, arquitetura, componentes ou módulos, data flow, contratos e interfaces, estados de erro, testes, riscos, fora de escopo.
 
-Depois de cada seção importante, pergunte se aquilo está correto antes de avançar. Se o usuário discordar, volte ao Passo 4 ou 5, ajuste e reapresente.
+Depois de cada seção importante, pergunte se aquilo está correto antes de avançar. Se o usuário discordar, volte ao Passo 4 or 5, ajuste e reapresente.
 
 Ao desenhar a arquitetura, divida o sistema em unidades menores com responsabilidade clara, interfaces bem definidas e dependências explícitas. Consulte `references/design-boundaries.md` para os critérios de uma boa fronteira entre unidades.
 
-### Passo 7: Documentar
+### Passo 9: Documentar
 
-Confirme a branch antes de escrever qualquer arquivo:
-
-1.  A regra principal é: toda nova branch de feature deve ser criada a partir da `develop`.
-2.  Se você estiver em `main` ou `develop`, peça ao parceiro humano para criar uma nova branch a partir da `develop`. O nome deve seguir o padrão `feature/<nome-descritivo>`. Nunca commite direto em `main` ou `develop`.
-3.  Se você já estiver em uma branch de feature, pergunte ao parceiro humano se é a branch correta. Se não for, peça para criar uma nova a partir da `develop`.
-
-Depois, escreva a spec:
+Escreva a spec:
 
 O padrão deste projeto é salvar em:
 
@@ -137,9 +139,9 @@ Use escrita clara, objetiva e curta. Consulte references/writing-the-spec.md par
 
 Inclua o que for necessário para reconstruir o design aprovado: problema, decisão tomada, alternativas rejeitadas, comportamento esperado, restrições, riscos e critérios de aceite. Não use uma lista fixa de seções como checklist mecânico. Se uma seção não ajuda a entender ou implementar, deixe fora.
 
-Se o projeto estiver em um repositório git e o fluxo local permitir, commite o documento de design (na branch confirmada ou criada acima) antes de avançar para o plano. Se não houver repositório git, ou se o usuário não quiser commit agora, apenas salve o arquivo.
+Se o projeto estiver em um repositório git e o fluxo local permitir, commite o documento de design na branch de trabalho confirmada antes de avançar para o plano. Se não houver repositório git, ou se o usuário não quiser commit agora, apenas salve o arquivo.
 
-### Passo 8: Auto Revisar a Spec
+### Passo 10: Auto Revisar a Spec
 
 Depois de escrever a spec, revise com olhar fresco, com foco em clareza e concisão:
 
@@ -152,7 +154,7 @@ Depois de escrever a spec, revise com olhar fresco, com foco em clareza e concis
 
 Corrija problemas inline. Não peça nova revisão para cada ajuste pequeno; limpe a spec e só então leve ao usuário.
 
-### Passo 9: Pedir Revisão do Usuário
+### Passo 11: Pedir Revisão do Usuário
 
 Peça ao usuário para revisar o arquivo antes de seguir:
 
@@ -160,9 +162,9 @@ Peça ao usuário para revisar o arquivo antes de seguir:
 Spec escrita em `<path>`. Revise e me diga se quer mudar algo antes de começarmos a escrever o plano de implementação.
 ```
 
-Aguarde a resposta do usuário. Se ele pedir mudanças, faça as alterações e rode a auto-revisão novamente (Passo 8). Só prossiga quando o usuário aprovar.
+Aguarde a resposta do usuário. Se ele pedir mudanças, faça as alterações e rode a auto-revisão novamente (Passo 10). Só prossiga quando o usuário aprovar.
 
-### Passo 10: Transicionar para o Plano
+### Passo 12: Transicionar para o Plano
 
 Depois da aprovação da spec, invoque `sdd-02-plan` para criar o plano detalhado de implementação. Não invoque nenhuma outra skill — o próximo passo depois de brainstorming é exclusivamente `sdd-02-plan`.
 
@@ -218,7 +220,7 @@ Esses sinais indicam risco de suposição não validada. Peça esclarecimento ao
 - Validação incremental: apresentar, confirmar e ajustar.
 - Design antes de implementação: não pular o gate, mesmo em projetos pequenos.
 - Escopo pequeno: decompor antes de tentar resolver tudo.
-- Confirmar ou criar a branch a partir da `develop` antes do primeiro commit da spec.
+- Confirmar ou criar a branch a partir da `develop` antes de alterar ou escrever qualquer arquivo.
 - Flexibilidade: voltar e esclarecer quando algo não fecha.
 
 ## Saída Esperada

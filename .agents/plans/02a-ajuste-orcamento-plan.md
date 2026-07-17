@@ -110,6 +110,42 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 
 ---
 
+### Tarefa 4: Refatoração Física das Tabelas do Supabase no Código Next.js
+
+**Arquivos:**
+- Modificar: `lib/db/budget.ts`
+- Modificar: `app/finance/budget/page.tsx`
+- Modificar: `__tests__/lib/db/budget.test.ts`
+- Modificar: `__tests__/app/finance/budget-page.test.tsx`
+
+**Lógica:**
+- Modificar todas as chamadas de `.from("budget_revisions")` para `.from("budget_adjustments")`.
+- Modificar referências de `revision_id` para `adjustment_id` na tabela `budget_items` em todas as queries e interfaces locais do código.
+
+- [ ] **Passo 1: Aplicar a migração SQL localmente**
+  Executar o script SQL criado no Dashboard do Supabase.
+
+- [ ] **Passo 2: Atualizar o código em `lib/db/budget.ts`**
+  Substituir todas as ocorrências de `.from("budget_revisions")` por `.from("budget_adjustments")` e a chave estrangeira `revision_id` por `adjustment_id`.
+
+- [ ] **Passo 3: Atualizar as queries no front-end (`app/finance/budget/page.tsx`)**
+  Garantir que as chamadas ao Supabase usam as tabelas e campos corretos.
+
+- [ ] **Passo 4: Atualizar os arquivos de testes de unidade e UI**
+  Substituir os mocks das tabelas antigas em `budget.test.ts` e `budget-page.test.tsx` para usar `budget_adjustments` e `adjustment_id`.
+
+- [ ] **Passo 5: Validar a aplicação**
+  Rodar testes locais: `npm run test` e checar linting/compilação.
+  Expected: Tudo PASS.
+
+- [ ] **Passo 6: Commit**
+  ```bash
+  git add lib/db/budget.ts app/finance/budget/page.tsx __tests__/
+  git commit -m "feat: refatora nomenclatura de tabelas fisicas no banco de dados e codigo Next.js"
+  ```
+
+---
+
 ## Cenários de Teste Manuais de Aceitação
 
 ### Cenário 1: Visualização do Ajuste Mais Atual e Bloqueio Histórico

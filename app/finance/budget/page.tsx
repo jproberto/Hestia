@@ -58,10 +58,13 @@ export default function BudgetPage() {
     } finally {
       setLoading(false);
     }
-  }, [year]);
+  }, [year, supabase]);
 
   useEffect(() => {
-    loadData();
+    const timer = setTimeout(() => {
+      loadData();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadData]);
 
   async function handleStartBudget() {

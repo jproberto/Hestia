@@ -39,7 +39,7 @@ Manter a documentação pública atualizada é um pilar de qualidade. Esta skill
    *   `### Corrigido` - para quaisquer correções de bugs.
    *   `### Removido` - para recursos que foram retirados.
    *   `### Segurança` - em caso de melhorias ou correções de vulnerabilidades.
-4. Mantenha os itens curtos, objetivos e escritos em Português.
+4. Mantenha os itens curtos, objectives e escritos em Português.
 
 ### Passo 3: Atualizar o README.md
 Avalie se as alterações na feature afetam:

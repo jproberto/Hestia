@@ -272,7 +272,8 @@ function cmdTaskStart(taskId) {
   }
   const { logPath, content } = loadActiveLog();
   updateLog(logPath, content, taskId, "- [/] Em Andamento", `Tarefa ${taskId} iniciada.`);
-  logInfo(`Tarefa ${taskId} marcada como Em Andamento.`);
+  logInfo(`Tarefa ${taskId} marcada como Em Andamento no CLI.`);
+  logWarn("Atenção, Agente: Você deve abrir o diário de bordo (.agents/logs/...-tracker.md) e detalhar MANUALMENTE os incidentes de linter/testes e as decisões técnicas de engenharia, conforme a skill sdd-tool-tracking.");
 }
 
 // Comando: task-complete
@@ -305,7 +306,8 @@ function cmdTaskComplete(taskId) {
 
   const { logPath, content } = loadActiveLog();
   updateLog(logPath, content, taskId, "- [x] Concluída", `Tarefa ${taskId} concluída com sucesso.`);
-  logInfo(`Tarefa ${taskId} marcada como Concluída.`);
+  logInfo(`Tarefa ${taskId} marcada como Concluída no CLI.`);
+  logWarn("Atenção, Agente: Você deve abrir o diário de bordo (.agents/logs/...-tracker.md) e detalhar MANUALMENTE os incidentes de linter/testes e as decisões técnicas de engenharia, conforme a skill sdd-tool-tracking.");
 }
 
 // Comando: task-block
@@ -316,7 +318,8 @@ function cmdTaskBlock(taskId, reason) {
   }
   const { logPath, content } = loadActiveLog();
   updateLog(logPath, content, taskId, "- [!] Bloqueada", `Tarefa ${taskId} BLOQUEADA: ${reason}`, "WARN");
-  logWarn(`Tarefa ${taskId} marcada como Bloqueada.`);
+  logWarn(`Tarefa ${taskId} marcada como Bloqueada no CLI.`);
+  logWarn("Atenção, Agente: Você deve abrir o diário de bordo (.agents/logs/...-tracker.md) e detalhar MANUALMENTE os incidentes de linter/testes e as decisões técnicas de engenharia, conforme a skill sdd-tool-tracking.");
 }
 
 // Comando: request-review
@@ -349,7 +352,7 @@ function cmdRequestReview() {
     process.exit(1);
   }
 
-  logInfo("Todas as tarefas concluídas! Prontos para transicionar para sdd-04-review.");
+  logInfo("Todas as tarefas concluídas! Prontos para transicionar para a revisão técnica (sdd-04-review) e homologação manual (sdd-05-manual-test).");
   console.log(`\n\x1b[32m=== TEMPLATE DE REVISÃO RECOMENDADO ===\x1b[0m`);
   console.log(`Execute a skill sdd-04-review respondendo com o template:`);
   console.log(`

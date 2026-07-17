@@ -213,6 +213,8 @@ Adapte linguagem, framework e comandos ao projeto. Preserve a estrutura.
 
 **Sem placeholders:** cada passo deve conter o conteúdo real de que o executor precisa. São falhas de plano: `TBD`, `TODO`, "implementar depois", "preencher detalhes", "adicionar error handling apropriado", "adicionar validação", "tratar edge cases", "escrever testes para o código acima", "similar à Task N", passos que dizem o que fazer sem mostrar como, ou referências a tipos/funções/métodos não definidos em nenhuma tarefa. Quando um passo altera código, inclua o código ou um patch suficientemente específico. Quando um passo executa comando, inclua comando exato, diretório quando relevante, resultado esperado, e falha esperada quando for etapa red do TDD. Repita detalhes necessários mesmo que pareça redundante — o executor pode ler tasks fora de ordem ou com contexto reduzido.
 
+**Cenários de Teste Manuais de Aceitação**: Se o plano envolver alterações em elementos visuais de UI ou interações complexas do usuário (cliques, foco, atalhos de teclado), você **DEVE incluir, ao final do plano de implementação, uma seção dedicada intitulada '## Cenários de Teste Manuais de Aceitação'**. Nessa seção, descreva em formato de Critérios de Aceitação (Dado-Quando-Então) os caminhos felizes e restritivos que o parceiro humano precisará validar fisicamente localmente na UI. Isso garante que o comportamento esperado esteja bem definido antes da fase de homologação.
+
 ### Passo 8: Self-Review
 
 Depois de escrever o plano completo, revise a spec com olhar fresco e confira o plano contra ela.
@@ -224,7 +226,8 @@ Esta é uma checklist que você executa diretamente. Não despache subagente par
 3. **Consistência.** Verifique se tipos, assinaturas, nomes de métodos, props, eventos, paths e schemas usados em tasks posteriores batem com o que foi definido em tasks anteriores (ex: Task 3 cria `clearLayers()`, Task 7 chama `clearFullLayers()` — bug de plano). Corrija o plano diretamente.
 4. **Ordem de execução.** Confira se nenhuma task depende de código, tipo, config ou arquivo ainda não criado. Se a ordem estiver errada, reordene as tasks ou mova a criação da interface para a task anterior.
 5. **Qualidade de verificação.** Confira se cada task termina com verificação objetiva: teste específico, comando exato, resultado esperado, falha esperada na etapa red, comando final de regressão quando necessário. Se a verificação é "olhar manualmente", explique exatamente o que observar.
-6. **Ris### Passo 9: Entregar o Plano
+
+### Passo 9: Entregar o Plano
 
 Depois de salvar o plano, realize o `git add` e o `git commit` do arquivo do plano gerado (junto com a spec, se houver). Em seguida, informe o início da execução:
 

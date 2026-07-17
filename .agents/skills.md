@@ -11,7 +11,8 @@ Estas skills formam o pipeline principal de desenvolvimento, executadas em ordem
 | `sdd-01-brainstorm` | Refinar a solicitação a partir do backlog, explorar requisitos e definir o escopo. | Um artefato de especificação (`.agents/specs/...-spec.md`) e status do backlog atualizado. | No início do fluxo, selecionando o próximo item do backlog para especificar. |
 | `sdd-02-plan` | Quebrar a especificação em um plano de implementação detalhado e acionável. | Um artefato de plano (`.agents/plans/...-plan.md`) com tarefas discretas. | Após a `spec` ser aprovada, para criar o roteiro de implementação. |
 | `sdd-03-implement` | Executar as tarefas de um plano de implementação, uma a uma. | Código-fonte modificado, testes, e outros artefatos técnicos. | Quando um plano de implementação está pronto para ser executado. |
-| `sdd-04-review` | Revisar o código contra a spec/plano e marcar a funcionalidade no backlog como Concluída. | Relatório de revisão e atualização de status no `.agents/backlog.md`. | Após a conclusão da implementação, antes de integrar as mudanças. |
+| `sdd-04-review` | Revisar o código contra a spec/plano e preparar os artefatos de qualidade. | Relatório de revisão técnica de código. | Após a conclusão da implementação, antes da homologação manual. |
+| `sdd-05-manual-test` | Executar e guiar a homologação manual de UI e regras de negócio com o usuário humano. | Roteiro de testes manuais e feedbacks consolidados. | Após aprovação da revisão estática de código (sdd-04-review) e antes do encerramento final do plano. |
 
 ## Skills de Manutenção de Artefatos (Writers)
 

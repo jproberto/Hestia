@@ -7,7 +7,10 @@ import {
   initBudget,
   getBudgets,
   adjustBudgetItem,
+  getBudgetAdjustments,
+  createBudgetAdjustment,
   BudgetRevision,
+  BudgetAdjustment,
   BudgetItem
 } from "@/lib/db/budget";
 import { getCategories, Category } from "@/lib/db/categories";
@@ -20,7 +23,9 @@ export const dynamic = "force-dynamic";
 
 export default function BudgetPage() {
   const [year, setYear] = useState<number>(new Date().getFullYear());
-  const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
+  const [adjustments, setAdjustments] = useState<BudgetAdjustment[]>([]);
+  const [selectedAdjustmentId, setSelectedAdjustmentId] = useState<string | null>(null);
+  const [activeAdjustment, setActiveAdjustment] = useState<BudgetAdjustment | null>(null);
   const [revision, setRevision] = useState<BudgetRevision | null>(null);
   const [budgets, setBudgets] = useState<BudgetItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -41,7 +46,7 @@ export default function BudgetPage() {
   const supabase = createClient();
   const searchParams = useSearchParams();
 
-  // Obter o mês aberto de forma segura (suportando mockMonth em desenvolvimento e testes)
+  // Obter o mês corrente de forma segura (suportando mockMonth em desenvolvimento e testes)
   const getOpenMonth = useCallback(() => {
     if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
       const mockMonthParam = searchParams.get("mockMonth");
@@ -56,7 +61,7 @@ export default function BudgetPage() {
   }, [searchParams]);
 
   const openMonth = getOpenMonth();
-  const isEditable = month >= openMonth;
+  const isEditable = activeAdjustment ? activeAdjustment.start_month === openMonth : false;
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -71,13 +76,35 @@ export default function BudgetPage() {
       setRevision(activeRevision);
 
       if (activeRevision) {
-        const [items, cats] = await Promise.all([
-          getBudgets(supabase, year, month),
-          getCategories(supabase)
-        ]);
-        setBudgets(items);
-        setCategories(cats);
+        const adjs = await getBudgetAdjustments(supabase, year);
+        setAdjustments(adjs);
+
+        let currentAdj: BudgetAdjustment | null = null;
+        if (selectedAdjustmentId) {
+          currentAdj = adjs.find((a) => a.id === selectedAdjustmentId) || null;
+        }
+
+        if (!currentAdj && adjs.length > 0) {
+          currentAdj = adjs[adjs.length - 1];
+          setSelectedAdjustmentId(currentAdj.id);
+        }
+
+        setActiveAdjustment(currentAdj);
+
+        if (currentAdj) {
+          const [items, cats] = await Promise.all([
+            getBudgets(supabase, year, currentAdj.start_month),
+            getCategories(supabase)
+          ]);
+          setBudgets(items);
+          setCategories(cats);
+        } else {
+          setBudgets([]);
+          setCategories([]);
+        }
       } else {
+        setAdjustments([]);
+        setActiveAdjustment(null);
         setBudgets([]);
         setCategories([]);
       }
@@ -86,7 +113,9 @@ export default function BudgetPage() {
     } finally {
       setLoading(false);
     }
-  }, [year, month, supabase]);
+  }, [year, selectedAdjustmentId, supabase]);
+
+
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -108,15 +137,29 @@ export default function BudgetPage() {
     }
   }
 
+  async function handleCreateAdjustment() {
+    if (!userEmail) return;
+    setLoading(true);
+    try {
+      const newId = await createBudgetAdjustment(supabase, year, openMonth, userEmail);
+      setSelectedAdjustmentId(newId);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleSaveItem(e: React.FormEvent) {
     e.preventDefault();
-    if (!revision || !categoryName || !amount || !userEmail) return;
+    if (!revision || !activeAdjustment || !categoryName || !amount || !userEmail) return;
 
     try {
       await adjustBudgetItem(
         supabase,
         year,
-        month,
+        activeAdjustment.start_month,
         categoryName,
         categoryType,
         parseFloat(amount),
@@ -149,11 +192,11 @@ export default function BudgetPage() {
     }
     setSavingCategoryId(categoryId);
     try {
-      if (!userEmail) return;
+      if (!userEmail || !activeAdjustment) return;
       await adjustBudgetItem(
         supabase,
         year,
-        month,
+        activeAdjustment.start_month,
         categoryName,
         categoryType,
         value,
@@ -176,7 +219,6 @@ export default function BudgetPage() {
     );
   }
 
-  // Filtragem que remove os orçamentos zerados da listagem da tabela
   const revenues = budgets.filter((b) => b.category_type === "receita" && b.amount > 0);
   const expenses = budgets.filter((b) => b.category_type === "despesa" && b.amount > 0);
 
@@ -184,13 +226,14 @@ export default function BudgetPage() {
   const totalExpenses = expenses.reduce((acc, cur) => acc + cur.amount, 0);
   const netBudget = totalRevenues - totalExpenses;
 
-  // Filtrar sugestões de categoria com base no que o usuário digita
   const suggestions = categories.filter(
     (c) =>
       c.type === categoryType &&
       c.name.toLowerCase().includes(categoryName.toLowerCase()) &&
       c.name.toLowerCase() !== categoryName.toLowerCase()
   );
+
+  const hasCurrentMonthAdjustment = adjustments.some((a) => a.start_month === openMonth);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
@@ -200,32 +243,33 @@ export default function BudgetPage() {
           <p className="text-sm text-muted-foreground">Planeje suas metas financeiras para o ano.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Label htmlFor="month-select">Mês:</Label>
+          <Label htmlFor="adjustment-select">Ajuste:</Label>
           <select
-            id="month-select"
-            value={month}
-            onChange={(e) => setMonth(parseInt(e.target.value))}
+            id="adjustment-select"
+            value={selectedAdjustmentId || ""}
+            onChange={(e) => setSelectedAdjustmentId(e.target.value)}
             className="rounded border p-1 bg-card text-card-foreground text-sm"
           >
-            <option value={1}>Janeiro</option>
-            <option value={2}>Fevereiro</option>
-            <option value={3}>Março</option>
-            <option value={4}>Abril</option>
-            <option value={5}>Maio</option>
-            <option value={6}>Junho</option>
-            <option value={7}>Julho</option>
-            <option value={8}>Agosto</option>
-            <option value={9}>Setembro</option>
-            <option value={10}>Outubro</option>
-            <option value={11}>Novembro</option>
-            <option value={12}>Dezembro</option>
+            {adjustments.map((adj) => {
+              const label = adj.start_month === 1
+                ? `Orçamento Inicial ${adj.year}`
+                : adj.description;
+              return (
+                <option key={adj.id} value={adj.id}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
 
           <Label htmlFor="year-select" className="ml-2">Ano:</Label>
           <select
             id="year-select"
             value={year}
-            onChange={(e) => setYear(parseInt(e.target.value))}
+            onChange={(e) => {
+              setYear(parseInt(e.target.value));
+              setSelectedAdjustmentId(null);
+            }}
             className="rounded border p-1 bg-card text-card-foreground text-sm"
           >
             <option value={2026}>2026</option>
@@ -267,21 +311,19 @@ export default function BudgetPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold">Previsões Cadastradas</h2>
-              {!isEditable ? (
-                <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
-                  Fechado
-                </span>
-              ) : (
-                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                  Aberto
-                </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {!hasCurrentMonthAdjustment && !isEditable && (
+                <Button onClick={handleCreateAdjustment} variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
+                  Criar Novo Ajuste
+                </Button>
+              )}
+              {isEditable && (
+                <Button onClick={() => setShowForm(!showForm)}>
+                  {showForm ? "Fechar" : "Adicionar Previsão"}
+                </Button>
               )}
             </div>
-            {isEditable && (
-              <Button onClick={() => setShowForm(!showForm)}>
-                {showForm ? "Fechar" : "Adicionar Previsão"}
-              </Button>
-            )}
           </div>
 
           {showForm && isEditable && (
@@ -312,7 +354,6 @@ export default function BudgetPage() {
                     required
                     autoComplete="off"
                   />
-                  {/* Dropdown de autocompletar simples */}
                   {categoryName && suggestions.length > 0 && (
                     <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-40 overflow-y-auto rounded border bg-popover shadow-md">
                       {suggestions.map((s) => (
@@ -348,7 +389,6 @@ export default function BudgetPage() {
           )}
 
           <div className="grid grid-cols-2 gap-8">
-            {/* Seção Receitas */}
             <div className="flex flex-col gap-3">
               <h3 className="text-md font-semibold text-emerald-700">Receitas</h3>
               <div className="rounded-lg border overflow-hidden">
@@ -412,7 +452,6 @@ export default function BudgetPage() {
               </div>
             </div>
 
-            {/* Seção Despesas */}
             <div className="flex flex-col gap-3">
               <h3 className="text-md font-semibold text-rose-700">Despesas</h3>
               <div className="rounded-lg border overflow-hidden">

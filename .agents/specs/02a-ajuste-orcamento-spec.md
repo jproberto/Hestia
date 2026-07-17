@@ -38,6 +38,15 @@ A modelagem física final e queries SQL no Supabase devem ser alinhadas com as r
 Para carregar o orçamento de um Ajuste selecionado com vigência no mês `M`:
 *   O frontend executa a consulta de agregação para carregar os itens vigentes até o mês `M` (herança automática).
 
+### 4.1 Tabela de Controle de Migrações (`schema_migrations`)
+Para fins de controle de consistência e auditoria de deploy entre ambientes (desenvolvimento vs produção), o banco expõe a tabela `public.schema_migrations`:
+- `id` (SERIAL, PRIMARY KEY)
+- `spec_id` (VARCHAR(50), ex: `"02a"`)
+- `spec_name` (TEXT, nome da especificação)
+- `script_name` (TEXT, UNIQUE, nome do script SQL de migração executado)
+- `executed_at` (TIMESTAMP WITH TIME ZONE, data/hora da execução)
+- `executed_by` (TEXT, e-mail ou identificador de quem rodou a migração)
+
 ## 5. Interface do Usuário (UI/UX)
 
 *   **Seletor de Ajustes**: Um dropdown compacto no topo ao lado do Ano, listando todos os ajustes cadastrados no ano.
@@ -55,3 +64,4 @@ Para carregar o orçamento de um Ajuste selecionado com vigência no mês `M`:
 6.  Definir um valor como `0` oculta a categoria da listagem dali em diante.
 7.  As nomenclaturas de tabelas (opcional) e variáveis são atualizadas de `revisions` para `adjustments`.
 8.  Todos os testes unitários e de UI passam com sucesso (`npm run test`).
+9.  O banco de dados expõe a tabela `public.schema_migrations` registrando o histórico de scripts executados.

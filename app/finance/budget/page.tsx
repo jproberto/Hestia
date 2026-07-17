@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import {
   getBudgetRevision,
@@ -31,7 +31,7 @@ export default function BudgetPage() {
 
   const supabase = createClient();
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -58,11 +58,11 @@ export default function BudgetPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [year]);
 
   useEffect(() => {
     loadData();
-  }, [year]);
+  }, [loadData]);
 
   async function handleStartBudget() {
     if (!userEmail) return;
@@ -188,8 +188,8 @@ export default function BudgetPage() {
                   <select
                     id="category-type"
                     value={categoryType}
-                    onChange={(e: any) => {
-                      setCategoryType(e.target.value);
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                      setCategoryType(e.target.value as "receita" | "despesa");
                       setCategoryName("");
                     }}
                     className="rounded border p-2"

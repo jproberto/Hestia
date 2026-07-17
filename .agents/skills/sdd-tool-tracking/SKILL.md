@@ -1,73 +1,75 @@
 ---
 name: sdd-tool-tracking
-description: Use para registrar o progresso de um plano de execução em um log estruturado. Dispare esta skill para inicializar o log no começo da execução, para atualizar o status de uma tarefa (concluída, bloqueada), ou para registrar um evento importante ou um impedimento detalhado. Essencial para manter a visibilidade do progresso e para depuração post-mortem.
+description: Use para criar e manter o Diário de Bordo da execução de um plano. Registra o progresso das tarefas usando checkboxes e documenta decisões de arquitetura, incidentes, justificativas de refatoração e resoluções de problemas em formato Markdown (.md). Essencial para manter o histórico de decisões e visibilidade pós-mortem da implementação.
 ---
 
-# Rastreamento de Execução de Tarefas
+# Rastreamento de Execução (Diário de Bordo)
 
 ## Visão Geral
 
-Esta skill gerencia um log de execução para fornecer um registro detalhado e estruturado do progresso de um plano de tarefas. O log é composto por um cabeçalho com o status geral das tarefas e um corpo com o histórico de eventos em ordem cronológica. O objetivo é que qualquer agente ou humano possa entender rapidamente o estado atual da execução, o que já foi feito, e quais os impedimentos.
+Esta skill gerencia o rastreador de execução (`<slug>-tracker.md`) para fornecer um histórico legível de decisões técnicas e de progresso. Em vez de logs textuais crus, ele funciona como um **diário de bordo** contendo a checklist atualizada de tarefas e um histórico de eventos enriquecido com incidentes e decisões de engenharia.
 
-**Anuncie no início:** "Estou usando a skill `sdd-tool-tracking` para registrar o progresso da execução."
+**Anuncie no início:** "Estou usando a skill `sdd-tool-tracking` para documentar o progresso e decisões no diário de bordo."
 
-**Onde encontrar/salvar o log:** O arquivo de log de uma execução específica fica em `.agents/logs/YYYY-MM-DD-<slug-do-plano>-execution.log`. O `slug-do-plano` deve ser o mesmo usado nos artefatos de `spec` e `plan`.
+**Onde salvar o tracker:** `.agents/logs/<slug>-tracker.md` *(Onde <slug> é o identificador da feature, ex: `01-orcamento-tracker.md`)*.
+
+---
 
 ## O Processo
 
-### Passo 1: Determinar o Nome do Arquivo de Log
+### Passo 1: Inicializar o Diário de Bordo (Tracker)
 
-1.  Identifique o `slug` do plano que está sendo executado. Ele é derivado do tópico da tarefa e tem o formato `YYYY-MM-DD-<topico>`.
-2.  O nome do arquivo de log será `.agents/logs/<slug>-execution.log`.
-3.  Se o diretório `.agents/logs` não existir, crie-o.
+*Este passo só é executado no início da execução de um novo plano.*
 
-### Passo 2: Inicializar o Log com o Plano de Tarefas
+1.  Crie o arquivo `.agents/logs/<slug>-tracker.md`.
+2.  Adicione um título descritivo e a seção **Checklist de Progresso** utilizando caixas de seleção Markdown (`- [ ]`, `- [/]`, `- [x]`, `- [!]` para bloqueios).
+3.  Adicione a seção **Diário de Bordo e Decisões Técnicas** com a primeira entrada informando a inicialização da branch e do plano.
 
-*Este passo só é executado no início de uma nova execução, quando o log ainda não existe.*
+*Exemplo de estrutura inicial:*
+```markdown
+# Diário de Execução: Orçamento Anual por Categoria (Feature 1)
 
-1.  Receba a lista de tarefas do plano (geralmente de `sdd-02-plan`).
-2.  Crie o arquivo de log com um cabeçalho contendo uma tabela Markdown.
-3.  A tabela deve ter as colunas `ID`, `Tarefa` e `Status`.
-4.  Preencha a tabela com todas as tarefas do plano, atribuindo um ID sequencial e o status inicial "Pendente".
-5.  Adicione uma entrada de evento no corpo do log, abaixo da tabela, marcando o início da execução. Ex: `[YYYY-MM-DD HH:MM:SS] - INFO: Início da execução do plano '<slug-do-plano>'`.
+## Checklist de Progresso
+- [ ] Tarefa 1: Configurar a Infraestrutura de Testes (Vitest + JSDOM)
+- [ ] Tarefa 2: Criar as Tabelas e Políticas no Banco de Dados (Supabase SQL)
+- [ ] Tarefa 3: Desenvolver a Lógica de Negócio e Serviços (TDD)
+- [ ] Tarefa 4: Criar a Página de Orçamento `/finance/budget`
+- [ ] Tarefa 5: Integrar Atalho no Dashboard e Versão
 
-### Passo 3: Atualizar o Status de uma Tarefa
+## Diário de Bordo e Decisões Técnicas
+- **[2026-07-16 23:11] (INFO)**: Início da execução do plano na branch `feature/orcamentoAnual`.
+```
 
-*Use este passo sempre que uma tarefa mudar de estado (ex: ao ser concluída por `sdd-03-implement`)*.
+### Passo 2: Atualizar o Progresso da Tarefa
 
-1.  Leia o conteúdo atual do arquivo de log correspondente.
-2.  Localize a linha na tabela de status que corresponde à tarefa em questão (pelo ID ou nome).
-3.  Reescreva a linha, atualizando a coluna `Status` para o novo valor (`Em Andamento`, `Concluída`, `Bloqueada`).
-4.  Adicione uma entrada de evento no corpo do log com timestamp, informando a mudança.
-    *   **Exemplo para conclusão:** `[YYYY-MM-DD HH:MM:SS] - INFO: Tarefa 'Implementar a função X' concluída.`
-    *   **Exemplo para bloqueio:** `[YYYY-MM-DD HH:MM:SS] - WARN: Tarefa 'Conectar ao banco de dados' bloqueada.`
-5.  Salve o arquivo de log com a tabela e o corpo atualizados.
+*Sempre que iniciar, concluir ou bloquear uma tarefa:*
 
-### Passo 4: Registrar um Evento ou Impedimento Detalhado
+1.  Abra o tracker da feature.
+2.  Atualize a caixa de seleção da tarefa na checklist de progresso:
+    *   `[/]` para tarefas em andamento.
+    *   `[x]` para tarefas concluídas.
+    *   `[!]` para tarefas bloqueadas ou com problemas.
+3.  Adicione uma nova entrada datada na seção de histórico de eventos explicando a transição.
 
-*Use este passo para registrar informações que não são apenas uma mudança de status, como um erro inesperado, uma decisão de arquitetura tomada durante a implementação, ou a descrição detalhada de um bloqueio.*
+### Passo 3: Registrar Decisões e Incidentes de Engenharia (Alto Valor)
 
-1.  Leia o conteúdo atual do arquivo de log.
-2.  Adicione uma nova linha ao final do corpo do log.
-3.  Formate a linha com `[YYYY-MM-DD HH:MM:SS] - LEVEL: Mensagem.`, onde `LEVEL` pode ser:
-    *   `INFO`: Para eventos gerais (ex: "Iniciando a fase de testes.").
-    *   `WARN`: Para avisos ou impedimentos que não param a execução completamente.
-    *   `ERROR`: Para erros críticos que interromperam o trabalho.
-4.  A mensagem deve ser descritiva. Para um impedimento, explique a causa raiz e o impacto.
-    *   **Exemplo:** `[YYYY-MM-DD HH:MM:SS] - ERROR: A build falhou devido à dependência 'lib-xyz' não encontrada. A implementação das tarefas subsequentes está parada até que isso seja resolvido.`
-5.  Salve o arquivo de log com a nova entrada.
+*Não registre apenas "Tarefa X iniciada". Use a seção de histórico para documentar qualquer fato relevante de engenharia:*
+*   **Incidentes**: "O linter falhou na regra de cascade renders síncronos no useEffect. Corrigimos envolvendo a chamada do serviço em setTimeout 0ms para adiar a execução".
+*   **Decisões**: "Para evitar retrabalhos nas features de transações, desacoplamos o serviço de categorias em `lib/db/categories.ts` separado da lógica de orçamentos".
+*   **Refatorações**: "Trocamos os casts de `as any` nos mocks por `as unknown as SupabaseClient` para satisfazer as regras estritas do linter e do compilador typescript".
+
+*Formato recomendado de entrada:*
+`- **[YYYY-MM-DD HH:MM] (TIPO)**: [Explicação descritiva da decisão, problema ou feito técnico].`
+
+---
 
 ## Quando Parar e Pedir Ajuda
 
-- Se você não conseguir determinar o `slug` do plano para nomear o arquivo de log.
-- Se você não conseguir ler ou escrever no arquivo de log por problemas de permissão ou outro erro de I/O.
-- Se o plano de tarefas não for fornecido e você for solicitado a inicializar o log (Passo 2).
-- Se a estrutura de um arquivo de log existente estiver corrompida ou for irreconhecível.
+- Se você encontrar divergências de permissão para salvar no diretório `.agents/logs/`.
+- Se o plano sofrer alterações drásticas que invalidem a checklist inicial.
 
 ## Lembre-se
 
-- O nome do arquivo de log **deve** ser consistente com os artefatos `spec` e `plan` da mesma execução.
-- O cabeçalho com a tabela de status deve estar **sempre** no topo do arquivo e refletir o estado mais recente.
-- O corpo do log é **append-only**. Nunca apague eventos passados.
-- Use os níveis de log (`INFO`, `WARN`, `ERROR`) de forma consistente.
-- Esta skill não executa tarefas, apenas registra o que outras skills (como `sdd-03-implement`) estão fazendo.
+- O Diário de Bordo deve ser em formato Markdown (`.md`), não `.log`.
+- Documente o **porquê** das correções de linter/build, não apenas que elas foram feitas. Isso economiza tempo dos próximos agentes que herdarem o código.
+- Mantenha a checklist de tarefas rigorosamente sincronizada com o status atual do seu desenvolvimento local.

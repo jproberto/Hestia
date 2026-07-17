@@ -22,14 +22,18 @@ Todo agente de IA que atuar neste projeto é obrigado a respeitar as seguintes d
 
 1. **Uso do Backlog Central:** Qualquer ciclo de desenvolvimento de feature deve se iniciar consultando o `.agents/backlog.md` e atualizando o status do item correspondente para `Em Especificação` (e linkando a spec gerada).
 2. **Uso Obrigatório do CLI de Automação:** Todo o tracking de execução do plano, validações de linter/build, guardian e segurança de commits devem ser executados através do utilitário `.agents/scripts/sdd.js`.
-3. **Ciclo de Vida de Tarefas:**
+3. **Ciclo de Vida de Tarefas (Ordem Estrita de Conclusão):**
    - Ao iniciar uma tarefa, execute: `node .agents/scripts/sdd.js task-start <id>`
-   - Ao concluir uma tarefa, execute: `node .agents/scripts/sdd.js task-complete <id>` (a conclusão será bloqueada se houver erros de linter ou compilador).
+   - Para concluir uma tarefa, siga obrigatoriamente esta ordem de passos:
+     1. Execute localmente os validadores para garantir que não há erros: `npm run test`, `npx eslint .` e `npx tsc --noEmit`.
+     2. Marque a tarefa como concluída no CLI: `node .agents/scripts/sdd.js task-complete <id>` (a conclusão será bloqueada no script caso haja erros).
+     3. Adicione os arquivos ao Git stage (`git add <arquivos>`).
+     4. Faça o commit seguro (conforme item 4 abaixo).
    - Ao encontrar um bloqueador, execute: `node .agents/scripts/sdd.js task-block <id> "<motivo>"`
-4. **Commit Seguro e Padronizado:** Todo commit de código deve ser feito exclusivamente via `node .agents/scripts/sdd.js commit "<mensagem>"` para garantir:
+4. **Commit Seguro e Padronizado:** Todo commit de código deve ser feito exclusivamente via `node .agents/scripts/sdd.js commit "<mensagem>"` (sempre após a execução bem-sucedida do `task-complete <id>`) para garantir:
    - Bloqueio preventivo de segurança contra staging acidental de arquivos de configuração locais (ex: `.env.local` contendo credenciais reais).
    - Validação e compatibilidade de idioma (força mensagens de commit em Português quando compatível com o histórico recente).
-5. **Redirecionamento para Review e Atualização do Backlog:** Antes de considerar o trabalho fechado, o agente deve rodar `node .agents/scripts/sdd.js request-review` para certificar que todas as tarefas foram fechadas, transicionar para a etapa de revisão (`sdd-04-review`), e ao final atualizar o status da feature correspondente no `.agents/backlog.md` para `Concluído`.
+5. **Redirecionamento para Review e Atualização do Backlog:** Antes de considerar o trabalho fechado, o agente deve rodar `node .agents/scripts/sdd.js request-review` para certificar que todas as tarefas foram fechadas, transicionar para a etapa de revisão (`sdd-04-review`), perguntar sobre a execução do `git push` ao usuário, e ao final atualizar o status da feature correspondente no `.agents/backlog.md` para `Concluído`.
 
 ## Comandos do SDD CLI
 

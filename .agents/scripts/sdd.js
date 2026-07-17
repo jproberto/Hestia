@@ -82,7 +82,7 @@ function cmdStart(slug) {
     logInfo(`Guardian: Transição válida! Spec correspondente encontrada.`);
   }
 
-  const logFileName = path.basename(planPath).replace("-plan.md", "-execution.log");
+  const logFileName = path.basename(planPath).replace("-plan.md", "-tracker.md");
   const logPath = path.join(LOGS_DIR, logFileName);
 
   if (!fs.existsSync(LOGS_DIR)) {
@@ -94,7 +94,7 @@ function cmdStart(slug) {
     process.exit(0);
   }
 
-  logInfo(`Inicializando log de execução estruturado (sdd-tool-tracking)...`);
+  logInfo(`Inicializando diário de bordo estruturado em Markdown (sdd-tool-tracking)...`);
   const planContent = fs.readFileSync(planPath, "utf8");
   const tasks = [];
   const lines = planContent.split("\n");
@@ -105,9 +105,9 @@ function cmdStart(slug) {
       const taskName = line.replace("### Tarefa ", "").trim();
       const match = taskName.match(/^(\d+):\s*(.*)$/);
       if (match) {
-        tasks.push({ id: match[1], name: match[2], status: "Pendente" });
+        tasks.push({ id: match[1], name: match[2], status: "- [ ] Pendente" });
       } else {
-        tasks.push({ id: String(tempTaskId++), name: taskName, status: "Pendente" });
+        tasks.push({ id: String(tempTaskId++), name: taskName, status: "- [ ] Pendente" });
       }
     }
   }
@@ -117,7 +117,8 @@ function cmdStart(slug) {
     process.exit(1);
   }
 
-  let logContent = `# Registro de Execução - ${slug}\n\n`;
+  let logContent = `# Diário de Execução: ${slug}\n\n`;
+  logContent += `## Checklist de Progresso\n`;
   logContent += `<!-- TABLE_START -->\n`;
   logContent += `| ID | Tarefa | Status |\n`;
   logContent += `|---|---|---|\n`;
@@ -125,12 +126,12 @@ function cmdStart(slug) {
     logContent += `| ${task.id} | ${task.name} | ${task.status} |\n`;
   }
   logContent += `<!-- TABLE_END -->\n\n`;
-  logContent += `## Histórico de Eventos\n`;
+  logContent += `## Diário de Bordo e Decisões Técnicas\n`;
   logContent += `<!-- EVENTS -->\n`;
-  logContent += `[${getTimestamp()}] - INFO: Início da execução do plano '${slug}'\n`;
+  logContent += `- **[${getTimestamp()}] (INFO)**: Início da execução do plano '${slug}'\n`;
 
   fs.writeFileSync(logPath, logContent, "utf8");
-  logInfo(`Log estruturado criado em: .agents/logs/${logFileName}`);
+  logInfo(`Diário de bordo criado em: .agents/logs/${logFileName}`);
 }
 
 // Carrega o log existente e retorna parsed
@@ -141,7 +142,7 @@ function loadActiveLog() {
   }
 
   const files = fs.readdirSync(LOGS_DIR)
-    .filter((f) => f.endsWith("-execution.log"))
+    .filter((f) => f.endsWith("-tracker.md"))
     .map((f) => ({
       name: f,
       time: fs.statSync(path.join(LOGS_DIR, f)).mtime.getTime()
@@ -202,7 +203,7 @@ function updateLog(logPath, content, taskId, newStatus, eventMsg, eventLevel = "
 
   const timestamp = getTimestamp();
   let updatedContent = beforeTable + updatedTable + afterTable;
-  updatedContent += `[${timestamp}] - ${eventLevel}: ${eventMsg}\n`;
+  updatedContent += `- **[${timestamp}] (${eventLevel})**: ${eventMsg}\n`;
 
   fs.writeFileSync(logPath, updatedContent, "utf8");
 }
@@ -214,7 +215,7 @@ function cmdTaskStart(taskId) {
     process.exit(1);
   }
   const { logPath, content } = loadActiveLog();
-  updateLog(logPath, content, taskId, "Em Andamento", `Tarefa ${taskId} iniciada.`);
+  updateLog(logPath, content, taskId, "- [/] Em Andamento", `Tarefa ${taskId} iniciada.`);
   logInfo(`Tarefa ${taskId} marcada como Em Andamento.`);
 }
 
@@ -247,7 +248,7 @@ function cmdTaskComplete(taskId) {
   }
 
   const { logPath, content } = loadActiveLog();
-  updateLog(logPath, content, taskId, "Concluída", `Tarefa ${taskId} concluída com sucesso.`);
+  updateLog(logPath, content, taskId, "- [x] Concluída", `Tarefa ${taskId} concluída com sucesso.`);
   logInfo(`Tarefa ${taskId} marcada como Concluída.`);
 }
 
@@ -258,7 +259,7 @@ function cmdTaskBlock(taskId, reason) {
     process.exit(1);
   }
   const { logPath, content } = loadActiveLog();
-  updateLog(logPath, content, taskId, "Bloqueada", `Tarefa ${taskId} BLOQUEADA: ${reason}`, "WARN");
+  updateLog(logPath, content, taskId, "- [!] Bloqueada", `Tarefa ${taskId} BLOQUEADA: ${reason}`, "WARN");
   logWarn(`Tarefa ${taskId} marcada como Bloqueada.`);
 }
 
@@ -278,7 +279,7 @@ function cmdRequestReview() {
       const currentId = parts[1].trim();
       const currentTask = parts[2].trim();
       const currentStatus = parts[3].trim();
-      if (currentId !== "ID" && currentStatus !== "Concluída" && !currentTask.includes("---")) {
+      if (currentId !== "ID" && !currentStatus.includes("- [x]") && !currentTask.includes("---")) {
         pendingTasks.push({ id: currentId, name: currentTask, status: currentStatus });
       }
     }

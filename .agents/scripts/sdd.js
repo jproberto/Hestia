@@ -298,20 +298,39 @@ function cmdCommit(msg) {
   }
 
   if (logHistory) {
-    const portugueseKeywords = ["adiciona", "cria", "corrige", "ajusta", "atualiza", "remove", "de", "para", "o", "com"];
-    const englishKeywords = ["add", "fix", "create", "update", "remove", "to", "for", "the", "with"];
+    // Remove o prefixo do commit convencional (ex: "feat: ", "fix: ") para focar no conteúdo
+    const msgContent = msg.includes(":") ? msg.substring(msg.indexOf(":") + 1).trim() : msg;
+
+    // Função para tokenizar e limpar palavras de pontuações
+    const tokenize = (text) => {
+      return text.toLowerCase()
+        .replace(/[^\w\s\u00C0-\u00FF]/g, "") // remove pontuação mas mantém caracteres acentuados
+        .split(/\s+/)
+        .filter(Boolean);
+    };
+
+    const portugueseKeywords = [
+      "adiciona", "adicionados", "cria", "criado", "corrige", "corrigido", "ajusta", "ajustado",
+      "atualiza", "atualizado", "remove", "removido", "implementa", "implementado", "refatora",
+      "refatorado", "de", "para", "o", "a", "os", "as", "em", "no", "na", "com", "por", "um", "uma", "e"
+    ];
+    const englishKeywords = [
+      "add", "added", "create", "created", "fix", "fixed", "update", "updated", "remove", "removed",
+      "implement", "implemented", "refactor", "refactored", "to", "for", "the", "in", "on", "at", "with",
+      "by", "from", "a", "an", "and"
+    ];
 
     let ptScore = 0;
     let enScore = 0;
 
-    const historyWords = logHistory.toLowerCase().split(/\s+/);
+    const historyWords = tokenize(logHistory);
     for (const word of historyWords) {
       if (portugueseKeywords.includes(word)) ptScore++;
       if (englishKeywords.includes(word)) enScore++;
     }
 
     const isHistoryPt = ptScore > enScore;
-    const msgWords = msg.toLowerCase().split(/\s+/);
+    const msgWords = tokenize(msgContent);
     let msgEnCount = 0;
     let msgPtCount = 0;
 

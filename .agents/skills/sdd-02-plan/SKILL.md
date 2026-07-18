@@ -168,7 +168,11 @@ Use este formato para cada tarefa:
 - Consome: [o que esta tarefa usa de tarefas anteriores: assinaturas exatas, tipos, eventos, contracts]
 - Produz: [o que tarefas futuras dependem: nomes de função, parâmetros, retorno, tipos, schema]
 
-**Passo 1: Escreva o teste que falha**
+**Passo 1: Executar o início da tarefa no CLI do SDD**
+
+Run: `node .agents/scripts/sdd.js task-start N`
+
+**Passo 2: Escreva o teste que falha**
 
 ```python
 def test_specific_behavior():
@@ -176,30 +180,33 @@ def test_specific_behavior():
     assert result == expected
 ```
 
-**Passo 2: Execute o teste para garantir que ele falha**
+**Passo 3: Execute o teste para garantir que ele falha**
 
 Run: `pytest tests/path/test_file.py::test_specific_behavior -v`
 Expected: FAIL with "function not defined"
 
-**Passo 3: Escreva implementação mínima**
+**Passo 4: Escreva implementação mínima**
 
 ```python
 def function(input):
     return expected
 ```
 
-**Passo 4: Execute o teste para garantir que ele passa**
+**Passo 5: Execute o teste para garantir que ele passa**
 
 Run: `pytest tests/path/test_file.py::test_specific_behavior -v`
 Expected: PASS
 
-**Passo 5: Commit**
+**Passo 6: Marcar a tarefa como concluída no CLI do SDD**
+
+Run: `node .agents/scripts/sdd.js task-complete N`
+
+**Passo 7: Commit**
 
 ```bash
 git add tests/path/test_file.py src/path/file.py
-git commit -m "feat: add specific behavior"
+node .agents/scripts/sdd.js commit "feat: add specific behavior"
 ```
-````
 
 Adapte linguagem, framework e comandos ao projeto. Preserve a estrutura.
 

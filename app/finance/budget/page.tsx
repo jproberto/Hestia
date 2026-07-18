@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { createClient } from "@/utils/supabase/client";
 import {
   getBudgetAdjustment,
@@ -28,7 +28,7 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-export default function BudgetPage() {
+function BudgetPageContent() {
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [adjustments, setAdjustments] = useState<BudgetAdjustment[]>([]);
   const [selectedAdjustmentId, setSelectedAdjustmentId] = useState<string | null>(null);
@@ -532,5 +532,19 @@ export default function BudgetPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function BudgetPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-full items-center justify-center p-6">
+          <p className="text-muted-foreground">Carregando orçamento...</p>
+        </div>
+      }
+    >
+      <BudgetPageContent />
+    </Suspense>
   );
 }

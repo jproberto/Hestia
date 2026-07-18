@@ -71,7 +71,7 @@ describe("Pagina de Orcamento Anual /finance/budget (Revisada por Ajustes)", () 
 
     // 2. Como vigencia de Agosto (mês 8) !== Outubro (mês 10), a tela deve estar em Somente-Leitura
     expect(screen.queryByRole("button", { name: /Adicionar Previsão/i })).not.toBeInTheDocument();
-    expect(screen.getByText("R$ 1000.00", { selector: "span" })).toHaveClass("cursor-default");
+    expect(screen.getByText(/1\.000,00/, { selector: "span" })).toHaveClass("cursor-default");
 
     // 3. E o botao "Criar Novo Ajuste" deve estar visivel para permitir ajustar o mes corrente
     const createBtn = screen.getByRole("button", { name: /Criar Novo Ajuste/i });
@@ -100,7 +100,7 @@ describe("Pagina de Orcamento Anual /finance/budget (Revisada por Ajustes)", () 
       // O botao "Adicionar Previsão" passa a aparecer (esta aberto para edicao)
       expect(screen.getByRole("button", { name: /Adicionar Previsão/i })).toBeInTheDocument();
       // O cursor da celula vira pointer
-      expect(screen.getByText("R$ 1000.00", { selector: "span" })).toHaveClass("cursor-pointer");
+      expect(screen.getByText(/1\.000,00/, { selector: "span" })).toHaveClass("cursor-pointer");
     });
   });
 });

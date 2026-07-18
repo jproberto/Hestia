@@ -34,9 +34,7 @@ describe("Serviço de Orçamento (Revisado por Ajustes)", () => {
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           lte: vi.fn().mockReturnValue({
-            order: vi.fn().mockReturnValue({
-              order: vi.fn().mockResolvedValue({ data: mockData, error: null })
-            })
+            order: vi.fn().mockResolvedValue({ data: mockData, error: null })
           })
         })
       })

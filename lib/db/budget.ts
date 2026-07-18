@@ -57,16 +57,23 @@ export async function getBudgets(supabase: SupabaseClient, year: number, month: 
     `)
     .eq("budget_adjustments.year", year)
     .lte("budget_adjustments.start_month", month)
-    .order("category_id")
-    .order("start_month", { referencedTable: "budget_adjustments", ascending: false });
+    .order("category_id");
 
   if (error) {
     console.error("getBudgets error:", error);
     throw error;
   }
 
+  // Ordena explicitamente por start_month decrescente no JavaScript
+  // para que o ajuste mais recente de cada categoria venha antes
+  const sortedData = (data || []).sort((a, b) => {
+    const monthA = (a.budget_adjustments as unknown as { start_month: number })?.start_month ?? 0;
+    const monthB = (b.budget_adjustments as unknown as { start_month: number })?.start_month ?? 0;
+    return monthB - monthA;
+  });
+
   const uniqueItems: Record<string, BudgetItem> = {};
-  const rows = (data || []) as unknown as Array<{
+  const rows = sortedData as unknown as Array<{
     amount: string;
     category_id: string;
     categories: { name: string; type: "receita" | "despesa" } | null;

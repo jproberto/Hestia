@@ -20,6 +20,14 @@ import { useSearchParams } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
+// Formatação brasileira de moeda (BRL)
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  }).format(value);
+};
+
 export default function BudgetPage() {
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [adjustments, setAdjustments] = useState<BudgetAdjustment[]>([]);
@@ -45,25 +53,29 @@ export default function BudgetPage() {
   const supabase = createClient();
   const searchParams = useSearchParams();
 
-  // Obter o mês corrente de forma segura (suportando mockMonth em desenvolvimento e testes)
+  // Obter o mês corrente de forma segura (suportando mockMonth para simulação de data da linha do tempo)
   const getOpenMonth = useCallback(() => {
-    if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
-      const mockMonthParam = searchParams.get("mockMonth");
-      if (mockMonthParam) {
-        const parsed = parseInt(mockMonthParam, 10);
-        if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) {
-          return parsed;
-        }
+    const mockMonthParam = searchParams.get("mockMonth");
+    if (mockMonthParam) {
+      const parsed = parseInt(mockMonthParam, 10);
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) {
+        return parsed;
       }
     }
     return new Date().getMonth() + 1;
   }, [searchParams]);
 
   const openMonth = getOpenMonth();
-  const isEditable = activeAdjustment ? activeAdjustment.start_month === openMonth : false;
+  const isMostRecent = activeAdjustment 
+    ? !adjustments.some((a) => a.start_month > activeAdjustment.start_month)
+    : false;
+  const isEditable = activeAdjustment 
+    ? (activeAdjustment.start_month === openMonth && isMostRecent) 
+    : false;
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  // Carrega os dados. Suporta refresh silencioso para evitar piscadas na UI ao salvar itens
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
@@ -110,11 +122,9 @@ export default function BudgetPage() {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [year, selectedAdjustmentId, supabase]);
-
-
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -167,7 +177,7 @@ export default function BudgetPage() {
       setCategoryName("");
       setAmount("");
       setShowForm(false);
-      await loadData();
+      await loadData(true); // silent refresh
     } catch (err) {
       console.error(err);
     }
@@ -201,7 +211,7 @@ export default function BudgetPage() {
         value,
         userEmail
       );
-      await loadData();
+      await loadData(true); // silent refresh
     } catch (err) {
       console.error("Erro ao salvar ajuste inline:", err);
     } finally {
@@ -293,16 +303,16 @@ export default function BudgetPage() {
           <div className="grid grid-cols-3 gap-4">
             <div className="rounded-lg border p-4 bg-muted/40">
               <span className="text-xs text-muted-foreground font-semibold uppercase">Receitas Previstas</span>
-              <p className="text-2xl font-bold text-emerald-600">R$ {totalRevenues.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalRevenues)}</p>
             </div>
             <div className="rounded-lg border p-4 bg-muted/40">
               <span className="text-xs text-muted-foreground font-semibold uppercase">Despesas Previstas</span>
-              <p className="text-2xl font-bold text-rose-600">R$ {totalExpenses.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-rose-600">{formatCurrency(totalExpenses)}</p>
             </div>
             <div className="rounded-lg border p-4 bg-muted/40">
               <span className="text-xs text-muted-foreground font-semibold uppercase">Saldo Planejado</span>
               <p className={`text-2xl font-bold ${netBudget >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                R$ {netBudget.toFixed(2)}
+                {formatCurrency(netBudget)}
               </p>
             </div>
           </div>
@@ -310,10 +320,15 @@ export default function BudgetPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold">Previsões Cadastradas</h2>
+              {!isMostRecent && (
+                <span className="rounded bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                  Histórico (Substituído)
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
-              {!hasCurrentMonthAdjustment && !isEditable && (
-                <Button onClick={handleCreateAdjustment} variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
+              {!hasCurrentMonthAdjustment && !isEditable && isMostRecent && (
+                <Button onClick={handleCreateAdjustment}>
                   Criar Novo Ajuste
                 </Button>
               )}
@@ -419,7 +434,7 @@ export default function BudgetPage() {
                                   if (e.key === "Enter") {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    handleSaveInline(b.category_id, b.category_name, b.category_type);
+                                    e.currentTarget.blur(); // Dispara o onBlur único de forma natural
                                   } else if (e.key === "Escape") {
                                     e.preventDefault();
                                     e.stopPropagation();
@@ -439,7 +454,7 @@ export default function BudgetPage() {
                                     : "cursor-default"
                                 } ${savingCategoryId === b.category_id ? "opacity-50" : ""}`}
                               >
-                                R$ {b.amount.toFixed(2)}
+                                {formatCurrency(b.amount)}
                               </span>
                             )}
                           </td>
@@ -482,7 +497,7 @@ export default function BudgetPage() {
                                   if (e.key === "Enter") {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    handleSaveInline(b.category_id, b.category_name, b.category_type);
+                                    e.currentTarget.blur(); // Dispara o onBlur único de forma natural
                                   } else if (e.key === "Escape") {
                                     e.preventDefault();
                                     e.stopPropagation();
@@ -502,7 +517,7 @@ export default function BudgetPage() {
                                     : "cursor-default"
                                 } ${savingCategoryId === b.category_id ? "opacity-50" : ""}`}
                               >
-                                R$ {b.amount.toFixed(2)}
+                                {formatCurrency(b.amount)}
                               </span>
                             )}
                           </td>
@@ -519,4 +534,3 @@ export default function BudgetPage() {
     </div>
   );
 }
-

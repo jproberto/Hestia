@@ -25,7 +25,6 @@ Antes de revisar o plano ou tocar em código:
 
 1. **Verifique a baseline.** Execute os testes do projeto conforme `references/testing.md`. Confirme que a suíte já passa *antes* de você começar. Se algo já estiver quebrado, pare e avise o parceiro humano — não é seu trabalho corrigir problemas pré-existentes dentro desta skill, e você precisa dessa baseline para saber depois se uma falha foi causada pela sua implementação.
 2. **Confirme a branch.** Se você não estiver em uma branch com o nome no estilo `feature/<nome-descritivo>`, peça confirmação antes de continuar. Caso o parceiro humano confirme a branch, continue o trabalho normalmente. Caso contrário, crie e mude para uma branch nova antes de continuar (`git checkout -b feature/<nome-descritivo>`). Isso é automático — não precisa de confirmação do parceiro humano para criar a branch em si, mas **nunca implemente diretamente na main ou develop sem consentimento explícito**.
-3. **Inicialize o log de execução.** Chame ativamente a skill `sdd-tool-tracking` para registrar o início da tarefa em `.agents/logs/`.
 
 ### Passo 3: Carregar e Revisar o Plano
 
@@ -43,7 +42,7 @@ Antes de revisar o plano ou tocar em código:
 
 Para cada tarefa, na ordem em que aparece no plano:
 
-1. Marque como `in_progress` no TODO e registre o status via `sdd-tool-tracking`.
+1. Marque como `in_progress` no TODO e inicie o desenvolvimento local.
 2. Siga cada passo exatamente como escrito (o plano tem passos curtos e diretos — não improvise além do que está pedido).
 3. **Gerenciamento de Processos em Background:** Ao iniciar servidores locais (ex: `npm run dev`) ou utilitários em segundo plano para testes:
    - Use sempre tempos limite de espera síncrona curtos (`WaitMsBeforeAsync` máximo de 3000ms) para não prender o terminal.
@@ -54,7 +53,7 @@ Para cada tarefa, na ordem em que aparece no plano:
    - **Green**: implemente o mínimo necessário para o teste passar. Não adicione funcionalidade que o teste não está cobrindo.
    - **Refactor**: com o teste passando, limpe a implementação se necessário (nomes, duplicação, clareza) e rode o teste de novo para confirmar que continua passando.
 5. Execute localmente os validadores para garantir que não há erros de qualidade antes do fechamento (`npm run test`, `npx eslint .`, `npx tsc --noEmit`). Não avance sem que tudo passe localmente.
-6. Marque a tarefa como concluída (`completed` no TODO, no CLI via `task-complete`, e no log do `sdd-tool-tracking`).
+6. Marque a tarefa como concluída (`completed` no TODO e no CLI via `task-complete`).
 7. Execute o commit seguro do trabalho via CLI: `node .agents/scripts/sdd.js commit "<mensagem-em-portugues>"`. **Nunca faça commits antes da execução bem-sucedida do task-complete**.
 
 Não pule verificações para "economizar tempo" — uma tarefa marcada como concluída sem verificação passada é uma tarefa não concluída.
@@ -65,8 +64,7 @@ Depois que todas as tarefas estiverem concluídas e verificadas:
 
 1. Rode a suíte de testes completa do projeto (conforme `references/testing.md`) — não apenas os testes da última tarefa.
 2. Confirme que nenhum TODO ficou pendente ou esquecido.
-3. Registre o encerramento no log da tarefa via `sdd-tool-tracking`.
-4. Resuma para o parceiro humano: o que foi feito, o que foi verificado, e qualquer desvio em relação ao plano original (mesmo pequeno).
+3. Resuma para o parceiro humano: o que foi feito, o que foi verificado, e qualquer desvio em relação ao plano original (mesmo pequeno).
 5. **Invoque obrigatoriamente a skill `sdd-04-review`** para realizar a revisão final do código antes de prosseguir com merges ou encerramentos.
 
 ## Quando Parar e Pedir Ajuda
@@ -76,7 +74,7 @@ Depois que todas as tarefas estiverem concluídas e verificadas:
 - Um passo do plano exigir a execução de um comando de shell (ex: `npm install`, `npx ...`) e a ferramenta para isso não estiver disponível.
 - O plano tiver lacunas críticas que impeçam o início ou a continuação.
 - Você não entender uma instrução, mesmo após reler.
-- A verificação falhar repetidamente — mesmo erro após 2-3 tentativas de correção.
+- A verificação falhar repetidamente — mesmo erro após 2-3 tentativas de correção. **PARE IMEDIATAMENTE** e apresente ao parceiro humano um relatório contendo: (1) O erro detalhado, (2) As hipóteses formuladas, (3) As tentativas já feitas, e (4) Os caminhos alternativos identificados de exploração.
 
 **Peça esclarecimentos em vez de tentar adivinhar.** Adivinhar e seguir em frente custa mais tempo do que parar e perguntar.
 

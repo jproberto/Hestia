@@ -1,25 +1,39 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { createClient } from "@/utils/supabase/client";
 import {
-  getBudgetRevision,
+  getBudgetAdjustment,
   initBudget,
   getBudgets,
-  addOrUpdateBudgetItem,
-  BudgetRevision,
+  adjustBudgetItem,
+  getBudgetAdjustments,
+  createBudgetAdjustment,
+  BudgetAdjustment,
   BudgetItem
 } from "@/lib/db/budget";
 import { getCategories, Category } from "@/lib/db/categories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSearchParams } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default function BudgetPage() {
+// Formatação brasileira de moeda (BRL)
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  }).format(value);
+};
+
+function BudgetPageContent() {
   const [year, setYear] = useState<number>(new Date().getFullYear());
-  const [revision, setRevision] = useState<BudgetRevision | null>(null);
+  const [adjustments, setAdjustments] = useState<BudgetAdjustment[]>([]);
+  const [selectedAdjustmentId, setSelectedAdjustmentId] = useState<string | null>(null);
+  const [activeAdjustment, setActiveAdjustment] = useState<BudgetAdjustment | null>(null);
+  const [revision, setRevision] = useState<BudgetAdjustment | null>(null);
   const [budgets, setBudgets] = useState<BudgetItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -31,36 +45,86 @@ export default function BudgetPage() {
   const [categoryType, setCategoryType] = useState<"receita" | "despesa">("despesa");
   const [amount, setAmount] = useState<string>("");
 
-  const supabase = createClient();
+  // Inline editing state
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [tempAmount, setTempAmount] = useState<string>("");
+  const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const supabase = createClient();
+  const searchParams = useSearchParams();
+
+  // Obter o mês corrente de forma segura (suportando mockMonth para simulação de data da linha do tempo)
+  const getOpenMonth = useCallback(() => {
+    const mockMonthParam = searchParams.get("mockMonth");
+    if (mockMonthParam) {
+      const parsed = parseInt(mockMonthParam, 10);
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) {
+        return parsed;
+      }
+    }
+    return new Date().getMonth() + 1;
+  }, [searchParams]);
+
+  const openMonth = getOpenMonth();
+  const isMostRecent = activeAdjustment 
+    ? !adjustments.some((a) => a.start_month > activeAdjustment.start_month)
+    : false;
+  const isEditable = activeAdjustment 
+    ? (activeAdjustment.start_month === openMonth && isMostRecent) 
+    : false;
+
+  // Carrega os dados. Suporta refresh silencioso para evitar piscadas na UI ao salvar itens
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
         setUserEmail(user.email);
       }
 
-      const activeRevision = await getBudgetRevision(supabase, year);
+      // Busca a revisão de Janeiro para saber se o orçamento anual foi iniciado
+      const activeRevision = await getBudgetAdjustment(supabase, year);
       setRevision(activeRevision);
 
       if (activeRevision) {
-        const [items, cats] = await Promise.all([
-          getBudgets(supabase, year, 1),
-          getCategories(supabase)
-        ]);
-        setBudgets(items);
-        setCategories(cats);
+        const adjs = await getBudgetAdjustments(supabase, year);
+        setAdjustments(adjs);
+
+        let currentAdj: BudgetAdjustment | null = null;
+        if (selectedAdjustmentId) {
+          currentAdj = adjs.find((a) => a.id === selectedAdjustmentId) || null;
+        }
+
+        if (!currentAdj && adjs.length > 0) {
+          currentAdj = adjs[adjs.length - 1];
+          setSelectedAdjustmentId(currentAdj.id);
+        }
+
+        setActiveAdjustment(currentAdj);
+
+        if (currentAdj) {
+          const [items, cats] = await Promise.all([
+            getBudgets(supabase, year, currentAdj.start_month),
+            getCategories(supabase)
+          ]);
+          setBudgets(items);
+          setCategories(cats);
+        } else {
+          setBudgets([]);
+          setCategories([]);
+        }
       } else {
+        setAdjustments([]);
+        setActiveAdjustment(null);
         setBudgets([]);
         setCategories([]);
       }
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [year, supabase]);
+  }, [year, selectedAdjustmentId, supabase]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -82,14 +146,29 @@ export default function BudgetPage() {
     }
   }
 
+  async function handleCreateAdjustment() {
+    if (!userEmail) return;
+    setLoading(true);
+    try {
+      const newId = await createBudgetAdjustment(supabase, year, openMonth, userEmail);
+      setSelectedAdjustmentId(newId);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleSaveItem(e: React.FormEvent) {
     e.preventDefault();
-    if (!revision || !categoryName || !amount || !userEmail) return;
+    if (!revision || !activeAdjustment || !categoryName || !amount || !userEmail) return;
 
     try {
-      await addOrUpdateBudgetItem(
+      await adjustBudgetItem(
         supabase,
-        revision.id,
+        year,
+        activeAdjustment.start_month,
         categoryName,
         categoryType,
         parseFloat(amount),
@@ -98,11 +177,48 @@ export default function BudgetPage() {
       setCategoryName("");
       setAmount("");
       setShowForm(false);
-      await loadData();
+      await loadData(true); // silent refresh
     } catch (err) {
       console.error(err);
     }
   }
+
+  const handleCellClick = (categoryId: string, currentAmount: number) => {
+    if (!isEditable) return;
+    setEditingCategoryId(categoryId);
+    setTempAmount(currentAmount.toString());
+  };
+
+  const handleSaveInline = async (
+    categoryId: string,
+    categoryName: string,
+    categoryType: "receita" | "despesa"
+  ) => {
+    const value = parseFloat(tempAmount);
+    if (isNaN(value) || value < 0) {
+      setEditingCategoryId(null);
+      return;
+    }
+    setSavingCategoryId(categoryId);
+    try {
+      if (!userEmail || !activeAdjustment) return;
+      await adjustBudgetItem(
+        supabase,
+        year,
+        activeAdjustment.start_month,
+        categoryName,
+        categoryType,
+        value,
+        userEmail
+      );
+      await loadData(true); // silent refresh
+    } catch (err) {
+      console.error("Erro ao salvar ajuste inline:", err);
+    } finally {
+      setSavingCategoryId(null);
+      setEditingCategoryId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -112,20 +228,21 @@ export default function BudgetPage() {
     );
   }
 
-  const revenues = budgets.filter((b) => b.category_type === "receita");
-  const expenses = budgets.filter((b) => b.category_type === "despesa");
+  const revenues = budgets.filter((b) => b.category_type === "receita" && b.amount > 0);
+  const expenses = budgets.filter((b) => b.category_type === "despesa" && b.amount > 0);
 
   const totalRevenues = revenues.reduce((acc, cur) => acc + cur.amount, 0);
   const totalExpenses = expenses.reduce((acc, cur) => acc + cur.amount, 0);
   const netBudget = totalRevenues - totalExpenses;
 
-  // Filtrar sugestões de categoria com base no que o usuário digita
   const suggestions = categories.filter(
     (c) =>
       c.type === categoryType &&
       c.name.toLowerCase().includes(categoryName.toLowerCase()) &&
       c.name.toLowerCase() !== categoryName.toLowerCase()
   );
+
+  const hasCurrentMonthAdjustment = adjustments.some((a) => a.start_month === openMonth);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
@@ -135,12 +252,34 @@ export default function BudgetPage() {
           <p className="text-sm text-muted-foreground">Planeje suas metas financeiras para o ano.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Label htmlFor="year-select">Ano:</Label>
+          <Label htmlFor="adjustment-select">Ajuste:</Label>
+          <select
+            id="adjustment-select"
+            value={selectedAdjustmentId || ""}
+            onChange={(e) => setSelectedAdjustmentId(e.target.value)}
+            className="rounded border p-1 bg-card text-card-foreground text-sm"
+          >
+            {adjustments.map((adj) => {
+              const label = adj.start_month === 1
+                ? `Orçamento Inicial ${adj.year}`
+                : adj.description;
+              return (
+                <option key={adj.id} value={adj.id}>
+                  {label}
+                </option>
+              );
+            })}
+          </select>
+
+          <Label htmlFor="year-select" className="ml-2">Ano:</Label>
           <select
             id="year-select"
             value={year}
-            onChange={(e) => setYear(parseInt(e.target.value))}
-            className="rounded border p-1"
+            onChange={(e) => {
+              setYear(parseInt(e.target.value));
+              setSelectedAdjustmentId(null);
+            }}
+            className="rounded border p-1 bg-card text-card-foreground text-sm"
           >
             <option value={2026}>2026</option>
             <option value={2027}>2027</option>
@@ -164,28 +303,44 @@ export default function BudgetPage() {
           <div className="grid grid-cols-3 gap-4">
             <div className="rounded-lg border p-4 bg-muted/40">
               <span className="text-xs text-muted-foreground font-semibold uppercase">Receitas Previstas</span>
-              <p className="text-2xl font-bold text-emerald-600">R$ {totalRevenues.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalRevenues)}</p>
             </div>
             <div className="rounded-lg border p-4 bg-muted/40">
               <span className="text-xs text-muted-foreground font-semibold uppercase">Despesas Previstas</span>
-              <p className="text-2xl font-bold text-rose-600">R$ {totalExpenses.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-rose-600">{formatCurrency(totalExpenses)}</p>
             </div>
             <div className="rounded-lg border p-4 bg-muted/40">
               <span className="text-xs text-muted-foreground font-semibold uppercase">Saldo Planejado</span>
               <p className={`text-2xl font-bold ${netBudget >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                R$ {netBudget.toFixed(2)}
+                {formatCurrency(netBudget)}
               </p>
             </div>
           </div>
 
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Previsões Cadastradas</h2>
-            <Button onClick={() => setShowForm(!showForm)}>
-              {showForm ? "Fechar" : "Adicionar Previsão"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">Previsões Cadastradas</h2>
+              {!isMostRecent && (
+                <span className="rounded bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                  Histórico (Substituído)
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {!hasCurrentMonthAdjustment && !isEditable && isMostRecent && (
+                <Button onClick={handleCreateAdjustment}>
+                  Criar Novo Ajuste
+                </Button>
+              )}
+              {isEditable && (
+                <Button onClick={() => setShowForm(!showForm)}>
+                  {showForm ? "Fechar" : "Adicionar Previsão"}
+                </Button>
+              )}
+            </div>
           </div>
 
-          {showForm && (
+          {showForm && isEditable && (
             <form onSubmit={handleSaveItem} className="flex flex-col gap-4 rounded-lg border p-4 bg-card relative">
               <div className="grid grid-cols-3 gap-4">
                 <div className="flex flex-col gap-1">
@@ -197,7 +352,7 @@ export default function BudgetPage() {
                       setCategoryType(e.target.value as "receita" | "despesa");
                       setCategoryName("");
                     }}
-                    className="rounded border p-2"
+                    className="rounded border p-2 bg-card text-card-foreground text-sm"
                   >
                     <option value="despesa">Despesa</option>
                     <option value="receita">Receita</option>
@@ -213,7 +368,6 @@ export default function BudgetPage() {
                     required
                     autoComplete="off"
                   />
-                  {/* Dropdown de autocompletar simples */}
                   {categoryName && suggestions.length > 0 && (
                     <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-40 overflow-y-auto rounded border bg-popover shadow-md">
                       {suggestions.map((s) => (
@@ -249,7 +403,6 @@ export default function BudgetPage() {
           )}
 
           <div className="grid grid-cols-2 gap-8">
-            {/* Seção Receitas */}
             <div className="flex flex-col gap-3">
               <h3 className="text-md font-semibold text-emerald-700">Receitas</h3>
               <div className="rounded-lg border overflow-hidden">
@@ -269,7 +422,42 @@ export default function BudgetPage() {
                       revenues.map((b) => (
                         <tr key={b.category_id} className="border-b">
                           <td className="p-3">{b.category_name}</td>
-                          <td className="p-3 text-right">R$ {b.amount.toFixed(2)}</td>
+                          <td className="p-3 text-right">
+                            {editingCategoryId === b.category_id ? (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={tempAmount}
+                                onChange={(e) => setTempAmount(e.target.value)}
+                                onBlur={() => handleSaveInline(b.category_id, b.category_name, b.category_type)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    e.currentTarget.blur(); // Dispara o onBlur único de forma natural
+                                  } else if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setEditingCategoryId(null);
+                                  }
+                                }}
+                                className="w-24 text-right inline-block h-8 p-1 ml-auto"
+                                autoFocus
+                                disabled={savingCategoryId === b.category_id}
+                              />
+                            ) : (
+                              <span
+                                onClick={() => handleCellClick(b.category_id, b.amount)}
+                                className={`${
+                                  isEditable
+                                    ? "cursor-pointer border-b border-dashed border-muted-foreground/60 hover:text-foreground hover:border-foreground"
+                                    : "cursor-default"
+                                } ${savingCategoryId === b.category_id ? "opacity-50" : ""}`}
+                              >
+                                {formatCurrency(b.amount)}
+                              </span>
+                            )}
+                          </td>
                         </tr>
                       ))
                     )}
@@ -278,7 +466,6 @@ export default function BudgetPage() {
               </div>
             </div>
 
-            {/* Seção Despesas */}
             <div className="flex flex-col gap-3">
               <h3 className="text-md font-semibold text-rose-700">Despesas</h3>
               <div className="rounded-lg border overflow-hidden">
@@ -298,7 +485,42 @@ export default function BudgetPage() {
                       expenses.map((b) => (
                         <tr key={b.category_id} className="border-b">
                           <td className="p-3">{b.category_name}</td>
-                          <td className="p-3 text-right">R$ {b.amount.toFixed(2)}</td>
+                          <td className="p-3 text-right">
+                            {editingCategoryId === b.category_id ? (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={tempAmount}
+                                onChange={(e) => setTempAmount(e.target.value)}
+                                onBlur={() => handleSaveInline(b.category_id, b.category_name, b.category_type)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    e.currentTarget.blur(); // Dispara o onBlur único de forma natural
+                                  } else if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setEditingCategoryId(null);
+                                  }
+                                }}
+                                className="w-24 text-right inline-block h-8 p-1 ml-auto"
+                                autoFocus
+                                disabled={savingCategoryId === b.category_id}
+                              />
+                            ) : (
+                              <span
+                                onClick={() => handleCellClick(b.category_id, b.amount)}
+                                className={`${
+                                  isEditable
+                                    ? "cursor-pointer border-b border-dashed border-muted-foreground/60 hover:text-foreground hover:border-foreground"
+                                    : "cursor-default"
+                                } ${savingCategoryId === b.category_id ? "opacity-50" : ""}`}
+                              >
+                                {formatCurrency(b.amount)}
+                              </span>
+                            )}
+                          </td>
                         </tr>
                       ))
                     )}
@@ -310,5 +532,19 @@ export default function BudgetPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function BudgetPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-full items-center justify-center p-6">
+          <p className="text-muted-foreground">Carregando orçamento...</p>
+        </div>
+      }
+    >
+      <BudgetPageContent />
+    </Suspense>
   );
 }

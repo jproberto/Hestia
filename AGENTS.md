@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<!-- Última atualização: 2026-07-16 -->
+<!-- Última atualização: 2026-07-17 -->
 
 ## Visão Geral do Projeto
 Héstia é uma ferramenta pessoal para controle de finanças e de lista de tarefas para uma família.
@@ -11,7 +11,6 @@ Héstia é uma ferramenta pessoal para controle de finanças e de lista de taref
     - `skills/`: Onde cada skill individual é definida em seu próprio diretório, contendo um `SKILL.md` com sua documentação.
     - `specs/`: Armazena as especificações geradas pela skill `sdd-01-brainstorm`.
     - `plans/`: Armazena os planos de implementação gerados pela skill `sdd-02-plan`.
-    - `logs/` : Armazena os logs de execução gerados pela skill `sdd-tool-tracking`.
     - `scripts/`: Scripts utilitários para automação de processos.
 - `AGENTS.md`: Este arquivo.
 - `README.md`: Documentação geral para humanos.
@@ -33,15 +32,16 @@ Todo agente de IA que atuar neste projeto é obrigado a respeitar as seguintes d
 4. **Commit Seguro e Padronizado:** Todo commit de código deve ser feito exclusivamente via `node .agents/scripts/sdd.js commit "<mensagem>"` (sempre após a execução bem-sucedida do `task-complete <id>`) para garantir:
    - Bloqueio preventivo de segurança contra staging acidental de arquivos de configuração locais (ex: `.env.local` contendo credenciais reais).
    - Validação e compatibilidade de idioma (força mensagens de commit em Português quando compatível com o histórico recente).
-5. **Redirecionamento para Review e Atualização do Backlog:** Antes de considerar o trabalho fechado, o agente deve rodar `node .agents/scripts/sdd.js request-review` para certificar que todas as tarefas foram fechadas, transicionar para a etapa de revisão (`sdd-04-review`), perguntar sobre a execução do `git push` ao usuário, e ao final atualizar o status da feature correspondente no `.agents/backlog.md` para `Concluído`.
+5. **Revisão e Homologação Manual (sdd-04 e sdd-05)**: Antes de considerar o trabalho fechado, o agente deve rodar `node .agents/scripts/sdd.js request-review` para certificar que todas as tarefas foram fechadas. Em seguida, transiciona para a etapa de revisão de código (`sdd-04-review`). Após aprovação técnica, transiciona obrigatoriamente para a homologação visual e validação de negócio com a skill `sdd-05-manual-test`. Após homologação com o usuário, atualiza o status da feature correspondente no `.agents/backlog.md` para `Concluído` e pergunta sobre a execução do `git push` ao usuário.
 6. **Separação Rígida de Etapas e Turnos (Não Pule Etapas)**: A fase de Brainstorming (`sdd-01-brainstorm`) e de Planejamento (`sdd-02-plan`) são etapas independentes com portões de aprovação humana obrigatórios. É expressamente proibido criar a especificação e o plano de tarefas em uma única iteração de mensagens. O agente deve parar, apresentar o artefato correspondente e aguardar a aprovação explícita do usuário antes de prosseguir para a próxima skill.
+7. **Alterações de Banco de Dados (Migrações)**: Toda alteração de dados ou schema físico do Supabase deve ser empacotada em arquivos SQL sob `utils/migrations/` e registrar a execução de forma auditável na tabela `public.schema_migrations`. Por padrão do projeto, o executor (`executed_by`) é sempre `'joaopsroberto@gmail.com'`. Agentes não devem implementar queries ou códigos Next.js sem antes garantir a existência do script DDL correspondente neste formato.
 
 ## Comandos do SDD CLI
 
 Execute os comandos a partir do diretório raiz:
 
 ```bash
-# Inicializar log de tracking (Guardian + Tracking)
+# Inicializar validação do plano (Guardian)
 node .agents/scripts/sdd.js start <slug-do-plano>
 
 # Ciclo de vida da tarefa

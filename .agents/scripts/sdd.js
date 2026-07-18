@@ -1,85 +1,67 @@
 #!/usr/bin/env node
-
 /* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 
 /**
- * SDD Workflow CLI Copilot
- * Automatiza e garante a conformidade com as regras do fluxo SDD do projeto Hestia.
+ * CLI de Automação de Processo (SDD CLI)
+ * Centraliza validações de branch, linter/compilação, guardian, testes e commits de segurança.
  */
 
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
 
-const ROOT_DIR = path.resolve(__dirname, "../..");
-const PLANS_DIR = path.join(ROOT_DIR, ".agents/plans");
-const LOGS_DIR = path.join(ROOT_DIR, ".agents/logs");
-const SPECS_DIR = path.join(ROOT_DIR, ".agents/specs");
+const ROOT_DIR = path.resolve(__dirname, "../../");
+const AGENTS_DIR = path.join(ROOT_DIR, ".agents");
+const SPECS_DIR = path.join(AGENTS_DIR, "specs");
+const PLANS_DIR = path.join(AGENTS_DIR, "plans");
 
-// Helper para obter timestamp formatado
-function getTimestamp() {
-  const now = new Date();
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-}
-
-// Helper para logar no terminal
 function logInfo(msg) {
-  console.log(`\x1b[32m[INFO]\x1b[0m ${msg}`);
+  console.log(`\x1b[34m[INFO]\x1b[0m ${msg}`);
 }
 
 function logWarn(msg) {
-  console.warn(`\x1b[33m[WARN]\x1b[0m ${msg}`);
+  console.log(`\x1b[33m[WARN]\x1b[0m ${msg}`);
 }
 
 function logError(msg) {
-  console.error(`\x1b[31m[ERROR]\x1b[0m ${msg}`);
+  console.log(`\x1b[31m[ERROR]\x1b[0m ${msg}`);
 }
 
-// Execução segura de comandos do terminal
 function runCmd(cmd) {
   try {
-    return execSync(cmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: "pipe" });
+    return execSync(cmd, { cwd: ROOT_DIR, encoding: "utf8" }).trim();
   } catch (error) {
-    throw new Error(error.stdout || error.message);
+    throw new Error(error.stdout || error.stderr || error.message);
   }
 }
 
-// Encontra o arquivo do plano com base no slug
+// Localiza o arquivo de plano com base no slug
 function findPlanFile(slug) {
-  const exactPath = path.join(PLANS_DIR, `${slug}-plan.md`);
-  if (fs.existsSync(exactPath)) return exactPath;
-
-  // Busca parcial se não for data exata
+  if (!fs.existsSync(PLANS_DIR)) return null;
   const files = fs.readdirSync(PLANS_DIR);
-  const matched = files.find((f) => f.includes(slug) && f.endsWith("-plan.md"));
-  if (matched) return path.join(PLANS_DIR, matched);
-
-  return null;
+  const match = files.find((f) => f.startsWith(slug) && f.endsWith("-plan.md"));
+  return match ? path.join(PLANS_DIR, match) : null;
 }
 
 // Comando: start
 function cmdStart(slug) {
   if (!slug) {
-    logError("Forneça o slug do plano. Ex: node sdd.js start 2024-07-15-pagina-login");
+    logError("Forneça o slug do plano. Ex: node sdd.js start 02-ajuste-orcamento");
     process.exit(1);
   }
 
-  logInfo(`Verificando conformidade da transição (sdd-tool-guardian)...`);
+  logInfo(`Inicializando fluxo de tracking para o plano: '${slug}'...`);
 
-  // 1. Checagem da Branch Git
-  let branchName = "";
+  // 1. Validação de branch git
   try {
-    branchName = runCmd("git rev-parse --abbrev-ref HEAD").trim();
+    const branchName = runCmd("git rev-parse --abbrev-ref HEAD");
     if (branchName === "main" || branchName === "develop") {
-      logError(`VIOLAÇÃO DE PROCESSO: Você está na branch principal '${branchName}'.`);
-      logError("Crie uma nova branch de feature a partir da 'develop' antes de iniciar o desenvolvimento.");
-      logError("Exemplo: git checkout develop && git pull && git checkout -b feature/nome-da-feature");
+      logError(`VIOLAÇÃO DE PROCESSO: O desenvolvimento direto nas branches '${branchName}' é proibido.`);
+      logError("Crie e mude para uma branch de feature dedicada antes de iniciar. Ex: feature/nome-da-feature");
       process.exit(1);
     }
     logInfo(`Branch Git ativa válida: '${branchName}'`);
-  } catch (error) {
+  } catch {
     logWarn("Não foi possível validar a branch git ativa. Continuando...");
   }
 
@@ -110,7 +92,6 @@ function cmdStart(slug) {
       const lines = backlogContent.split("\n");
       let featureRow = null;
       for (const line of lines) {
-        // Encontra a linha que começa com | <id> |
         const regex = new RegExp(`^\\s*\\|\\s*${id}\\s*\\|`);
         if (regex.test(line)) {
           featureRow = line;
@@ -121,12 +102,11 @@ function cmdStart(slug) {
       if (featureRow) {
         const columns = featureRow.split("|").map(col => col.trim());
         if (columns.length >= 5) {
-          const status = columns[4]; // O status está na 5ª coluna (index 4)
+          const status = columns[4]; // Coluna de status
           logInfo(`Status da feature ${id} no backlog: '${status}'`);
-          if (status !== "Especificado" && status !== "Em Desenvolvimento") {
+          if (status !== "Especificado" && status !== "Em Desenvolvimento" && status !== "Concluído") {
             logError(`VIOLAÇÃO DE PROCESSO: O status da feature ${id} no backlog é '${status}'.`);
-            logError("Para iniciar a execução de um plano, o status da feature deve ser 'Especificado'.");
-            logError("Certifique-se de que a fase de Brainstorming (sdd-01) foi concluída e aprovada pelo usuário.");
+            logError("Para iniciar a execução de um plano, o status da feature deve ser 'Especificado' ou 'Em Desenvolvimento'.");
             process.exit(1);
           }
         }
@@ -134,134 +114,9 @@ function cmdStart(slug) {
         logWarn(`Feature ID ${id} não encontrada na tabela do backlog.md.`);
       }
     }
-  } else {
-    logWarn("Arquivo .agents/backlog.md não encontrado. Pulando checagem de status.");
   }
 
-  const logFileName = path.basename(planPath).replace("-plan.md", "-tracker.md");
-  const logPath = path.join(LOGS_DIR, logFileName);
-
-  if (!fs.existsSync(LOGS_DIR)) {
-    fs.mkdirSync(LOGS_DIR, { recursive: true });
-  }
-
-  if (fs.existsSync(logPath)) {
-    logWarn(`Log de execução já existe para '${slug}'.`);
-    process.exit(0);
-  }
-
-  logInfo(`Inicializando diário de bordo estruturado em Markdown (sdd-tool-tracking)...`);
-  const planContent = fs.readFileSync(planPath, "utf8");
-  const tasks = [];
-  const lines = planContent.split("\n");
-  let tempTaskId = 1;
-
-  for (const line of lines) {
-    if (line.startsWith("### Tarefa ")) {
-      const taskName = line.replace("### Tarefa ", "").trim();
-      const match = taskName.match(/^(\d+):\s*(.*)$/);
-      if (match) {
-        tasks.push({ id: match[1], name: match[2], status: "- [ ] Pendente" });
-      } else {
-        tasks.push({ id: String(tempTaskId++), name: taskName, status: "- [ ] Pendente" });
-      }
-    }
-  }
-
-  if (tasks.length === 0) {
-    logError("Nenhuma tarefa encontrada no plano. Certifique-se de usar cabeçalhos '### Tarefa N: ...'");
-    process.exit(1);
-  }
-
-  let logContent = `# Diário de Execução: ${slug}\n\n`;
-  logContent += `## Checklist de Progresso\n`;
-  logContent += `<!-- TABLE_START -->\n`;
-  logContent += `| ID | Tarefa | Status |\n`;
-  logContent += `|---|---|---|\n`;
-  for (const task of tasks) {
-    logContent += `| ${task.id} | ${task.name} | ${task.status} |\n`;
-  }
-  logContent += `<!-- TABLE_END -->\n\n`;
-  logContent += `## Diário de Bordo e Decisões Técnicas\n`;
-  logContent += `<!-- EVENTS -->\n`;
-  logContent += `- **[${getTimestamp()}] (INFO)**: Início da execução do plano '${slug}'\n`;
-
-  fs.writeFileSync(logPath, logContent, "utf8");
-  logInfo(`Diário de bordo criado em: .agents/logs/${logFileName}`);
-}
-
-// Carrega o log existente e retorna parsed
-function loadActiveLog() {
-  if (!fs.existsSync(LOGS_DIR)) {
-    logError("Diretório de logs .agents/logs/ não existe. Rode 'start' primeiro.");
-    process.exit(1);
-  }
-
-  const files = fs.readdirSync(LOGS_DIR)
-    .filter((f) => f.endsWith("-tracker.md"))
-    .map((f) => ({
-      name: f,
-      time: fs.statSync(path.join(LOGS_DIR, f)).mtime.getTime()
-    }))
-    .sort((a, b) => b.time - a.time);
-
-  if (files.length === 0) {
-    logError("Nenhum log de execução ativo encontrado. Rode 'start' primeiro.");
-    process.exit(1);
-  }
-
-  const activeLog = files[0].name;
-  const logPath = path.join(LOGS_DIR, activeLog);
-  const content = fs.readFileSync(logPath, "utf8");
-  return { logPath, content };
-}
-
-// Atualiza o arquivo de log com nova tabela e evento
-function updateLog(logPath, content, taskId, newStatus, eventMsg, eventLevel = "INFO") {
-  const tableStartIdx = content.indexOf("<!-- TABLE_START -->");
-  const tableEndIdx = content.indexOf("<!-- TABLE_END -->");
-
-  if (tableStartIdx === -1 || tableEndIdx === -1) {
-    logError("Estrutura do arquivo de log corrompida. Não foi possível localizar a tabela de status.");
-    process.exit(1);
-  }
-
-  const beforeTable = content.substring(0, tableStartIdx + "<!-- TABLE_START -->".length);
-  const afterTable = content.substring(tableEndIdx);
-  const tableContent = content.substring(tableStartIdx + "<!-- TABLE_START -->".length, tableEndIdx);
-
-  const lines = tableContent.split("\n");
-  let updatedTable = "\n";
-  let found = false;
-
-  for (const line of lines) {
-    if (!line.trim() || line.startsWith("| ID |") || line.startsWith("|---|")) {
-      if (line.trim()) updatedTable += line + "\n";
-      continue;
-    }
-    const parts = line.split("|");
-    if (parts.length >= 4) {
-      const currentId = parts[1].trim();
-      const currentTask = parts[2].trim();
-      if (currentId === String(taskId)) {
-        updatedTable += `| ${currentId} | ${currentTask} | ${newStatus} |\n`;
-        found = true;
-      } else {
-        updatedTable += line + "\n";
-      }
-    }
-  }
-
-  if (!found) {
-    logError(`Tarefa com ID '${taskId}' não foi encontrada no log de execução.`);
-    process.exit(1);
-  }
-
-  const timestamp = getTimestamp();
-  let updatedContent = beforeTable + updatedTable + afterTable;
-  updatedContent += `- **[${timestamp}] (${eventLevel})**: ${eventMsg}\n`;
-
-  fs.writeFileSync(logPath, updatedContent, "utf8");
+  logInfo(`Plano de tarefas '${slug}' validado e pronto para desenvolvimento local.`);
 }
 
 // Comando: task-start
@@ -289,14 +144,11 @@ function cmdTaskStart(taskId) {
       logWarn("Por favor, comite os arquivos de design (.agents/specs/ e .agents/plans/) antes de iniciar o desenvolvimento das tarefas.");
       process.exit(1);
     }
-  } catch (error) {
-    // Caso ocorra falha ou não seja repositório git, prossegue
+  } catch {
+    // Prossegue caso falhe Git check
   }
 
-  const { logPath, content } = loadActiveLog();
-  updateLog(logPath, content, taskId, "- [/] Em Andamento", `Tarefa ${taskId} iniciada.`);
   logInfo(`Tarefa ${taskId} marcada como Em Andamento no CLI.`);
-  logWarn("Lembre-se de documentar no diário de bordo (.agents/logs/...) as decisões de design e caminhos iniciais da tarefa!");
 }
 
 // Comando: task-complete
@@ -327,10 +179,7 @@ function cmdTaskComplete(taskId) {
     process.exit(1);
   }
 
-  const { logPath, content } = loadActiveLog();
-  updateLog(logPath, content, taskId, "- [x] Concluída", `Tarefa ${taskId} concluída com sucesso.`);
   logInfo(`Tarefa ${taskId} marcada como Concluída no CLI.`);
-  logWarn("Atenção, Agente: Você deve abrir o diário de bordo (.agents/logs/...-tracker.md) e detalhar MANUALMENTE os incidentes de linter/testes e as decisões técnicas de engenharia, conforme a skill sdd-tool-tracking.");
 }
 
 // Comando: task-block
@@ -339,39 +188,38 @@ function cmdTaskBlock(taskId, reason) {
     logError("Forneça o ID e o motivo do bloqueio. Ex: node sdd.js task-block 1 \"Falta biblioteca X\"");
     process.exit(1);
   }
-  const { logPath, content } = loadActiveLog();
-  updateLog(logPath, content, taskId, "- [!] Bloqueada", `Tarefa ${taskId} BLOQUEADA: ${reason}`, "WARN");
-  logWarn(`Tarefa ${taskId} marcada como Bloqueada no CLI.`);
-  logWarn("Atenção, Agente: Você deve abrir o diário de bordo (.agents/logs/...-tracker.md) e detalhar MANUALMENTE os incidentes de linter/testes e as decisões técnicas de engenharia, conforme a skill sdd-tool-tracking.");
+  logWarn(`Tarefa ${taskId} marcada como Bloqueada no CLI. Motivo: ${reason}`);
 }
 
 // Comando: request-review
 function cmdRequestReview() {
-  const { logPath, content } = loadActiveLog();
-  const tableStartIdx = content.indexOf("<!-- TABLE_START -->");
-  const tableEndIdx = content.indexOf("<!-- TABLE_END -->");
-
-  const tableContent = content.substring(tableStartIdx + "<!-- TABLE_START -->".length, tableEndIdx);
-  const lines = tableContent.split("\n");
-  const pendingTasks = [];
-
-  for (const line of lines) {
-    const parts = line.split("|");
-    if (parts.length >= 4) {
-      const currentId = parts[1].trim();
-      const currentTask = parts[2].trim();
-      const currentStatus = parts[3].trim();
-      if (currentId !== "ID" && !currentStatus.includes("- [x]") && !currentTask.includes("---")) {
-        pendingTasks.push({ id: currentId, name: currentTask, status: currentStatus });
-      }
-    }
+  logInfo("Executando checagens estáticas e testes automatizados de qualidade...");
+  
+  try {
+    logInfo("Executando linter...");
+    runCmd("npx eslint .");
+  } catch (error) {
+    logError("Linter encontrou falhas. Abortando request-review.");
+    console.error(error.message);
+    process.exit(1);
   }
 
-  if (pendingTasks.length > 0) {
-    logError("Não é possível solicitar a revisão. Existem tarefas pendentes ou bloqueadas:");
-    for (const t of pendingTasks) {
-      console.log(` - ID ${t.id}: ${t.name} (Status: ${t.status})`);
-    }
+  try {
+    logInfo("Executando build do compilador TypeScript...");
+    runCmd("npx tsc --noEmit");
+  } catch (error) {
+    logError("Falha na compilação do TypeScript. Abortando request-review.");
+    console.error(error.message);
+    process.exit(1);
+  }
+
+  try {
+    logInfo("Executando suíte completa de testes automatizados...");
+    runCmd("npx vitest run");
+    logInfo("Todos os testes automatizados passaram!");
+  } catch (error) {
+    logError("Falha em testes unitários ou de UI. Corrija os erros antes de prosseguir.");
+    console.error(error.message);
     process.exit(1);
   }
 
@@ -404,7 +252,7 @@ function cmdCommit(msg) {
   let statusOutput = "";
   try {
     statusOutput = runCmd("git status --porcelain");
-  } catch (error) {
+  } catch {
     logError("Falha ao executar 'git status --porcelain'. Certifique-se de que está em um repositório Git.");
     process.exit(1);
   }
@@ -415,12 +263,11 @@ function cmdCommit(msg) {
 
   for (const line of lines) {
     if (!line.trim()) continue;
-    const isStaged = line.startsWith("A ") || line.startsWith("M ") || line.startsWith("R ");
+    const isStaged = line.startsWith("A ") || line.startsWith("M ") || line.startsWith("R ") || line.startsWith("D ");
     const filePath = line.substring(3).trim();
 
     if (isStaged) {
       stagedOtherFiles.push(filePath);
-      // Detecção de arquivos .env (qualquer arquivo contendo .env exceto o template .env.local.example)
       if (filePath.includes(".env") && !filePath.endsWith(".env.local.example")) {
         stagedEnvFiles.push(filePath);
       }
@@ -446,7 +293,7 @@ function cmdCommit(msg) {
   let logHistory = "";
   try {
     logHistory = runCmd("git log --oneline -20");
-  } catch (error) {
+  } catch {
     logWarn("Não foi possível ler o histórico de commits. Ignorando validação de idioma.");
   }
 
@@ -520,11 +367,11 @@ switch (command) {
   default:
     console.log(`
 Uso do SDD CLI Copilot:
-  node sdd.js start <slug>                 Inicializa o log de tracking e roda o guardian.
+  node sdd.js start <slug>                 Inicializa a validação do plano e roda o guardian.
   node sdd.js task-start <task-id>         Marca uma tarefa como em andamento.
   node sdd.js task-complete <task-id>      Valida linter/build e marca tarefa como concluída.
   node sdd.js task-block <task-id> <motivo> Marca uma tarefa como bloqueada com o motivo.
-  node sdd.js request-review               Valida tarefas e gera template de review.
+  node sdd.js request-review               Valida tarefas, roda testes locais e gera template de review.
   node sdd.js commit "<mensagem>"          Garante a segurança de .env, valida o idioma e commita.
 `);
     break;

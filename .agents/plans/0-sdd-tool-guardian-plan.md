@@ -72,7 +72,6 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
   - **Se a transição for INVÁLIDA:**
       1.  **Bloqueio:** A skill para a execução.
       2.  **Relatório:** Gera uma mensagem de erro clara: "VIOLAÇÃO DE PROCESSO: A skill 'X' não pode ser seguida por 'Y'. Ação correta: 'Z'."
-      3.  **Log:** Invoca `sdd-tool-tracking` para registrar um `ERROR` no log de execução da tarefa atual.
 
   ## Quando Parar e Pedir Ajuda
 

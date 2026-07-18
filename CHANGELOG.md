@@ -16,6 +16,11 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 - Refatoração completa da nomenclatura de banco físico de `budget_revisions` para `budget_adjustments` e de `revision_id` para `adjustment_id` na tabela `budget_items`, para aderir fielmente à linguagem ubíqua ("Ajustes").
 - Ajustado o botão "Criar Novo Ajuste" para seguir o padrão visual de estilo do projeto.
 - Movidas todas as migrações SQL do repositório para a pasta oficial `utils/migrations/`.
+- Atualizado o script do CLI `.agents/scripts/sdd.js` para operar sem dependência de diários de bordo físicos.
+- Ajustadas as skills `sdd-01-brainstorm` e `sdd-02-plan` para acomodar patches de especificação (ex: `02a`) e remover checkboxes dos templates de plano.
+
+### Removido
+- Removida a skill `sdd-tool-tracking` e a pasta de logs de execução `.agents/logs/` de dentro do projeto.
 
 ### Corrigido
 - Corrigido bug de ordenação em `getBudgets` que mascarava a atualização de valores inline exibindo dados de Janeiro mesmo após salvar o Ajuste de Agosto. Resolvido com ordenação decrescente explícita no JavaScript.

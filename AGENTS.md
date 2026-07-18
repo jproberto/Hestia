@@ -11,7 +11,6 @@ Héstia é uma ferramenta pessoal para controle de finanças e de lista de taref
     - `skills/`: Onde cada skill individual é definida em seu próprio diretório, contendo um `SKILL.md` com sua documentação.
     - `specs/`: Armazena as especificações geradas pela skill `sdd-01-brainstorm`.
     - `plans/`: Armazena os planos de implementação gerados pela skill `sdd-02-plan`.
-    - `logs/` : Armazena os logs de execução gerados pela skill `sdd-tool-tracking`.
     - `scripts/`: Scripts utilitários para automação de processos.
 - `AGENTS.md`: Este arquivo.
 - `README.md`: Documentação geral para humanos.
@@ -42,7 +41,7 @@ Todo agente de IA que atuar neste projeto é obrigado a respeitar as seguintes d
 Execute os comandos a partir do diretório raiz:
 
 ```bash
-# Inicializar log de tracking (Guardian + Tracking)
+# Inicializar validação do plano (Guardian)
 node .agents/scripts/sdd.js start <slug-do-plano>
 
 # Ciclo de vida da tarefa

@@ -130,6 +130,11 @@ O padrão deste projeto é salvar em:
 ```
 *(Onde <ID> é o número do item no backlog e <slug> é o nome curto em inglês da funcionalidade. Exemplo: `01-contas-spec.md`)*
 
+**Specs de Correção/Patch**:
+Se o objetivo for corrigir ou estender uma especificação já existente após um ciclo de homologação/bug (um patch na spec):
+- O arquivo deve receber um novo nome para preservar o histórico. O padrão de ID é `<ID da principal><letra sequencial>` (exemplo: `02a-ajuste-orcamento-spec.md` para o primeiro patch do item `02`).
+- Branches de patch de spec podem seguir na mesma branch da spec principal ou em uma nova branch de feature, conforme a preferência do usuário.
+
 Preferências explícitas do usuário ou do projeto sobrescrevem esse caminho. Se já existir uma convenção local para specs, use a convenção local.
 
 **Atualização do Backlog:**

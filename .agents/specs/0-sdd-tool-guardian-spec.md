@@ -41,7 +41,6 @@ O processo da skill será:
     - **Se a transição for INVÁLIDA (Violação de Processo):**
         a. **Bloqueio Rígido:** A skill irá parar a execução e impedir a ação incorreta.
         b. **Relatório de Violação:** Gerará uma mensagem de erro clara para o usuário, informando a skill atual, a ação tentada e qual seria a ação correta.
-        c. **Registro no Log:** Usará a skill `sdd-tool-tracking` para registrar um evento de nível `ERROR` no log de execução da tarefa atual, documentando a violação para auditoria futura.
 
 ## 4. Exemplo de Uso
 
@@ -50,7 +49,6 @@ O processo da skill será:
 3.  A primeira linha da `sdd-03-implement` o força a invocar `sdd-tool-guardian(current_skill='sdd-03-implement', intended_action='invoke:sdd-tool-commit')`.
 4.  O guardião verifica suas regras e vê que a transição é inválida.
 5.  O guardião bloqueia a ação e exibe: "VIOLAÇÃO DE PROCESSO: A skill 'sdd-03-implement' não pode ser seguida por 'sdd-tool-commit'. A próxima skill correta é 'sdd-04-review'."
-6.  O guardião invoca `sdd-tool-tracking` para registrar o erro no log.
 
 ## 5. Próximos Passos
 

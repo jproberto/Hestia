@@ -137,8 +137,6 @@ Todo plano deve começar com este cabeçalho:
 
 > **Para agentes:** REQUIRED SUB-SKILL: use `sdd-03-implement` para implementar este plano tarefa por tarefa.
 
-Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tarefa estiver concluída.
-
 **Objetivo:** [Uma frase descrevendo o que será construído]
 
 **Arquitetura:** [2-3 frases sobre a abordagem]
@@ -158,7 +156,7 @@ Não use o cabeçalho como formalidade vazia. Ele precisa conter informação su
 
 Use este formato para cada tarefa:
 
-````markdown
+```markdown
 ### Tarefa N: [Nome do componente ou comportamento]
 
 **Arquivos:**
@@ -170,7 +168,7 @@ Use este formato para cada tarefa:
 - Consome: [o que esta tarefa usa de tarefas anteriores: assinaturas exatas, tipos, eventos, contracts]
 - Produz: [o que tarefas futuras dependem: nomes de função, parâmetros, retorno, tipos, schema]
 
-- [ ] **Passo 1: Escreva o teste que falha**
+**Passo 1: Escreva o teste que falha**
 
 ```python
 def test_specific_behavior():
@@ -178,24 +176,24 @@ def test_specific_behavior():
     assert result == expected
 ```
 
-- [ ] **Passo 2: Execute o teste para garantir que ele falha**
+**Passo 2: Execute o teste para garantir que ele falha**
 
 Run: `pytest tests/path/test_file.py::test_specific_behavior -v`
 Expected: FAIL with "function not defined"
 
-- [ ] **Passo 3: Escreva implementação mínima**
+**Passo 3: Escreva implementação mínima**
 
 ```python
 def function(input):
     return expected
 ```
 
-- [ ] **Passo 4: Execute o teste para garantir que ele passa**
+**Passo 4: Execute o teste para garantir que ele passa**
 
 Run: `pytest tests/path/test_file.py::test_specific_behavior -v`
 Expected: PASS
 
-- [ ] **Passo 5: Commit**
+**Passo 5: Commit**
 
 ```bash
 git add tests/path/test_file.py src/path/file.py

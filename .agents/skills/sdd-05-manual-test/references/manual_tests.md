@@ -52,3 +52,14 @@ Estes cenários servem para validar manualmente o comportamento de edições e a
    *   **Resultado Esperado:** A categoria zerada também não aparece em Junho.
 4. **Ação:** No dropdown de seleção de Mês, mude para **"Abril"** (mês passado).
    *   **Resultado Esperado:** A categoria continua visível com o valor original em Abril (preservando o histórico passado).
+
+---
+
+## 4. Gestão de Meses e Períodos
+**Objetivo:** Validar que o usuário consegue abrir e encerrar um mês operacional na tela `/finance/months`.
+
+1. **Ação:** Acesse a tela de gestão de meses em [http://localhost:3000/finance/months](http://localhost:3000/finance/months).
+2. **Ação:** No grid de cards, clique em **"Abrir Mês"** para qualquer mês no status "Não Iniciado".
+   *   **Resultado Esperado:** O status do mês muda para **"Aberto"** (cor verde) e o botão muda para **"Encerrar Mês"**.
+3. **Ação:** No card do mês aberto, clique em **"Encerrar Mês"**.
+   *   **Resultado Esperado:** O status do mês muda para **"Encerrado"** (cor vermelha/escura) e o botão muda para **"Reabrir Mês"**.

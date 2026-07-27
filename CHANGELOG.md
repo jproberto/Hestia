@@ -5,6 +5,20 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-07-27
+
+### Adicionado
+- Nova funcionalidade de **Abertura de Mês** (Feature 4).
+- Nova tabela `public.monthly_periods` no Supabase com suporte a RLS e auditoria transparente para controle de períodos operacionais.
+- Módulo de serviço de banco de dados `lib/db/months.ts` para consulta, abertura e encerramento de meses.
+- Interface `/finance/months` com visualização em grid de 12 cards anuais, badges de status (Não Iniciado, Aberto, Encerrado), métricas de resumo anual e botões de ação contextualizados por mês.
+- Menu de navegação por abas superiores em Héstia Financeira integrando as telas de "Orçamento Anual" (`/finance/budget`) e "Meses e Períodos" (`/finance/months`).
+- Banner visual de feedback e tratamento amigável de erros de banco/autenticação na interface.
+- Suíte completa de testes automatizados unitários e de UI em `__tests__/lib/db/months.test.ts` e `__tests__/app/finance/months-page.test.tsx`.
+
+### Alterado
+- Incrementada a versão do projeto em `package.json` para `0.4.0` (SemVer Minor).
+
 ## [0.3.1] - 2026-07-17
 
 ### Adicionado

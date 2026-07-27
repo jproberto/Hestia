@@ -32,7 +32,7 @@ export default function DashboardPage() {
           Sair 🚪
         </Button>
       </div>
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Link
           href="/finance/budget"
           className="group flex flex-col gap-2 rounded-lg border p-6 hover:bg-muted/40 transition-colors"

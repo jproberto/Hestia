@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, Suspense } from "react";
+import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import {
   getBudgetAdjustment,
@@ -246,6 +247,16 @@ function BudgetPageContent() {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
+      {/* Menu Superior Financeiro */}
+      <div className="flex border-b pb-1 gap-6">
+        <Link href="/finance/budget" className="pb-2 text-sm font-semibold border-b-2 border-primary text-foreground">
+          Orçamento Anual
+        </Link>
+        <Link href="/finance/months" className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+          Meses e Períodos
+        </Link>
+      </div>
+
       <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Orçamento Anual</h1>

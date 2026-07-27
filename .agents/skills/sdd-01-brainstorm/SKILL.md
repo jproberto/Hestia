@@ -29,8 +29,9 @@ Antes de qualquer outra ação, invoque a `sdd-tool-guardian` para garantir que 
 
 Antes de alterar, criar ou commitar qualquer arquivo (incluindo o backlog, specs ou código), confirme a branch Git ativa:
 1. A regra principal é: toda nova branch de feature deve ser criada a partir da `develop`.
-2. Se você estiver em `main` ou `develop`, crie uma nova branch a partir da `develop`. O nome deve seguir o padrão `feature/<nome-descritivo>`. Nunca commite direto em `main` ou `develop`.
-3. Se você já estiver em uma branch de feature, pergunte ao parceiro humano se é a branch correta para a feature que está iniciando. Se não for, crie uma nova a partir da `develop`.
+2. SEMPRE faça `git checkout develop` e em seguida `git pull origin develop` (ou `git pull`) para garantir que a base está 100% atualizada antes de criar a nova branch.
+3. Se você estiver em `main` ou em outra branch de feature, mude para a `develop`, faça `git pull origin develop` e crie uma nova branch a partir da `develop`. O nome deve seguir o padrão `feature/<nome-descritivo>`. Nunca commite direto em `main` ou `develop`.
+4. Se você já estiver na branch de feature correta para o trabalho, confirme com o parceiro humano se ela está atualizada com a `develop`.
 
 ### Passo 3: Consultar e Atualizar o Backlog
 
@@ -141,6 +142,8 @@ Preferências explícitas do usuário ou do projeto sobrescrevem esse caminho. S
 Ao finalizar e commitar a especificação, certifique-se de adicionar o link para a spec e mudar o status do item correspondente no `.agents/backlog.md` para `Especificado` após a aprovação do usuário.
 
 Use escrita clara, objetiva e curta. Consulte references/writing-the-spec.md para o critério de quando um item está específico o suficiente para ser útil (especialmente problema, comportamento esperado e critérios de aceite). A spec não deve tentar impressionar por volume; ela deve preservar decisões importantes, reduzir ambiguidade e permitir que a próxima etapa escreva um plano de implementação confiável.
+
+⚠️ **Regra Fundamental de Especificação (Sem Código de Implementação)**: A Spec especifica requisitos, regras de negócio, contratos e critérios de aceite. Código de implementação NÃO pertence à etapa de brainstorming ou à Spec. A Spec deve conter apenas a modelagem DDL/SQL do banco (se houver migração), schemas conceituais e a especificação de comportamento.
 
 Inclua o que for necessário para reconstruir o design aprovado: problema, decisão tomada, alternativas rejeitadas, comportamento esperado, restrições, riscos e critérios de aceite. Não use uma lista fixa de seções como checklist mecânico. Se uma seção não ajuda a entender ou implementar, deixe fora.
 

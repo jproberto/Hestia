@@ -11,13 +11,14 @@ Escreva planos de implementação completos assumindo que o executor é um desen
 
 Documente tudo que ele precisa saber:
 
-- Quais arquivos tocar em cada tarefa.
-- Qual código escrever ou alterar.
-- Quais testes criar.
-- Quais comandos executar.
-- Quais documentos consultar.
-- Como saber que a tarefa passou.
-- Quando commitar.
+- QUAIS arquivos tocar em cada tarefa (criar, modificar, testar).
+- QUAL o objetivo técnico e contrato de cada tarefa.
+- QUAIS testes criar e quais critérios de aceite validar.
+- QUAIS comandos executar (suíte de teste, linter, sdd CLI).
+- COMO saber que a tarefa passou.
+- QUANDO commitar.
+
+⚠️ **Regra Fundamental do Plano (Planejamento sem Código de Implementação)**: O plano serve para planejar a estratégia de desenvolvimento, quebrando a spec em tarefas (tasks) pequenas, ordenadas, independentes e testáveis. O plano NÃO deve conter blocos de código de implementação nem soluções de código prontas. Quem decide a implementação e escreve o código final é o executor/implementador na skill apropriada (`sdd-03-implement`).
 
 O plano deve quebrar a implementação em tarefas pequenas, rastreáveis e revisáveis.
 
@@ -266,7 +267,7 @@ Nesses casos, pare e pergunte. Um plano que preenche lacunas com suposição tra
 - **O arquivo do plano gerado deve ser adicionado e commitado no Git antes de iniciar a execução.**
 - **Planeje defensivamente:** Antecipe falhas em comandos de CLI. Tenha planos de recuperação e não assuma o "caminho feliz".
 - Paths exatos sempre.
-- Código completo em cada passo que muda código.
+- Sem código de implementação no plano (apenas arquivos afetados, objetivos técnicos, comandos e testes).
 - Comandos exatos com output esperado.
 - Se o agente executor não tiver permissão para rodar um comando, ele deve preparar o comando exato, anunciar o bloqueio e pedir ao parceiro humano para executá-lo.
 - DRY.

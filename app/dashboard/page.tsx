@@ -44,17 +44,6 @@ export default function DashboardPage() {
             Acesse o controle de orçamento anual, categorias de receitas e despesas previstas.
           </p>
         </Link>
-        <Link
-          href="/finance/months"
-          className="group flex flex-col gap-2 rounded-lg border p-6 hover:bg-muted/40 transition-colors"
-        >
-          <h2 className="text-lg font-bold group-hover:text-primary transition-colors">
-            Meses e Períodos 📅
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Abra e encerre períodos mensais para permitir novos lançamentos e travar edições.
-          </p>
-        </Link>
       </div>
     </div>
   );

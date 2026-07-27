@@ -20,9 +20,11 @@ export default function MonthsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [userEmail, setUserEmail] = useState<string>("");
   const [actionLoading, setActionLoading] = useState<Record<number, boolean>>({});
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadPeriods = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
+    setErrorMessage(null);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
@@ -31,8 +33,14 @@ export default function MonthsPage() {
 
       const data = await getMonthlyPeriods(supabase, year);
       setPeriods(data);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Erro ao carregar períodos:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("relation") && msg.includes("does not exist")) {
+        setErrorMessage("A tabela 'monthly_periods' não existe no Supabase. Execute o script utils/migrations/migration-feature-4.sql no console SQL do Supabase.");
+      } else {
+        setErrorMessage("Erro ao carregar períodos: " + msg);
+      }
     } finally {
       if (!silent) setLoading(false);
     }
@@ -45,27 +53,65 @@ export default function MonthsPage() {
     return () => clearTimeout(timer);
   }, [loadPeriods]);
 
+  const getOrFetchUserEmail = async (): Promise<string | null> => {
+    if (userEmail) return userEmail;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setUserEmail(user.email);
+        return user.email;
+      }
+    } catch (e) {
+      console.error("Erro ao obter usuário:", e);
+    }
+    return null;
+  };
+
   const handleOpenMonth = async (monthIndex: number) => {
-    if (!userEmail) return;
+    setErrorMessage(null);
     setActionLoading((prev) => ({ ...prev, [monthIndex]: true }));
     try {
-      await openMonthlyPeriod(supabase, year, monthIndex, userEmail);
+      const email = await getOrFetchUserEmail();
+      if (!email) {
+        setErrorMessage("Não foi possível identificar o usuário autenticado. Por favor, certifique-se de estar logado.");
+        return;
+      }
+
+      await openMonthlyPeriod(supabase, year, monthIndex, email);
       await loadPeriods(true);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Erro ao abrir mês:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("relation") && msg.includes("does not exist")) {
+        setErrorMessage("A tabela 'monthly_periods' não existe no banco de dados. Execute o script SQL utils/migrations/migration-feature-4.sql no Supabase.");
+      } else {
+        setErrorMessage(`Erro ao abrir o mês: ${msg}`);
+      }
     } finally {
       setActionLoading((prev) => ({ ...prev, [monthIndex]: false }));
     }
   };
 
   const handleCloseMonth = async (monthIndex: number) => {
-    if (!userEmail) return;
+    setErrorMessage(null);
     setActionLoading((prev) => ({ ...prev, [monthIndex]: true }));
     try {
-      await closeMonthlyPeriod(supabase, year, monthIndex, userEmail);
+      const email = await getOrFetchUserEmail();
+      if (!email) {
+        setErrorMessage("Não foi possível identificar o usuário autenticado. Por favor, certifique-se de estar logado.");
+        return;
+      }
+
+      await closeMonthlyPeriod(supabase, year, monthIndex, email);
       await loadPeriods(true);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Erro ao encerrar mês:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("relation") && msg.includes("does not exist")) {
+        setErrorMessage("A tabela 'monthly_periods' não existe no banco de dados. Execute o script SQL utils/migrations/migration-feature-4.sql no Supabase.");
+      } else {
+        setErrorMessage(`Erro ao encerrar o mês: ${msg}`);
+      }
     } finally {
       setActionLoading((prev) => ({ ...prev, [monthIndex]: false }));
     }
@@ -115,6 +161,22 @@ export default function MonthsPage() {
           </select>
         </div>
       </div>
+
+      {errorMessage && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+          <div className="flex items-center justify-between">
+            <p className="font-medium">{errorMessage}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-auto p-1 text-rose-800 hover:bg-rose-100"
+              onClick={() => setErrorMessage(null)}
+            >
+              Fechar ✕
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Resumo Anual */}
       <div className="grid grid-cols-3 gap-4 rounded-lg border p-4 bg-muted/20">

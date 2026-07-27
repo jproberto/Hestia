@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod, MonthlyPeriod } from "@/lib/db/months";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { parseErrorMessage } from "@/lib/utils";
 import Link from "next/link";
 
 const MONTH_NAMES = [
@@ -35,7 +36,7 @@ export default function MonthsPage() {
       setPeriods(data);
     } catch (err: unknown) {
       console.error("Erro ao carregar períodos:", err);
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = parseErrorMessage(err);
       if (msg.includes("relation") && msg.includes("does not exist")) {
         setErrorMessage("A tabela 'monthly_periods' não existe no Supabase. Execute o script utils/migrations/migration-feature-4.sql no console SQL do Supabase.");
       } else {
@@ -81,7 +82,7 @@ export default function MonthsPage() {
       await loadPeriods(true);
     } catch (err: unknown) {
       console.error("Erro ao abrir mês:", err);
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = parseErrorMessage(err);
       if (msg.includes("relation") && msg.includes("does not exist")) {
         setErrorMessage("A tabela 'monthly_periods' não existe no banco de dados. Execute o script SQL utils/migrations/migration-feature-4.sql no Supabase.");
       } else {
@@ -106,7 +107,7 @@ export default function MonthsPage() {
       await loadPeriods(true);
     } catch (err: unknown) {
       console.error("Erro ao encerrar mês:", err);
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = parseErrorMessage(err);
       if (msg.includes("relation") && msg.includes("does not exist")) {
         setErrorMessage("A tabela 'monthly_periods' não existe no banco de dados. Execute o script SQL utils/migrations/migration-feature-4.sql no Supabase.");
       } else {

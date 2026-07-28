@@ -71,6 +71,7 @@ export default function TransactionsPage() {
   const [isRefund, setIsRefund] = useState<boolean>(false);
   const [date, setDate] = useState<string>("");
   const [accountInput, setAccountInput] = useState<string>("");
+  const [isAccountFixed, setIsAccountFixed] = useState<boolean>(false);
   const [categoryInput, setCategoryInput] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
 
@@ -221,15 +222,23 @@ export default function TransactionsPage() {
 
   const accountEntries = Array.from(accountsMap.entries());
 
-  const handleOpenModal = () => {
+  const handleOpenModal = (targetAccountName?: string) => {
     setDate(minDateStr);
     setDescription("");
     setAmount("");
     setType("despesa");
     setIsRefund(false);
-    setAccountInput(accounts.length > 0 ? accounts[0].name : "");
     setCategoryInput(categories.length > 0 ? categories[0].name : "");
     setErrorMsg(null);
+
+    if (targetAccountName) {
+      setAccountInput(targetAccountName);
+      setIsAccountFixed(true);
+    } else {
+      setAccountInput("");
+      setIsAccountFixed(false);
+    }
+
     setIsModalOpen(true);
   };
 
@@ -350,12 +359,6 @@ export default function TransactionsPage() {
               </select>
             </div>
           )}
-
-          {openMonths.length > 0 && (
-            <Button onClick={handleOpenModal} size="sm">
-              + Nova Transação
-            </Button>
-          )}
         </div>
       </div>
 
@@ -385,16 +388,14 @@ export default function TransactionsPage() {
           {/* 1. ÁREA SUPERIOR: COMPARATIVO ORÇADO VS REAL (RECEITAS E DESPESAS)         */}
           {/* ========================================================================= */}
           <div className="flex flex-col gap-4">
-            <h2 className="text-lg font-bold tracking-tight">Comparativo Orçado vs. Real</h2>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Tabela de Receitas (Esquerda) */}
               <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
-                <div className="bg-emerald-50 dark:bg-emerald-950/40 p-3 border-b border-emerald-100 dark:border-emerald-900/50 flex items-center justify-between">
-                  <h3 className="font-semibold text-sm text-emerald-900 dark:text-emerald-300">
-                    📈 Receitas (Orçado vs Real)
+                <div className="bg-emerald-50 dark:bg-emerald-950/60 p-3 border-b border-emerald-200 dark:border-emerald-900/50 flex items-center justify-between">
+                  <h3 className="font-bold text-sm text-emerald-950 dark:text-emerald-100">
+                    📈 Receitas
                   </h3>
-                  <div className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                  <div className="text-xs text-emerald-900 dark:text-emerald-200 font-bold">
                     Real: {formatCurrency(totalReceitaReal)}
                   </div>
                 </div>
@@ -422,7 +423,7 @@ export default function TransactionsPage() {
                             <td className="p-2.5 text-right text-muted-foreground">
                               {formatCurrency(r.previsto)}
                             </td>
-                            <td className="p-2.5 text-right font-semibold text-emerald-600 dark:text-emerald-400">
+                            <td className="p-2.5 text-right font-semibold text-emerald-700 dark:text-emerald-300">
                               {formatCurrency(r.real)}
                             </td>
                           </tr>
@@ -435,7 +436,7 @@ export default function TransactionsPage() {
                         <td className="p-2.5 text-right text-muted-foreground">
                           {formatCurrency(totalReceitaPrevisto)}
                         </td>
-                        <td className="p-2.5 text-right text-emerald-600 dark:text-emerald-400">
+                        <td className="p-2.5 text-right text-emerald-700 dark:text-emerald-300">
                           {formatCurrency(totalReceitaReal)}
                         </td>
                       </tr>
@@ -446,11 +447,11 @@ export default function TransactionsPage() {
 
               {/* Tabela de Despesas (Direita) */}
               <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
-                <div className="bg-rose-50 dark:bg-rose-950/40 p-3 border-b border-rose-100 dark:border-rose-900/50 flex items-center justify-between">
-                  <h3 className="font-semibold text-sm text-rose-900 dark:text-rose-300">
-                    📉 Despesas (Orçado vs Real)
+                <div className="bg-rose-50 dark:bg-rose-950/60 p-3 border-b border-rose-200 dark:border-rose-900/50 flex items-center justify-between">
+                  <h3 className="font-bold text-sm text-rose-950 dark:text-rose-100">
+                    📉 Despesas
                   </h3>
-                  <div className="text-xs text-rose-700 dark:text-rose-400 font-medium">
+                  <div className="text-xs text-rose-900 dark:text-rose-200 font-bold">
                     Real: {formatCurrency(totalDespesaReal)}
                   </div>
                 </div>
@@ -478,7 +479,7 @@ export default function TransactionsPage() {
                             <td className="p-2.5 text-right text-muted-foreground">
                               {formatCurrency(d.previsto)}
                             </td>
-                            <td className="p-2.5 text-right font-semibold text-rose-600 dark:text-rose-400">
+                            <td className="p-2.5 text-right font-semibold text-rose-700 dark:text-rose-300">
                               {formatCurrency(d.real)}
                             </td>
                           </tr>
@@ -491,7 +492,7 @@ export default function TransactionsPage() {
                         <td className="p-2.5 text-right text-muted-foreground">
                           {formatCurrency(totalDespesaPrevisto)}
                         </td>
-                        <td className="p-2.5 text-right text-rose-600 dark:text-rose-400">
+                        <td className="p-2.5 text-right text-rose-700 dark:text-rose-300">
                           {formatCurrency(totalDespesaReal)}
                         </td>
                       </tr>
@@ -503,10 +504,15 @@ export default function TransactionsPage() {
           </div>
 
           {/* ========================================================================= */}
-          {/* 2. ÁREA INFERIOR: EXTRATO SEPARADO POR CONTA / CARTÃO                     */}
+          {/* 2. ÁREA INFERIOR: CONTAS E CARTÕES (GRID DE 2 COLUNAS)                   */}
           {/* ========================================================================= */}
           <div className="flex flex-col gap-4 pt-4 border-t">
-            <h2 className="text-lg font-bold tracking-tight">Extrato por Conta / Cartão</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold tracking-tight">Contas e Cartões</h2>
+              <Button onClick={() => handleOpenModal()} variant="outline" size="sm">
+                + Nova Conta / Cartão
+              </Button>
+            </div>
 
             {loading ? (
               <div className="p-8 text-center text-sm text-muted-foreground">
@@ -514,10 +520,10 @@ export default function TransactionsPage() {
               </div>
             ) : accountEntries.length === 0 ? (
               <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
-                Nenhum lançamento registrado neste mês.
+                Nenhum lançamento registrado neste mês. Clique em <strong>&quot;+ Nova Conta / Cartão&quot;</strong> para iniciar.
               </div>
             ) : (
-              <div className="flex flex-col gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {accountEntries.map(([accountName, txs]) => {
                   const accountTotal = txs.reduce((acc, t) => {
                     if (t.type === "receita" || t.is_refund) return acc + Number(t.amount);
@@ -527,64 +533,68 @@ export default function TransactionsPage() {
                   return (
                     <div
                       key={accountName}
-                      className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden"
+                      className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col"
                     >
-                      <div className="bg-muted/40 p-3 border-b flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                      <div className="bg-muted/40 p-3 border-b flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-1.5">
                           <span className="text-base">💳</span>
                           <h3 className="font-bold text-sm tracking-tight">{accountName}</h3>
-                          <span className="text-xs text-muted-foreground">
-                            ({txs.length} {txs.length === 1 ? "lançamento" : "lançamentos"})
-                          </span>
                         </div>
-                        <div className="text-xs font-semibold">
-                          Saldo do Mês:{" "}
+                        <div className="flex items-center gap-3">
                           <span
-                            className={
+                            className={`text-xs font-bold ${
                               accountTotal >= 0
-                                ? "text-emerald-600 dark:text-emerald-400"
-                                : "text-rose-600 dark:text-rose-400"
-                            }
+                                ? "text-emerald-700 dark:text-emerald-300"
+                                : "text-rose-700 dark:text-rose-300"
+                            }`}
                           >
                             {formatCurrency(accountTotal)}
                           </span>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleOpenModal(accountName)}
+                            className="h-7 text-xs px-2"
+                          >
+                            + Nova Transação
+                          </Button>
                         </div>
                       </div>
 
-                      <div className="overflow-x-auto">
+                      <div className="overflow-x-auto flex-1">
                         <table className="w-full text-left text-sm border-collapse">
                           <thead>
                             <tr className="border-b bg-muted/20 text-muted-foreground text-xs font-semibold">
-                              <th className="p-3">Data</th>
-                              <th className="p-3">Descrição</th>
-                              <th className="p-3">Categoria</th>
-                              <th className="p-3 text-right">Valor</th>
+                              <th className="p-2.5">Data</th>
+                              <th className="p-2.5">Descrição</th>
+                              <th className="p-2.5">Categoria</th>
+                              <th className="p-2.5 text-right">Valor</th>
                             </tr>
                           </thead>
                           <tbody>
                             {txs.map((tx) => (
                               <tr key={tx.id} className="border-b hover:bg-muted/20 transition-colors">
-                                <td className="p-3 font-medium text-xs whitespace-nowrap">
+                                <td className="p-2.5 font-medium text-xs whitespace-nowrap">
                                   {formatDateBR(tx.date)}
                                 </td>
-                                <td className="p-3 text-xs">
-                                  <div className="flex items-center gap-2">
+                                <td className="p-2.5 text-xs">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="font-medium">{tx.description}</span>
                                     {tx.is_refund && (
-                                      <span className="rounded bg-sky-100 text-sky-800 text-[10px] font-semibold px-2 py-0.5 dark:bg-sky-950 dark:text-sky-300">
+                                      <span className="rounded bg-sky-100 text-sky-800 text-[10px] font-semibold px-1.5 py-0.5 dark:bg-sky-950 dark:text-sky-300">
                                         Reembolso
                                       </span>
                                     )}
                                   </div>
                                 </td>
-                                <td className="p-3 text-xs text-muted-foreground">
+                                <td className="p-2.5 text-xs text-muted-foreground">
                                   {tx.category_name}
                                 </td>
                                 <td
-                                  className={`p-3 text-xs text-right font-semibold whitespace-nowrap ${
+                                  className={`p-2.5 text-xs text-right font-semibold whitespace-nowrap ${
                                     tx.type === "receita" || tx.is_refund
-                                      ? "text-emerald-600 dark:text-emerald-400"
-                                      : "text-rose-600 dark:text-rose-400"
+                                      ? "text-emerald-700 dark:text-emerald-300"
+                                      : "text-rose-700 dark:text-rose-300"
                                   }`}
                                 >
                                   {tx.type === "receita" || tx.is_refund ? "+" : "-"} {formatCurrency(Number(tx.amount))}
@@ -607,7 +617,9 @@ export default function TransactionsPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-lg flex flex-col gap-4">
-            <h2 className="text-lg font-bold tracking-tight">Novo Lançamento</h2>
+            <h2 className="text-lg font-bold tracking-tight">
+              {isAccountFixed ? `Nova Transação (${accountInput})` : "Novo Lançamento / Conta"}
+            </h2>
 
             <form onSubmit={handleSaveTransaction} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
@@ -623,6 +635,43 @@ export default function TransactionsPage() {
                   onChange={(e) => setDate(e.target.value)}
                   required
                 />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="tx-account" className="text-xs font-semibold">
+                  Conta / Cartão
+                </Label>
+                {isAccountFixed ? (
+                  <div>
+                    <Input
+                      id="tx-account"
+                      type="text"
+                      value={accountInput}
+                      disabled
+                      className="bg-muted text-muted-foreground cursor-not-allowed"
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Conta fixada para este lançamento.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <Input
+                      id="tx-account"
+                      type="text"
+                      list="accounts-list"
+                      placeholder="Selecione ou digite para criar nova conta"
+                      value={accountInput}
+                      onChange={(e) => setAccountInput(e.target.value)}
+                      required
+                    />
+                    <datalist id="accounts-list">
+                      {accounts.map((acc) => (
+                        <option key={acc.id} value={acc.name} />
+                      ))}
+                    </datalist>
+                  </>
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -685,26 +734,6 @@ export default function TransactionsPage() {
                   </Label>
                 </div>
               )}
-
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="tx-account" className="text-xs font-semibold">
-                  Conta / Cartão
-                </Label>
-                <Input
-                  id="tx-account"
-                  type="text"
-                  list="accounts-list"
-                  placeholder="Selecione ou digite para criar nova conta"
-                  value={accountInput}
-                  onChange={(e) => setAccountInput(e.target.value)}
-                  required
-                />
-                <datalist id="accounts-list">
-                  {accounts.map((acc) => (
-                    <option key={acc.id} value={acc.name} />
-                  ))}
-                </datalist>
-              </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="tx-category" className="text-xs font-semibold">

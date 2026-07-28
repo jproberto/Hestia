@@ -45,7 +45,7 @@ describe("Página de Cadastro de Transações /finance/transactions", () => {
     vi.clearAllMocks();
   });
 
-  it("deve renderizar o comparativo Orçado vs Real e o extrato agrupado por contas", async () => {
+  it("deve renderizar os cabeçalhos de Receitas, Despesas e a seção de Contas e Cartões", async () => {
     (getAllOpenMonthlyPeriods as Mock).mockResolvedValue([
       { id: "p1", year: 2026, month: 3, status: "aberto" },
     ]);
@@ -75,13 +75,14 @@ describe("Página de Cadastro de Transações /finance/transactions", () => {
     render(<TransactionsPage />);
 
     expect(await screen.findByText("Lançamentos")).toBeInTheDocument();
-    expect(screen.getByText("Comparativo Orçado vs. Real")).toBeInTheDocument();
-    expect(screen.getByText("Extrato por Conta / Cartão")).toBeInTheDocument();
+    expect(screen.getByText(/^📈 Receitas$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^📉 Despesas$/i)).toBeInTheDocument();
+    expect(screen.getByText("Contas e Cartões")).toBeInTheDocument();
     expect(screen.getByText("Itaú Corrente")).toBeInTheDocument();
     expect(screen.getByText("Supermercado")).toBeInTheDocument();
   });
 
-  it("deve abrir o modal de nova transação e permitir criar um lançamento", async () => {
+  it("deve abrir o modal de nova conta/cartão e permitir criar um lançamento", async () => {
     (getAllOpenMonthlyPeriods as Mock).mockResolvedValue([
       { id: "p1", year: 2026, month: 3, status: "aberto" },
     ]);
@@ -107,10 +108,10 @@ describe("Página de Cadastro de Transações /finance/transactions", () => {
 
     render(<TransactionsPage />);
 
-    const newBtn = await screen.findByRole("button", { name: /\+ Nova Transação/i });
-    fireEvent.click(newBtn);
+    const newAccountBtn = await screen.findByRole("button", { name: /\+ Nova Conta \/ Cartão/i });
+    fireEvent.click(newAccountBtn);
 
-    expect(screen.getByText("Novo Lançamento")).toBeInTheDocument();
+    expect(screen.getByText("Novo Lançamento / Conta")).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/Descrição/i), { target: { value: "Salário" } });
     fireEvent.change(screen.getByLabelText(/Valor/i), { target: { value: "5000" } });

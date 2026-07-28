@@ -10,7 +10,7 @@ import {
 } from "@/lib/db/transactions";
 import { getAccounts, getOrCreateAccount, Account } from "@/lib/db/accounts";
 import { getCategories, getOrCreateCategory, Category } from "@/lib/db/categories";
-import { getMonthlyPeriods, MonthlyPeriod } from "@/lib/db/months";
+import { getAllOpenMonthlyPeriods, MonthlyPeriod } from "@/lib/db/months";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +53,7 @@ export default function TransactionsPage() {
   const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth() + 1);
 
   const [userEmail, setUserEmail] = useState<string>("");
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [openMonths, setOpenMonths] = useState<MonthlyPeriod[]>([]);
   const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -82,20 +83,35 @@ export default function TransactionsPage() {
         setUserEmail(user.email);
       }
 
-      // Buscar períodos abertos do ano selecionado
-      const periods = await getMonthlyPeriods(supabase, selectedYear);
-      const openPeriods = periods.filter((p) => p.status === "aberto");
-      setOpenMonths(openPeriods);
+      // Buscar todos os períodos abertos no banco
+      const allOpen = await getAllOpenMonthlyPeriods(supabase);
+      const years = Array.from(new Set(allOpen.map((p) => p.year))).sort((a, b) => a - b);
+      setAvailableYears(years);
 
-      // Se o mês selecionado não estiver aberto mas houver meses abertos, ajusta para o primeiro aberto
+      if (years.length === 0) {
+        setOpenMonths([]);
+        setTransactions([]);
+        setLoading(false);
+        return;
+      }
+
+      let yearToUse = selectedYear;
+      if (!years.includes(selectedYear)) {
+        yearToUse = years[0];
+        setSelectedYear(yearToUse);
+      }
+
+      const openMonthsForYear = allOpen.filter((p) => p.year === yearToUse);
+      setOpenMonths(openMonthsForYear);
+
       let monthToFetch = selectedMonth;
-      if (openPeriods.length > 0 && !openPeriods.some((p) => p.month === selectedMonth)) {
-        monthToFetch = openPeriods[0].month;
+      if (openMonthsForYear.length > 0 && !openMonthsForYear.some((p) => p.month === selectedMonth)) {
+        monthToFetch = openMonthsForYear[0].month;
         setSelectedMonth(monthToFetch);
       }
 
       const [txsData, accsData, catsData] = await Promise.all([
-        getTransactionsByMonth(supabase, selectedYear, monthToFetch),
+        getTransactionsByMonth(supabase, yearToUse, monthToFetch),
         getAccounts(supabase),
         getCategories(supabase),
       ]);
@@ -231,19 +247,23 @@ export default function TransactionsPage() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <Label htmlFor="year-select" className="text-xs">Ano:</Label>
-            <select
-              id="year-select"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="rounded border p-1 bg-card text-card-foreground text-sm"
-            >
-              <option value={2026}>2026</option>
-              <option value={2027}>2027</option>
-              <option value={2028}>2028</option>
-            </select>
-          </div>
+          {availableYears.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="year-select" className="text-xs">Ano:</Label>
+              <select
+                id="year-select"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="rounded border p-1 bg-card text-card-foreground text-sm font-medium"
+              >
+                {availableYears.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {openMonths.length > 0 && (
             <div className="flex items-center gap-1.5">
@@ -279,10 +299,10 @@ export default function TransactionsPage() {
       )}
 
       {/* Mensagem caso nenhum mês esteja aberto */}
-      {!loading && openMonths.length === 0 && (
+      {!loading && availableYears.length === 0 && (
         <div className="rounded-lg border p-8 text-center bg-card text-card-foreground flex flex-col items-center gap-3">
           <p className="text-muted-foreground">
-            Nenhum mês está <strong className="text-emerald-600 dark:text-emerald-400">Aberto</strong> para lançamentos no ano de {selectedYear}.
+            Nenhum mês está <strong className="text-emerald-600 dark:text-emerald-400">Aberto</strong> para lançamentos.
           </p>
           <Link href="/finance/months">
             <Button variant="outline">Ir para Gestão de Meses e Períodos 📅</Button>
@@ -291,7 +311,7 @@ export default function TransactionsPage() {
       )}
 
       {/* Conteúdo do Mês Aberto */}
-      {openMonths.length > 0 && (
+      {availableYears.length > 0 && openMonths.length > 0 && (
         <>
           {/* Cards de Resumo Financeiro */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

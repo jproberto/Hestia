@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { getTransactionsByMonth, createTransaction } from "@/lib/db/transactions";
 import { getAccounts, getOrCreateAccount } from "@/lib/db/accounts";
 import { getCategories, getOrCreateCategory } from "@/lib/db/categories";
-import { getMonthlyPeriods } from "@/lib/db/months";
+import { getMonthlyPeriods, getAllOpenMonthlyPeriods } from "@/lib/db/months";
 
 vi.mock("@/utils/supabase/client", () => ({
   createClient: () => ({
@@ -31,6 +31,7 @@ vi.mock("@/lib/db/categories", () => ({
 
 vi.mock("@/lib/db/months", () => ({
   getMonthlyPeriods: vi.fn(),
+  getAllOpenMonthlyPeriods: vi.fn(),
 }));
 
 describe("Página de Cadastro de Transações /finance/transactions", () => {
@@ -40,6 +41,9 @@ describe("Página de Cadastro de Transações /finance/transactions", () => {
   });
 
   it("deve renderizar o cabeçalho, os cards de resumo e a tabela de lançamentos", async () => {
+    (getAllOpenMonthlyPeriods as Mock).mockResolvedValue([
+      { id: "p1", year: 2026, month: 3, status: "aberto" },
+    ]);
     (getMonthlyPeriods as Mock).mockResolvedValue([
       { id: "p1", year: 2026, month: 3, status: "aberto" },
     ]);
@@ -69,6 +73,9 @@ describe("Página de Cadastro de Transações /finance/transactions", () => {
   });
 
   it("deve abrir o modal de nova transação e permitir criar um lançamento", async () => {
+    (getAllOpenMonthlyPeriods as Mock).mockResolvedValue([
+      { id: "p1", year: 2026, month: 3, status: "aberto" },
+    ]);
     (getMonthlyPeriods as Mock).mockResolvedValue([
       { id: "p1", year: 2026, month: 3, status: "aberto" },
     ]);

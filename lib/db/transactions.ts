@@ -48,7 +48,7 @@ export async function getTransactionsByMonth(
     `)
     .gte("date", startDate)
     .lte("date", endDate)
-    .order("date", { ascending: false });
+    .order("date", { ascending: true });
 
   if (error) throw error;
 

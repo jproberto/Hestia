@@ -141,6 +141,9 @@ export default function MonthsPage() {
         <Link href="/finance/months" className="pb-2 text-sm font-semibold border-b-2 border-primary text-foreground">
           Meses e Períodos
         </Link>
+        <Link href="/finance/transactions" className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+          Lançamentos
+        </Link>
       </div>
 
       <div className="flex items-center justify-between border-b pb-4">

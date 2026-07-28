@@ -10,6 +10,11 @@ import {
 } from "@/lib/db/transactions";
 import { getAccounts, getOrCreateAccount, Account } from "@/lib/db/accounts";
 import { getCategories, getOrCreateCategory, Category } from "@/lib/db/categories";
+import { getMonthlyPeriods, MonthlyPeriod } from "@/lib/db/months";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { parseErrorMessage } from "@/lib/utils";
 
 const MONTH_NAMES = [
   "Janeiro",
@@ -26,6 +31,21 @@ const MONTH_NAMES = [
   "Dezembro",
 ];
 
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+};
+
+const formatDateBR = (dateStr: string) => {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return dateStr;
+  const [year, month, day] = parts;
+  return `${day}/${month}/${year}`;
+};
+
 export default function TransactionsPage() {
   const supabase = createClient();
   const today = new Date();
@@ -33,23 +53,20 @@ export default function TransactionsPage() {
   const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth() + 1);
 
   const [userEmail, setUserEmail] = useState<string>("");
+  const [openMonths, setOpenMonths] = useState<MonthlyPeriod[]>([]);
   const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Form State
+  // Modal State
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [description, setDescription] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [type, setType] = useState<"receita" | "despesa">("despesa");
   const [isRefund, setIsRefund] = useState<boolean>(false);
-  const [date, setDate] = useState<string>(
-    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
-      today.getDate()
-    ).padStart(2, "0")}`
-  );
+  const [date, setDate] = useState<string>("");
   const [accountInput, setAccountInput] = useState<string>("");
   const [categoryInput, setCategoryInput] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
@@ -65,8 +82,20 @@ export default function TransactionsPage() {
         setUserEmail(user.email);
       }
 
+      // Buscar períodos abertos do ano selecionado
+      const periods = await getMonthlyPeriods(supabase, selectedYear);
+      const openPeriods = periods.filter((p) => p.status === "aberto");
+      setOpenMonths(openPeriods);
+
+      // Se o mês selecionado não estiver aberto mas houver meses abertos, ajusta para o primeiro aberto
+      let monthToFetch = selectedMonth;
+      if (openPeriods.length > 0 && !openPeriods.some((p) => p.month === selectedMonth)) {
+        monthToFetch = openPeriods[0].month;
+        setSelectedMonth(monthToFetch);
+      }
+
       const [txsData, accsData, catsData] = await Promise.all([
-        getTransactionsByMonth(supabase, selectedYear, selectedMonth),
+        getTransactionsByMonth(supabase, selectedYear, monthToFetch),
         getAccounts(supabase),
         getCategories(supabase),
       ]);
@@ -75,25 +104,12 @@ export default function TransactionsPage() {
       setAccounts(accsData);
       setCategories(catsData);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setErrorMsg(err.message);
-      } else {
-        setErrorMsg("Erro ao carregar os lançamentos.");
-      }
+      console.error("Erro ao carregar lançamentos:", err);
+      setErrorMsg(parseErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [
-    supabase,
-    selectedYear,
-    selectedMonth,
-    setLoading,
-    setErrorMsg,
-    setUserEmail,
-    setTransactions,
-    setAccounts,
-    setCategories,
-  ]);
+  }, [supabase, selectedYear, selectedMonth]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -118,9 +134,15 @@ export default function TransactionsPage() {
   const totalSaidas = despesasNormais - estornosDespesa;
   const resultadoMes = totalReceitas - totalSaidas;
 
+  // Delimitadores do Date Input para travar dentro do Mês e Ano selecionados
+  const minDateStr = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
+  const lastDayOfMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+  const maxDateStr = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-${String(
+    lastDayOfMonth
+  ).padStart(2, "0")}`;
+
   const handleOpenModal = () => {
-    const defaultDate = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
-    setDate(defaultDate);
+    setDate(minDateStr);
     setDescription("");
     setAmount("");
     setType("despesa");
@@ -168,385 +190,273 @@ export default function TransactionsPage() {
       setIsModalOpen(false);
       await fetchData();
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setErrorMsg(err.message);
-      } else {
-        setErrorMsg("Erro ao salvar a transação.");
-      }
+      console.error("Erro ao salvar a transação:", err);
+      setErrorMsg(parseErrorMessage(err));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <main style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
-      {/* Navegação por Abas */}
-      <nav
-        style={{
-          display: "flex",
-          gap: "1rem",
-          marginBottom: "2rem",
-          borderBottom: "1px solid #333",
-          paddingBottom: "1rem",
-        }}
-      >
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
+      {/* Menu Superior Financeiro */}
+      <div className="flex border-b pb-1 gap-6">
         <Link
           href="/finance/budget"
-          style={{
-            padding: "0.5rem 1rem",
-            textDecoration: "none",
-            color: "#aaa",
-            borderRadius: "6px",
-          }}
+          className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground"
         >
-          Metas de Orçamento
+          Orçamento Anual
         </Link>
         <Link
           href="/finance/months"
-          style={{
-            padding: "0.5rem 1rem",
-            textDecoration: "none",
-            color: "#aaa",
-            borderRadius: "6px",
-          }}
+          className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           Meses e Períodos
         </Link>
         <Link
           href="/finance/transactions"
-          style={{
-            padding: "0.5rem 1rem",
-            textDecoration: "none",
-            color: "#fff",
-            backgroundColor: "#2563eb",
-            fontWeight: "bold",
-            borderRadius: "6px",
-          }}
+          className="pb-2 text-sm font-semibold border-b-2 border-primary text-foreground"
         >
           Lançamentos
         </Link>
-      </nav>
+      </div>
 
       {/* Header e Seletores */}
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "1rem",
-          marginBottom: "2rem",
-        }}
-      >
+      <div className="flex items-center justify-between border-b pb-4 flex-wrap gap-4">
         <div>
-          <h1 style={{ fontSize: "2rem", margin: 0, color: "#f3f4f6" }}>Extrato de Lançamentos</h1>
-          <p style={{ color: "#9ca3af", margin: "0.25rem 0 0 0" }}>
-            Gerencie entradas, saídas e estornos de cada período
+          <h1 className="text-2xl font-bold tracking-tight">Extrato de Lançamentos</h1>
+          <p className="text-sm text-muted-foreground">
+            Gerencie entradas, saídas e estornos do período.
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            style={{
-              padding: "0.5rem 1rem",
-              borderRadius: "6px",
-              backgroundColor: "#1f2937",
-              color: "#fff",
-              border: "1px solid #374151",
-            }}
-          >
-            <option value={2026}>2026</option>
-            <option value={2027}>2027</option>
-            <option value={2028}>2028</option>
-          </select>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <Label htmlFor="year-select" className="text-xs">Ano:</Label>
+            <select
+              id="year-select"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="rounded border p-1 bg-card text-card-foreground text-sm"
+            >
+              <option value={2026}>2026</option>
+              <option value={2027}>2027</option>
+              <option value={2028}>2028</option>
+            </select>
+          </div>
 
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            style={{
-              padding: "0.5rem 1rem",
-              borderRadius: "6px",
-              backgroundColor: "#1f2937",
-              color: "#fff",
-              border: "1px solid #374151",
-            }}
-          >
-            {MONTH_NAMES.map((name, idx) => (
-              <option key={idx + 1} value={idx + 1}>
-                {name}
-              </option>
-            ))}
-          </select>
+          {openMonths.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="month-select" className="text-xs">Mês:</Label>
+              <select
+                id="month-select"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                className="rounded border p-1 bg-card text-card-foreground text-sm font-medium"
+              >
+                {openMonths.map((p) => (
+                  <option key={p.month} value={p.month}>
+                    {MONTH_NAMES[p.month - 1]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          <button
-            onClick={handleOpenModal}
-            style={{
-              padding: "0.5rem 1.25rem",
-              backgroundColor: "#10b981",
-              color: "#fff",
-              fontWeight: "bold",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-            }}
-          >
-            + Nova Transação
-          </button>
+          {openMonths.length > 0 && (
+            <Button onClick={handleOpenModal} size="sm">
+              + Nova Transação
+            </Button>
+          )}
         </div>
-      </header>
+      </div>
 
       {/* Alerta de erro */}
       {errorMsg && (
-        <div
-          style={{
-            backgroundColor: "#7f1d1d",
-            color: "#fecaca",
-            padding: "0.75rem 1rem",
-            borderRadius: "6px",
-            marginBottom: "1.5rem",
-          }}
-        >
-          {errorMsg}
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/50 dark:text-rose-200">
+          <p className="font-medium">{errorMsg}</p>
         </div>
       )}
 
-      {/* Cards de Resumo Financeiro */}
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "1.5rem",
-          marginBottom: "2rem",
-        }}
-      >
-        <div
-          style={{
-            backgroundColor: "#111827",
-            border: "1px solid #1f2937",
-            borderRadius: "8px",
-            padding: "1.25rem",
-          }}
-        >
-          <span style={{ color: "#9ca3af", fontSize: "0.875rem" }}>Total Entradas</span>
-          <h2 style={{ color: "#10b981", fontSize: "1.75rem", margin: "0.5rem 0 0 0" }}>
-            R$ {totalReceitas.toFixed(2)}
-          </h2>
+      {/* Mensagem caso nenhum mês esteja aberto */}
+      {!loading && openMonths.length === 0 && (
+        <div className="rounded-lg border p-8 text-center bg-card text-card-foreground flex flex-col items-center gap-3">
+          <p className="text-muted-foreground">
+            Nenhum mês está <strong className="text-emerald-600 dark:text-emerald-400">Aberto</strong> para lançamentos no ano de {selectedYear}.
+          </p>
+          <Link href="/finance/months">
+            <Button variant="outline">Ir para Gestão de Meses e Períodos 📅</Button>
+          </Link>
         </div>
+      )}
 
-        <div
-          style={{
-            backgroundColor: "#111827",
-            border: "1px solid #1f2937",
-            borderRadius: "8px",
-            padding: "1.25rem",
-          }}
-        >
-          <span style={{ color: "#9ca3af", fontSize: "0.875rem" }}>Total Saídas</span>
-          <h2 style={{ color: "#ef4444", fontSize: "1.75rem", margin: "0.5rem 0 0 0" }}>
-            R$ {totalSaidas.toFixed(2)}
-          </h2>
-        </div>
+      {/* Conteúdo do Mês Aberto */}
+      {openMonths.length > 0 && (
+        <>
+          {/* Cards de Resumo Financeiro */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="rounded-lg border p-4 shadow-sm bg-card text-card-foreground">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Total Entradas
+              </p>
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                {formatCurrency(totalReceitas)}
+              </p>
+            </div>
 
-        <div
-          style={{
-            backgroundColor: "#111827",
-            border: "1px solid #1f2937",
-            borderRadius: "8px",
-            padding: "1.25rem",
-          }}
-        >
-          <span style={{ color: "#9ca3af", fontSize: "0.875rem" }}>Resultado do Mês</span>
-          <h2
-            style={{
-              color: resultadoMes >= 0 ? "#10b981" : "#ef4444",
-              fontSize: "1.75rem",
-              margin: "0.5rem 0 0 0",
-            }}
-          >
-            R$ {resultadoMes.toFixed(2)}
-          </h2>
-        </div>
-      </section>
+            <div className="rounded-lg border p-4 shadow-sm bg-card text-card-foreground">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Total Saídas
+              </p>
+              <p className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1">
+                {formatCurrency(totalSaidas)}
+              </p>
+            </div>
 
-      {/* Tabela de Extrato de Lançamentos */}
-      <section
-        style={{
-          backgroundColor: "#111827",
-          border: "1px solid #1f2937",
-          borderRadius: "8px",
-          overflow: "hidden",
-        }}
-      >
-        {loading ? (
-          <div style={{ padding: "2rem", textAlign: "center", color: "#9ca3af" }}>
-            Carregando lançamentos...
+            <div className="rounded-lg border p-4 shadow-sm bg-card text-card-foreground">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Resultado do Mês
+              </p>
+              <p
+                className={`text-2xl font-bold mt-1 ${
+                  resultadoMes >= 0
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-rose-600 dark:text-rose-400"
+                }`}
+              >
+                {formatCurrency(resultadoMes)}
+              </p>
+            </div>
           </div>
-        ) : transactions.length === 0 ? (
-          <div style={{ padding: "2rem", textAlign: "center", color: "#9ca3af" }}>
-            Nenhum lançamento registrado neste mês.
+
+          {/* Tabela de Extrato de Lançamentos */}
+          <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+            {loading ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                Carregando lançamentos...
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                Nenhum lançamento registrado neste mês.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b bg-muted/50 text-muted-foreground font-medium">
+                      <th className="p-3">Data</th>
+                      <th className="p-3">Descrição</th>
+                      <th className="p-3">Categoria</th>
+                      <th className="p-3">Conta</th>
+                      <th className="p-3">Tipo</th>
+                      <th className="p-3 text-right">Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map((tx) => (
+                      <tr key={tx.id} className="border-b hover:bg-muted/30 transition-colors">
+                        <td className="p-3 font-medium whitespace-nowrap">
+                          {formatDateBR(tx.date)}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            <span>{tx.description}</span>
+                            {tx.is_refund && (
+                              <span className="rounded bg-sky-100 text-sky-800 text-[10px] font-semibold px-2 py-0.5 dark:bg-sky-950 dark:text-sky-300">
+                                Reembolso
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-3 text-muted-foreground">{tx.category_name}</td>
+                        <td className="p-3 text-muted-foreground">{tx.account_name}</td>
+                        <td className="p-3">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                              tx.type === "receita"
+                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                : "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
+                            }`}
+                          >
+                            {tx.type === "receita" ? "Receita" : "Despesa"}
+                          </span>
+                        </td>
+                        <td
+                          className={`p-3 text-right font-semibold whitespace-nowrap ${
+                            tx.type === "receita" || tx.is_refund
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-rose-600 dark:text-rose-400"
+                          }`}
+                        >
+                          {tx.type === "receita" || tx.is_refund ? "+" : "-"} {formatCurrency(Number(tx.amount))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", color: "#e5e7eb" }}>
-            <thead>
-              <tr style={{ backgroundColor: "#1f2937", textAlign: "left" }}>
-                <th style={{ padding: "0.75rem 1rem" }}>Data</th>
-                <th style={{ padding: "0.75rem 1rem" }}>Descrição</th>
-                <th style={{ padding: "0.75rem 1rem" }}>Categoria</th>
-                <th style={{ padding: "0.75rem 1rem" }}>Conta</th>
-                <th style={{ padding: "0.75rem 1rem" }}>Tipo</th>
-                <th style={{ padding: "0.75rem 1rem" }}>Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map((tx) => (
-                <tr key={tx.id} style={{ borderBottom: "1px solid #1f2937" }}>
-                  <td style={{ padding: "0.75rem 1rem" }}>{tx.date}</td>
-                  <td style={{ padding: "0.75rem 1rem" }}>
-                    {tx.description}
-                    {tx.is_refund && (
-                      <span
-                        style={{
-                          marginLeft: "0.5rem",
-                          fontSize: "0.75rem",
-                          backgroundColor: "#374151",
-                          color: "#38bdf8",
-                          padding: "0.15rem 0.4rem",
-                          borderRadius: "4px",
-                        }}
-                      >
-                        Estorno
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ padding: "0.75rem 1rem" }}>{tx.category_name}</td>
-                  <td style={{ padding: "0.75rem 1rem" }}>{tx.account_name}</td>
-                  <td style={{ padding: "0.75rem 1rem" }}>
-                    <span
-                      style={{
-                        color: tx.type === "receita" ? "#10b981" : "#ef4444",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {tx.type === "receita" ? "Receita" : "Despesa"}
-                    </span>
-                  </td>
-                  <td
-                    style={{
-                      padding: "0.75rem 1rem",
-                      fontWeight: "bold",
-                      color: tx.type === "receita" || tx.is_refund ? "#10b981" : "#ef4444",
-                    }}
-                  >
-                    {tx.type === "receita" || tx.is_refund ? "+" : "-"} R${" "}
-                    {Number(tx.amount).toFixed(2)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+        </>
+      )}
 
       {/* Modal de Formulário */}
       {isModalOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "rgba(0,0,0,0.75)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "1rem",
-            zIndex: 50,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#1f2937",
-              borderRadius: "8px",
-              padding: "2rem",
-              width: "100%",
-              maxWidth: "500px",
-              color: "#fff",
-            }}
-          >
-            <h2 style={{ margin: "0 0 1.5rem 0" }}>Novo Lançamento</h2>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-lg flex flex-col gap-4">
+            <h2 className="text-lg font-bold tracking-tight">Novo Lançamento</h2>
 
-            <form onSubmit={handleSaveTransaction} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div>
-                <label htmlFor="tx-date" style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem" }}>
-                  Data
-                </label>
-                <input
+            <form onSubmit={handleSaveTransaction} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="tx-date" className="text-xs font-semibold">
+                  Data (Limitada a {MONTH_NAMES[selectedMonth - 1]}/{selectedYear})
+                </Label>
+                <Input
                   id="tx-date"
                   type="date"
+                  min={minDateStr}
+                  max={maxDateStr}
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   required
-                  style={{
-                    width: "100%",
-                    padding: "0.5rem",
-                    borderRadius: "6px",
-                    border: "1px solid #374151",
-                    backgroundColor: "#111827",
-                    color: "#fff",
-                  }}
                 />
               </div>
 
-              <div>
-                <label htmlFor="tx-description" style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem" }}>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="tx-description" className="text-xs font-semibold">
                   Descrição
-                </label>
-                <input
+                </Label>
+                <Input
                   id="tx-description"
                   type="text"
                   placeholder="Ex: Supermercado, Salário"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   required
-                  style={{
-                    width: "100%",
-                    padding: "0.5rem",
-                    borderRadius: "6px",
-                    border: "1px solid #374151",
-                    backgroundColor: "#111827",
-                    color: "#fff",
-                  }}
                 />
               </div>
 
-              <div style={{ display: "flex", gap: "1rem" }}>
-                <div style={{ flex: 1 }}>
-                  <label htmlFor="tx-type" style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem" }}>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="tx-type" className="text-xs font-semibold">
                     Tipo
-                  </label>
+                  </Label>
                   <select
                     id="tx-type"
                     value={type}
                     onChange={(e) => setType(e.target.value as "receita" | "despesa")}
-                    style={{
-                      width: "100%",
-                      padding: "0.5rem",
-                      borderRadius: "6px",
-                      border: "1px solid #374151",
-                      backgroundColor: "#111827",
-                      color: "#fff",
-                    }}
+                    className="rounded border p-2 bg-background text-foreground text-sm"
                   >
                     <option value="despesa">Despesa</option>
                     <option value="receita">Receita</option>
                   </select>
                 </div>
 
-                <div style={{ flex: 1 }}>
-                  <label htmlFor="tx-amount" style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem" }}>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="tx-amount" className="text-xs font-semibold">
                     Valor (R$)
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     id="tx-amount"
                     type="number"
                     step="0.01"
@@ -554,37 +464,30 @@ export default function TransactionsPage() {
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     required
-                    style={{
-                      width: "100%",
-                      padding: "0.5rem",
-                      borderRadius: "6px",
-                      border: "1px solid #374151",
-                      backgroundColor: "#111827",
-                      color: "#fff",
-                    }}
                   />
                 </div>
               </div>
 
               {type === "despesa" && (
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <div className="flex items-center gap-2 pt-1">
                   <input
                     type="checkbox"
                     id="is_refund"
                     checked={isRefund}
                     onChange={(e) => setIsRefund(e.target.checked)}
+                    className="rounded border-gray-300"
                   />
-                  <label htmlFor="is_refund" style={{ fontSize: "0.875rem", cursor: "pointer" }}>
-                    É um estorno/reembolso? (abate da despesa da categoria)
-                  </label>
+                  <Label htmlFor="is_refund" className="text-xs font-medium cursor-pointer">
+                    Reembolso
+                  </Label>
                 </div>
               )}
 
-              <div>
-                <label htmlFor="tx-account" style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem" }}>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="tx-account" className="text-xs font-semibold">
                   Conta
-                </label>
-                <input
+                </Label>
+                <Input
                   id="tx-account"
                   type="text"
                   list="accounts-list"
@@ -592,14 +495,6 @@ export default function TransactionsPage() {
                   value={accountInput}
                   onChange={(e) => setAccountInput(e.target.value)}
                   required
-                  style={{
-                    width: "100%",
-                    padding: "0.5rem",
-                    borderRadius: "6px",
-                    border: "1px solid #374151",
-                    backgroundColor: "#111827",
-                    color: "#fff",
-                  }}
                 />
                 <datalist id="accounts-list">
                   {accounts.map((acc) => (
@@ -608,11 +503,11 @@ export default function TransactionsPage() {
                 </datalist>
               </div>
 
-              <div>
-                <label htmlFor="tx-category" style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem" }}>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="tx-category" className="text-xs font-semibold">
                   Categoria
-                </label>
-                <input
+                </Label>
+                <Input
                   id="tx-category"
                   type="text"
                   list="categories-list"
@@ -620,14 +515,6 @@ export default function TransactionsPage() {
                   value={categoryInput}
                   onChange={(e) => setCategoryInput(e.target.value)}
                   required
-                  style={{
-                    width: "100%",
-                    padding: "0.5rem",
-                    borderRadius: "6px",
-                    border: "1px solid #374151",
-                    backgroundColor: "#111827",
-                    color: "#fff",
-                  }}
                 />
                 <datalist id="categories-list">
                   {categories.map((cat) => (
@@ -636,41 +523,22 @@ export default function TransactionsPage() {
                 </datalist>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "1rem" }}>
-                <button
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => setIsModalOpen(false)}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    borderRadius: "6px",
-                    border: "1px solid #374151",
-                    backgroundColor: "transparent",
-                    color: "#aaa",
-                    cursor: "pointer",
-                  }}
                 >
                   Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  style={{
-                    padding: "0.5rem 1.25rem",
-                    borderRadius: "6px",
-                    border: "none",
-                    backgroundColor: "#10b981",
-                    color: "#fff",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                  }}
-                >
+                </Button>
+                <Button type="submit" disabled={saving}>
                   {saving ? "Salvando..." : "Salvar Transação"}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }

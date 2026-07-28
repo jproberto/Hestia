@@ -5,6 +5,7 @@ import { getTransactionsByMonth, createTransaction } from "@/lib/db/transactions
 import { getAccounts, getOrCreateAccount } from "@/lib/db/accounts";
 import { getCategories, getOrCreateCategory } from "@/lib/db/categories";
 import { getMonthlyPeriods, getAllOpenMonthlyPeriods } from "@/lib/db/months";
+import { getBudgets } from "@/lib/db/budget";
 
 vi.mock("@/utils/supabase/client", () => ({
   createClient: () => ({
@@ -34,18 +35,26 @@ vi.mock("@/lib/db/months", () => ({
   getAllOpenMonthlyPeriods: vi.fn(),
 }));
 
+vi.mock("@/lib/db/budget", () => ({
+  getBudgets: vi.fn(),
+}));
+
 describe("Página de Cadastro de Transações /finance/transactions", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
-  it("deve renderizar o cabeçalho, os cards de resumo e a tabela de lançamentos", async () => {
+  it("deve renderizar o comparativo Orçado vs Real e o extrato agrupado por contas", async () => {
     (getAllOpenMonthlyPeriods as Mock).mockResolvedValue([
       { id: "p1", year: 2026, month: 3, status: "aberto" },
     ]);
     (getMonthlyPeriods as Mock).mockResolvedValue([
       { id: "p1", year: 2026, month: 3, status: "aberto" },
+    ]);
+    (getBudgets as Mock).mockResolvedValue([
+      { category_id: "c1", category_name: "Alimentação", category_type: "despesa", amount: 1000, start_month: 1 },
+      { category_id: "c2", category_name: "Salário", category_type: "receita", amount: 5000, start_month: 1 },
     ]);
     (getTransactionsByMonth as Mock).mockResolvedValue([
       {
@@ -56,19 +65,19 @@ describe("Página de Cadastro de Transações /finance/transactions", () => {
         is_refund: false,
         date: "2026-03-15",
         category_name: "Alimentação",
-        account_name: "Itaú",
+        account_name: "Itaú Corrente",
         created_by: "teste@hestia.com",
       },
     ]);
-    (getAccounts as Mock).mockResolvedValue([{ id: "a1", name: "Itaú" }]);
+    (getAccounts as Mock).mockResolvedValue([{ id: "a1", name: "Itaú Corrente" }]);
     (getCategories as Mock).mockResolvedValue([{ id: "c1", name: "Alimentação", type: "despesa" }]);
 
     render(<TransactionsPage />);
 
     expect(await screen.findByText("Lançamentos")).toBeInTheDocument();
-    expect(screen.getByText("Total Entradas")).toBeInTheDocument();
-    expect(screen.getByText("Total Saídas")).toBeInTheDocument();
-    expect(screen.getByText("Resultado do Mês")).toBeInTheDocument();
+    expect(screen.getByText("Comparativo Orçado vs. Real")).toBeInTheDocument();
+    expect(screen.getByText("Extrato por Conta / Cartão")).toBeInTheDocument();
+    expect(screen.getByText("Itaú Corrente")).toBeInTheDocument();
     expect(screen.getByText("Supermercado")).toBeInTheDocument();
   });
 
@@ -79,8 +88,9 @@ describe("Página de Cadastro de Transações /finance/transactions", () => {
     (getMonthlyPeriods as Mock).mockResolvedValue([
       { id: "p1", year: 2026, month: 3, status: "aberto" },
     ]);
+    (getBudgets as Mock).mockResolvedValue([]);
     (getTransactionsByMonth as Mock).mockResolvedValue([]);
-    (getAccounts as Mock).mockResolvedValue([{ id: "a1", name: "Itaú" }]);
+    (getAccounts as Mock).mockResolvedValue([{ id: "a1", name: "Itaú Corrente" }]);
     (getCategories as Mock).mockResolvedValue([{ id: "c1", name: "Alimentação", type: "despesa" }]);
     (getOrCreateAccount as Mock).mockResolvedValue("a1");
     (getOrCreateCategory as Mock).mockResolvedValue("c1");
@@ -92,7 +102,7 @@ describe("Página de Cadastro de Transações /finance/transactions", () => {
       is_refund: false,
       date: "2026-03-01",
       category_name: "Salário",
-      account_name: "Itaú",
+      account_name: "Itaú Corrente",
     });
 
     render(<TransactionsPage />);
@@ -104,7 +114,7 @@ describe("Página de Cadastro de Transações /finance/transactions", () => {
 
     fireEvent.change(screen.getByLabelText(/Descrição/i), { target: { value: "Salário" } });
     fireEvent.change(screen.getByLabelText(/Valor/i), { target: { value: "5000" } });
-    fireEvent.change(screen.getByPlaceholderText(/Selecione ou digite para criar nova conta/i), { target: { value: "Itaú" } });
+    fireEvent.change(screen.getByPlaceholderText(/Selecione ou digite para criar nova conta/i), { target: { value: "Itaú Corrente" } });
     fireEvent.change(screen.getByPlaceholderText(/Selecione ou digite para criar nova categoria/i), { target: { value: "Salário" } });
 
     const submitBtn = screen.getByRole("button", { name: /Salvar Transação/i });

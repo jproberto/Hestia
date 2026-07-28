@@ -11,6 +11,7 @@ import {
 import { getAccounts, getOrCreateAccount, Account } from "@/lib/db/accounts";
 import { getCategories, getOrCreateCategory, Category } from "@/lib/db/categories";
 import { getAllOpenMonthlyPeriods, MonthlyPeriod } from "@/lib/db/months";
+import { getBudgets, BudgetItem } from "@/lib/db/budget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +57,7 @@ export default function TransactionsPage() {
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [openMonths, setOpenMonths] = useState<MonthlyPeriod[]>([]);
   const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]);
+  const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -91,6 +93,7 @@ export default function TransactionsPage() {
       if (years.length === 0) {
         setOpenMonths([]);
         setTransactions([]);
+        setBudgetItems([]);
         setLoading(false);
         return;
       }
@@ -110,22 +113,24 @@ export default function TransactionsPage() {
         setSelectedMonth(monthToFetch);
       }
 
-      const [txsData, accsData, catsData] = await Promise.all([
+      const [txsData, accsData, catsData, budgetData] = await Promise.all([
         getTransactionsByMonth(supabase, yearToUse, monthToFetch),
         getAccounts(supabase),
         getCategories(supabase),
+        getBudgets(supabase, yearToUse, monthToFetch).catch(() => []),
       ]);
 
       setTransactions(txsData);
       setAccounts(accsData);
       setCategories(catsData);
+      setBudgetItems(budgetData);
     } catch (err: unknown) {
       console.error("Erro ao carregar lançamentos:", err);
       setErrorMsg(parseErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [supabase, selectedYear, selectedMonth]);
+  }, [supabase, selectedYear, selectedMonth, setSelectedYear, setSelectedMonth]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -134,28 +139,87 @@ export default function TransactionsPage() {
     return () => clearTimeout(timer);
   }, [fetchData]);
 
-  // Totais do mês
-  const totalReceitas = transactions
-    .filter((t) => t.type === "receita")
-    .reduce((acc, t) => acc + Number(t.amount), 0);
-
-  const despesasNormais = transactions
-    .filter((t) => t.type === "despesa" && !t.is_refund)
-    .reduce((acc, t) => acc + Number(t.amount), 0);
-
-  const estornosDespesa = transactions
-    .filter((t) => t.type === "despesa" && t.is_refund)
-    .reduce((acc, t) => acc + Number(t.amount), 0);
-
-  const totalSaidas = despesasNormais - estornosDespesa;
-  const resultadoMes = totalReceitas - totalSaidas;
-
   // Delimitadores do Date Input para travar dentro do Mês e Ano selecionados
   const minDateStr = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
   const lastDayOfMonth = new Date(selectedYear, selectedMonth, 0).getDate();
   const maxDateStr = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-${String(
     lastDayOfMonth
   ).padStart(2, "0")}`;
+
+  // Processamento de Categorias de Receita e Despesa para a Área Orçado vs Real
+  const receitasBudgetCats = budgetItems.filter((b) => b.category_type === "receita");
+  const despesasBudgetCats = budgetItems.filter((b) => b.category_type === "despesa");
+
+  // Garantir que categorias com transações registradas mas sem orçamento também apareçam
+  const receitaCatMap = new Map<string, { category_name: string; previsto: number; real: number }>();
+  receitasBudgetCats.forEach((b) => {
+    receitaCatMap.set(b.category_name.toLowerCase(), {
+      category_name: b.category_name,
+      previsto: Number(b.amount),
+      real: 0,
+    });
+  });
+
+  const despesaCatMap = new Map<string, { category_name: string; previsto: number; real: number }>();
+  despesasBudgetCats.forEach((b) => {
+    despesaCatMap.set(b.category_name.toLowerCase(), {
+      category_name: b.category_name,
+      previsto: Number(b.amount),
+      real: 0,
+    });
+  });
+
+  // Calcular o Valor Real de cada categoria a partir das transações
+  transactions.forEach((tx) => {
+    const catName = tx.category_name || "Sem categoria";
+    const key = catName.toLowerCase();
+    if (tx.type === "receita") {
+      const existing = receitaCatMap.get(key) || {
+        category_name: catName,
+        previsto: 0,
+        real: 0,
+      };
+      existing.real += Number(tx.amount);
+      receitaCatMap.set(key, existing);
+    } else {
+      const existing = despesaCatMap.get(key) || {
+        category_name: catName,
+        previsto: 0,
+        real: 0,
+      };
+      if (tx.is_refund) {
+        existing.real -= Number(tx.amount);
+      } else {
+        existing.real += Number(tx.amount);
+      }
+      despesaCatMap.set(key, existing);
+    }
+  });
+
+  const receitaRows = Array.from(receitaCatMap.values());
+  const despesaRows = Array.from(despesaCatMap.values());
+
+  const totalReceitaPrevisto = receitaRows.reduce((acc, r) => acc + r.previsto, 0);
+  const totalReceitaReal = receitaRows.reduce((acc, r) => acc + r.real, 0);
+
+  const totalDespesaPrevisto = despesaRows.reduce((acc, r) => acc + r.previsto, 0);
+  const totalDespesaReal = despesaRows.reduce((acc, r) => acc + r.real, 0);
+
+  // Agrupamento de Transações por Conta / Cartão
+  const accountsMap = new Map<string, TransactionWithDetails[]>();
+  transactions.forEach((tx) => {
+    const accName = tx.account_name || "Sem Conta";
+    const list = accountsMap.get(accName) || [];
+    list.push(tx);
+    accountsMap.set(accName, list);
+  });
+
+  // Ordenar transações em cada conta por data crescente
+  accountsMap.forEach((txs) => {
+    txs.sort((a, b) => a.date.localeCompare(b.date));
+  });
+
+  const accountEntries = Array.from(accountsMap.entries());
 
   const handleOpenModal = () => {
     setDate(minDateStr);
@@ -214,7 +278,7 @@ export default function TransactionsPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
       {/* Menu Superior Financeiro */}
       <div className="flex border-b pb-1 gap-6">
         <Link
@@ -240,21 +304,23 @@ export default function TransactionsPage() {
       {/* Header e Seletores */}
       <div className="flex items-center justify-between border-b pb-4 flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Extrato de Lançamentos</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Extrato & Orçado vs. Real</h1>
           <p className="text-sm text-muted-foreground">
-            Gerencie entradas, saídas e estornos do período.
+            Acompanhe o desempenho do orçamento e os lançamentos detalhados por conta.
           </p>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
           {availableYears.length > 0 && (
             <div className="flex items-center gap-1.5">
-              <Label htmlFor="year-select" className="text-xs">Ano:</Label>
+              <Label htmlFor="year-select" className="text-xs font-semibold">
+                Ano:
+              </Label>
               <select
                 id="year-select"
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="rounded border p-1 bg-card text-card-foreground text-sm font-medium"
+                className="rounded border p-1.5 bg-card text-card-foreground text-sm font-medium"
               >
                 {availableYears.map((y) => (
                   <option key={y} value={y}>
@@ -267,12 +333,14 @@ export default function TransactionsPage() {
 
           {openMonths.length > 0 && (
             <div className="flex items-center gap-1.5">
-              <Label htmlFor="month-select" className="text-xs">Mês:</Label>
+              <Label htmlFor="month-select" className="text-xs font-semibold">
+                Mês:
+              </Label>
               <select
                 id="month-select"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="rounded border p-1 bg-card text-card-foreground text-sm font-medium"
+                className="rounded border p-1.5 bg-card text-card-foreground text-sm font-medium"
               >
                 {openMonths.map((p) => (
                   <option key={p.month} value={p.month}>
@@ -310,110 +378,225 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      {/* Conteúdo do Mês Aberto */}
+      {/* Conteúdo Principal do Mês Aberto */}
       {availableYears.length > 0 && openMonths.length > 0 && (
         <>
-          {/* Cards de Resumo Financeiro */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="rounded-lg border p-4 shadow-sm bg-card text-card-foreground">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Total Entradas
-              </p>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                {formatCurrency(totalReceitas)}
-              </p>
-            </div>
+          {/* ========================================================================= */}
+          {/* 1. ÁREA SUPERIOR: COMPARATIVO ORÇADO VS REAL (RECEITAS E DESPESAS)         */}
+          {/* ========================================================================= */}
+          <div className="flex flex-col gap-4">
+            <h2 className="text-lg font-bold tracking-tight">Comparativo Orçado vs. Real</h2>
 
-            <div className="rounded-lg border p-4 shadow-sm bg-card text-card-foreground">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Total Saídas
-              </p>
-              <p className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1">
-                {formatCurrency(totalSaidas)}
-              </p>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Tabela de Receitas (Esquerda) */}
+              <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
+                <div className="bg-emerald-50 dark:bg-emerald-950/40 p-3 border-b border-emerald-100 dark:border-emerald-900/50 flex items-center justify-between">
+                  <h3 className="font-semibold text-sm text-emerald-900 dark:text-emerald-300">
+                    📈 Receitas (Orçado vs Real)
+                  </h3>
+                  <div className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                    Real: {formatCurrency(totalReceitaReal)}
+                  </div>
+                </div>
 
-            <div className="rounded-lg border p-4 shadow-sm bg-card text-card-foreground">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Resultado do Mês
-              </p>
-              <p
-                className={`text-2xl font-bold mt-1 ${
-                  resultadoMes >= 0
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-rose-600 dark:text-rose-400"
-                }`}
-              >
-                {formatCurrency(resultadoMes)}
-              </p>
+                <div className="overflow-x-auto flex-1">
+                  <table className="w-full text-left text-sm border-collapse">
+                    <thead>
+                      <tr className="border-b bg-muted/40 text-muted-foreground text-xs font-semibold">
+                        <th className="p-2.5">Categoria</th>
+                        <th className="p-2.5 text-right">Previsto</th>
+                        <th className="p-2.5 text-right">Real</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {receitaRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="p-4 text-center text-xs text-muted-foreground">
+                            Nenhuma categoria de receita cadastrada.
+                          </td>
+                        </tr>
+                      ) : (
+                        receitaRows.map((r, idx) => (
+                          <tr key={idx} className="border-b hover:bg-muted/20 text-xs">
+                            <td className="p-2.5 font-medium">{r.category_name}</td>
+                            <td className="p-2.5 text-right text-muted-foreground">
+                              {formatCurrency(r.previsto)}
+                            </td>
+                            <td className="p-2.5 text-right font-semibold text-emerald-600 dark:text-emerald-400">
+                              {formatCurrency(r.real)}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t bg-muted/50 font-bold text-xs">
+                        <td className="p-2.5">Total Receitas</td>
+                        <td className="p-2.5 text-right text-muted-foreground">
+                          {formatCurrency(totalReceitaPrevisto)}
+                        </td>
+                        <td className="p-2.5 text-right text-emerald-600 dark:text-emerald-400">
+                          {formatCurrency(totalReceitaReal)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+
+              {/* Tabela de Despesas (Direita) */}
+              <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
+                <div className="bg-rose-50 dark:bg-rose-950/40 p-3 border-b border-rose-100 dark:border-rose-900/50 flex items-center justify-between">
+                  <h3 className="font-semibold text-sm text-rose-900 dark:text-rose-300">
+                    📉 Despesas (Orçado vs Real)
+                  </h3>
+                  <div className="text-xs text-rose-700 dark:text-rose-400 font-medium">
+                    Real: {formatCurrency(totalDespesaReal)}
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto flex-1">
+                  <table className="w-full text-left text-sm border-collapse">
+                    <thead>
+                      <tr className="border-b bg-muted/40 text-muted-foreground text-xs font-semibold">
+                        <th className="p-2.5">Categoria</th>
+                        <th className="p-2.5 text-right">Previsto</th>
+                        <th className="p-2.5 text-right">Real</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {despesaRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="p-4 text-center text-xs text-muted-foreground">
+                            Nenhuma categoria de despesa cadastrada.
+                          </td>
+                        </tr>
+                      ) : (
+                        despesaRows.map((d, idx) => (
+                          <tr key={idx} className="border-b hover:bg-muted/20 text-xs">
+                            <td className="p-2.5 font-medium">{d.category_name}</td>
+                            <td className="p-2.5 text-right text-muted-foreground">
+                              {formatCurrency(d.previsto)}
+                            </td>
+                            <td className="p-2.5 text-right font-semibold text-rose-600 dark:text-rose-400">
+                              {formatCurrency(d.real)}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t bg-muted/50 font-bold text-xs">
+                        <td className="p-2.5">Total Despesas</td>
+                        <td className="p-2.5 text-right text-muted-foreground">
+                          {formatCurrency(totalDespesaPrevisto)}
+                        </td>
+                        <td className="p-2.5 text-right text-rose-600 dark:text-rose-400">
+                          {formatCurrency(totalDespesaReal)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Tabela de Extrato de Lançamentos */}
-          <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+          {/* ========================================================================= */}
+          {/* 2. ÁREA INFERIOR: EXTRATO SEPARADO POR CONTA / CARTÃO                     */}
+          {/* ========================================================================= */}
+          <div className="flex flex-col gap-4 pt-4 border-t">
+            <h2 className="text-lg font-bold tracking-tight">Extrato por Conta / Cartão</h2>
+
             {loading ? (
               <div className="p-8 text-center text-sm text-muted-foreground">
                 Carregando lançamentos...
               </div>
-            ) : transactions.length === 0 ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">
+            ) : accountEntries.length === 0 ? (
+              <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
                 Nenhum lançamento registrado neste mês.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead>
-                    <tr className="border-b bg-muted/50 text-muted-foreground font-medium">
-                      <th className="p-3">Data</th>
-                      <th className="p-3">Descrição</th>
-                      <th className="p-3">Categoria</th>
-                      <th className="p-3">Conta</th>
-                      <th className="p-3">Tipo</th>
-                      <th className="p-3 text-right">Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transactions.map((tx) => (
-                      <tr key={tx.id} className="border-b hover:bg-muted/30 transition-colors">
-                        <td className="p-3 font-medium whitespace-nowrap">
-                          {formatDateBR(tx.date)}
-                        </td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <span>{tx.description}</span>
-                            {tx.is_refund && (
-                              <span className="rounded bg-sky-100 text-sky-800 text-[10px] font-semibold px-2 py-0.5 dark:bg-sky-950 dark:text-sky-300">
-                                Reembolso
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-3 text-muted-foreground">{tx.category_name}</td>
-                        <td className="p-3 text-muted-foreground">{tx.account_name}</td>
-                        <td className="p-3">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                              tx.type === "receita"
-                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                                : "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
-                            }`}
-                          >
-                            {tx.type === "receita" ? "Receita" : "Despesa"}
+              <div className="flex flex-col gap-6">
+                {accountEntries.map(([accountName, txs]) => {
+                  const accountTotal = txs.reduce((acc, t) => {
+                    if (t.type === "receita" || t.is_refund) return acc + Number(t.amount);
+                    return acc - Number(t.amount);
+                  }, 0);
+
+                  return (
+                    <div
+                      key={accountName}
+                      className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden"
+                    >
+                      <div className="bg-muted/40 p-3 border-b flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">💳</span>
+                          <h3 className="font-bold text-sm tracking-tight">{accountName}</h3>
+                          <span className="text-xs text-muted-foreground">
+                            ({txs.length} {txs.length === 1 ? "lançamento" : "lançamentos"})
                           </span>
-                        </td>
-                        <td
-                          className={`p-3 text-right font-semibold whitespace-nowrap ${
-                            tx.type === "receita" || tx.is_refund
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-rose-600 dark:text-rose-400"
-                          }`}
-                        >
-                          {tx.type === "receita" || tx.is_refund ? "+" : "-"} {formatCurrency(Number(tx.amount))}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                        <div className="text-xs font-semibold">
+                          Saldo do Mês:{" "}
+                          <span
+                            className={
+                              accountTotal >= 0
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-rose-600 dark:text-rose-400"
+                            }
+                          >
+                            {formatCurrency(accountTotal)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm border-collapse">
+                          <thead>
+                            <tr className="border-b bg-muted/20 text-muted-foreground text-xs font-semibold">
+                              <th className="p-3">Data</th>
+                              <th className="p-3">Descrição</th>
+                              <th className="p-3">Categoria</th>
+                              <th className="p-3 text-right">Valor</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {txs.map((tx) => (
+                              <tr key={tx.id} className="border-b hover:bg-muted/20 transition-colors">
+                                <td className="p-3 font-medium text-xs whitespace-nowrap">
+                                  {formatDateBR(tx.date)}
+                                </td>
+                                <td className="p-3 text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{tx.description}</span>
+                                    {tx.is_refund && (
+                                      <span className="rounded bg-sky-100 text-sky-800 text-[10px] font-semibold px-2 py-0.5 dark:bg-sky-950 dark:text-sky-300">
+                                        Reembolso
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="p-3 text-xs text-muted-foreground">
+                                  {tx.category_name}
+                                </td>
+                                <td
+                                  className={`p-3 text-xs text-right font-semibold whitespace-nowrap ${
+                                    tx.type === "receita" || tx.is_refund
+                                      ? "text-emerald-600 dark:text-emerald-400"
+                                      : "text-rose-600 dark:text-rose-400"
+                                  }`}
+                                >
+                                  {tx.type === "receita" || tx.is_refund ? "+" : "-"} {formatCurrency(Number(tx.amount))}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -505,7 +688,7 @@ export default function TransactionsPage() {
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="tx-account" className="text-xs font-semibold">
-                  Conta
+                  Conta / Cartão
                 </Label>
                 <Input
                   id="tx-account"

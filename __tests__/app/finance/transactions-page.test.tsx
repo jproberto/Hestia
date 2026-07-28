@@ -97,6 +97,8 @@ describe("Página de Cadastro de Transações /finance/transactions", () => {
 
     fireEvent.change(screen.getByLabelText(/Descrição/i), { target: { value: "Salário" } });
     fireEvent.change(screen.getByLabelText(/Valor/i), { target: { value: "5000" } });
+    fireEvent.change(screen.getByPlaceholderText(/Selecione ou digite para criar nova conta/i), { target: { value: "Itaú" } });
+    fireEvent.change(screen.getByPlaceholderText(/Selecione ou digite para criar nova categoria/i), { target: { value: "Salário" } });
 
     const submitBtn = screen.getByRole("button", { name: /Salvar Transação/i });
     fireEvent.click(submitBtn);

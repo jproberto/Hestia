@@ -264,7 +264,7 @@ Nesses casos, pare e pergunte. Um plano que preenche lacunas com suposição tra
 
 ## Lembre-se
 
-- **O arquivo do plano gerado deve ser adicionado e commitado no Git antes de iniciar a execução.**
+- **O commit do arquivo de plano via `node .agents/scripts/sdd.js commit` deve ser realizado EXCLUSIVAMENTE após a aprovação explícita e prévia do parceiro humano.** Salve o arquivo localmente, apresente ao usuário e só commite após a aprovação.
 - **Planeje defensivamente:** Antecipe falhas em comandos de CLI. Tenha planos de recuperação e não assuma o "caminho feliz".
 - Paths exatos sempre.
 - Sem código de implementação no plano (apenas arquivos afetados, objetivos técnicos, comandos e testes).

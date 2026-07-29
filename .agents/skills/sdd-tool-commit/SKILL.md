@@ -11,7 +11,8 @@ Transforme mudanças já verificadas em commits git bem formados: revise o diff,
 
 **Anuncie no início:** "Estou usando a skill sdd-tool-commit para registrar este trabalho."
 
-**Pré-requisito:** as mudanças que serão commitadas já devem estar verificadas (testes passando, tarefas marcadas como concluídas). Esta skill não implementa nem corrige nada — se encontrar algo quebrado, pare e volte para a etapa de implementação.
+**Pré-requisito:** As mudanças que serão commitadas já devem estar verificadas (testes passando, tarefas marcadas como concluídas) **E O PARCEIRO HUMANO DEVE TER APROVADO EXPLICITAMENTE A REALIZAÇÃO DO COMMIT**. Esta skill não commita automaticamente sem autorização prévia expressa do parceiro humano.
+⚠️ **Regra Fundamental de Commit Aprovado**: NENHUM commit (seja de specs, planos, código ou documentação) pode ser executado sem a APROVAÇÃO EXPLÍCITA PRÉVIA do parceiro humano. Salve/altere os arquivos localmente, apresente a entrega ao usuário e execute o commit apenas após ele responder aprovando.
 
 ## O Processo
 

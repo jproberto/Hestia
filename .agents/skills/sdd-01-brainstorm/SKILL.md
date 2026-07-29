@@ -143,11 +143,11 @@ Ao finalizar e commitar a especificação, certifique-se de adicionar o link par
 
 Use escrita clara, objetiva e curta. Consulte references/writing-the-spec.md para o critério de quando um item está específico o suficiente para ser útil (especialmente problema, comportamento esperado e critérios de aceite). A spec não deve tentar impressionar por volume; ela deve preservar decisões importantes, reduzir ambiguidade e permitir que a próxima etapa escreva um plano de implementação confiável.
 
-⚠️ **Regra Fundamental de Especificação (Sem Código de Implementação)**: A Spec especifica requisitos, regras de negócio, contratos e critérios de aceite. Código de implementação NÃO pertence à etapa de brainstorming ou à Spec. A Spec deve conter apenas a modelagem DDL/SQL do banco (se houver migração), schemas conceituais e a especificação de comportamento.
+⚠️ **Regra Fundamental de Especificação (Proibição Absoluta de Código)**: A Spec especifica exclusivamente requisitos, regras de negócio, contratos conceituais e critérios de aceite em linguagem natural. NENHUM CÓDIGO de qualquer natureza (TypeScript, React, SQL, DDL/DML, HTML ou CSS) pertence à etapa de brainstorming ou à Spec. A especificação de dados e banco deve ser feita exclusivamente via descrição textual dos modelos, campos e tipos lógicos.
 
 Inclua o que for necessário para reconstruir o design aprovado: problema, decisão tomada, alternativas rejeitadas, comportamento esperado, restrições, riscos e critérios de aceite. Não use uma lista fixa de seções como checklist mecânico. Se uma seção não ajuda a entender ou implementar, deixe fora.
 
-Se o projeto estiver em um repositório git e o fluxo local permitir, commite o documento de design na branch de trabalho confirmada antes de avançar para o plano. Se não houver repositório git, ou se o usuário não quiser commit agora, apenas salve o arquivo.
+⚠️ **Regra Fundamental de Commit Aprovado**: O commit da especificação via `node .agents/scripts/sdd.js commit` deve ser realizado EXCLUSIVAMENTE após a aprovação explícita e prévia do parceiro humano. Salve o arquivo de spec localmente, apresente-o ao usuário e execute o commit apenas após a aprovação expressa.
 
 ### Passo 10: Auto Revisar a Spec
 

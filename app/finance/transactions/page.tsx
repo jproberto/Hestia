@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -74,6 +74,8 @@ export default function TransactionsPage() {
   const [accountTypeInput, setAccountTypeInput] = useState<"conta" | "cartao">("conta");
   const [categoryInput, setCategoryInput] = useState<string>("");
   const [savingTx, setSavingTx] = useState<boolean>(false);
+  const [txSuccessMsg, setTxSuccessMsg] = useState<string | null>(null);
+  const descInputRef = useRef<HTMLInputElement>(null);
 
   // Modal de Nova Conta / Cartão State
   const [isAccModalOpen, setIsAccModalOpen] = useState<boolean>(false);
@@ -259,6 +261,7 @@ export default function TransactionsPage() {
     setAccountTypeInput(acc.type);
     setCategoryInput("");
     setErrorMsg(null);
+    setTxSuccessMsg(null);
     setIsTxModalOpen(true);
   };
 
@@ -307,6 +310,7 @@ export default function TransactionsPage() {
 
     setSavingTx(true);
     setErrorMsg(null);
+    setTxSuccessMsg(null);
 
     try {
       const accountId = await getOrCreateAccount(
@@ -333,6 +337,67 @@ export default function TransactionsPage() {
 
       setIsTxModalOpen(false);
       await fetchData();
+    } catch (err: unknown) {
+      console.error("Erro ao salvar a transação:", err);
+      setErrorMsg(parseErrorMessage(err));
+    } finally {
+      setSavingTx(false);
+    }
+  };
+
+  const handleSaveTransactionAndAddAnother = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!description.trim() || !amount || !accountInput.trim() || !categoryInput.trim()) {
+      setErrorMsg("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setErrorMsg("O valor deve ser um número maior que zero.");
+      return;
+    }
+
+    setSavingTx(true);
+    setErrorMsg(null);
+    setTxSuccessMsg(null);
+
+    try {
+      const accountId = await getOrCreateAccount(
+        supabase,
+        accountInput,
+        userEmail,
+        accountTypeInput
+      );
+      const categoryId = await getOrCreateCategory(supabase, categoryInput, type, userEmail);
+
+      await createTransaction(
+        supabase,
+        {
+          description: description.trim(),
+          amount: numAmount,
+          type,
+          is_refund: type === "despesa" ? isRefund : false,
+          date,
+          account_id: accountId,
+          category_id: categoryId,
+        },
+        userEmail
+      );
+
+      // Reseta os campos especificos e mantem o modal aberto
+      setDescription("");
+      setAmount("");
+      setCategoryInput("");
+      setIsRefund(false);
+      setTxSuccessMsg("Transação salva com sucesso!");
+
+      await fetchData();
+
+      // Foco automatico no campo Descrição
+      setTimeout(() => {
+        descInputRef.current?.focus();
+      }, 50);
     } catch (err: unknown) {
       console.error("Erro ao salvar a transação:", err);
       setErrorMsg(parseErrorMessage(err));
@@ -759,6 +824,12 @@ export default function TransactionsPage() {
               {`Nova Transação (${accountInput})`}
             </h2>
 
+            {txSuccessMsg && (
+              <div className="rounded border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                {txSuccessMsg}
+              </div>
+            )}
+
             <form onSubmit={handleSaveTransaction} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="tx-date" className="text-xs font-semibold">
@@ -794,6 +865,7 @@ export default function TransactionsPage() {
                 </Label>
                 <Input
                   id="tx-description"
+                  ref={descInputRef}
                   type="text"
                   placeholder="Ex: Supermercado, Salário"
                   value={description}
@@ -876,6 +948,14 @@ export default function TransactionsPage() {
                   onClick={() => setIsTxModalOpen(false)}
                 >
                   Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleSaveTransactionAndAddAnother}
+                  disabled={savingTx}
+                >
+                  {savingTx ? "Salvando..." : "Salvar e Adicionar Outro"}
                 </Button>
                 <Button type="submit" disabled={savingTx}>
                   {savingTx ? "Salvando..." : "Salvar"}

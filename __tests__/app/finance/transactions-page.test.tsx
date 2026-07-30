@@ -122,5 +122,7 @@ describe("Página de Cadastro de Transações /finance/transactions", () => {
     fireEvent.click(footerTxBtn);
 
     expect(await screen.findByRole("heading", { name: "Nova Transação (Itaú Corrente)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar e Adicionar Outro" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeInTheDocument();
   });
 });

@@ -6,6 +6,8 @@ import { createClient } from "@/utils/supabase/client";
 import {
   getTransactionsByMonth,
   createTransaction,
+  updateTransaction,
+  deleteTransaction,
   TransactionWithDetails,
 } from "@/lib/db/transactions";
 import { getAccounts, getOrCreateAccount, Account } from "@/lib/db/accounts";
@@ -16,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { parseErrorMessage } from "@/lib/utils";
+import { Pencil, Trash2 } from "lucide-react";
 
 const MONTH_NAMES = [
   "Janeiro",
@@ -65,6 +68,11 @@ export default function TransactionsPage() {
 
   // Modal de Transação State
   const [isTxModalOpen, setIsTxModalOpen] = useState<boolean>(false);
+  const [editingTransaction, setEditingTransaction] = useState<TransactionWithDetails | null>(null);
+  const [deletingTransaction, setDeletingTransaction] = useState<TransactionWithDetails | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [deletingTx, setDeletingTx] = useState<boolean>(false);
+
   const [description, setDescription] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [type, setType] = useState<"receita" | "despesa">("despesa");
@@ -250,8 +258,9 @@ export default function TransactionsPage() {
     card.txs.sort((a, b) => a.date.localeCompare(b.date));
   });
 
-  // Abertura do Modal de Transação pré-fixado para a conta escolhida
+  // Abertura do Modal de Transação pré-fixado para a conta escolhida (Nova Transação)
   const handleOpenTxModal = (acc: Account) => {
+    setEditingTransaction(null);
     setDate(minDateStr);
     setDescription("");
     setAmount("");
@@ -263,6 +272,47 @@ export default function TransactionsPage() {
     setErrorMsg(null);
     setTxSuccessMsg(null);
     setIsTxModalOpen(true);
+  };
+
+  // Abertura do Modal de Transação (Edição)
+  const handleOpenEditModal = (tx: TransactionWithDetails) => {
+    setEditingTransaction(tx);
+    setDate(tx.date);
+    setDescription(tx.description);
+    setAmount(String(tx.amount));
+    setType(tx.type);
+    setIsRefund(tx.is_refund);
+    setAccountInput(tx.account_name || "");
+    setAccountTypeInput("conta");
+    setCategoryInput(tx.category_name || "");
+    setErrorMsg(null);
+    setTxSuccessMsg(null);
+    setIsTxModalOpen(true);
+  };
+
+  // Abertura do Modal de Exclusão
+  const handleOpenDeleteModal = (tx: TransactionWithDetails) => {
+    setDeletingTransaction(tx);
+    setErrorMsg(null);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingTransaction) return;
+    setDeletingTx(true);
+    setErrorMsg(null);
+
+    try {
+      await deleteTransaction(supabase, deletingTransaction.id, userEmail);
+      setIsDeleteModalOpen(false);
+      setDeletingTransaction(null);
+      await fetchData();
+    } catch (err: unknown) {
+      console.error("Erro ao excluir a transação:", err);
+      setErrorMsg(parseErrorMessage(err));
+    } finally {
+      setDeletingTx(false);
+    }
   };
 
   // Abertura do Modal Dedicado "Nova Conta / Cartão"
@@ -321,21 +371,39 @@ export default function TransactionsPage() {
       );
       const categoryId = await getOrCreateCategory(supabase, categoryInput, type, userEmail);
 
-      await createTransaction(
-        supabase,
-        {
-          description,
-          amount: numAmount,
-          type,
-          is_refund: type === "despesa" ? isRefund : false,
-          date,
-          account_id: accountId,
-          category_id: categoryId,
-        },
-        userEmail
-      );
+      if (editingTransaction) {
+        await updateTransaction(
+          supabase,
+          editingTransaction.id,
+          {
+            description: description.trim(),
+            amount: numAmount,
+            type,
+            is_refund: type === "despesa" ? isRefund : false,
+            date,
+            account_id: accountId,
+            category_id: categoryId,
+          },
+          userEmail
+        );
+      } else {
+        await createTransaction(
+          supabase,
+          {
+            description: description.trim(),
+            amount: numAmount,
+            type,
+            is_refund: type === "despesa" ? isRefund : false,
+            date,
+            account_id: accountId,
+            category_id: categoryId,
+          },
+          userEmail
+        );
+      }
 
       setIsTxModalOpen(false);
+      setEditingTransaction(null);
       await fetchData();
     } catch (err: unknown) {
       console.error("Erro ao salvar a transação:", err);
@@ -702,6 +770,7 @@ export default function TransactionsPage() {
                                 <th className="p-2.5">Descrição</th>
                                 <th className="p-2.5">Categoria</th>
                                 <th className="p-2.5 text-right">Valor</th>
+                                <th className="p-2.5 text-right">Ações</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -731,6 +800,28 @@ export default function TransactionsPage() {
                                     }`}
                                   >
                                     {tx.type === "receita" || tx.is_refund ? "+" : "-"} {formatCurrency(Number(tx.amount))}
+                                  </td>
+                                  <td className="p-2.5 text-right whitespace-nowrap">
+                                    <div className="flex items-center justify-end gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenEditModal(tx)}
+                                        aria-label={`Editar lançamento ${tx.description}`}
+                                        title="Editar lançamento"
+                                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenDeleteModal(tx)}
+                                        aria-label={`Excluir lançamento ${tx.description}`}
+                                        title="Excluir lançamento"
+                                        className="p-1 rounded hover:bg-rose-100 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 transition-colors"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               ))}
@@ -821,7 +912,9 @@ export default function TransactionsPage() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-lg flex flex-col gap-4">
             <h2 className="text-lg font-bold tracking-tight">
-              {`Nova Transação (${accountInput})`}
+              {editingTransaction
+                ? `Editar Transação (${accountInput})`
+                : `Nova Transação (${accountInput})`}
             </h2>
 
             {txSuccessMsg && (
@@ -945,23 +1038,66 @@ export default function TransactionsPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsTxModalOpen(false)}
+                  onClick={() => {
+                    setIsTxModalOpen(false);
+                    setEditingTransaction(null);
+                  }}
                 >
                   Cancelar
                 </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleSaveTransactionAndAddAnother}
-                  disabled={savingTx}
-                >
-                  {savingTx ? "Salvando..." : "Salvar e Adicionar Outro"}
-                </Button>
+                {!editingTransaction && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleSaveTransactionAndAddAnother}
+                    disabled={savingTx}
+                  >
+                    {savingTx ? "Salvando..." : "Salvar e Adicionar Outro"}
+                  </Button>
+                )}
                 <Button type="submit" disabled={savingTx}>
                   {savingTx ? "Salvando..." : "Salvar"}
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 3: CONFIRMAÇÃO DE EXCLUSÃO DE TRANSAÇÃO                              */}
+      {/* ========================================================================= */}
+      {isDeleteModalOpen && deletingTransaction && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm rounded-lg border bg-card p-6 text-card-foreground shadow-lg flex flex-col gap-4">
+            <h2 className="text-lg font-bold tracking-tight text-rose-600 dark:text-rose-400">
+              Excluir lançamento
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Tem certeza que deseja excluir o lançamento{" "}
+              <strong className="text-foreground">{deletingTransaction.description}</strong> no valor de{" "}
+              <strong className="text-foreground">{formatCurrency(Number(deletingTransaction.amount))}</strong>?
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setDeletingTransaction(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={deletingTx}
+                onClick={handleConfirmDelete}
+              >
+                {deletingTx ? "Excluindo..." : "Confirmar Exclusão"}
+              </Button>
+            </div>
           </div>
         </div>
       )}

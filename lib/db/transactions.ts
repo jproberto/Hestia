@@ -27,7 +27,7 @@ export interface TransactionWithDetails {
 
 interface TransactionRow extends TransactionWithDetails {
   categories?: { name: string } | null;
-  accounts?: { name: string } | null;
+  financial_accounts?: { name: string } | null;
 }
 
 export async function getTransactionsByMonth(
@@ -44,7 +44,7 @@ export async function getTransactionsByMonth(
     .select(`
       *,
       categories ( name ),
-      accounts ( name )
+      financial_accounts ( name )
     `)
     .gte("date", startDate)
     .lte("date", endDate)
@@ -55,7 +55,7 @@ export async function getTransactionsByMonth(
   return ((data || []) as unknown as TransactionRow[]).map((t) => ({
     ...t,
     category_name: t.categories?.name ?? "Sem categoria",
-    account_name: t.accounts?.name ?? "Sem conta",
+    account_name: t.financial_accounts?.name ?? "Sem conta",
   }));
 }
 
@@ -98,7 +98,7 @@ export async function createTransaction(
     .select(`
       *,
       categories ( name ),
-      accounts ( name )
+      financial_accounts ( name )
     `)
     .single();
 
@@ -109,6 +109,6 @@ export async function createTransaction(
   return {
     ...row,
     category_name: row.categories?.name ?? "Sem categoria",
-    account_name: row.accounts?.name ?? "Sem conta",
+    account_name: row.financial_accounts?.name ?? "Sem conta",
   };
 }

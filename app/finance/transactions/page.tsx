@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -48,7 +48,7 @@ const formatDateBR = (dateStr: string) => {
 };
 
 export default function TransactionsPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const today = new Date();
   const [selectedYear, setSelectedYear] = useState<number>(today.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth() + 1);
@@ -63,25 +63,30 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  // Modal de Transação State
+  const [isTxModalOpen, setIsTxModalOpen] = useState<boolean>(false);
   const [description, setDescription] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [type, setType] = useState<"receita" | "despesa">("despesa");
   const [isRefund, setIsRefund] = useState<boolean>(false);
   const [date, setDate] = useState<string>("");
   const [accountInput, setAccountInput] = useState<string>("");
-  const [isAccountFixed, setIsAccountFixed] = useState<boolean>(false);
+  const [accountTypeInput, setAccountTypeInput] = useState<"conta" | "cartao">("conta");
   const [categoryInput, setCategoryInput] = useState<string>("");
-  const [saving, setSaving] = useState<boolean>(false);
+  const [savingTx, setSavingTx] = useState<boolean>(false);
+
+  // Modal de Nova Conta / Cartão State
+  const [isAccModalOpen, setIsAccModalOpen] = useState<boolean>(false);
+  const [newAccName, setNewAccName] = useState<string>("");
+  const [newAccType, setNewAccType] = useState<"conta" | "cartao">("conta");
+  const [savingAcc, setSavingAcc] = useState<boolean>(false);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg(null);
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      setErrorMsg(null);
       if (user?.email) {
         setUserEmail(user.email);
       }
@@ -99,20 +104,22 @@ export default function TransactionsPage() {
         return;
       }
 
-      let yearToUse = selectedYear;
-      if (!years.includes(selectedYear)) {
-        yearToUse = years[0];
-        setSelectedYear(yearToUse);
+      if (years.length > 0 && !years.includes(selectedYear)) {
+        setSelectedYear(years[0]);
       }
 
+      const yearToUse = years.includes(selectedYear) ? selectedYear : years[0];
       const openMonthsForYear = allOpen.filter((p) => p.year === yearToUse);
       setOpenMonths(openMonthsForYear);
 
-      let monthToFetch = selectedMonth;
       if (openMonthsForYear.length > 0 && !openMonthsForYear.some((p) => p.month === selectedMonth)) {
-        monthToFetch = openMonthsForYear[0].month;
-        setSelectedMonth(monthToFetch);
+        setSelectedMonth(openMonthsForYear[0].month);
       }
+
+      const monthToFetch =
+        openMonthsForYear.length > 0 && openMonthsForYear.some((p) => p.month === selectedMonth)
+          ? selectedMonth
+          : openMonthsForYear[0]?.month ?? selectedMonth;
 
       const [txsData, accsData, catsData, budgetData] = await Promise.all([
         getTransactionsByMonth(supabase, yearToUse, monthToFetch),
@@ -121,10 +128,10 @@ export default function TransactionsPage() {
         getBudgets(supabase, yearToUse, monthToFetch).catch(() => []),
       ]);
 
-      setTransactions(txsData);
-      setAccounts(accsData);
-      setCategories(catsData);
-      setBudgetItems(budgetData);
+      setTransactions(txsData || []);
+      setAccounts(accsData || []);
+      setCategories(catsData || []);
+      setBudgetItems(budgetData || []);
     } catch (err: unknown) {
       console.error("Erro ao carregar lançamentos:", err);
       setErrorMsg(parseErrorMessage(err));
@@ -134,10 +141,16 @@ export default function TransactionsPage() {
   }, [supabase, selectedYear, selectedMonth, setSelectedYear, setSelectedMonth]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchData();
-    }, 0);
-    return () => clearTimeout(timer);
+    let isMounted = true;
+    const load = async () => {
+      if (isMounted) {
+        await fetchData();
+      }
+    };
+    void load();
+    return () => {
+      isMounted = false;
+    };
   }, [fetchData]);
 
   // Delimitadores do Date Input para travar dentro do Mês e Ano selecionados
@@ -206,40 +219,77 @@ export default function TransactionsPage() {
   const totalDespesaPrevisto = despesaRows.reduce((acc, r) => acc + r.previsto, 0);
   const totalDespesaReal = despesaRows.reduce((acc, r) => acc + r.real, 0);
 
-  // Agrupamento de Transações por Conta / Cartão
-  const accountsMap = new Map<string, TransactionWithDetails[]>();
+  // Estruturação do Grid de Contas e Cartões (unindo contas existentes e lançamentos)
+  const allAccountsMap = new Map<string, { account: Account; txs: TransactionWithDetails[] }>();
+
+  accounts.forEach((acc) => {
+    allAccountsMap.set(acc.name.toLowerCase(), {
+      account: acc,
+      txs: [],
+    });
+  });
+
   transactions.forEach((tx) => {
     const accName = tx.account_name || "Sem Conta";
-    const list = accountsMap.get(accName) || [];
-    list.push(tx);
-    accountsMap.set(accName, list);
+    const key = accName.toLowerCase();
+    const existing = allAccountsMap.get(key);
+    if (existing) {
+      existing.txs.push(tx);
+    } else {
+      allAccountsMap.set(key, {
+        account: { id: tx.account_id, name: accName, type: "conta" },
+        txs: [tx],
+      });
+    }
   });
 
-  // Ordenar transações em cada conta por data crescente
-  accountsMap.forEach((txs) => {
-    txs.sort((a, b) => a.date.localeCompare(b.date));
+  const accountCardsList = Array.from(allAccountsMap.values());
+  accountCardsList.forEach((card) => {
+    card.txs.sort((a, b) => a.date.localeCompare(b.date));
   });
 
-  const accountEntries = Array.from(accountsMap.entries());
-
-  const handleOpenModal = (targetAccountName?: string) => {
+  // Abertura do Modal de Transação pré-fixado para a conta escolhida
+  const handleOpenTxModal = (acc: Account) => {
     setDate(minDateStr);
     setDescription("");
     setAmount("");
     setType("despesa");
     setIsRefund(false);
-    setCategoryInput(categories.length > 0 ? categories[0].name : "");
+    setAccountInput(acc.name);
+    setAccountTypeInput(acc.type);
+    setCategoryInput("");
     setErrorMsg(null);
+    setIsTxModalOpen(true);
+  };
 
-    if (targetAccountName) {
-      setAccountInput(targetAccountName);
-      setIsAccountFixed(true);
-    } else {
-      setAccountInput("");
-      setIsAccountFixed(false);
+  // Abertura do Modal Dedicado "Nova Conta / Cartão"
+  const handleOpenAccModal = () => {
+    setNewAccName("");
+    setNewAccType("conta");
+    setErrorMsg(null);
+    setIsAccModalOpen(true);
+  };
+
+  const handleSaveAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAccName.trim()) {
+      setErrorMsg("Digite o nome da conta ou cartão.");
+      return;
     }
 
-    setIsModalOpen(true);
+    setSavingAcc(true);
+    setErrorMsg(null);
+
+    try {
+      await getOrCreateAccount(supabase, newAccName.trim(), userEmail, newAccType);
+      setIsAccModalOpen(false);
+      await fetchData();
+    } catch (err: unknown) {
+      console.error("Erro ao salvar conta/cartão:", err);
+      setErrorMsg(parseErrorMessage(err));
+    } finally {
+      setSavingAcc(false);
+    }
   };
 
   const handleSaveTransaction = async (e: React.FormEvent) => {
@@ -255,11 +305,16 @@ export default function TransactionsPage() {
       return;
     }
 
-    setSaving(true);
+    setSavingTx(true);
     setErrorMsg(null);
 
     try {
-      const accountId = await getOrCreateAccount(supabase, accountInput, userEmail);
+      const accountId = await getOrCreateAccount(
+        supabase,
+        accountInput,
+        userEmail,
+        accountTypeInput
+      );
       const categoryId = await getOrCreateCategory(supabase, categoryInput, type, userEmail);
 
       await createTransaction(
@@ -276,13 +331,13 @@ export default function TransactionsPage() {
         userEmail
       );
 
-      setIsModalOpen(false);
+      setIsTxModalOpen(false);
       await fetchData();
     } catch (err: unknown) {
       console.error("Erro ao salvar a transação:", err);
       setErrorMsg(parseErrorMessage(err));
     } finally {
-      setSaving(false);
+      setSavingTx(false);
     }
   };
 
@@ -509,100 +564,126 @@ export default function TransactionsPage() {
           <div className="flex flex-col gap-4 pt-4 border-t">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold tracking-tight">Contas e Cartões</h2>
-              <Button onClick={() => handleOpenModal()} variant="outline" size="sm">
+              <Button onClick={handleOpenAccModal} variant="outline" size="sm">
                 + Nova Conta / Cartão
               </Button>
             </div>
 
             {loading ? (
               <div className="p-8 text-center text-sm text-muted-foreground">
-                Carregando lançamentos...
+                Carregando contas e lançamentos...
               </div>
-            ) : accountEntries.length === 0 ? (
-              <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
-                Nenhum lançamento registrado neste mês. Clique em <strong>&quot;+ Nova Conta / Cartão&quot;</strong> para iniciar.
+            ) : accountCardsList.length === 0 ? (
+              <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm flex flex-col items-center gap-2">
+                <p>Nenhuma conta ou cartão cadastrado ainda.</p>
+                <Button onClick={handleOpenAccModal} size="sm">
+                  + Cadastrar Primeira Conta ou Cartão
+                </Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {accountEntries.map(([accountName, txs]) => {
+                {accountCardsList.map(({ account, txs }) => {
                   const accountTotal = txs.reduce((acc, t) => {
                     if (t.type === "receita" || t.is_refund) return acc + Number(t.amount);
                     return acc - Number(t.amount);
                   }, 0);
 
+                  const isCard = account.type === "cartao";
+
                   return (
                     <div
-                      key={accountName}
+                      key={account.id || account.name}
                       className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col"
                     >
-                      <div className="bg-muted/40 p-3 border-b flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-base">💳</span>
-                          <h3 className="font-bold text-sm tracking-tight">{accountName}</h3>
-                        </div>
-                        <div className="flex items-center gap-3">
+                      {/* Cabeçalho da Conta (sem botão de transação) */}
+                      <div className="bg-muted/40 p-3 border-b flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{isCard ? "💳" : "🏦"}</span>
+                          <h3 className="font-bold text-sm tracking-tight">{account.name}</h3>
                           <span
-                            className={`text-xs font-bold ${
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                              isCard
+                                ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300"
+                                : "bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-300"
+                            }`}
+                          >
+                            {isCard ? "Cartão" : "Conta"}
+                          </span>
+                        </div>
+                        <div className="text-xs font-bold">
+                          <span
+                            className={
                               accountTotal >= 0
                                 ? "text-emerald-700 dark:text-emerald-300"
                                 : "text-rose-700 dark:text-rose-300"
-                            }`}
+                            }
                           >
                             {formatCurrency(accountTotal)}
                           </span>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleOpenModal(accountName)}
-                            className="h-7 text-xs px-2"
-                          >
-                            + Nova Transação
-                          </Button>
                         </div>
                       </div>
 
+                      {/* Tabela de Transações */}
                       <div className="overflow-x-auto flex-1">
-                        <table className="w-full text-left text-sm border-collapse">
-                          <thead>
-                            <tr className="border-b bg-muted/20 text-muted-foreground text-xs font-semibold">
-                              <th className="p-2.5">Data</th>
-                              <th className="p-2.5">Descrição</th>
-                              <th className="p-2.5">Categoria</th>
-                              <th className="p-2.5 text-right">Valor</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {txs.map((tx) => (
-                              <tr key={tx.id} className="border-b hover:bg-muted/20 transition-colors">
-                                <td className="p-2.5 font-medium text-xs whitespace-nowrap">
-                                  {formatDateBR(tx.date)}
-                                </td>
-                                <td className="p-2.5 text-xs">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-medium">{tx.description}</span>
-                                    {tx.is_refund && (
-                                      <span className="rounded bg-sky-100 text-sky-800 text-[10px] font-semibold px-1.5 py-0.5 dark:bg-sky-950 dark:text-sky-300">
-                                        Reembolso
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="p-2.5 text-xs text-muted-foreground">
-                                  {tx.category_name}
-                                </td>
-                                <td
-                                  className={`p-2.5 text-xs text-right font-semibold whitespace-nowrap ${
-                                    tx.type === "receita" || tx.is_refund
-                                      ? "text-emerald-700 dark:text-emerald-300"
-                                      : "text-rose-700 dark:text-rose-300"
-                                  }`}
-                                >
-                                  {tx.type === "receita" || tx.is_refund ? "+" : "-"} {formatCurrency(Number(tx.amount))}
-                                </td>
+                        {txs.length === 0 ? (
+                          <div className="p-6 text-center text-xs text-muted-foreground">
+                            Nenhum lançamento nesta conta no mês de {MONTH_NAMES[selectedMonth - 1]}.
+                          </div>
+                        ) : (
+                          <table className="w-full text-left text-sm border-collapse">
+                            <thead>
+                              <tr className="border-b bg-muted/20 text-muted-foreground text-xs font-semibold">
+                                <th className="p-2.5">Data</th>
+                                <th className="p-2.5">Descrição</th>
+                                <th className="p-2.5">Categoria</th>
+                                <th className="p-2.5 text-right">Valor</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {txs.map((tx) => (
+                                <tr key={tx.id} className="border-b hover:bg-muted/20 transition-colors">
+                                  <td className="p-2.5 font-medium text-xs whitespace-nowrap">
+                                    {formatDateBR(tx.date)}
+                                  </td>
+                                  <td className="p-2.5 text-xs">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-medium">{tx.description}</span>
+                                      {tx.is_refund && (
+                                        <span className="rounded bg-sky-100 text-sky-800 text-[10px] font-semibold px-1.5 py-0.5 dark:bg-sky-950 dark:text-sky-300">
+                                          Reembolso
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="p-2.5 text-xs text-muted-foreground">
+                                    {tx.category_name}
+                                  </td>
+                                  <td
+                                    className={`p-2.5 text-xs text-right font-semibold whitespace-nowrap ${
+                                      tx.type === "receita" || tx.is_refund
+                                        ? "text-emerald-700 dark:text-emerald-300"
+                                        : "text-rose-700 dark:text-rose-300"
+                                    }`}
+                                  >
+                                    {tx.type === "receita" || tx.is_refund ? "+" : "-"} {formatCurrency(Number(tx.amount))}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+
+                      {/* Rodapé do Extrato com o botão + Nova Transação */}
+                      <div className="p-2.5 bg-muted/20 border-t flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleOpenTxModal(account)}
+                          className="h-8 text-xs font-semibold w-full sm:w-auto"
+                        >
+                          + Nova Transação
+                        </Button>
                       </div>
                     </div>
                   );
@@ -613,12 +694,69 @@ export default function TransactionsPage() {
         </>
       )}
 
-      {/* Modal de Formulário */}
-      {isModalOpen && (
+      {/* ========================================================================= */}
+      {/* MODAL 1: DEDICADO PARA NOVA CONTA / CARTÃO                                 */}
+      {/* ========================================================================= */}
+      {isAccModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm rounded-lg border bg-card p-6 text-card-foreground shadow-lg flex flex-col gap-4">
+            <h2 className="text-lg font-bold tracking-tight">Nova Conta / Cartão</h2>
+
+            <form onSubmit={handleSaveAccount} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="acc-name" className="text-xs font-semibold">
+                  Nome da Conta / Cartão
+                </Label>
+                <Input
+                  id="acc-name"
+                  type="text"
+                  placeholder="Ex: Itaú Corrente, Cartão Nubank"
+                  value={newAccName}
+                  onChange={(e) => setNewAccName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="acc-type" className="text-xs font-semibold">
+                  Tipo
+                </Label>
+                <select
+                  id="acc-type"
+                  value={newAccType}
+                  onChange={(e) => setNewAccType(e.target.value as "conta" | "cartao")}
+                  className="rounded border p-2 bg-background text-foreground text-sm font-medium"
+                >
+                  <option value="conta">Conta</option>
+                  <option value="cartao">Cartão</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAccModalOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={savingAcc}>
+                  {savingAcc ? "Salvando..." : "Salvar"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 2: LANÇAMENTO DE TRANSAÇÃO (COM CONTA PRÉ-FIXADA)                   */}
+      {/* ========================================================================= */}
+      {isTxModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-lg flex flex-col gap-4">
             <h2 className="text-lg font-bold tracking-tight">
-              {isAccountFixed ? `Nova Transação (${accountInput})` : "Novo Lançamento / Conta"}
+              {`Nova Transação (${accountInput})`}
             </h2>
 
             <form onSubmit={handleSaveTransaction} className="flex flex-col gap-4">
@@ -641,37 +779,13 @@ export default function TransactionsPage() {
                 <Label htmlFor="tx-account" className="text-xs font-semibold">
                   Conta / Cartão
                 </Label>
-                {isAccountFixed ? (
-                  <div>
-                    <Input
-                      id="tx-account"
-                      type="text"
-                      value={accountInput}
-                      disabled
-                      className="bg-muted text-muted-foreground cursor-not-allowed"
-                    />
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      Conta fixada para este lançamento.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <Input
-                      id="tx-account"
-                      type="text"
-                      list="accounts-list"
-                      placeholder="Selecione ou digite para criar nova conta"
-                      value={accountInput}
-                      onChange={(e) => setAccountInput(e.target.value)}
-                      required
-                    />
-                    <datalist id="accounts-list">
-                      {accounts.map((acc) => (
-                        <option key={acc.id} value={acc.name} />
-                      ))}
-                    </datalist>
-                  </>
-                )}
+                <Input
+                  id="tx-account"
+                  type="text"
+                  value={accountInput}
+                  disabled
+                  className="bg-muted text-muted-foreground cursor-not-allowed font-medium"
+                />
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -697,7 +811,7 @@ export default function TransactionsPage() {
                     id="tx-type"
                     value={type}
                     onChange={(e) => setType(e.target.value as "receita" | "despesa")}
-                    className="rounded border p-2 bg-background text-foreground text-sm"
+                    className="rounded border p-2 bg-background text-foreground text-sm font-medium"
                   >
                     <option value="despesa">Despesa</option>
                     <option value="receita">Receita</option>
@@ -759,12 +873,12 @@ export default function TransactionsPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => setIsTxModalOpen(false)}
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={saving}>
-                  {saving ? "Salvando..." : "Salvar Transação"}
+                <Button type="submit" disabled={savingTx}>
+                  {savingTx ? "Salvando..." : "Salvar"}
                 </Button>
               </div>
             </form>

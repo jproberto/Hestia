@@ -361,6 +361,37 @@ function cmdCommit(msg) {
   }
 }
 
+// Comando: guardian
+function cmdGuardian(currentSkill, intendedAction) {
+  if (!currentSkill || !intendedAction) {
+    logError("Forneça a skill atual e a ação pretendida. Ex: node sdd.js guardian sdd-01-brainstorm sdd-02-plan");
+    process.exit(1);
+  }
+
+  const validTransitions = {
+    "sdd-01-brainstorm": ["sdd-02-plan", "write_spec", "spec"],
+    "sdd-02-plan": ["sdd-03-implement", "write_plan", "plan"],
+    "sdd-03-implement": ["sdd-tool-db-migration", "sdd-tool-debug", "sdd-04-review", "task"],
+    "sdd-04-review": ["sdd-tool-debug", "sdd-03-implement", "sdd-05-manual-test"],
+    "sdd-05-manual-test": ["sdd-03-implement", "sdd-tool-debug", "sdd-writer-changelog", "sdd-writer-skills", "sdd-writer-agents", "sdd-tool-commit"],
+  };
+
+  const allowed = validTransitions[currentSkill];
+  if (!allowed) {
+    logError(`VIOLAÇÃO DE PROCESSO: Skill '${currentSkill}' não possui regras de transição válidas registradas no Guardian.`);
+    process.exit(1);
+  }
+
+  const isActionAllowed = allowed.some((act) => intendedAction.toLowerCase().includes(act.toLowerCase()));
+  if (!isActionAllowed) {
+    logError(`VIOLAÇÃO DE PROCESSO (GUARDIAN BLOQUEIO): A transição de '${currentSkill}' para '${intendedAction}' É PROIBIDA.`);
+    logError(`Ações/skills permitidas a partir de '${currentSkill}': ${allowed.join(", ")}`);
+    process.exit(1);
+  }
+
+  logInfo(`Guardian: Transição de '${currentSkill}' para '${intendedAction}' VALIDADA E APROVADA FISICAMENTE.`);
+}
+
 // Dispatcher de comandos
 const [,, command, ...args] = process.argv;
 
@@ -383,6 +414,9 @@ switch (command) {
   case "commit":
     cmdCommit(args[0]);
     break;
+  case "guardian":
+    cmdGuardian(args[0], args[1]);
+    break;
   default:
     console.log(`
 Uso do SDD CLI Copilot:
@@ -392,6 +426,7 @@ Uso do SDD CLI Copilot:
   node sdd.js task-block <task-id> <motivo> Marca uma tarefa como bloqueada com o motivo.
   node sdd.js request-review               Valida tarefas, roda testes locais e gera template de review.
   node sdd.js commit "<mensagem>"          Garante a segurança de .env, valida o idioma e commita.
+  node sdd.js guardian <skill> <acao>      Valida fisicamente a transição entre skills no processo.
 `);
     break;
 }

@@ -54,7 +54,7 @@ Para cada tarefa, na ordem em que aparece no plano:
    - **Refactor**: com o teste passando, limpe a implementação se necessário (nomes, duplicação, clareza) e rode o teste de novo para confirmar que continua passando.
 5. Execute localmente os validadores para garantir que não há erros de qualidade antes do fechamento (`npm run test`, `npx eslint .`, `npx tsc --noEmit`). Não avance sem que tudo passe localmente.
 6. Marque a tarefa como concluída (`completed` no TODO e no CLI via `task-complete`).
-7. Execute o commit seguro do trabalho via CLI: `node .agents/scripts/sdd.js commit "<mensagem-em-portugues>"` EXCLUSIVAMENTE após a aprovação explícita e prévia do parceiro humano para o trabalho realizado. **Nunca faça commits sem o consentimento e aprovação prévia do usuário**.
+7. Apresente o resultado da tarefa concluída ao parceiro humano e execute o commit via CLI (`node .agents/scripts/sdd.js commit "<mensagem-em-portugues>"`) EXCLUSIVAMENTE após a aprovação explícita em um turno posterior. ⚠️ **Parada Obrigatória de Turno:** É EXPRESSAMENTE PROIBIDO commitar automaticamente na mesma resposta em que a tarefa é concluída sem aguardar o sinal verde do usuário no chat.
 
 Não pule verificações para "economizar tempo" — uma tarefa marcada como concluída sem verificação passada é uma tarefa não concluída.
 

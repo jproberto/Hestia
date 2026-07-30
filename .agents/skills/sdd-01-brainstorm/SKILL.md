@@ -169,7 +169,7 @@ Depois de escrever a spec, revise com olhar fresco, com foco em clareza e concis
 
 Corrija problemas inline. Não peça nova revisão para cada ajuste pequeno; limpe a spec e só então leve ao usuário.
 
-### Passo 11: Pedir Revisão do Usuário
+### Passo 11: Pedir Revisão do Usuário (Parada Obrigatória de Turno)
 
 Peça ao usuário para revisar o arquivo antes de seguir:
 
@@ -177,7 +177,7 @@ Peça ao usuário para revisar o arquivo antes de seguir:
 Spec escrita em `<path>`. Revise e me diga se quer mudar algo antes de começarmos a escrever o plano de implementação.
 ```
 
-Aguarde a resposta do usuário. Se ele pedir mudanças, faça as alterações e rode a auto-revisão novamente (Passo 10). Só prossiga quando o usuário aprovar.
+⚠️ **Parada Obrigatória de Turno (Stop & Wait):** É EXPRESSAMENTE PROIBIDO executar o comando `node .agents/scripts/sdd.js commit` na mesma iteração/resposta em que a spec é criada. O agente deve apresentar o caminho da spec, encerrar a sua resposta (turn) e AGUARDE a confirmação explícita do parceiro humano no chat. O commit via CLI deve ser executado exclusivamente em um turno posterior à aprovação.
 
 ### Passo 12: Transicionar para o Plano
 

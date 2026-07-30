@@ -74,30 +74,37 @@ Quando o escopo estiver grande demais:
 
 Cada subprojeto deve ter sua própria sequência: spec → plan → tasks → implementação → review.
 
-### Passo 6: Fazer Perguntas de Esclarecimento
+### Passo 6: Conduzir o Discovery Competente de Produto
 
-Para projetos com escopo adequado, faça perguntas uma por vez.
+⚠️ **Atuação Proativa de Product Manager:** O agente NUNCA deve atuar como mero anotador de pedidos ou aceitar descrições superficiais. Seu papel é atuar como um Product Lead especialista, guiando o parceiro humano em uma investigação profunda e estruturada para descobrir o real valor de negócio, os atritos operacionais e os cenários não pensados antes de qualquer linha de especificação.
 
-Regras:
+O agente deve conduzir o diálogo de discovery em 4 etapas estruturadas:
 
-- Uma pergunta por mensagem.
-- Preferir múltipla escolha quando isso reduzir esforço do usuário.
-- Usar pergunta aberta quando a resposta realmente precisa de nuance.
-- Separar tópicos grandes em perguntas menores.
-- Focar em propósito, restrições e critérios de sucesso.
-- Não transformar a etapa em interrogatório; pare quando houver clareza suficiente.
+1. **Entendimento da Intenção & Problema Real:**
+   - Em vez de aceitar o pedido no formato "quero a funcionalidade X", investigue a dor concreta: *"Qual problema do dia a dia você está tentando resolver? Quem é o usuário principal e como é o cenário de uso?"*
 
-Perguntas úteis:
+2. **Mapeamento da Jornada do Usuário & Experiência de Uso (UX):**
+   - Guie o usuário passo a passo pela experiência visual e operacional:
+     - *"Por onde o usuário inicia essa ação na interface?"*
+     - *"Como é a navegação e o fluxo operacional (ex: ação única vs uso repetitivo/lote, modais, formulários)?"*
+     - *"Qual o estado inicial dos elementos e para onde a atenção/foco é direcionada ao concluir?"*
 
-- Qual problema isso resolve?
-- Quem usa?
-- Qual é a menor versão útil?
-- O que precisa acontecer para considerarmos sucesso?
-- O que está fora de escopo?
-- Há stack, prazo, orçamento ou integração obrigatória?
-- Que dados entram e saem?
-- Que comportamento não pode quebrar?
-- Que decisão você já tomou e não quer rediscutir?
+3. **Mapeamento Proativo de Regras de Negócio e Casos de Borda (Edge Cases):**
+   - O agente deve antecipar proativamente dúvidas e cenários de exceção específicos da funcionalidade que o usuário pode não ter considerado:
+     - Comportamentos em estados não mencionados.
+     - Alterações, edições parciais, cancelamentos ou estornos.
+     - Validações de integridade de dados e concorrência.
+     - Impacto em telas, dashboards ou agregações existentes.
+
+4. **Fronteiras de Escopo & Definição do escopo (YAGNI):**
+   - Ajude o parceiro humano a estabelecer limites claros:
+     - *"Qual é a menor versão funcional que resolve a dor atual?"*
+     - *"O que deixaremos explicitamente fora de escopo para evitar complexidade desnecessária?"*
+
+Regras de Condução:
+- **Diálogo Fluido e Relevante:** Não faça questionamentos genéricos ou checklists mecânicos. Cada pergunta deve demonstrar entendimento profundo do domínio da funcionalidade solicitada.
+- **Uma Etapa por Vez:** Faça perguntas focadas, preferindo opções de escolha quando isso economizar esforço de resposta do usuário.
+- **NÃO GERE A SPEC** enquanto houver pontos cegos de UX, regras de negócio ou limites de escopo não resolvidos na conversa.
 
 ### Passo 7: Explorar Abordagens
 

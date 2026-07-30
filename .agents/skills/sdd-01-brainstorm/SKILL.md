@@ -103,7 +103,7 @@ O agente deve conduzir o diálogo de discovery em 4 etapas estruturadas:
 
 Regras de Condução:
 - **Diálogo Fluido e Relevante:** Não faça questionamentos genéricos ou checklists mecânicos. Cada pergunta deve demonstrar entendimento profundo do domínio da funcionalidade solicitada.
-- **Uma Etapa por Vez:** Faça perguntas focadas, preferindo opções de escolha quando isso economizar esforço de resposta do usuário.
+- **Uma Única Pergunta por Vez (Regra Estrita):** Faça EXATAMENTE UMA pergunta por turno (resposta do chat). É expressamente proibido agrupar múltiplos questionamentos ou listar várias perguntas simultâneas na mesma mensagem. Aguarde a resposta do usuário antes de enviar a pergunta seguinte.
 - **NÃO GERE A SPEC** enquanto houver pontos cegos de UX, regras de negócio ou limites de escopo não resolvidos na conversa.
 
 ### Passo 7: Explorar Abordagens

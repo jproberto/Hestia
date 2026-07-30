@@ -11,13 +11,14 @@ Escreva planos de implementação completos assumindo que o executor é um desen
 
 Documente tudo que ele precisa saber:
 
-- Quais arquivos tocar em cada tarefa.
-- Qual código escrever ou alterar.
-- Quais testes criar.
-- Quais comandos executar.
-- Quais documentos consultar.
-- Como saber que a tarefa passou.
-- Quando commitar.
+- QUAIS arquivos tocar em cada tarefa (criar, modificar, testar).
+- QUAL o objetivo técnico e contrato de cada tarefa.
+- QUAIS testes criar e quais critérios de aceite validar.
+- QUAIS comandos executar (suíte de teste, linter, sdd CLI).
+- COMO saber que a tarefa passou.
+- QUANDO commitar.
+
+⚠️ **Regra Fundamental do Plano (Planejamento sem Código de Implementação)**: O plano serve para planejar a estratégia de desenvolvimento, quebrando a spec em tarefas (tasks) pequenas, ordenadas, independentes e testáveis. O plano NÃO deve conter blocos de código de implementação nem soluções de código prontas. Quem decide a implementação e escreve o código final é o executor/implementador na skill apropriada (`sdd-03-implement`).
 
 O plano deve quebrar a implementação em tarefas pequenas, rastreáveis e revisáveis.
 
@@ -232,24 +233,26 @@ Esta é uma checklist que você executa diretamente. Não despache subagente par
 4. **Ordem de execução.** Confira se nenhuma task depende de código, tipo, config ou arquivo ainda não criado. Se a ordem estiver errada, reordene as tasks ou mova a criação da interface para a task anterior.
 5. **Qualidade de verificação.** Confira se cada task termina com verificação objetiva: teste específico, comando exato, resultado esperado, falha esperada na etapa red, comando final de regressão quando necessário. Se a verificação é "olhar manualmente", explique exatamente o que observar.
 
-### Passo 9: Entregar o Plano
+### Passo 9: Entregar o Plano (Parada Obrigatória de Turno)
 
-Depois de salvar o plano, realize o `git add` e o `git commit` do arquivo do plano gerado (junto com a spec, se houver). Em seguida, informe o início da execução:
+Depois de salvar o plano localmente, informe o caminho do arquivo e solicite a aprovação do parceiro humano:
 
 ```text
 Plano completo e salvo em `<path>`.
 
-Agora vamos à implementação, task por task. Podemos começar?
+Revise o plano acima. Se aprovar, me confirme para que eu possa commitar o plano e iniciar a execução task por task.
 ```
 
+⚠️ **Parada Obrigatória de Turno (Stop & Wait):** É EXPRESSAMENTE PROIBIDO executar o comando `node .agents/scripts/sdd.js commit` na mesma iteração/resposta em que o plano é gerado. O agente deve apresentar o caminho do plano, encerrar a sua resposta (turn) e AGUARDAR a confirmação explícita do parceiro humano no chat. O commit via CLI deve ser executado exclusivamente em um turno posterior à aprovação.
+
 **Atualização do Backlog:**
-Ao finalizar e salvar o plano, atualize o status da funcionalidade correspondente no arquivo `.agents/backlog.md` para `Em Desenvolvimento` e adicione o link para o plano gerado na tabela.
+Ao finalizar e salvar o plano após a aprovação, atualize o status da funcionalidade correspondente no arquivo `.agents/backlog.md` para `Em Desenvolvimento` e adicione o link para o plano gerado na tabela.
 
 - Use `sdd-03-implement`.
 - Execute task por task nesta sessão.
 - Use checkpoints para revisão.
 
-Não comece a implementação dentro desta skill. O estado final de `sdd-02-plan` é o plano salvo, commitado e a escolha de execução.
+Não comece a implementação dentro desta skill. O estado final de `sdd-02-plan` é o plano salvo, commitado (após aprovação em turno separado) e a escolha de execução.
 
 ## Quando Parar e Pedir Ajuda
 
@@ -263,10 +266,10 @@ Nesses casos, pare e pergunte. Um plano que preenche lacunas com suposição tra
 
 ## Lembre-se
 
-- **O arquivo do plano gerado deve ser adicionado e commitado no Git antes de iniciar a execução.**
+- **O commit do arquivo de plano via `node .agents/scripts/sdd.js commit` deve ser realizado EXCLUSIVAMENTE após a aprovação explícita e prévia do parceiro humano.** Salve o arquivo localmente, apresente ao usuário e só commite após a aprovação.
 - **Planeje defensivamente:** Antecipe falhas em comandos de CLI. Tenha planos de recuperação e não assuma o "caminho feliz".
 - Paths exatos sempre.
-- Código completo em cada passo que muda código.
+- Sem código de implementação no plano (apenas arquivos afetados, objetivos técnicos, comandos e testes).
 - Comandos exatos com output esperado.
 - Se o agente executor não tiver permissão para rodar um comando, ele deve preparar o comando exato, anunciar o bloqueio e pedir ao parceiro humano para executá-lo.
 - DRY.

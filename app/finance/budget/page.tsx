@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -51,7 +51,7 @@ function BudgetPageContent() {
   const [tempAmount, setTempAmount] = useState<string>("");
   const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const searchParams = useSearchParams();
 
   // Obter o mês corrente de forma segura (suportando mockMonth para simulação de data da linha do tempo)
@@ -254,6 +254,9 @@ function BudgetPageContent() {
         </Link>
         <Link href="/finance/months" className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground">
           Meses e Períodos
+        </Link>
+        <Link href="/finance/transactions" className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+          Lançamentos
         </Link>
       </div>
 

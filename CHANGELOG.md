@@ -5,6 +5,32 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-07-30
+
+### Adicionado
+- Nova funcionalidade de **Lançamento em Lote com Botão "Salvar e Adicionar Outro"** (Patch 05d).
+- Novo modal exclusivo para cadastro de **Conta e Cartão** com opções puras de tipo e botão "Salvar" (Patch 05c).
+- Nova tabela `public.financial_accounts` em substituição da antiga `accounts`, com FK única `account_id` em `transactions` e migração SQL `migration-feature-5c-financial-accounts.sql`.
+- Botão `+ Nova Transação` fixado no rodapé da tabela de cada conta no grid de 2 colunas.
+- Sincronização automática do calendário do modal de transação com o mês/ano selecionado nos filtros da página.
+
+### Alterado
+- Incrementada a versão do projeto em `package.json` para `0.5.1` (SemVer Patch).
+
+## [0.5.0] - 2026-07-27
+
+### Adicionado
+- Nova funcionalidade de **Cadastro de Transações** (Feature 5).
+- Novas tabelas `public.accounts` e `public.transactions` no Supabase com suporte a RLS e auditoria transparente (`created_by`).
+- Script de migração SQL `utils/migrations/migration-feature-5.sql`.
+- Módulos de banco de dados `lib/db/accounts.ts` e `lib/db/transactions.ts` com validação de mês aberto em `monthly_periods`, suporte a estornos/reembolsos via flag `is_refund` e busca/criação inline de contas e categorias.
+- Nova rota e interface de usuário `/finance/transactions` com seletor de mês, cards de resumo financeiro (Total Entradas, Total Saídas e Resultado do Mês), modal/formulário de lançamentos e tabela de extrato.
+- Testes automatizados unitários e de UI em `__tests__/lib/db/accounts.test.ts`, `__tests__/lib/db/transactions.test.ts` e `__tests__/app/finance/transactions-page.test.tsx`.
+- Smoke test #5 em `.agents/skills/sdd-05-manual-test/references/manual_tests.md`.
+
+### Alterado
+- Incrementada a versão do projeto em `package.json` para `0.5.0` (SemVer Minor).
+
 ## [0.4.0] - 2026-07-27
 
 ### Adicionado

@@ -23,6 +23,20 @@ export async function getMonthlyPeriods(
   return data || [];
 }
 
+export async function getAllOpenMonthlyPeriods(
+  supabase: SupabaseClient
+): Promise<MonthlyPeriod[]> {
+  const { data, error } = await supabase
+    .from("monthly_periods")
+    .select("*")
+    .eq("status", "aberto")
+    .order("year", { ascending: true })
+    .order("month", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
 export async function openMonthlyPeriod(
   supabase: SupabaseClient,
   year: number,

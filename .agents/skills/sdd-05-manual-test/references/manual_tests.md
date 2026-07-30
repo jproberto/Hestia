@@ -63,3 +63,16 @@ Estes cenários servem para validar manualmente o comportamento de edições e a
    *   **Resultado Esperado:** O status do mês muda para **"Aberto"** (cor verde) e o botão muda para **"Encerrar Mês"**.
 3. **Ação:** No card do mês aberto, clique em **"Encerrar Mês"**.
    *   **Resultado Esperado:** O status do mês muda para **"Encerrado"** (cor vermelha/escura) e o botão muda para **"Reabrir Mês"**.
+
+---
+
+## 5. Cadastro de Transações (`/finance/transactions`)
+**Objetivo:** Validar o registro de receitas, despesas, estornos e criação inline de contas e categorias.
+
+1. **Ação:** Acesse a tela de lançamentos em [http://localhost:3000/finance/transactions](http://localhost:3000/finance/transactions).
+2. **Ação:** Clique em **"+ Nova Transação"**.
+3. **Ação:** Preencha Descrição (ex: "Supermercado"), Valor (ex: "150.00"), Tipo ("Despesa"), Conta (ex: "Itaú") e Categoria (ex: "Alimentação"). Clique em **"Salvar Transação"**.
+   * **Resultado Esperado:** Se o mês selecionado no topo estiver 'Aberto', o lançamento aparece na tabela e o card "Total Saídas" é recalculado.
+4. **Ação:** Para registrar um estorno/reembolso, clique em **"+ Nova Transação"**, informe Tipo "Despesa", marque **"É um estorno/reembolso?"** e salve.
+   * **Resultado Esperado:** O lançamento ganha a tag visual "Estorno" e abate o valor do card "Total Saídas".
+

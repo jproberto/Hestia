@@ -17,21 +17,18 @@ A skill é invocada com dois argumentos:
 - `current_skill`: O nome da skill que a está invocando.
 - `intended_action`: A próxima ação que o agente planeja executar.
 
-### Passo 2: Definir e Consultar as Regras de Transição
+### Passo 2: Executar Validação Física no CLI
 
-As transições válidas estão definidas internamente.
+O agente DEVE obrigatoriamente executar o validador físico via CLI:
 
-- de `sdd-01-brainstorm`: `write_file` (spec), `invoke:sdd-02-plan`
-- de `sdd-02-plan`: `write_file` (plano), `invoke:sdd-03-implement`
-- de `sdd-03-implement`: `invoke:sdd-04-review`
-- de `sdd-04-review`: `invoke:sdd-tool-commit`, `invoke:sdd-writer-skills`
+```bash
+node .agents/scripts/sdd.js guardian <current_skill> <intended_action>
+```
 
 ### Passo 3: Validar e Agir
 
-- **Se a transição for VÁLIDA:** A skill termina silenciosamente, permitindo que a ação prossiga.
-- **Se a transição for INVÁLIDA:**
-    1.  **Bloqueio:** A skill para a execução.
-    2.  **Relatório:** Gera uma mensagem de erro clara: "VIOLAÇÃO DE PROCESSO: A skill 'X' não pode ser seguida por 'Y'. Ação correta: 'Z'."
+- **Se o comando retornar sucesso (exit code 0):** A transição foi aprovada e o trabalho pode prosseguir.
+- **Se o comando retornar falha (exit code 1):** O script abortará a execução fisicamente, exibindo a violação de processo e bloqueando a transição. O agente DEVE parar imediatamente.
 
 ## Quando Parar e Pedir Ajuda
 

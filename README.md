@@ -7,6 +7,7 @@ Héstia é uma ferramenta pessoal para controle de finanças e planejamento orç
 * **Orçamento Anual por Categoria:** Planejamento anual de receitas e despesas por categoria (`/finance/budget`).
 * **Ajustes Orçamentários:** Revisões de metas orçamentárias com vigência a partir do mês em que são criadas.
 * **Meses e Períodos Operacionais:** Controle explícito de abertura e encerramento de meses para lançamentos (`/finance/months`).
+* **Cadastro de Transações:** Lançamento de receitas e despesas com criação inline de contas e categorias, estornos/reembolsos e restrição de mês aberto (`/finance/transactions`).
 
 ## Como Executar
 

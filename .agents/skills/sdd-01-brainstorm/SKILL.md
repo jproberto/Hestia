@@ -29,8 +29,9 @@ Antes de qualquer outra ação, invoque a `sdd-tool-guardian` para garantir que 
 
 Antes de alterar, criar ou commitar qualquer arquivo (incluindo o backlog, specs ou código), confirme a branch Git ativa:
 1. A regra principal é: toda nova branch de feature deve ser criada a partir da `develop`.
-2. Se você estiver em `main` ou `develop`, crie uma nova branch a partir da `develop`. O nome deve seguir o padrão `feature/<nome-descritivo>`. Nunca commite direto em `main` ou `develop`.
-3. Se você já estiver em uma branch de feature, pergunte ao parceiro humano se é a branch correta para a feature que está iniciando. Se não for, crie uma nova a partir da `develop`.
+2. SEMPRE faça `git checkout develop` e em seguida `git pull origin develop` (ou `git pull`) para garantir que a base está 100% atualizada antes de criar a nova branch.
+3. Se você estiver em `main` ou em outra branch de feature, mude para a `develop`, faça `git pull origin develop` e crie uma nova branch a partir da `develop`. O nome deve seguir o padrão `feature/<nome-descritivo>`. Nunca commite direto em `main` ou `develop`.
+4. Se você já estiver na branch de feature correta para o trabalho, confirme com o parceiro humano se ela está atualizada com a `develop`.
 
 ### Passo 3: Consultar e Atualizar o Backlog
 
@@ -73,30 +74,37 @@ Quando o escopo estiver grande demais:
 
 Cada subprojeto deve ter sua própria sequência: spec → plan → tasks → implementação → review.
 
-### Passo 6: Fazer Perguntas de Esclarecimento
+### Passo 6: Conduzir o Discovery Competente de Produto
 
-Para projetos com escopo adequado, faça perguntas uma por vez.
+⚠️ **Atuação Proativa de Product Manager:** O agente NUNCA deve atuar como mero anotador de pedidos ou aceitar descrições superficiais. Seu papel é atuar como um Product Lead especialista, guiando o parceiro humano em uma investigação profunda e estruturada para descobrir o real valor de negócio, os atritos operacionais e os cenários não pensados antes de qualquer linha de especificação.
 
-Regras:
+O agente deve conduzir o diálogo de discovery em 4 etapas estruturadas:
 
-- Uma pergunta por mensagem.
-- Preferir múltipla escolha quando isso reduzir esforço do usuário.
-- Usar pergunta aberta quando a resposta realmente precisa de nuance.
-- Separar tópicos grandes em perguntas menores.
-- Focar em propósito, restrições e critérios de sucesso.
-- Não transformar a etapa em interrogatório; pare quando houver clareza suficiente.
+1. **Entendimento da Intenção & Problema Real:**
+   - Em vez de aceitar o pedido no formato "quero a funcionalidade X", investigue a dor concreta: *"Qual problema do dia a dia você está tentando resolver? Quem é o usuário principal e como é o cenário de uso?"*
 
-Perguntas úteis:
+2. **Mapeamento da Jornada do Usuário & Experiência de Uso (UX):**
+   - Guie o usuário passo a passo pela experiência visual e operacional:
+     - *"Por onde o usuário inicia essa ação na interface?"*
+     - *"Como é a navegação e o fluxo operacional (ex: ação única vs uso repetitivo/lote, modais, formulários)?"*
+     - *"Qual o estado inicial dos elementos e para onde a atenção/foco é direcionada ao concluir?"*
 
-- Qual problema isso resolve?
-- Quem usa?
-- Qual é a menor versão útil?
-- O que precisa acontecer para considerarmos sucesso?
-- O que está fora de escopo?
-- Há stack, prazo, orçamento ou integração obrigatória?
-- Que dados entram e saem?
-- Que comportamento não pode quebrar?
-- Que decisão você já tomou e não quer rediscutir?
+3. **Mapeamento Proativo de Regras de Negócio e Casos de Borda (Edge Cases):**
+   - O agente deve antecipar proativamente dúvidas e cenários de exceção específicos da funcionalidade que o usuário pode não ter considerado:
+     - Comportamentos em estados não mencionados.
+     - Alterações, edições parciais, cancelamentos ou estornos.
+     - Validações de integridade de dados e concorrência.
+     - Impacto em telas, dashboards ou agregações existentes.
+
+4. **Fronteiras de Escopo & Definição do escopo (YAGNI):**
+   - Ajude o parceiro humano a estabelecer limites claros:
+     - *"Qual é a menor versão funcional que resolve a dor atual?"*
+     - *"O que deixaremos explicitamente fora de escopo para evitar complexidade desnecessária?"*
+
+Regras de Condução:
+- **Diálogo Fluido e Relevante:** Não faça questionamentos genéricos ou checklists mecânicos. Cada pergunta deve demonstrar entendimento profundo do domínio da funcionalidade solicitada.
+- **Uma Etapa por Vez:** Faça perguntas focadas, preferindo opções de escolha quando isso economizar esforço de resposta do usuário.
+- **NÃO GERE A SPEC** enquanto houver pontos cegos de UX, regras de negócio ou limites de escopo não resolvidos na conversa.
 
 ### Passo 7: Explorar Abordagens
 
@@ -142,9 +150,11 @@ Ao finalizar e commitar a especificação, certifique-se de adicionar o link par
 
 Use escrita clara, objetiva e curta. Consulte references/writing-the-spec.md para o critério de quando um item está específico o suficiente para ser útil (especialmente problema, comportamento esperado e critérios de aceite). A spec não deve tentar impressionar por volume; ela deve preservar decisões importantes, reduzir ambiguidade e permitir que a próxima etapa escreva um plano de implementação confiável.
 
+⚠️ **Regra Fundamental de Especificação (Proibição Absoluta de Código)**: A Spec especifica exclusivamente requisitos, regras de negócio, contratos conceituais e critérios de aceite em linguagem natural. NENHUM CÓDIGO de qualquer natureza (TypeScript, React, SQL, DDL/DML, HTML ou CSS) pertence à etapa de brainstorming ou à Spec. A especificação de dados e banco deve ser feita exclusivamente via descrição textual dos modelos, campos e tipos lógicos.
+
 Inclua o que for necessário para reconstruir o design aprovado: problema, decisão tomada, alternativas rejeitadas, comportamento esperado, restrições, riscos e critérios de aceite. Não use uma lista fixa de seções como checklist mecânico. Se uma seção não ajuda a entender ou implementar, deixe fora.
 
-Se o projeto estiver em um repositório git e o fluxo local permitir, commite o documento de design na branch de trabalho confirmada antes de avançar para o plano. Se não houver repositório git, ou se o usuário não quiser commit agora, apenas salve o arquivo.
+⚠️ **Regra Fundamental de Commit Aprovado**: O commit da especificação via `node .agents/scripts/sdd.js commit` deve ser realizado EXCLUSIVAMENTE após a aprovação explícita e prévia do parceiro humano. Salve o arquivo de spec localmente, apresente-o ao usuário e execute o commit apenas após a aprovação expressa.
 
 ### Passo 10: Auto Revisar a Spec
 
@@ -159,7 +169,7 @@ Depois de escrever a spec, revise com olhar fresco, com foco em clareza e concis
 
 Corrija problemas inline. Não peça nova revisão para cada ajuste pequeno; limpe a spec e só então leve ao usuário.
 
-### Passo 11: Pedir Revisão do Usuário
+### Passo 11: Pedir Revisão do Usuário (Parada Obrigatória de Turno)
 
 Peça ao usuário para revisar o arquivo antes de seguir:
 
@@ -167,7 +177,7 @@ Peça ao usuário para revisar o arquivo antes de seguir:
 Spec escrita em `<path>`. Revise e me diga se quer mudar algo antes de começarmos a escrever o plano de implementação.
 ```
 
-Aguarde a resposta do usuário. Se ele pedir mudanças, faça as alterações e rode a auto-revisão novamente (Passo 10). Só prossiga quando o usuário aprovar.
+⚠️ **Parada Obrigatória de Turno (Stop & Wait):** É EXPRESSAMENTE PROIBIDO executar o comando `node .agents/scripts/sdd.js commit` na mesma iteração/resposta em que a spec é criada. O agente deve apresentar o caminho da spec, encerrar a sua resposta (turn) e AGUARDE a confirmação explícita do parceiro humano no chat. O commit via CLI deve ser executado exclusivamente em um turno posterior à aprovação.
 
 ### Passo 12: Transicionar para o Plano
 

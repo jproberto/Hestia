@@ -255,7 +255,11 @@ export default function TransactionsPage() {
 
   const accountCardsList = Array.from(allAccountsMap.values());
   accountCardsList.forEach((card) => {
-    card.txs.sort((a, b) => a.date.localeCompare(b.date));
+    card.txs.sort((a, b) => {
+      const dateCmp = a.date.localeCompare(b.date);
+      if (dateCmp !== 0) return dateCmp;
+      return (a.id || "").localeCompare(b.id || "");
+    });
   });
 
   // Abertura do Modal de Transação pré-fixado para a conta escolhida (Nova Transação)
@@ -303,7 +307,7 @@ export default function TransactionsPage() {
     setErrorMsg(null);
 
     try {
-      await deleteTransaction(supabase, deletingTransaction.id, userEmail);
+      await deleteTransaction(supabase, deletingTransaction.id);
       setIsDeleteModalOpen(false);
       setDeletingTransaction(null);
       await fetchData();
@@ -383,8 +387,7 @@ export default function TransactionsPage() {
             date,
             account_id: accountId,
             category_id: categoryId,
-          },
-          userEmail
+          }
         );
       } else {
         await createTransaction(
@@ -1070,7 +1073,7 @@ export default function TransactionsPage() {
       {isDeleteModalOpen && deletingTransaction && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-sm rounded-lg border bg-card p-6 text-card-foreground shadow-lg flex flex-col gap-4">
-            <h2 className="text-lg font-bold tracking-tight text-rose-600 dark:text-rose-400">
+            <h2 className="text-lg font-bold tracking-tight text-rose-700 dark:text-rose-300">
               Excluir lançamento
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -1091,9 +1094,9 @@ export default function TransactionsPage() {
               </Button>
               <Button
                 type="button"
-                variant="destructive"
                 disabled={deletingTx}
                 onClick={handleConfirmDelete}
+                className="bg-rose-500/90 hover:bg-rose-600 text-white font-medium shadow-sm border-none transition-colors"
               >
                 {deletingTx ? "Excluindo..." : "Confirmar Exclusão"}
               </Button>

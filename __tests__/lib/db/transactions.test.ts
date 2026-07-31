@@ -19,20 +19,22 @@ describe("Serviço de Transações (Transactions)", () => {
       select: vi.fn().mockReturnValue({
         gte: vi.fn().mockReturnValue({
           lte: vi.fn().mockReturnValue({
-            order: vi.fn().mockResolvedValue({
-              data: [
-                {
-                  id: "tx-1",
-                  description: "Supermercado",
-                  amount: 150,
-                  type: "despesa",
-                  is_refund: false,
-                  date: "2026-03-15",
-                  categories: { name: "Alimentação" },
-                  accounts: { name: "Itaú" },
-                },
-              ],
-              error: null,
+            order: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: "tx-1",
+                    description: "Supermercado",
+                    amount: 150,
+                    type: "despesa",
+                    is_refund: false,
+                    date: "2026-03-15",
+                    categories: { name: "Alimentação" },
+                    accounts: { name: "Itaú" },
+                  },
+                ],
+                error: null,
+              }),
             }),
           }),
         }),
@@ -195,8 +197,7 @@ describe("Serviço de Transações (Transactions)", () => {
         date: "2026-03-15",
         category_id: "cat-1",
         account_id: "acc-1",
-      },
-      "joao@email.com"
+      }
     );
 
     expect(result.id).toBe("tx-1");
@@ -235,8 +236,7 @@ describe("Serviço de Transações (Transactions)", () => {
           date: "2026-03-15",
           category_id: "cat-1",
           account_id: "acc-1",
-        },
-        "joao@email.com"
+        }
       )
     ).rejects.toThrow("Não é possível alterar transações no período 3/2026 pois ele não está aberto.");
   });
@@ -275,7 +275,7 @@ describe("Serviço de Transações (Transactions)", () => {
       return {} as never;
     });
 
-    await expect(deleteTransaction(mockSupabase, "tx-1", "joao@email.com")).resolves.not.toThrow();
+    await expect(deleteTransaction(mockSupabase, "tx-1")).resolves.not.toThrow();
   });
 
   it("deve lancar erro ao tentar excluir transação de mês não aberto", async () => {
@@ -309,7 +309,7 @@ describe("Serviço de Transações (Transactions)", () => {
       return {} as never;
     });
 
-    await expect(deleteTransaction(mockSupabase, "tx-1", "joao@email.com")).rejects.toThrow(
+    await expect(deleteTransaction(mockSupabase, "tx-1")).rejects.toThrow(
       "Não é possível excluir transações no período 3/2026 pois ele não está aberto."
     );
   });

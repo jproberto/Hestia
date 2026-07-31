@@ -5,6 +5,23 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-07-30
+
+### Adicionado
+- Nova funcionalidade de **Edição e Exclusão de Lançamentos** (Feature 8).
+- Novas funções de backend `updateTransaction` e `deleteTransaction` em `lib/db/transactions.ts` com validação de status de mês aberto no Supabase.
+- Nova coluna de **Ações** na tabela de extrato da página `/finance/transactions` com botões e ícones para **Editar** e **Excluir**.
+- Modal de formulário reaproveitado para edição preenchido com os dados existentes da transação.
+- Modal dialog de confirmação de exclusão com exibição clara do nome e valor da transação a ser removida.
+- Restrição estrita de seleção de data no modal ao intervalo do mês visualizado na tela.
+- Tom de vermelho suavizado no modal de confirmação de exclusão de lançamentos.
+- Ordenação determinística de lançamentos por data (crescente) e ID interno (crescente) para desempate constante.
+- Suíte de testes unitários e de componente cobrindo edição e exclusão em `__tests__/lib/db/transactions.test.ts` e `__tests__/app/finance/transactions-page.test.tsx`.
+- Smoke test #6 em `.agents/skills/sdd-05-manual-test/references/manual_tests.md`.
+
+### Alterado
+- Incrementada a versão do projeto em `package.json` para `0.6.0` (SemVer Minor).
+
 ## [0.5.1] - 2026-07-30
 
 ### Adicionado

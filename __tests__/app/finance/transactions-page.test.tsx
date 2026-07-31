@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import TransactionsPage from "@/app/finance/transactions/page";
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
-import { getTransactionsByMonth, updateTransaction, deleteTransaction } from "@/lib/db/transactions";
+import { getTransactionsByMonth, deleteTransaction } from "@/lib/db/transactions";
 import { getAccounts } from "@/lib/db/accounts";
 import { getCategories } from "@/lib/db/categories";
 import { getMonthlyPeriods, getAllOpenMonthlyPeriods } from "@/lib/db/months";
@@ -208,7 +208,7 @@ describe("Página de Cadastro de Transações /finance/transactions", () => {
     fireEvent.click(confirmDeleteBtn);
 
     await waitFor(() => {
-      expect(deleteTransaction).toHaveBeenCalledWith(expect.anything(), "t1", "teste@hestia.com");
+      expect(deleteTransaction).toHaveBeenCalledWith(expect.anything(), "t1");
     });
   });
 });

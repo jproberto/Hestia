@@ -48,7 +48,8 @@ export async function getTransactionsByMonth(
     `)
     .gte("date", startDate)
     .lte("date", endDate)
-    .order("date", { ascending: true });
+    .order("date", { ascending: true })
+    .order("id", { ascending: true });
 
   if (error) throw error;
 
@@ -116,8 +117,7 @@ export async function createTransaction(
 export async function updateTransaction(
   supabase: SupabaseClient,
   id: string,
-  input: TransactionInput,
-  email: string
+  input: TransactionInput
 ): Promise<TransactionWithDetails> {
   const [yearStr, monthStr] = input.date.split("-");
   const year = parseInt(yearStr, 10);
@@ -170,8 +170,7 @@ export async function updateTransaction(
 
 export async function deleteTransaction(
   supabase: SupabaseClient,
-  id: string,
-  email: string
+  id: string
 ): Promise<void> {
   const { data: tx, error: fetchError } = await supabase
     .from("transactions")

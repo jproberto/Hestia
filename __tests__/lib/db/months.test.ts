@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod } from "@/lib/db/months";
+import * as checklistDb from "@/lib/db/checklist";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 const mockSupabase = {
@@ -35,7 +36,13 @@ describe("Serviço de Períodos Mensais", () => {
   });
 
   it("deve abrir um periodo utilizando upsert", async () => {
-    const upsertMock = vi.fn().mockResolvedValue({ error: null });
+    vi.spyOn(checklistDb, "instantiateGlobalChecklistItemsForMonth").mockResolvedValue();
+
+    const upsertMock = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({ data: { id: "m-3" }, error: null })
+      })
+    });
 
     const fromMock = mockSupabase.from as unknown as {
       mockReturnValue: (val: unknown) => unknown;

@@ -28,9 +28,9 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 ### Bloco 2 — Contas a pagar
 
-| # | Feature | Descrição |
-|---|---|---|
-| 3 | **Checklist de contas a pagar** | Uma lista simples de compromissos financeiros do mês, com data de vencimento e um status de paga/não paga. É deliberadamente desacoplada do cadastro de transações — marcar uma conta como paga aqui não gera automaticamente um lançamento financeiro. Serve como um lembrete operacional, não como parte do cálculo de saldo. Por não depender de categoria nem de conta, pode ser construída em paralelo a qualquer outro bloco. |
+| # | Feature | Descrição | Status | Specs | Planos |
+|---|---|---|---|---|---|
+| 3 | **Checklist de contas a pagar** | Lista recorrente/mensal de compromissos financeiros (receitas e despesas). Cada item possui dia, descrição, tipo (receita ou despesa), categoria e valor previsto (opcional). Fica disponível nos meses abertos com indicação visual de urgência/tempo até o vencimento via código de cores. Ao marcar um item, abre o modal de transação pré-preenchido (com Conta em branco), mas sem vinculo permanente entre checklist e transação (servindo como um atalho conveniente). | Especificado | [.agents/specs/03-checklist-contas-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/03-checklist-contas-spec.md) | - |
 
 ### Bloco 3 — Lançamentos
 

@@ -30,7 +30,7 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 | # | Feature | Descrição | Status | Specs | Planos |
 |---|---|---|---|---|---|
-| 3 | **Checklist de contas a pagar** | Lista recorrente/mensal de compromissos financeiros (receitas e despesas). Cada item possui dia, descrição, tipo (receita ou despesa), categoria e valor previsto (opcional). Fica disponível nos meses abertos com indicação visual de urgência/tempo até o vencimento via código de cores. Ao marcar um item, abre o modal de transação pré-preenchido (com Conta em branco), mas sem vinculo permanente entre checklist e transação (servindo como um atalho conveniente). | Especificado | [.agents/specs/03-checklist-contas-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/03-checklist-contas-spec.md) | - |
+| 3 | **Checklist de contas a pagar** | Lista recorrente/mensal de compromissos financeiros (receitas e despesas). Cada item possui dia, descrição, tipo (receita ou despesa), categoria e valor previsto (opcional). Fica disponível nos meses abertos com indicação visual de urgência/tempo até o vencimento via código de cores. Ao marcar um item, abre o modal de transação pré-preenchido (com Conta em branco), mas sem vinculo permanente entre checklist e transação (servindo como um atalho conveniente). | Em Desenvolvimento | [.agents/specs/03-checklist-contas-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/03-checklist-contas-spec.md) | [.agents/plans/03-checklist-contas-plan.md](file:///p:/workspace/IA/hestia/.agents/plans/03-checklist-contas-plan.md) |
 
 ### Bloco 3 — Lançamentos
 

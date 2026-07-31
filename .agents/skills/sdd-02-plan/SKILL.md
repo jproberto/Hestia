@@ -108,7 +108,7 @@ Ao definir fronteiras:
 - Não crie tasks soltas de "setup" se o setup não entrega valor verificável sozinho.
 - Divida apenas quando um reviewer conseguir avaliar uma tarefa separadamente da outra.
 - Cada tarefa deve terminar com algo testável.
-- **Atualização de Versão (SemVer):** Para qualquer plano que implemente uma nova funcionalidade (feature) ou correção significativa, certifique-se de incluir no planejamento de tarefas (tipicamente na última tarefa de implementação do plano) um passo ou tarefa dedicada a atualizar a versão do projeto no campo `"version"` do arquivo `package.json`, seguindo a convenção de Versionamento Semântico (ex: minor para features, patch para correções).
+- **Versão do Projeto (SemVer):** O bump de versão no `package.json` NÃO deve ser incluído nos planos de tarefas de implementação. A atualização de versão (SemVer) ocorre exclusivamente no final do ciclo de homologação/revisão, imediatamente antes da execução do `git push`.
 
 Dentro de cada tarefa, cada passo deve ser uma ação única, de 2-5 minutos.
 

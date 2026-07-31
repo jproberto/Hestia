@@ -76,3 +76,13 @@ Estes cenários servem para validar manualmente o comportamento de edições e a
 4. **Ação:** Para registrar um estorno/reembolso, clique em **"+ Nova Transação"**, informe Tipo "Despesa", marque **"É um estorno/reembolso?"** e salve.
    * **Resultado Esperado:** O lançamento ganha a tag visual "Estorno" e abate o valor do card "Total Saídas".
 
+---
+
+## 6. Edição e Exclusão de Lançamentos (`/finance/transactions`)
+**Objetivo:** Validar a alteração e remoção pontual de um lançamento em mês aberto.
+
+1. **Ação:** Acesse [http://localhost:3000/finance/transactions](http://localhost:3000/finance/transactions) em um mês com status **Aberto**.
+2. **Ação:** Na linha de qualquer lançamento da tabela de extrato da conta, clique no ícone de **Lápis (Editar)**.
+   * **Resultado Esperado:** O modal abre com os dados atuais da transação. Altere o valor ou a descrição e clique em **Salvar**. A lista reflete a edição imediatamente.
+3. **Ação:** Na linha de um lançamento, clique no ícone de **Lixeira (Excluir)**.
+   * **Resultado Esperado:** O modal de confirmação dialog abre exibindo a descrição e valor. Clique em **Confirmar Exclusão**. O lançamento é removido e o saldo da conta é recalculado.

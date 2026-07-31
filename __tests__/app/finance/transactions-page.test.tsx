@@ -1,7 +1,7 @@
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import TransactionsPage from "@/app/finance/transactions/page";
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
-import { getTransactionsByMonth } from "@/lib/db/transactions";
+import { getTransactionsByMonth, deleteTransaction } from "@/lib/db/transactions";
 import { getAccounts } from "@/lib/db/accounts";
 import { getCategories } from "@/lib/db/categories";
 import { getMonthlyPeriods, getAllOpenMonthlyPeriods } from "@/lib/db/months";
@@ -18,6 +18,8 @@ vi.mock("@/utils/supabase/client", () => ({
 vi.mock("@/lib/db/transactions", () => ({
   getTransactionsByMonth: vi.fn(),
   createTransaction: vi.fn(),
+  updateTransaction: vi.fn(),
+  deleteTransaction: vi.fn(),
 }));
 
 vi.mock("@/lib/db/accounts", () => ({
@@ -125,4 +127,89 @@ describe("Página de Cadastro de Transações /finance/transactions", () => {
     expect(screen.getByRole("button", { name: "Salvar e Adicionar Outro" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvar" })).toBeInTheDocument();
   });
+
+  it("deve exibir botões de editar e excluir na tabela de transações e abrir o modal de edição preenchido ao clicar em editar", async () => {
+    (getAllOpenMonthlyPeriods as Mock).mockResolvedValue([
+      { id: "p1", year: 2026, month: 3, status: "aberto" },
+    ]);
+    (getMonthlyPeriods as Mock).mockResolvedValue([
+      { id: "p1", year: 2026, month: 3, status: "aberto" },
+    ]);
+    (getBudgets as Mock).mockResolvedValue([]);
+    (getTransactionsByMonth as Mock).mockResolvedValue([
+      {
+        id: "t1",
+        description: "Padaria",
+        amount: 30,
+        type: "despesa",
+        is_refund: false,
+        date: "2026-03-10",
+        category_name: "Alimentação",
+        account_name: "Itaú Corrente",
+        account_id: "a1",
+        category_id: "c1",
+        created_by: "teste@hestia.com",
+      },
+    ]);
+    (getAccounts as Mock).mockResolvedValue([{ id: "a1", name: "Itaú Corrente", type: "conta" }]);
+    (getCategories as Mock).mockResolvedValue([{ id: "c1", name: "Alimentação", type: "despesa" }]);
+
+    render(<TransactionsPage />);
+
+    const editBtn = await screen.findByRole("button", { name: /Editar lançamento Padaria/i });
+    expect(editBtn).toBeInTheDocument();
+    const deleteBtn = screen.getByRole("button", { name: /Excluir lançamento Padaria/i });
+    expect(deleteBtn).toBeInTheDocument();
+
+    fireEvent.click(editBtn);
+
+    expect(await screen.findByRole("heading", { name: /Editar Transação/i })).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Padaria")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("30")).toBeInTheDocument();
+  });
+
+  it("deve abrir modal de confirmação ao clicar no botão excluir e chamar deleteTransaction ao confirmar", async () => {
+    (getAllOpenMonthlyPeriods as Mock).mockResolvedValue([
+      { id: "p1", year: 2026, month: 3, status: "aberto" },
+    ]);
+    (getMonthlyPeriods as Mock).mockResolvedValue([
+      { id: "p1", year: 2026, month: 3, status: "aberto" },
+    ]);
+    (getBudgets as Mock).mockResolvedValue([]);
+    (getTransactionsByMonth as Mock).mockResolvedValue([
+      {
+        id: "t1",
+        description: "Aluguel",
+        amount: 1500,
+        type: "despesa",
+        is_refund: false,
+        date: "2026-03-05",
+        category_name: "Moradia",
+        account_name: "Itaú Corrente",
+        account_id: "a1",
+        category_id: "c2",
+        created_by: "teste@hestia.com",
+      },
+    ]);
+    (getAccounts as Mock).mockResolvedValue([{ id: "a1", name: "Itaú Corrente", type: "conta" }]);
+    (getCategories as Mock).mockResolvedValue([{ id: "c2", name: "Moradia", type: "despesa" }]);
+    (deleteTransaction as Mock).mockResolvedValue(undefined);
+
+    render(<TransactionsPage />);
+
+    const deleteBtn = await screen.findByRole("button", { name: /Excluir lançamento Aluguel/i });
+    fireEvent.click(deleteBtn);
+
+    expect(await screen.findByRole("heading", { name: "Excluir lançamento" })).toBeInTheDocument();
+    expect(screen.getByText(/Tem certeza que deseja excluir o lançamento/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Aluguel/i).length).toBeGreaterThanOrEqual(2);
+
+    const confirmDeleteBtn = screen.getByRole("button", { name: "Confirmar Exclusão" });
+    fireEvent.click(confirmDeleteBtn);
+
+    await waitFor(() => {
+      expect(deleteTransaction).toHaveBeenCalledWith(expect.anything(), "t1");
+    });
+  });
 });
+

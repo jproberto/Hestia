@@ -14,6 +14,16 @@ import { getAccounts, getOrCreateAccount, Account } from "@/lib/db/accounts";
 import { getCategories, getOrCreateCategory, Category } from "@/lib/db/categories";
 import { getAllOpenMonthlyPeriods, MonthlyPeriod } from "@/lib/db/months";
 import { getBudgets, BudgetItem } from "@/lib/db/budget";
+import ChecklistCard from "@/components/finance/ChecklistCard";
+import {
+  getChecklistItemsByMonth,
+  createChecklistItem,
+  updateChecklistItem,
+  deleteChecklistItem,
+  toggleChecklistItemCompletion,
+  ChecklistItem,
+  ChecklistItemInput,
+} from "@/lib/db/checklist";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,6 +73,7 @@ export default function TransactionsPage() {
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -131,17 +142,23 @@ export default function TransactionsPage() {
           ? selectedMonth
           : openMonthsForYear[0]?.month ?? selectedMonth;
 
-      const [txsData, accsData, catsData, budgetData] = await Promise.all([
+      const activeMonthPeriod = openMonthsForYear.find((p) => p.month === monthToFetch);
+
+      const [txsData, accsData, catsData, budgetData, chkData] = await Promise.all([
         getTransactionsByMonth(supabase, yearToUse, monthToFetch),
         getAccounts(supabase),
         getCategories(supabase),
         getBudgets(supabase, yearToUse, monthToFetch).catch(() => []),
+        activeMonthPeriod?.id
+          ? getChecklistItemsByMonth(supabase, activeMonthPeriod.id).catch(() => [])
+          : Promise.resolve([]),
       ]);
 
       setTransactions(txsData || []);
       setAccounts(accsData || []);
       setCategories(catsData || []);
       setBudgetItems(budgetData || []);
+      setChecklistItems(chkData || []);
     } catch (err: unknown) {
       console.error("Erro ao carregar lançamentos:", err);
       setErrorMsg(parseErrorMessage(err));
@@ -342,11 +359,66 @@ export default function TransactionsPage() {
       setIsAccModalOpen(false);
       await fetchData();
     } catch (err: unknown) {
-      console.error("Erro ao salvar conta/cartão:", err);
+      console.error("Erro ao salvar conta:", err);
       setErrorMsg(parseErrorMessage(err));
     } finally {
       setSavingAcc(false);
     }
+  };
+
+  const handleToggleChecklistItem = async (id: string, isCompleted: boolean) => {
+    try {
+      await toggleChecklistItemCompletion(supabase, id, isCompleted);
+      setChecklistItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, is_completed: isCompleted } : item))
+      );
+    } catch (err) {
+      console.error("Erro ao alterar conclusão do item:", err);
+    }
+  };
+
+  const handleAddChecklistItem = async (input: ChecklistItemInput, isGlobal: boolean) => {
+    const activeMonthPeriod = openMonths.find((p) => p.month === selectedMonth);
+    await createChecklistItem(supabase, input, isGlobal, activeMonthPeriod?.id);
+    await fetchData();
+  };
+
+  const handleEditChecklistItem = async (
+    id: string,
+    input: Partial<ChecklistItemInput>,
+    updateGlobal: boolean,
+    parentId?: string | null
+  ) => {
+    await updateChecklistItem(supabase, id, input, updateGlobal, parentId);
+    await fetchData();
+  };
+
+  const handleDeleteChecklistItem = async (
+    id: string,
+    deleteGlobal: boolean,
+    parentId?: string | null
+  ) => {
+    await deleteChecklistItem(supabase, id, deleteGlobal, parentId);
+    await fetchData();
+  };
+
+  const handleTriggerTransactionModalFromChecklist = (prefill: {
+    description: string;
+    amount?: number | null;
+    type: "receita" | "despesa";
+    category_id: string;
+    date: string;
+  }) => {
+    setDescription(prefill.description);
+    setType(prefill.type);
+    setCategoryInput(prefill.category_id);
+    setAmount(prefill.amount !== null && prefill.amount !== undefined ? String(prefill.amount) : "");
+    setDate(prefill.date);
+    setAccountInput("");
+    setIsRefund(false);
+    setEditingTransaction(null);
+    setTxSuccessMsg(null);
+    setIsTxModalOpen(true);
   };
 
   const handleSaveTransaction = async (e: React.FormEvent) => {
@@ -552,6 +624,21 @@ export default function TransactionsPage() {
           )}
         </div>
       </div>
+
+      {/* Card de Checklist de Contas a Pagar / Receber */}
+      <ChecklistCard
+        items={checklistItems}
+        categories={categories}
+        isMonthOpen={openMonths.some((p) => p.month === selectedMonth && p.status === "aberto")}
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
+        userEmail={userEmail}
+        onToggleItem={handleToggleChecklistItem}
+        onAddItem={handleAddChecklistItem}
+        onEditItem={handleEditChecklistItem}
+        onDeleteItem={handleDeleteChecklistItem}
+        onTriggerTransactionModal={handleTriggerTransactionModalFromChecklist}
+      />
 
       {/* Alerta de erro */}
       {errorMsg && (

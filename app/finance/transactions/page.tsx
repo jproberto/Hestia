@@ -411,7 +411,8 @@ export default function TransactionsPage() {
   }) => {
     setDescription(prefill.description);
     setType(prefill.type);
-    setCategoryInput(prefill.category_id);
+    const targetCat = categories.find((c) => c.id === prefill.category_id);
+    setCategoryInput(targetCat?.name || prefill.category_id);
     setAmount(prefill.amount !== null && prefill.amount !== undefined ? String(prefill.amount) : "");
     setDate(prefill.date);
     setAccountInput("");
@@ -1003,8 +1004,8 @@ export default function TransactionsPage() {
           <div className="w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-lg flex flex-col gap-4">
             <h2 className="text-lg font-bold tracking-tight">
               {editingTransaction
-                ? `Editar Transação (${accountInput})`
-                : `Nova Transação (${accountInput})`}
+                ? `Editar Transação${accountInput ? ` (${accountInput})` : ""}`
+                : `Nova Transação${accountInput ? ` (${accountInput})` : ""}`}
             </h2>
 
             {txSuccessMsg && (
@@ -1033,13 +1034,31 @@ export default function TransactionsPage() {
                 <Label htmlFor="tx-account" className="text-xs font-semibold">
                   Conta / Cartão
                 </Label>
-                <Input
-                  id="tx-account"
-                  type="text"
-                  value={accountInput}
-                  disabled
-                  className="bg-muted text-muted-foreground cursor-not-allowed font-medium"
-                />
+                {accounts.length > 0 ? (
+                  <select
+                    id="tx-account"
+                    value={accountInput}
+                    onChange={(e) => setAccountInput(e.target.value)}
+                    required
+                    className="rounded border p-2 bg-background text-foreground text-sm font-medium"
+                  >
+                    <option value="">-- Selecione uma Conta / Cartão --</option>
+                    {accounts.map((acc) => (
+                      <option key={acc.id || acc.name} value={acc.name}>
+                        {acc.name} ({acc.type === "cartao" ? "Cartão" : "Conta"})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <Input
+                    id="tx-account"
+                    type="text"
+                    placeholder="Ex: Itaú Corrente, Cartão Nubank"
+                    value={accountInput}
+                    onChange={(e) => setAccountInput(e.target.value)}
+                    required
+                  />
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5">

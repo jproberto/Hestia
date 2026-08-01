@@ -63,16 +63,18 @@ export default function ChecklistCard({
   const [saving, setSaving] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const today = new Date();
-  const isCurrentViewedMonth =
-    today.getFullYear() === selectedYear && today.getMonth() + 1 === selectedMonth;
-  const currentDay = isCurrentViewedMonth ? today.getDate() : 1;
-
   const getItemUrgency = (item: ChecklistItem) => {
     if (item.is_completed) return "completed";
-    if (!isCurrentViewedMonth) return "ondue"; // Em mês futuro/passado sem hoje como balizador
-    if (item.day < currentDay) return "overdue";
-    if (item.day <= currentDay + 3) return "warning";
+
+    const today = new Date();
+    const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const itemDate = new Date(selectedYear, selectedMonth - 1, item.day);
+
+    const diffTime = itemDate.getTime() - todayZero.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
+
+    if (diffDays < 0) return "overdue";
+    if (diffDays <= 3) return "warning";
     return "ondue";
   };
 
@@ -200,7 +202,6 @@ export default function ChecklistCard({
     const newCompleted = !item.is_completed;
     onToggleItem(item.id, newCompleted, item);
 
-    // Se estiver marcando como concluído, dispara o modal de transação pré-preenchido
     if (newCompleted) {
       const formattedDay = String(item.day).padStart(2, "0");
       const formattedMonth = String(selectedMonth).padStart(2, "0");
@@ -219,14 +220,14 @@ export default function ChecklistCard({
   const sortedItems = [...items].sort((a, b) => a.day - b.day);
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 mb-6">
+    <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 mb-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <h2 className="text-lg font-bold tracking-tight flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-primary" />
             Checklist de Contas a Pagar / Receber
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-muted-foreground">
             Lembretes de vencimento do mês e atalho para lançamento
           </p>
         </div>
@@ -235,7 +236,7 @@ export default function ChecklistCard({
           <Button
             onClick={handleOpenAddModal}
             size="sm"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 self-start sm:self-auto"
+            className="flex items-center gap-1.5 self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" />
             Adicionar Item
@@ -244,30 +245,30 @@ export default function ChecklistCard({
       </div>
 
       {sortedItems.length === 0 ? (
-        <div className="text-center py-8 text-slate-500 dark:text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-lg">
+        <div className="text-center py-8 text-sm text-muted-foreground border border-dashed rounded-lg">
           Nenhum item no checklist para este mês.
         </div>
       ) : (
-        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+        <div className="divide-y border-t border-b">
           {sortedItems.map((item) => {
             const urgency = getItemUrgency(item);
 
-            let borderClass = "border-slate-200 dark:border-slate-800";
-            let badgeBg = "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400";
+            let rowBg = "";
+            let badgeBg = "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50";
             let statusIcon = <Clock className="w-3.5 h-3.5" />;
             let statusLabel = `Dia ${item.day}`;
 
             if (urgency === "completed") {
-              borderClass = "opacity-60 bg-slate-50/50 dark:bg-slate-900/30";
-              badgeBg = "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
+              rowBg = "opacity-60 bg-muted/30";
+              badgeBg = "bg-muted text-muted-foreground border border-border";
               statusIcon = <CheckCircle2 className="w-3.5 h-3.5" />;
               statusLabel = "Concluída";
             } else if (urgency === "overdue") {
-              badgeBg = "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 font-semibold";
+              badgeBg = "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50 font-semibold";
               statusIcon = <AlertCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />;
               statusLabel = `Vencida (Dia ${item.day})`;
             } else if (urgency === "warning") {
-              badgeBg = "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 font-semibold";
+              badgeBg = "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50 font-semibold";
               statusIcon = <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />;
               statusLabel = `Dia ${item.day} (Em breve)`;
             }
@@ -275,7 +276,7 @@ export default function ChecklistCard({
             return (
               <div
                 key={item.id}
-                className={`py-3.5 px-2 flex items-center justify-between gap-3 transition-colors ${borderClass}`}
+                className={`py-3 px-2 flex items-center justify-between gap-3 transition-colors ${rowBg}`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <input
@@ -283,14 +284,14 @@ export default function ChecklistCard({
                     checked={item.is_completed}
                     disabled={!isMonthOpen}
                     onChange={() => handleCheckboxToggle(item)}
-                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer disabled:cursor-not-allowed"
+                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer disabled:cursor-not-allowed"
                   />
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className={`text-sm font-medium text-slate-900 dark:text-slate-100 ${
-                          item.is_completed ? "line-through text-slate-400 dark:text-slate-500" : ""
+                        className={`text-sm font-medium ${
+                          item.is_completed ? "line-through text-muted-foreground" : "text-foreground"
                         }`}
                       >
                         {item.description}
@@ -303,14 +304,14 @@ export default function ChecklistCard({
                       </span>
                     </div>
 
-                    <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+                    <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
                       <span>{item.category_name ?? "Sem categoria"}</span>
                       <span>•</span>
                       <span
                         className={
                           item.type === "receita"
-                            ? "text-emerald-600 dark:text-emerald-400 font-medium"
-                            : "text-slate-600 dark:text-slate-400"
+                            ? "text-emerald-700 dark:text-emerald-400 font-medium"
+                            : "text-muted-foreground"
                         }
                       >
                         {item.type === "receita" ? "Receita" : "Despesa"}
@@ -323,10 +324,10 @@ export default function ChecklistCard({
                   <span
                     className={`text-sm font-semibold ${
                       item.is_completed
-                        ? "line-through text-slate-400 dark:text-slate-500"
+                        ? "line-through text-muted-foreground"
                         : item.type === "receita"
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-slate-900 dark:text-slate-100"
+                        ? "text-emerald-700 dark:text-emerald-300"
+                        : "text-foreground"
                     }`}
                   >
                     {formatCurrency(item.amount)}
@@ -335,16 +336,18 @@ export default function ChecklistCard({
                   {isMonthOpen && (
                     <div className="flex items-center gap-1">
                       <button
+                        type="button"
                         onClick={() => handleOpenEditModal(item)}
                         title="Editar item"
-                        className="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition-colors"
+                        className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors"
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleOpenDeleteModal(item)}
                         title="Excluir item"
-                        className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded transition-colors"
+                        className="p-1 text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 rounded transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -359,14 +362,14 @@ export default function ChecklistCard({
 
       {/* Modal Adicionar Item */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card text-card-foreground rounded-lg shadow-lg max-w-md w-full p-6 border">
+            <h3 className="text-lg font-bold tracking-tight mb-4">
               Adicionar Item ao Checklist
             </h3>
 
             {errorMsg && (
-              <div className="p-3 mb-4 text-sm bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 rounded-lg">
+              <div className="p-3 mb-4 text-xs bg-rose-50 text-rose-800 dark:bg-rose-950/50 dark:text-rose-200 border border-rose-200 rounded-md">
                 {errorMsg}
               </div>
             )}
@@ -374,7 +377,7 @@ export default function ChecklistCard({
             <form onSubmit={handleSaveAdd} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="add-day">Dia do Vencimento</Label>
+                  <Label htmlFor="add-day" className="text-xs font-semibold">Dia do Vencimento</Label>
                   <Input
                     id="add-day"
                     type="number"
@@ -387,12 +390,12 @@ export default function ChecklistCard({
                 </div>
 
                 <div>
-                  <Label htmlFor="add-type">Tipo</Label>
+                  <Label htmlFor="add-type" className="text-xs font-semibold">Tipo</Label>
                   <select
                     id="add-type"
                     value={formType}
                     onChange={(e) => setFormType(e.target.value as "receita" | "despesa")}
-                    className="w-full h-10 px-3 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+                    className="w-full h-10 px-3 rounded-md border bg-background text-foreground text-sm"
                   >
                     <option value="despesa">Despesa</option>
                     <option value="receita">Receita</option>
@@ -401,7 +404,7 @@ export default function ChecklistCard({
               </div>
 
               <div>
-                <Label htmlFor="add-desc">Descrição</Label>
+                <Label htmlFor="add-desc" className="text-xs font-semibold">Descrição</Label>
                 <Input
                   id="add-desc"
                   type="text"
@@ -414,12 +417,12 @@ export default function ChecklistCard({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="add-cat">Categoria</Label>
+                  <Label htmlFor="add-cat" className="text-xs font-semibold">Categoria</Label>
                   <select
                     id="add-cat"
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full h-10 px-3 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+                    className="w-full h-10 px-3 rounded-md border bg-background text-foreground text-sm"
                   >
                     {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
@@ -430,7 +433,7 @@ export default function ChecklistCard({
                 </div>
 
                 <div>
-                  <Label htmlFor="add-amount">Valor Previsto (opcional)</Label>
+                  <Label htmlFor="add-amount" className="text-xs font-semibold">Valor Previsto (opcional)</Label>
                   <Input
                     id="add-amount"
                     type="text"
@@ -441,12 +444,12 @@ export default function ChecklistCard({
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                <Label className="block mb-2 text-xs font-semibold uppercase text-slate-500">
+              <div className="pt-2 border-t">
+                <Label className="block mb-2 text-xs font-semibold uppercase text-muted-foreground">
                   Escopo da Inclusão
                 </Label>
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                     <input
                       type="radio"
                       name="add-scope"
@@ -456,7 +459,7 @@ export default function ChecklistCard({
                     />
                     Apenas neste mês
                   </label>
-                  <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                     <input
                       type="radio"
                       name="add-scope"
@@ -489,14 +492,14 @@ export default function ChecklistCard({
 
       {/* Modal Editar Item */}
       {editingItem && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card text-card-foreground rounded-lg shadow-lg max-w-md w-full p-6 border">
+            <h3 className="text-lg font-bold tracking-tight mb-4">
               Editar Item do Checklist
             </h3>
 
             {errorMsg && (
-              <div className="p-3 mb-4 text-sm bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 rounded-lg">
+              <div className="p-3 mb-4 text-xs bg-rose-50 text-rose-800 dark:bg-rose-950/50 dark:text-rose-200 border border-rose-200 rounded-md">
                 {errorMsg}
               </div>
             )}
@@ -504,7 +507,7 @@ export default function ChecklistCard({
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit-day">Dia do Vencimento</Label>
+                  <Label htmlFor="edit-day" className="text-xs font-semibold">Dia do Vencimento</Label>
                   <Input
                     id="edit-day"
                     type="number"
@@ -517,12 +520,12 @@ export default function ChecklistCard({
                 </div>
 
                 <div>
-                  <Label htmlFor="edit-type">Tipo</Label>
+                  <Label htmlFor="edit-type" className="text-xs font-semibold">Tipo</Label>
                   <select
                     id="edit-type"
                     value={formType}
                     onChange={(e) => setFormType(e.target.value as "receita" | "despesa")}
-                    className="w-full h-10 px-3 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+                    className="w-full h-10 px-3 rounded-md border bg-background text-foreground text-sm"
                   >
                     <option value="despesa">Despesa</option>
                     <option value="receita">Receita</option>
@@ -531,7 +534,7 @@ export default function ChecklistCard({
               </div>
 
               <div>
-                <Label htmlFor="edit-desc">Descrição</Label>
+                <Label htmlFor="edit-desc" className="text-xs font-semibold">Descrição</Label>
                 <Input
                   id="edit-desc"
                   type="text"
@@ -543,12 +546,12 @@ export default function ChecklistCard({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit-cat">Categoria</Label>
+                  <Label htmlFor="edit-cat" className="text-xs font-semibold">Categoria</Label>
                   <select
                     id="edit-cat"
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full h-10 px-3 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+                    className="w-full h-10 px-3 rounded-md border bg-background text-foreground text-sm"
                   >
                     {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
@@ -559,7 +562,7 @@ export default function ChecklistCard({
                 </div>
 
                 <div>
-                  <Label htmlFor="edit-amount">Valor Previsto (opcional)</Label>
+                  <Label htmlFor="edit-amount" className="text-xs font-semibold">Valor Previsto (opcional)</Label>
                   <Input
                     id="edit-amount"
                     type="text"
@@ -570,12 +573,12 @@ export default function ChecklistCard({
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                <Label className="block mb-2 text-xs font-semibold uppercase text-slate-500">
+              <div className="pt-2 border-t">
+                <Label className="block mb-2 text-xs font-semibold uppercase text-muted-foreground">
                   Escopo da Alteração
                 </Label>
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                     <input
                       type="radio"
                       name="edit-scope"
@@ -585,7 +588,7 @@ export default function ChecklistCard({
                     />
                     Apenas neste mês
                   </label>
-                  <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                     <input
                       type="radio"
                       name="edit-scope"
@@ -618,26 +621,26 @@ export default function ChecklistCard({
 
       {/* Modal Excluir Item */}
       {deletingItem && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card text-card-foreground rounded-lg shadow-lg max-w-md w-full p-6 border">
+            <h3 className="text-lg font-bold tracking-tight mb-2">
               Excluir Item do Checklist
             </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Tem certeza que deseja excluir &quot;{deletingItem.description}&quot;?
             </p>
 
             {errorMsg && (
-              <div className="p-3 mb-4 text-sm bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 rounded-lg">
+              <div className="p-3 mb-4 text-xs bg-rose-50 text-rose-800 dark:bg-rose-950/50 dark:text-rose-200 border border-rose-200 rounded-md">
                 {errorMsg}
               </div>
             )}
 
-            <div className="mb-6 space-y-2">
-              <Label className="block mb-2 text-xs font-semibold uppercase text-slate-500">
+            <div className="mb-6 space-y-2 border-t pt-3">
+              <Label className="block mb-2 text-xs font-semibold uppercase text-muted-foreground">
                 Escopo da Exclusão
               </Label>
-              <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                 <input
                   type="radio"
                   name="delete-scope"
@@ -647,7 +650,7 @@ export default function ChecklistCard({
                 />
                 Apenas neste mês
               </label>
-              <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                 <input
                   type="radio"
                   name="delete-scope"

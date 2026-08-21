@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkGlobalBudgetOverflow, checkMonthBudgetOverflow } from '@/lib/checklist-budget';
+import { checkGlobalBudgetOverflow, checkMonthBudgetOverflow, BudgetItem } from '@/lib/checklist-budget';
 
 describe('checkGlobalBudgetOverflow', () => {
   it('retorna isOverflow: false quando soma prevista <= orçamento', () => {
@@ -55,7 +55,7 @@ describe('checkGlobalBudgetOverflow', () => {
     const globalItems = [
       { id: '1', category_id: 'cat1', amount: 400, month_id: null, is_active: true }
     ];
-    const budgetItems = [];
+    const budgetItems: BudgetItem[] = [];
     const result = checkGlobalBudgetOverflow(globalItems, budgetItems, 'cat1', 200);
     expect(result.isOverflow).toBe(false);
   });

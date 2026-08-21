@@ -44,6 +44,7 @@ vi.mock("@/lib/db/budget", () => ({
 
 vi.mock("@/lib/db/checklist", () => ({
   getChecklistItemsByMonth: vi.fn(),
+  getGlobalChecklistItems: vi.fn(() => Promise.resolve([])),
   createChecklistItem: vi.fn(),
   updateChecklistItem: vi.fn(),
   deleteChecklistItem: vi.fn(),

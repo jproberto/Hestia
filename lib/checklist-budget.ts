@@ -1,4 +1,4 @@
-interface ChecklistItem {
+export interface ChecklistItem {
   id: string;
   category_id: string;
   amount?: number | null;
@@ -6,13 +6,13 @@ interface ChecklistItem {
   is_active?: boolean;
 }
 
-interface BudgetItem {
+export interface BudgetItem {
   category_id: string;
   category_name?: string;
   amount: number;
 }
 
-interface BudgetOverflowResult {
+export interface BudgetOverflowResult {
   isOverflow: boolean;
   categoryId: string;
   categoryName: string;

@@ -29,6 +29,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { parseErrorMessage } from "@/lib/utils";
 import { Pencil, Trash2 } from "lucide-react";
+import BudgetOverflowModal from "@/components/finance/BudgetOverflowModal";
+import { checkGlobalBudgetOverflow, BudgetOverflowResult } from "@/lib/checklist-budget";
+import { getGlobalChecklistItems } from "@/lib/db/checklist";
+import { adjustBudgetItem } from "@/lib/db/budget";
 
 const MONTH_NAMES = [
   "Janeiro",
@@ -74,8 +78,24 @@ export default function TransactionsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+  const [globalChecklistItems, setGlobalChecklistItems] = useState<ChecklistItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Budget Overflow Modal State
+  const [isOverflowModalOpen, setIsOverflowModalOpen] = useState<boolean>(false);
+  const [overflowData, setOverflowData] = useState<BudgetOverflowResult & {
+    categoryType: "receita" | "despesa";
+    operationLabel: string;
+    pendingOperation: {
+      type: "create" | "edit";
+      input: ChecklistItemInput;
+      isGlobal: boolean;
+      itemId?: string;
+      updateGlobal?: boolean;
+      parentId?: string | null;
+    } | null;
+  } | null>(null);
 
   // Modal de Transação State
   const [isTxModalOpen, setIsTxModalOpen] = useState<boolean>(false);
@@ -144,7 +164,7 @@ export default function TransactionsPage() {
 
       const activeMonthPeriod = openMonthsForYear.find((p) => p.month === monthToFetch);
 
-      const [txsData, accsData, catsData, budgetData, chkData] = await Promise.all([
+      const [txsData, accsData, catsData, budgetData, chkData, globalChkData] = await Promise.all([
         getTransactionsByMonth(supabase, yearToUse, monthToFetch),
         getAccounts(supabase),
         getCategories(supabase),
@@ -152,6 +172,7 @@ export default function TransactionsPage() {
         activeMonthPeriod?.id
           ? getChecklistItemsByMonth(supabase, activeMonthPeriod.id).catch(() => [])
           : Promise.resolve([]),
+        getGlobalChecklistItems(supabase).catch(() => []),
       ]);
 
       setTransactions(txsData || []);
@@ -159,6 +180,7 @@ export default function TransactionsPage() {
       setCategories(catsData || []);
       setBudgetItems(budgetData || []);
       setChecklistItems(chkData || []);
+      setGlobalChecklistItems(globalChkData || []);
     } catch (err: unknown) {
       console.error("Erro ao carregar lançamentos:", err);
       setErrorMsg(parseErrorMessage(err));
@@ -378,6 +400,30 @@ export default function TransactionsPage() {
   };
 
   const handleAddChecklistItem = async (input: ChecklistItemInput, isGlobal: boolean) => {
+    if (isGlobal && input.amount !== null && input.amount !== undefined) {
+      const overflowResult = checkGlobalBudgetOverflow(
+        globalChecklistItems,
+        budgetItems,
+        input.category_id,
+        input.amount
+      );
+      if (overflowResult.isOverflow) {
+        const category = categories.find((c) => c.id === input.category_id);
+        setOverflowData({
+          ...overflowResult,
+          categoryType: category?.type || "despesa",
+          operationLabel: "incluir",
+          pendingOperation: {
+            type: "create",
+            input,
+            isGlobal: true,
+          },
+        });
+        setIsOverflowModalOpen(true);
+        return;
+      }
+    }
+
     const activeMonthPeriod = openMonths.find((p) => p.month === selectedMonth);
     await createChecklistItem(supabase, input, isGlobal, activeMonthPeriod?.id);
     await fetchData();
@@ -389,6 +435,48 @@ export default function TransactionsPage() {
     updateGlobal: boolean,
     parentId?: string | null
   ) => {
+    if (updateGlobal && input.amount !== undefined && input.amount !== null) {
+      const originalItem = globalChecklistItems.find((item) => item.id === id) || 
+                           checklistItems.find((item) => item.id === id);
+      const targetCategoryId = input.category_id || originalItem?.category_id;
+      const targetAmount = input.amount !== undefined ? input.amount : originalItem?.amount;
+
+      if (targetCategoryId && targetAmount !== undefined && targetAmount !== null && originalItem) {
+        const overflowResult = checkGlobalBudgetOverflow(
+          globalChecklistItems,
+          budgetItems,
+          targetCategoryId,
+          targetAmount,
+          id // exclude the item being edited
+        );
+        if (overflowResult.isOverflow) {
+          const category = categories.find((c) => c.id === targetCategoryId);
+          setOverflowData({
+            ...overflowResult,
+            categoryType: category?.type || "despesa",
+            operationLabel: "alterar",
+            pendingOperation: {
+              type: "edit",
+              input: {
+                day: input.day ?? originalItem.day,
+                description: input.description ?? originalItem.description,
+                type: input.type ?? originalItem.type,
+                category_id: targetCategoryId,
+                amount: targetAmount,
+                created_by: userEmail,
+              },
+              isGlobal: true,
+              itemId: id,
+              updateGlobal: updateGlobal ?? false,
+              parentId,
+            },
+          });
+          setIsOverflowModalOpen(true);
+          return;
+        }
+      }
+    }
+
     await updateChecklistItem(supabase, id, input, updateGlobal, parentId);
     await fetchData();
   };
@@ -400,6 +488,48 @@ export default function TransactionsPage() {
   ) => {
     await deleteChecklistItem(supabase, id, deleteGlobal, parentId);
     await fetchData();
+  };
+
+  const handleOverflowConfirm = async (newBudgetValue: number) => {
+    if (!overflowData?.pendingOperation) return;
+
+    const { pendingOperation } = overflowData;
+    const category = categories.find((c) => c.id === overflowData.categoryId);
+
+    try {
+      await adjustBudgetItem(
+        supabase,
+        selectedYear,
+        selectedMonth,
+        category?.name || "",
+        overflowData.categoryType,
+        newBudgetValue,
+        userEmail
+      );
+
+      if (pendingOperation.type === "create") {
+        const activeMonthPeriod = openMonths.find((p) => p.month === selectedMonth);
+        await createChecklistItem(supabase, pendingOperation.input, true, activeMonthPeriod?.id);
+      } else if (pendingOperation.type === "edit" && pendingOperation.itemId) {
+        await updateChecklistItem(
+          supabase,
+          pendingOperation.itemId,
+          pendingOperation.input,
+          pendingOperation.updateGlobal ?? false,
+          pendingOperation.parentId
+        );
+      }
+
+      await fetchData();
+    } catch (err: unknown) {
+      console.error("Erro ao confirmar ajuste de orçamento:", err);
+      setErrorMsg(parseErrorMessage(err));
+    }
+  };
+
+  const handleOverflowCancel = () => {
+    setIsOverflowModalOpen(false);
+    setOverflowData(null);
   };
 
   const handleTriggerTransactionModalFromChecklist = (prefill: {
@@ -630,6 +760,7 @@ export default function TransactionsPage() {
       <ChecklistCard
         items={checklistItems}
         categories={categories}
+        budgetItems={budgetItems}
         isMonthOpen={openMonths.some((p) => p.month === selectedMonth && p.status === "aberto")}
         selectedYear={selectedYear}
         selectedMonth={selectedMonth}
@@ -1209,6 +1340,25 @@ export default function TransactionsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Budget Overflow Modal */}
+      {isOverflowModalOpen && overflowData && (
+        <BudgetOverflowModal
+          isOpen={isOverflowModalOpen}
+          overflowData={{
+            categoryId: overflowData.categoryId,
+            categoryName: overflowData.categoryName,
+            categoryType: overflowData.categoryType,
+            totalChecklist: overflowData.totalChecklist,
+            budgetAmount: overflowData.budgetAmount,
+            operationLabel: overflowData.operationLabel,
+          }}
+          month={selectedMonth}
+          userEmail={userEmail}
+          onConfirm={handleOverflowConfirm}
+          onCancel={handleOverflowCancel}
+        />
       )}
     </div>
   );

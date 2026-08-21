@@ -86,3 +86,22 @@ Estes cenários servem para validar manualmente o comportamento de edições e a
    * **Resultado Esperado:** O modal abre com os dados atuais da transação. Altere o valor ou a descrição e clique em **Salvar**. A lista reflete a edição imediatamente.
 3. **Ação:** Na linha de um lançamento, clique no ícone de **Lixeira (Excluir)**.
    * **Resultado Esperado:** O modal de confirmação dialog abre exibindo a descrição e valor. Clique em **Confirmar Exclusão**. O lançamento é removido e o saldo da conta é recalculado.
+
+---
+
+## 7. Orçamento de Checklist - Estouro de Orçamento
+
+**Objetivo:** Validar a detecção e exibição de estouro de orçamento para itens do checklist (itens globais e itens pontuais).
+
+1. **Ação:** Acesse a página de transações em [http://localhost:3000/finance/transactions](http://localhost:3000/finance/transactions) com um mês **aberto**.
+2. **Ação:** No checklist card, tente adicionar um item global quando o total já excede o orçamento da categoria.
+   * **Resultado Esperado:** Modal de "Estouro de Orçamento Detectado" aparece, bloqueando a gravação e oferecendo passo a passo para ajuste de orçamento.
+3. **Ação:** Visualizar checklist com itens pontuais que excedem o orçamento da categoria.
+   * **Resultado Esperado:** Banner informativo (ambar/rose) aparece mostrando quando o total previsto excede o orçamento planejado da categoria.
+4. **Ação:** Editar um item global e mudar seu `category_id` para outra categoria.
+   * **Resultado Esperado:** 
+     - Se a nova categoria já tem itens excedendo o orçamento → modal de overflow aparece
+     - Se a nova categoria tem limite maior → gravação normal prossegue sem bloqueio
+     - Apenas mudar category_id (sem alterar amount) → verificação usa o amount existente contra a nova categoria
+
+---

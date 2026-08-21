@@ -3,16 +3,20 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import ChecklistCard from "@/components/finance/ChecklistCard";
 import { ChecklistItem } from "@/lib/db/checklist";
 import { Category } from "@/lib/db/categories";
+import { BudgetItem } from "@/lib/db/budget";
 
 const mockCategories: Category[] = [
   { id: "cat-1", name: "Moradia", type: "despesa", created_at: "2026-01-01", created_by: "user@test.com" },
   { id: "cat-2", name: "Renda", type: "receita", created_at: "2026-01-01", created_by: "user@test.com" },
 ];
 
+const mockBudgetItems: BudgetItem[] = [];
+
 describe("Componente ChecklistCard", () => {
   const defaultProps = {
     items: [],
     categories: mockCategories,
+    budgetItems: mockBudgetItems,
     isMonthOpen: true,
     selectedYear: 2026,
     selectedMonth: 8,

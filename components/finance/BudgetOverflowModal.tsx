@@ -28,7 +28,6 @@ export interface BudgetOverflowModalProps {
     budgetAmount: number;
     operationLabel: string;
   };
-  year: number;
   month: number;
   userEmail: string;
   onConfirm: (newBudgetValue: number) => void;
@@ -38,7 +37,6 @@ export interface BudgetOverflowModalProps {
 export default function BudgetOverflowModal({
   isOpen,
   overflowData,
-  year,
   month,
   onConfirm,
   onCancel,

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChecklistItem, ChecklistItemInput } from "@/lib/db/checklist";
 import { Category } from "@/lib/db/categories";
+import { BudgetItem } from "@/lib/db/budget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,7 @@ import { Plus, Pencil, Trash2, CheckCircle2, Clock, AlertTriangle, AlertCircle }
 interface ChecklistCardProps {
   items: ChecklistItem[];
   categories: Category[];
+  budgetItems: BudgetItem[];
   isMonthOpen: boolean;
   selectedYear: number;
   selectedMonth: number;
@@ -36,9 +38,12 @@ const formatCurrency = (value?: number | null) => {
   }).format(value);
 };
 
+import { checkMonthBudgetOverflow, BudgetOverflowResult } from "@/lib/checklist-budget";
+
 export default function ChecklistCard({
   items,
   categories,
+  budgetItems,
   isMonthOpen,
   selectedYear,
   selectedMonth,
@@ -219,6 +224,25 @@ export default function ChecklistCard({
 
   const sortedItems = [...items].sort((a, b) => a.day - b.day);
 
+  // Calculate budget overflow per category
+  const categoryTotals = new Map<string, { total: number; categoryName: string }>();
+  sortedItems.forEach((item) => {
+    const catId = item.category_id;
+    const catName = item.category_name ?? "Sem categoria";
+    const amount = item.amount ?? 0;
+    const existing = categoryTotals.get(catId) || { total: 0, categoryName: catName };
+    existing.total += amount;
+    categoryTotals.set(catId, existing);
+  });
+
+  const overflowCategories: BudgetOverflowResult[] = [];
+  categoryTotals.forEach((data, catId) => {
+    const result = checkMonthBudgetOverflow(sortedItems, budgetItems, catId);
+    if (result.isOverflow) {
+      overflowCategories.push(result);
+    }
+  });
+
   return (
     <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 mb-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
@@ -357,6 +381,25 @@ export default function ChecklistCard({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Budget Overflow Banners for point items */}
+      {overflowCategories.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {overflowCategories.map((overflow) => (
+            <div
+              key={overflow.categoryId}
+              className="font-semibold text-rose-800 dark:text-rose-300 bg-rose-100 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/50 rounded-lg p-3 text-sm"
+              role="alert"
+            >
+              Atenção: O total previsto para &apos;{overflow.categoryName}&apos; neste mês (
+              <strong>{formatCurrency(overflow.totalChecklist)}</strong>
+              ) excede o orçamento planejado (
+              <strong>{formatCurrency(overflow.budgetAmount)}</strong>
+              ).
+            </div>
+          ))}
         </div>
       )}
 

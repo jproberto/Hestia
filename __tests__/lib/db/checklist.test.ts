@@ -3,8 +3,6 @@ import {
   getChecklistItemsByMonth,
   getGlobalChecklistItems,
   createChecklistItem,
-  updateChecklistItem,
-  deleteChecklistItem,
   toggleChecklistItemCompletion,
   instantiateGlobalChecklistItemsForMonth,
   ChecklistItemInput,

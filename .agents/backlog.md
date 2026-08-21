@@ -30,8 +30,12 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 | # | Feature | Descrição | Status | Specs | Planos |
 |---|---|---|---|---|---|
+<<<<<<< Updated upstream
 | 3 | **Checklist de contas a pagar** | Lista recorrente/mensal de compromissos financeiros (receitas e despesas). Cada item possui dia, descrição, tipo (receita ou despesa), categoria e valor previsto (opcional). Fica disponível nos meses abertos com indicação visual de urgência/tempo até o vencimento via código de cores. Ao marcar um item, abre o modal de transação pré-preenchido (com Conta em branco), mas sem vinculo permanente entre checklist e transação (servindo como um atalho conveniente). | Em Desenvolvimento | [.agents/specs/03-checklist-contas-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/03-checklist-contas-spec.md) | [.agents/plans/03-checklist-contas-plan.md](file:///p:/workspace/IA/hestia/.agents/plans/03-checklist-contas-plan.md) |
 | 3a | **Patch: Cruzamento Checklist × Orçamento** | Validação de estouro de orçamento por categoria ao incluir/editar itens globais do checklist. Itens globais bloqueiam a gravação e oferecem fluxo guiado para criar/atualizar o Ajuste do Mês Atual; itens pontuais exibem apenas aviso informativo não-bloqueante. Mesma lógica será reutilizada em Compras Parceladas. | Concluído | [.agents/specs/03a-checklist-orcamento-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/03a-checklist-orcamento-spec.md) | [.agents/plans/03a-checklist-orcamento-plan.md](file:///p:/workspace/IA/hestia/.agents/plans/03a-checklist-orcamento-plan.md) |
+=======
+| 3 | **Checklist de contas a pagar** | Uma lista simples de compromissos financeiros do mês, com data de vencimento e um status de paga/não paga. É deliberadamente desacoplada do cadastro de transações — marcar uma conta como paga aqui não gera automaticamente um lançamento financeiro. Serve como um lembrete operacional, não como parte do cálculo de saldo. Por não depender de categoria nem de conta, pode ser construída em paralelo a qualquer outro bloco. | Concluído | [.agents/specs/03-checklist-contas-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/03-checklist-contas-spec.md) <br> [.agents/specs/03a-checklist-contas-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/03a-checklist-contas-spec.md) (Patch) | [.agents/plans/03-checklist-contas-plan.md](file:///p:/workspace/IA/hestia/.agents/plans/03-checklist-contas-plan.md) <br> [.agents/plans/03a-checklist-contas-plan.md](file:///p:/workspace/IA/hestia/.agents/plans/03a-checklist-contas-plan.md) (Patch) |
+>>>>>>> Stashed changes
 
 ### Bloco 3 — Lançamentos
 
@@ -48,7 +52,7 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 | # | Feature | Descrição |
 |---|---|---|
-| 10 | **Saldo do mês** | A lógica central de agregação: soma todas as receitas e subtrai todas as despesas lançadas no mês para chegar à sobra ou déficit. Essa lógica de cálculo é a base para os dois itens seguintes, por isso vem antes deles. |
+| 10 | **Saldo do mês** | A lógica central de agregação: soma todas as receitas e subtrai todas as despesas lançadas no mês para chegar à sobra ou déficit. Essa lógica de cálculo é a base para os dois itens seguintes, por isso vem antes deles. | Em Especificação |  |  |
 | 11 | **Dashboard: orçado vs. realizado (mês)** | Reaproveita a lógica de agregação do item anterior, mas agrupada por categoria e confrontada com o valor planejado no orçamento anual daquele mês. É a visão que responde "onde estou gastando mais ou menos do que planejei". |
 | 12 | **Conciliação de saldo** | Também depende do Saldo do mês já calculado: compara esse valor com o saldo real que o usuário informa manualmente (já que não há integração bancária), apontando divergências. Ajuda a identificar lançamentos esquecidos antes de fechar o mês. |
 

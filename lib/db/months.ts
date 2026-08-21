@@ -1,4 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
+import { instantiateGlobalChecklistItemsForMonth } from "@/lib/db/checklist";
 
 export interface MonthlyPeriod {
   id: string;
@@ -43,16 +44,22 @@ export async function openMonthlyPeriod(
   month: number,
   email: string
 ): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("monthly_periods")
     .upsert({
       year,
       month,
       status: "aberto",
       created_by: email
-    }, { onConflict: "year,month" });
+    }, { onConflict: "year,month" })
+    .select("id")
+    .single();
 
   if (error) throw error;
+
+  if (data?.id) {
+    await instantiateGlobalChecklistItemsForMonth(supabase, data.id, email);
+  }
 }
 
 export async function closeMonthlyPeriod(

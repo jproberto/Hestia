@@ -22,6 +22,20 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 ### Alterado
 - Incrementada a versão do projeto em `package.json` para `0.6.0` (SemVer Minor).
 
+## [0.7.0] - 2026-08-21
+
+### Adicionado
+- **Funcionalidade de Overflow Orçamentário em Checklist**: validação de estouro ao incluir/editar itens globais do checklist, com modal de bloqueio guiado para ajuste de orçamento mensal.
+- **Banners Informativos de Orçamento**: exibição visual (rose-900 sobre rose-50) quando o total previsto de itens pontuais excede o orçamento planejado da categoria.
+- **Edição Global com Mudança de Categoria**: lógica que verifica o amount existente contra a nova categoria ao mudar `category_id` em itens globais, sem excluir o item original.
+
+### Alterado
+- Cores do banner de overflow ajustadas para melhor contraste (rose-900 em vez de amber sobre rose-50).
+- Atualizada a lógica de `handleEditChecklistItem` para detectar mudança de `category_id` e aplicar overflow check contra nova categoria.
+
+### Corrigido
+- Problema de contraste visual no aviso de estouro (combinação de cores âmbar/fundo cinza substituída por rose-900/rose-50).
+
 ## [0.5.1] - 2026-07-30
 
 ### Adicionado

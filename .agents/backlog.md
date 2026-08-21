@@ -28,9 +28,9 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 ### Bloco 2 — Contas a pagar
 
-| # | Feature | Descrição |
-|---|---|---|
-| 3 | **Checklist de contas a pagar** | Uma lista simples de compromissos financeiros do mês, com data de vencimento e um status de paga/não paga. É deliberadamente desacoplada do cadastro de transações — marcar uma conta como paga aqui não gera automaticamente um lançamento financeiro. Serve como um lembrete operacional, não como parte do cálculo de saldo. Por não depender de categoria nem de conta, pode ser construída em paralelo a qualquer outro bloco. |
+| # | Feature | Descrição | Status | Specs | Planos |
+|---|---|---|---|---|---|
+| 3 | **Checklist de contas a pagar** | Uma lista simples de compromissos financeiros do mês, com data de vencimento e um status de paga/não paga. É deliberadamente desacoplada do cadastro de transações — marcar uma conta como paga aqui não gera automaticamente um lançamento financeiro. Serve como um lembrete operacional, não como parte do cálculo de saldo. Por não depender de categoria nem de conta, pode ser construída em paralelo a qualquer outro bloco. | Concluído | [.agents/specs/03-checklist-contas-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/03-checklist-contas-spec.md) <br> [.agents/specs/03a-checklist-contas-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/03a-checklist-contas-spec.md) (Patch) | [.agents/plans/03-checklist-contas-plan.md](file:///p:/workspace/IA/hestia/.agents/plans/03-checklist-contas-plan.md) <br> [.agents/plans/03a-checklist-contas-plan.md](file:///p:/workspace/IA/hestia/.agents/plans/03a-checklist-contas-plan.md) (Patch) |
 
 ### Bloco 3 — Lançamentos
 
@@ -47,7 +47,7 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 | # | Feature | Descrição |
 |---|---|---|
-| 10 | **Saldo do mês** | A lógica central de agregação: soma todas as receitas e subtrai todas as despesas lançadas no mês para chegar à sobra ou déficit. Essa lógica de cálculo é a base para os dois itens seguintes, por isso vem antes deles. |
+| 10 | **Saldo do mês** | A lógica central de agregação: soma todas as receitas e subtrai todas as despesas lançadas no mês para chegar à sobra ou déficit. Essa lógica de cálculo é a base para os dois itens seguintes, por isso vem antes deles. | Em Especificação |  |  |
 | 11 | **Dashboard: orçado vs. realizado (mês)** | Reaproveita a lógica de agregação do item anterior, mas agrupada por categoria e confrontada com o valor planejado no orçamento anual daquele mês. É a visão que responde "onde estou gastando mais ou menos do que planejei". |
 | 12 | **Conciliação de saldo** | Também depende do Saldo do mês já calculado: compara esse valor com o saldo real que o usuário informa manualmente (já que não há integração bancária), apontando divergências. Ajuda a identificar lançamentos esquecidos antes de fechar o mês. |
 

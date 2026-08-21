@@ -14,11 +14,25 @@ import { getAccounts, getOrCreateAccount, Account } from "@/lib/db/accounts";
 import { getCategories, getOrCreateCategory, Category } from "@/lib/db/categories";
 import { getAllOpenMonthlyPeriods, MonthlyPeriod } from "@/lib/db/months";
 import { getBudgets, BudgetItem } from "@/lib/db/budget";
+import ChecklistCard from "@/components/finance/ChecklistCard";
+import {
+  getChecklistItemsByMonth,
+  createChecklistItem,
+  updateChecklistItem,
+  deleteChecklistItem,
+  toggleChecklistItemCompletion,
+  ChecklistItem,
+  ChecklistItemInput,
+} from "@/lib/db/checklist";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { parseErrorMessage } from "@/lib/utils";
 import { Pencil, Trash2 } from "lucide-react";
+import BudgetOverflowModal from "@/components/finance/BudgetOverflowModal";
+import { checkGlobalBudgetOverflow, BudgetOverflowResult } from "@/lib/checklist-budget";
+import { getGlobalChecklistItems } from "@/lib/db/checklist";
+import { adjustBudgetItem } from "@/lib/db/budget";
 
 const MONTH_NAMES = [
   "Janeiro",
@@ -63,8 +77,25 @@ export default function TransactionsPage() {
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+  const [globalChecklistItems, setGlobalChecklistItems] = useState<ChecklistItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Budget Overflow Modal State
+  const [isOverflowModalOpen, setIsOverflowModalOpen] = useState<boolean>(false);
+  const [overflowData, setOverflowData] = useState<BudgetOverflowResult & {
+    categoryType: "receita" | "despesa";
+    operationLabel: string;
+    pendingOperation: {
+      type: "create" | "edit";
+      input: ChecklistItemInput;
+      isGlobal: boolean;
+      itemId?: string;
+      updateGlobal?: boolean;
+      parentId?: string | null;
+    } | null;
+  } | null>(null);
 
   // Modal de Transação State
   const [isTxModalOpen, setIsTxModalOpen] = useState<boolean>(false);
@@ -131,17 +162,25 @@ export default function TransactionsPage() {
           ? selectedMonth
           : openMonthsForYear[0]?.month ?? selectedMonth;
 
-      const [txsData, accsData, catsData, budgetData] = await Promise.all([
+      const activeMonthPeriod = openMonthsForYear.find((p) => p.month === monthToFetch);
+
+      const [txsData, accsData, catsData, budgetData, chkData, globalChkData] = await Promise.all([
         getTransactionsByMonth(supabase, yearToUse, monthToFetch),
         getAccounts(supabase),
         getCategories(supabase),
         getBudgets(supabase, yearToUse, monthToFetch).catch(() => []),
+        activeMonthPeriod?.id
+          ? getChecklistItemsByMonth(supabase, activeMonthPeriod.id).catch(() => [])
+          : Promise.resolve([]),
+        getGlobalChecklistItems(supabase).catch(() => []),
       ]);
 
       setTransactions(txsData || []);
       setAccounts(accsData || []);
       setCategories(catsData || []);
       setBudgetItems(budgetData || []);
+      setChecklistItems(chkData || []);
+      setGlobalChecklistItems(globalChkData || []);
     } catch (err: unknown) {
       console.error("Erro ao carregar lançamentos:", err);
       setErrorMsg(parseErrorMessage(err));
@@ -342,11 +381,175 @@ export default function TransactionsPage() {
       setIsAccModalOpen(false);
       await fetchData();
     } catch (err: unknown) {
-      console.error("Erro ao salvar conta/cartão:", err);
+      console.error("Erro ao salvar conta:", err);
       setErrorMsg(parseErrorMessage(err));
     } finally {
       setSavingAcc(false);
     }
+  };
+
+  const handleToggleChecklistItem = async (id: string, isCompleted: boolean) => {
+    try {
+      await toggleChecklistItemCompletion(supabase, id, isCompleted);
+      setChecklistItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, is_completed: isCompleted } : item))
+      );
+    } catch (err) {
+      console.error("Erro ao alterar conclusão do item:", err);
+    }
+  };
+
+  const handleAddChecklistItem = async (input: ChecklistItemInput, isGlobal: boolean) => {
+    if (isGlobal && input.amount !== null && input.amount !== undefined) {
+      const overflowResult = checkGlobalBudgetOverflow(
+        globalChecklistItems,
+        budgetItems,
+        input.category_id,
+        input.amount
+      );
+      if (overflowResult.isOverflow) {
+        const category = categories.find((c) => c.id === input.category_id);
+        setOverflowData({
+          ...overflowResult,
+          categoryType: category?.type || "despesa",
+          operationLabel: "incluir",
+          pendingOperation: {
+            type: "create",
+            input,
+            isGlobal: true,
+          },
+        });
+        setIsOverflowModalOpen(true);
+        return;
+      }
+    }
+
+    const activeMonthPeriod = openMonths.find((p) => p.month === selectedMonth);
+    await createChecklistItem(supabase, input, isGlobal, activeMonthPeriod?.id);
+    await fetchData();
+  };
+
+  const handleEditChecklistItem = async (
+    id: string,
+    input: Partial<ChecklistItemInput>,
+    updateGlobal: boolean,
+    parentId?: string | null
+  ) => {
+    if (updateGlobal && input.amount !== undefined && input.amount !== null) {
+      const originalItem = globalChecklistItems.find((item) => item.id === id) || 
+                           checklistItems.find((item) => item.id === id);
+      const targetCategoryId = input.category_id || originalItem?.category_id;
+      const targetAmount = input.amount !== undefined ? input.amount : originalItem?.amount;
+
+      if (targetCategoryId && targetAmount !== undefined && targetAmount !== null && originalItem) {
+        const overflowResult = checkGlobalBudgetOverflow(
+          globalChecklistItems,
+          budgetItems,
+          targetCategoryId,
+          targetAmount,
+          id // exclude the item being edited
+        );
+        if (overflowResult.isOverflow) {
+          const category = categories.find((c) => c.id === targetCategoryId);
+          setOverflowData({
+            ...overflowResult,
+            categoryType: category?.type || "despesa",
+            operationLabel: "alterar",
+            pendingOperation: {
+              type: "edit",
+              input: {
+                day: input.day ?? originalItem.day,
+                description: input.description ?? originalItem.description,
+                type: input.type ?? originalItem.type,
+                category_id: targetCategoryId,
+                amount: targetAmount,
+                created_by: userEmail,
+              },
+              isGlobal: true,
+              itemId: id,
+              updateGlobal: updateGlobal ?? false,
+              parentId,
+            },
+          });
+          setIsOverflowModalOpen(true);
+          return;
+        }
+      }
+    }
+
+    await updateChecklistItem(supabase, id, input, updateGlobal, parentId);
+    await fetchData();
+  };
+
+  const handleDeleteChecklistItem = async (
+    id: string,
+    deleteGlobal: boolean,
+    parentId?: string | null
+  ) => {
+    await deleteChecklistItem(supabase, id, deleteGlobal, parentId);
+    await fetchData();
+  };
+
+  const handleOverflowConfirm = async (newBudgetValue: number) => {
+    if (!overflowData?.pendingOperation) return;
+
+    const { pendingOperation } = overflowData;
+    const category = categories.find((c) => c.id === overflowData.categoryId);
+
+    try {
+      await adjustBudgetItem(
+        supabase,
+        selectedYear,
+        selectedMonth,
+        category?.name || "",
+        overflowData.categoryType,
+        newBudgetValue,
+        userEmail
+      );
+
+      if (pendingOperation.type === "create") {
+        const activeMonthPeriod = openMonths.find((p) => p.month === selectedMonth);
+        await createChecklistItem(supabase, pendingOperation.input, true, activeMonthPeriod?.id);
+      } else if (pendingOperation.type === "edit" && pendingOperation.itemId) {
+        await updateChecklistItem(
+          supabase,
+          pendingOperation.itemId,
+          pendingOperation.input,
+          pendingOperation.updateGlobal ?? false,
+          pendingOperation.parentId
+        );
+      }
+
+      await fetchData();
+    } catch (err: unknown) {
+      console.error("Erro ao confirmar ajuste de orçamento:", err);
+      setErrorMsg(parseErrorMessage(err));
+    }
+  };
+
+  const handleOverflowCancel = () => {
+    setIsOverflowModalOpen(false);
+    setOverflowData(null);
+  };
+
+  const handleTriggerTransactionModalFromChecklist = (prefill: {
+    description: string;
+    amount?: number | null;
+    type: "receita" | "despesa";
+    category_id: string;
+    date: string;
+  }) => {
+    setDescription(prefill.description);
+    setType(prefill.type);
+    const targetCat = categories.find((c) => c.id === prefill.category_id);
+    setCategoryInput(targetCat?.name || prefill.category_id);
+    setAmount(prefill.amount !== null && prefill.amount !== undefined ? String(prefill.amount) : "");
+    setDate(prefill.date);
+    setAccountInput("");
+    setIsRefund(false);
+    setEditingTransaction(null);
+    setTxSuccessMsg(null);
+    setIsTxModalOpen(true);
   };
 
   const handleSaveTransaction = async (e: React.FormEvent) => {
@@ -552,6 +755,22 @@ export default function TransactionsPage() {
           )}
         </div>
       </div>
+
+      {/* Card de Checklist de Contas a Pagar / Receber */}
+      <ChecklistCard
+        items={checklistItems}
+        categories={categories}
+        budgetItems={budgetItems}
+        isMonthOpen={openMonths.some((p) => p.month === selectedMonth && p.status === "aberto")}
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
+        userEmail={userEmail}
+        onToggleItem={handleToggleChecklistItem}
+        onAddItem={handleAddChecklistItem}
+        onEditItem={handleEditChecklistItem}
+        onDeleteItem={handleDeleteChecklistItem}
+        onTriggerTransactionModal={handleTriggerTransactionModalFromChecklist}
+      />
 
       {/* Alerta de erro */}
       {errorMsg && (
@@ -916,8 +1135,8 @@ export default function TransactionsPage() {
           <div className="w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-lg flex flex-col gap-4">
             <h2 className="text-lg font-bold tracking-tight">
               {editingTransaction
-                ? `Editar Transação (${accountInput})`
-                : `Nova Transação (${accountInput})`}
+                ? `Editar Transação${accountInput ? ` (${accountInput})` : ""}`
+                : `Nova Transação${accountInput ? ` (${accountInput})` : ""}`}
             </h2>
 
             {txSuccessMsg && (
@@ -946,13 +1165,31 @@ export default function TransactionsPage() {
                 <Label htmlFor="tx-account" className="text-xs font-semibold">
                   Conta / Cartão
                 </Label>
-                <Input
-                  id="tx-account"
-                  type="text"
-                  value={accountInput}
-                  disabled
-                  className="bg-muted text-muted-foreground cursor-not-allowed font-medium"
-                />
+                {accounts.length > 0 ? (
+                  <select
+                    id="tx-account"
+                    value={accountInput}
+                    onChange={(e) => setAccountInput(e.target.value)}
+                    required
+                    className="rounded border p-2 bg-background text-foreground text-sm font-medium"
+                  >
+                    <option value="">-- Selecione uma Conta / Cartão --</option>
+                    {accounts.map((acc) => (
+                      <option key={acc.id || acc.name} value={acc.name}>
+                        {acc.name} ({acc.type === "cartao" ? "Cartão" : "Conta"})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <Input
+                    id="tx-account"
+                    type="text"
+                    placeholder="Ex: Itaú Corrente, Cartão Nubank"
+                    value={accountInput}
+                    onChange={(e) => setAccountInput(e.target.value)}
+                    required
+                  />
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -1103,6 +1340,25 @@ export default function TransactionsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Budget Overflow Modal */}
+      {isOverflowModalOpen && overflowData && (
+        <BudgetOverflowModal
+          isOpen={isOverflowModalOpen}
+          overflowData={{
+            categoryId: overflowData.categoryId,
+            categoryName: overflowData.categoryName,
+            categoryType: overflowData.categoryType,
+            totalChecklist: overflowData.totalChecklist,
+            budgetAmount: overflowData.budgetAmount,
+            operationLabel: overflowData.operationLabel,
+          }}
+          month={selectedMonth}
+          userEmail={userEmail}
+          onConfirm={handleOverflowConfirm}
+          onCancel={handleOverflowCancel}
+        />
       )}
     </div>
   );

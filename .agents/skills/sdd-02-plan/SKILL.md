@@ -227,6 +227,25 @@ Depois de escrever o plano completo, revise a spec com olhar fresco e confira o 
 
 Esta é uma checklist que você executa diretamente. Não despache subagente para isso.
 
+---
+
+## Commit do Plano (Passo 9 complementar)
+
+Após a aprovação do plano pelo usuário (regra de Stop & Wait do Turno), o próximo passo é executar o commit do artefato:
+
+**Comando:** `node .agents/scripts/sdd.js commit "planning: <descrição do plano>"`
+
+**Artefato commitado:** `.agents/plans/<ID>-<slug>-plan.md`
+
+**Momento:** Apenas após o usuário responder explicitamente "aprovado" à apresentação do plano. Nunca commite o plano na mesma resposta em que ele é apresentado.
+
+**Por que isso importa:** Assim como a spec precisa de commit separado após aprovação, o plano também precisa ser registrado no git. Isso garante que:
+- O histórico do projeto tenha o plano documentado
+- O link entre backlog → spec → plano fique completo e rastreável
+- O próximo agente que pegar o fluxo saiba que o plano já foi aprovado e registrado
+
+**Observação:** O commit do plano é distinto dos commits das tasks de implementação (que acontecem em `sdd-03-implement`). Esse é o commit do próprio artefato de plano.
+
 1. **Cobertura da spec.** Percorra cada seção e requisito da spec. Para cada um, responda: qual task implementa isso, qual teste ou verificação prova isso, alguma restrição global foi esquecida. Liste lacunas e corrija o plano. Se um requisito da spec não tem task, adicione uma task.
 2. **Busca por placeholders.** Procure os padrões proibidos do Passo 7 (`TBD`, `TODO`, "similar", "apropriado", "edge cases", "validar", "implementar depois"). Corrija inline — não deixe observações vagas para o executor resolver.
 3. **Consistência.** Verifique se tipos, assinaturas, nomes de métodos, props, eventos, paths e schemas usados em tasks posteriores batem com o que foi definido em tasks anteriores (ex: Task 3 cria `clearLayers()`, Task 7 chama `clearFullLayers()` — bug de plano). Corrija o plano diretamente.
@@ -245,7 +264,27 @@ Revise o plano acima. Se aprovar, me confirme para que eu possa commitar o plano
 
 ⚠️ **Parada Obrigatória de Turno (Stop & Wait):** É EXPRESSAMENTE PROIBIDO executar o comando `node .agents/scripts/sdd.js commit` na mesma iteração/resposta em que o plano é gerado. O agente deve apresentar o caminho do plano, encerrar a sua resposta (turn) e AGUARDAR a confirmação explícita do parceiro humano no chat. O commit via CLI deve ser executado exclusivamente em um turno posterior à aprovação.
 
+---
+
+## Commit do Plano
+
+Após a aprovação do plano pelo usuário (regra de Stop & Wait do Turno), o próximo passo é executar o commit do artefato:
+
+**Comando:** `node .agents/scripts/sdd.js commit "planning: <descrição do plano>"`
+
+**Artefato commitado:** `.agents/plans/<ID>-<slug>-plan.md`
+
+**Momento:** Apenas após o usuário responder explicitamente "aprovado" à apresentação do plano. Nunca commite o plano na mesma resposta em que ele é apresentado.
+
+**Por que isso importa:** Assim como a spec precisa de commit separado após aprovação, o plano também precisa ser registrado no git. Isso garante que:
+- O histórico do projeto tenha o plano documentado
+- O link entre backlog → spec → plano fique completo e rastreável
+- O próximo agente que pegar o fluxo saiba que o plano já foi aprovado e registrado
+
+**Observação:** O commit do plano é distinto dos commits das tasks de implementação (que acontecem em `sdd-03-implement`). Esse é o commit do próprio artefato de plano.
+
 **Atualização do Backlog:**
+Ao finalizar e salvar o plano após a aprovação, atualize o status da funcionalidade correspondente no arquivo `.agents/backlog.md` para `Em Desenvolvimento` e adicione o link para o plano gerado na tabela.
 Ao finalizar e salvar o plano após a aprovação, atualize o status da funcionalidade correspondente no arquivo `.agents/backlog.md` para `Em Desenvolvimento` e adicione o link para o plano gerado na tabela.
 
 - Use `sdd-03-implement`.

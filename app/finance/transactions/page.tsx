@@ -268,6 +268,8 @@ export default function TransactionsPage() {
   const totalDespesaPrevisto = despesaRows.reduce((acc, r) => acc + r.previsto, 0);
   const totalDespesaReal = despesaRows.reduce((acc, r) => acc + r.real, 0);
 
+  const saldoMes = totalReceitaReal - totalDespesaReal;
+
   // Estruturação do Grid de Contas e Cartões (unindo contas existentes e lançamentos)
   const allAccountsMap = new Map<string, { account: Account; txs: TransactionWithDetails[] }>();
 
@@ -779,6 +781,17 @@ export default function TransactionsPage() {
         </div>
       )}
 
+      <div
+        className={`mt-4 flex items-center justify-between p-3 rounded-lg border ${
+          saldoMes >= 0 ? "border-success-border bg-success-soft" : "border-danger-border bg-danger-soft"
+        }`}
+      >
+        <span className="text-sm font-bold text-muted-foreground">💰 Saldo do Mês</span>
+        <span className={`text-lg font-bold ${saldoMes >= 0 ? "text-success" : "text-danger"}`}>
+          {formatCurrency(saldoMes)}
+        </span>
+      </div>
+
       {/* Mensagem caso nenhum mês esteja aberto */}
       {!loading && availableYears.length === 0 && (
         <div className="rounded-lg border p-8 text-center bg-card text-card-foreground flex flex-col items-center gap-3">
@@ -801,11 +814,11 @@ export default function TransactionsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Tabela de Receitas (Esquerda) */}
               <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
-                <div className="bg-emerald-50 dark:bg-emerald-950/60 p-3 border-b border-emerald-200 dark:border-emerald-900/50 flex items-center justify-between">
-                  <h3 className="font-bold text-sm text-emerald-950 dark:text-emerald-100">
+                <div className="bg-success-soft p-3 border-b border-success-border flex items-center justify-between">
+                  <h3 className="font-bold text-sm text-success">
                     📈 Receitas
                   </h3>
-                  <div className="text-xs text-emerald-900 dark:text-emerald-200 font-bold">
+                  <div className="text-xs text-success font-bold">
                     Real: {formatCurrency(totalReceitaReal)}
                   </div>
                 </div>
@@ -857,11 +870,11 @@ export default function TransactionsPage() {
 
               {/* Tabela de Despesas (Direita) */}
               <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
-                <div className="bg-rose-50 dark:bg-rose-950/60 p-3 border-b border-rose-200 dark:border-rose-900/50 flex items-center justify-between">
-                  <h3 className="font-bold text-sm text-rose-950 dark:text-rose-100">
+                <div className="bg-danger-soft p-3 border-b border-danger-border flex items-center justify-between">
+                  <h3 className="font-bold text-sm text-danger">
                     📉 Despesas
                   </h3>
-                  <div className="text-xs text-rose-900 dark:text-rose-200 font-bold">
+                  <div className="text-xs text-danger font-bold">
                     Real: {formatCurrency(totalDespesaReal)}
                   </div>
                 </div>
@@ -910,13 +923,13 @@ export default function TransactionsPage() {
                   </table>
                 </div>
               </div>
-            </div>
-          </div>
+</div>
+        </div>
 
-          {/* ========================================================================= */}
-          {/* 2. ÁREA INFERIOR: CONTAS E CARTÕES (GRID DE 2 COLUNAS)                   */}
-          {/* ========================================================================= */}
-          <div className="flex flex-col gap-4 pt-4 border-t">
+        {/* ========================================================================= */}
+        {/* 2. ÁREA INFERIOR: CONTAS E CARTÕES (GRID DE 2 COLUNAS)                   */}
+        {/* ========================================================================= */}
+        <div className="flex flex-col gap-4 pt-4 border-t">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold tracking-tight">Contas e Cartões</h2>
               <Button onClick={handleOpenAccModal} variant="outline" size="sm">

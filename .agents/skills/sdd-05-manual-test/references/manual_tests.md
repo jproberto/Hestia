@@ -105,3 +105,14 @@ Estes cenários servem para validar manualmente o comportamento de edições e a
      - Apenas mudar category_id (sem alterar amount) → verificação usa o amount existente contra a nova categoria
 
 ---
+
+## 8. Saldo do Mês (`/finance/transactions`)
+
+**Objetivo:** Validar que o banner de saldo do mês reflete a diferença entre os totais dos cards Receitas e Despesas.
+
+1. **Ação:** Acesse [http://localhost:3000/finance/transactions](http://localhost:3000/finance/transactions) em um mês **Aberto**.
+   * **Resultado Esperado:** Banner "💰 Saldo do Mês" exibido entre o checklist e os cards, com valor igual a Receitas − Despesas: verde se ≥ 0, vermelho se < 0.
+2. **Ação:** Lance uma despesa que torne o total negativo.
+   * **Resultado Esperado:** O banner muda para vermelho e exibe o valor negativo imediatamente após a atualização da lista.
+
+---

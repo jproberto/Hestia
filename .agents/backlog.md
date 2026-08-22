@@ -47,7 +47,7 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 | # | Feature | Descrição | Status | Specs | Planos |
 |---|---|---|---|---|---|
-| 10 | **Saldo do mês** | A lógica central de agregação: soma todas as receitas e subtrai todas as despesas lançadas no mês para chegar à sobra ou déficit. Essa lógica de cálculo é a base para os dois itens seguintes, por isso vem antes deles. | Especificado | [.agents/specs/10-saldo-mes-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/10-saldo-mes-spec.md) | [.agents/plans/10-saldo-mes-plan.md](file:///p:/workspace/IA/hestia/.agents/plans/10-saldo-mes-plan.md) |
+| 10 | **Saldo do mês** | A lógica central de agregação: soma todas as receitas e subtrai todas as despesas lançadas no mês para chegar à sobra ou déficit. Essa lógica de cálculo é a base para os dois itens seguintes, por isso vem antes deles. | Concluído | [.agents/specs/10-saldo-mes-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/10-saldo-mes-spec.md) | [.agents/plans/10-saldo-mes-plan.md](file:///p:/workspace/IA/hestia/.agents/plans/10-saldo-mes-plan.md) |
 | 11 | **Dashboard: orçado vs. realizado (mês)** | Reaproveita a lógica de agregação do item anterior, mas agrupada por categoria e confrontada com o valor planejado no orçamento anual daquele mês. É a visão que responde "onde estou gastando mais ou menos do que planejei". |
 | 12 | **Conciliação de saldo** | Também depende do Saldo do mês já calculado: compara esse valor com o saldo real que o usuário informa manualmente (já que não há integração bancária), apontando divergências. Ajuda a identificar lançamentos esquecidos antes de fechar o mês. |
 

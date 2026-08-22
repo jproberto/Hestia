@@ -28,10 +28,15 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 - **Funcionalidade de Overflow Orçamentário em Checklist**: validação de estouro ao incluir/editar itens globais do checklist, com modal de bloqueio guiado para ajuste de orçamento mensal.
 - **Banners Informativos de Orçamento**: exibição visual (rose-900 sobre rose-50) quando o total previsto de itens pontuais excede o orçamento planejado da categoria.
 - **Edição Global com Mudança de Categoria**: lógica que verifica o amount existente contra a nova categoria ao mudar `category_id` em itens globais, sem excluir o item original.
+- **Saldo do Mês em Destaque**: novo banner na página `/finance/transactions` exibindo a diferença entre receitas e despesas do período, com cores condicionais (verde para saldo ≥ 0, vermelho para negativo) e oculto automaticamente quando nenhum mês está aberto (Feature 10).
+- Testes automatizados cobrindo os estados do banner de saldo em `__tests__/app/finance/transactions-page.test.tsx`.
+- Smoke test #8 em `.agents/skills/sdd-05-manual-test/references/manual_tests.md`.
 
 ### Alterado
 - Cores do banner de overflow ajustadas para melhor contraste (rose-900 em vez de amber sobre rose-50).
 - Atualizada a lógica de `handleEditChecklistItem` para detectar mudança de `category_id` e aplicar overflow check contra nova categoria.
+- **Tokens de cor centralizados**: criadas variáveis semânticas `success`/`danger` em `app/globals.css` com valores para modo claro e escuro; headers dos cards Receitas e Despesas migraram das classes utilitárias fixas (`emerald-*`/`rose-*`) para os novos tokens.
+- Incrementada a versão do projeto em `package.json` para `0.7.0` (SemVer Minor).
 
 ### Corrigido
 - Problema de contraste visual no aviso de estouro (combinação de cores âmbar/fundo cinza substituída por rose-900/rose-50).

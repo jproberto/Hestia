@@ -45,40 +45,40 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 ### Bloco 4 — Motor de cálculo
 
-| # | Feature | Descrição |
-|---|---|---|
-| 10 | **Saldo do mês** | A lógica central de agregação: soma todas as receitas e subtrai todas as despesas lançadas no mês para chegar à sobra ou déficit. Essa lógica de cálculo é a base para os dois itens seguintes, por isso vem antes deles. | Em Especificação |  |  |
+| # | Feature | Descrição | Status | Specs | Planos |
+|---|---|---|---|---|---|
+| 10 | **Saldo do mês** | A lógica central de agregação: soma todas as receitas e subtrai todas as despesas lançadas no mês para chegar à sobra ou déficit. Essa lógica de cálculo é a base para os dois itens seguintes, por isso vem antes deles. | Concluído | [.agents/specs/10-saldo-mes-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/10-saldo-mes-spec.md) | [.agents/plans/10-saldo-mes-plan.md](file:///p:/workspace/IA/hestia/.agents/plans/10-saldo-mes-plan.md) |
 | 11 | **Dashboard: orçado vs. realizado (mês)** | Reaproveita a lógica de agregação do item anterior, mas agrupada por categoria e confrontada com o valor planejado no orçamento anual daquele mês. É a visão que responde "onde estou gastando mais ou menos do que planejei". |
 | 12 | **Conciliação de saldo** | Também depende do Saldo do mês já calculado: compara esse valor com o saldo real que o usuário informa manualmente (já que não há integração bancária), apontando divergências. Ajuda a identificar lançamentos esquecidos antes de fechar o mês. |
 
 ### Bloco 5 — Fechamento
 
-| # | Feature | Descrição |
-|---|---|---|
-| 13 | **Encerramento de mês** | Uma vez que a conciliação bate e o saldo já foi destinado, o mês é travado para novas edições e passa a existir apenas para consulta. Inclui uma opção de reabertura, pensada para exceções pontuais, mas que não deve ser o caminho padrão de uso. |
-| 14 | **Histórico de meses anteriores** | A consulta de meses já encerrados — orçamento planejado x realizado, saldo final e destinação dada a ele. Depende de todos os blocos anteriores estarem funcionando, já que reaproveita os mesmos dados e cálculos, apenas em modo somente-leitura. |
+| # | Feature | Descrição | Status | Specs | Planos |
+|---|---|---|---|---|---|
+| 13 | **Encerramento de mês** | Uma vez que a conciliação bate e o saldo já foi destinado, o mês é travado para novas edições e passa a existir apenas para consulta. Inclui uma opção de reabertura, pensada para exceções pontuais, mas que não deve ser o caminho padrão de uso. | |  |  |
+| 14 | **Histórico de meses anteriores** | A consulta de meses já encerrados — orçamento planejado x realizado, saldo final e destinação dada a ele. Depende de todos os blocos anteriores estarem funcionando, já que reaproveita os mesmos dados e cálculos, apenas em modo somente-leitura. | |  |  |
 
 ---
 
 ## Backlog priorizado (V2)
 
-| # | Feature | Descrição |
-|---|---|---|
-| 15 | **Transações recorrentes** | Permite marcar uma receita ou despesa como fixa (aluguel, salário) para que seja lançada automaticamente todo mês, reduzindo a repetição manual. |
-| 16 | **Alertas de estouro de orçamento** | Notifica o usuário quando uma categoria ultrapassa um percentual definido do limite planejado, antecipando o problema antes do fim do mês. |
-| 17 | **Alertas de conta a vencer** | Complementa o checklist de contas a pagar com lembretes automáticos para vencimentos próximos. |
-| 18 | **Gráficos de tendência** | Mostra a evolução de gastos por categoria ou conta ao longo de vários meses, útil para identificar padrões que um único mês não revela. |
-| 19 | **Divisão entre os dois usuários** | Mostra quanto cada um dos dois usuários lançou ou contribuiu no mês, útil para conversas sobre divisão de despesas. |
-| 20 | **Metas de economia** | Permite definir uma meta de economia (ex: guardar R$500/mês) e acompanhar o progresso ao longo do tempo. |
-| 21 | **Exportação de dados** | Exporta os lançamentos em CSV/Excel, para backup ou análise fora da ferramenta. |
+| # | Feature | Descrição | Status | Specs | Planos |
+|---|---|---|---|---|---|
+| 15 | **Transações recorrentes** | Permite marcar uma receita ou despesa como fixa (aluguel, salário) para que seja lançada automaticamente todo mês, reduzindo a repetição manual. | |  |  |
+| 16 | **Alertas de estouro de orçamento** | Notifica o usuário quando uma categoria ultrapassa um percentual definido do limite planejado, antecipando o problema antes do fim do mês. | |  |  |
+| 17 | **Alertas de conta a vencer** | Complementa o checklist de contas a pagar com lembretes automáticos para vencimentos próximos. | |  |  |
+| 18 | **Gráficos de tendência** | Mostra a evolução de gastos por categoria ou conta ao longo de vários meses, útil para identificar padrões que um único mês não revela. | |  |  |
+| 19 | **Divisão entre os dois usuários** | Mostra quanto cada um dos dois usuários lançou ou contribuiu no mês, útil para conversas sobre divisão de despesas. | |  |  |
+| 20 | **Metas de economia** | Permite definir uma meta de economia (ex: guardar R$500/mês) e acompanhar o progresso ao longo do tempo. | |  |  |
+| 21 | **Exportação de dados** | Exporta os lançamentos em CSV/Excel, para backup ou análise fora da ferramenta. | |  |  |
 
 ---
 
 ## Backlog priorizado (V3)
 
-| # | Feature | Descrição |
-|---|---|---|
-| 22 | **Patrimônio e investimentos** | Passa a acompanhar o rendimento e saldo de investimentos ao longo do tempo, não só o valor transferido para lá — um salto de fluxo de caixa para visão de patrimônio. |
-| 23 | **Importação de extratos (CSV/OFX)** | Reduz a entrada manual permitindo importar extratos de banco ou cartão diretamente. |
-| 24 | **Integração bancária (open finance)** | Automatiza a sincronização de transações, eliminando boa parte do lançamento manual. |
-| 25 | **Planejamento plurianual** | Permite comparar orçamento e realizado entre anos diferentes, dando uma visão de longo prazo da evolução financeira da família. |
+| # | Feature | Descrição | Status | Specs | Planos |
+|---|---|---|-|---|---|
+| 22 | **Patrimônio e investimentos** | Passa a acompanhar o rendimento e saldo de investimentos ao longo do tempo, não só o valor transferido para lá — um salto de fluxo de caixa para visão de patrimônio. | |  |  |
+| 23 | **Importação de extratos (CSV/OFX)** | Reduz a entrada manual permitindo importar extratos de banco ou cartão diretamente. | |  |  |
+| 24 | **Integração bancária (open finance)** | Automatiza a sincronização de transações, eliminando boa parte do lançamento manual. | |  |  |
+| 25 | **Planejamento plurianual** | Permite comparar orçamento e realizado entre anos diferentes, dando uma visão de longo prazo da evolução financeira da família. | |  |  |

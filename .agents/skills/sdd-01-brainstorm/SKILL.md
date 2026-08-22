@@ -146,7 +146,15 @@ Se o objetivo for corrigir ou estender uma especificação já existente após u
 Preferências explícitas do usuário ou do projeto sobrescrevem esse caminho. Se já existir uma convenção local para specs, use a convenção local.
 
 **Atualização do Backlog:**
-Ao finalizar e commitar a especificação, certifique-se de adicionar o link para a spec e mudar o status do item correspondente no `.agents/backlog.md` para `Especificado` após a aprovação do usuário.
+Após a aprovação da spec e o commit do artefato (próximo passo obrigatório), atualize o status do item no `.agents/backlog.md` para `Especificado`, adicionando o link para a spec `.agents/specs/<ID>-<slug>-spec.md`.
+
+**Fluxo recomendado:**
+1. Spec escrita e aprovada pelo usuário
+2. Executar `node .agents/scripts/sdd.js commit "spec: <descrição>"` para registrar a spec no git
+3. Atualizar o status do backlog (pode ser no mesmo commit da spec ou imediatamente após)
+4. Status no backlog passa de `Em Especificação` para `Especificado`
+
+**Observação:** A atualização do status no backlog deve ser feita juntamente com o commit da spec, nunca como uma edição manual isolada. Isso garante rastreabilidade: o link direto de qual spec corresponde a qual status no backlog.
 
 Use escrita clara, objetiva e curta. Consulte references/writing-the-spec.md para o critério de quando um item está específico o suficiente para ser útil (especialmente problema, comportamento esperado e critérios de aceite). A spec não deve tentar impressionar por volume; ela deve preservar decisões importantes, reduzir ambiguidade e permitir que a próxima etapa escreva um plano de implementação confiável.
 
@@ -154,7 +162,17 @@ Use escrita clara, objetiva e curta. Consulte references/writing-the-spec.md par
 
 Inclua o que for necessário para reconstruir o design aprovado: problema, decisão tomada, alternativas rejeitadas, comportamento esperado, restrições, riscos e critérios de aceite. Não use uma lista fixa de seções como checklist mecânico. Se uma seção não ajuda a entender ou implementar, deixe fora.
 
-⚠️ **Regra Fundamental de Commit Aprovado**: O commit da especificação via `node .agents/scripts/sdd.js commit` deve ser realizado EXCLUSIVAMENTE após a aprovação explícita e prévia do parceiro humano. Salve o arquivo de spec localmente, apresente-o ao usuário e execute o commit apenas após a aprovação expressa.
+**Features com impacto visual:** quando a feature altera interface, registre na spec as referências de estilo aplicáveis — tokens semânticos existentes no tema global (ex: cores centralizadas em `app/globals.css`), componentes ou padrões visuais a reutilizar e os estados visuais esperados (positivo/negativo/vazio/carregando etc.). Requisitos visuais deixados implícitos tendem a emergir apenas como retrabalho durante a homologação; descrevê-los em texto (sem código) reduz esse ciclo.
+
+⚠️ **Regra Fundamental de Commit Aprovado**: 
+O commit da especificação via `node .agents/scripts/sdd.js commit` deve ser realizado EXCLUSIVAMENTE após a aprovação explícita e prévia do parceiro humano.
+
+**Fluxo em 3 turnos distintos (obrigatório):**
+• **Turno 1 (agora):** Spec escrita e apresentada ao usuário → usuário aprova verbalmente ou confirma aprovação no chat
+• **Turno 2 (próximo):** Apenas após a aprovação explícita do usuário no turno anterior, executamos `node .agents/scripts/sdd.js commit "especificação: <descrição>"` → a spec fica registrada no git
+• **Turno 3 (posterior):** Commits subsequentes (plano, tasks) seguem o mesmo padrão de aprovação prévia
+
+**NUNCA** execute `node .agents/scripts/sdd.js commit` na mesma resposta em que a spec é criada. Apresenta a spec, encerra o turn e aguarda aprovação explícita do usuário para então commitar. O comando commit só será aceito após o usuário dizer "aprovado" em resposta à apresentação da spec.
 
 ### Passo 10: Auto Revisar a Spec
 

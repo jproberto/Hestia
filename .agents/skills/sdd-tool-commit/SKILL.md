@@ -23,6 +23,7 @@ Transforme mudanças já verificadas em commits git bem formados: revise o diff,
 3. Rode `git log --oneline -20` para observar a convenção de mensagens já usada neste projeto (Conventional Commits, imperativo simples, prefixo de ticket, etc.). **Observe com atenção o idioma das mensagens anteriores (ex: se são escritas em Português ou Inglês) e siga rigorosamente o mesmo idioma.** Não introduza uma convenção ou idioma novo por conta própria.
 4. Confirme que a branch atual não é `main` ou `develop`. Se for, pare e avise o parceiro humano — não commite diretamente nas branches principais sem consentimento explícito.
 5. Se houver mudanças no diff que não fazem parte do escopo do que foi implementado (arquivos tocados por acidente, artefatos de build, arquivos de configuração local), sinalize e confirme com o parceiro humano antes de incluir ou excluir do commit.
+6. **Ruído de formatação:** além do escopo, inspecione o diff por mudanças acidentais de indentação ou espaçamento (comuns em edições grandes de JSX/HTML). Corrija-as antes de commitar ou sinalize explicitamente ao parceiro humano — whitespace quebrado commitado polui o histórico, dificulta reviews futuras e pode indicar edição mal aplicada.
 
 ### Passo 2: Confirmar a Baseline
 

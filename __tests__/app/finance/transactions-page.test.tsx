@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, waitFor, within } from "@testing-library/react";
 import TransactionsPage from "@/app/finance/transactions/page";
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { getTransactionsByMonth, deleteTransaction } from "@/lib/db/transactions";
@@ -210,6 +210,101 @@ describe("Página de Cadastro de Transações /finance/transactions", () => {
     await waitFor(() => {
       expect(deleteTransaction).toHaveBeenCalledWith(expect.anything(), "t1");
     });
+  });
+
+  it("deve exibir o banner de saldo do mês com valor positivo em verde quando receitas superam despesas", async () => {
+    (getAllOpenMonthlyPeriods as Mock).mockResolvedValue([
+      { id: "p1", year: 2026, month: 3, status: "aberto" },
+    ]);
+    (getMonthlyPeriods as Mock).mockResolvedValue([
+      { id: "p1", year: 2026, month: 3, status: "aberto" },
+    ]);
+    (getBudgets as Mock).mockResolvedValue([]);
+    (getTransactionsByMonth as Mock).mockResolvedValue([
+      {
+        id: "t1",
+        description: "Salário",
+        amount: 5000,
+        type: "receita",
+        is_refund: false,
+        date: "2026-03-05",
+        category_name: "Salário",
+        account_name: "Itaú Corrente",
+        created_by: "teste@hestia.com",
+      },
+      {
+        id: "t2",
+        description: "Supermercado",
+        amount: 200,
+        type: "despesa",
+        is_refund: false,
+        date: "2026-03-15",
+        category_name: "Alimentação",
+        account_name: "Itaú Corrente",
+        created_by: "teste@hestia.com",
+      },
+    ]);
+    (getAccounts as Mock).mockResolvedValue([{ id: "a1", name: "Itaú Corrente", type: "conta" }]);
+    (getCategories as Mock).mockResolvedValue([]);
+
+    render(<TransactionsPage />);
+
+    const bannerLabelPos = await screen.findByText("💰 Saldo do Mês");
+    const bannerElPos = bannerLabelPos.closest("div") as HTMLElement;
+
+    const saldoElPos = within(bannerElPos).getByText(/R\$\s*4\.800,00/);
+    expect(saldoElPos).toBeInTheDocument();
+    expect(saldoElPos.className).toContain("text-success");
+    expect(saldoElPos.className).not.toContain("text-danger");
+  });
+
+  it("deve exibir o banner de saldo do mês em vermelho quando despesas superam receitas", async () => {
+    (getAllOpenMonthlyPeriods as Mock).mockResolvedValue([
+      { id: "p1", year: 2026, month: 3, status: "aberto" },
+    ]);
+    (getMonthlyPeriods as Mock).mockResolvedValue([
+      { id: "p1", year: 2026, month: 3, status: "aberto" },
+    ]);
+    (getBudgets as Mock).mockResolvedValue([]);
+    (getTransactionsByMonth as Mock).mockResolvedValue([
+      {
+        id: "t1",
+        description: "Aluguel",
+        amount: 1500,
+        type: "despesa",
+        is_refund: false,
+        date: "2026-03-05",
+        category_name: "Moradia",
+        account_name: "Itaú Corrente",
+        created_by: "teste@hestia.com",
+      },
+    ]);
+    (getAccounts as Mock).mockResolvedValue([{ id: "a1", name: "Itaú Corrente", type: "conta" }]);
+    (getCategories as Mock).mockResolvedValue([]);
+
+    render(<TransactionsPage />);
+
+    const bannerLabelNeg = await screen.findByText("💰 Saldo do Mês");
+    const bannerElNeg = bannerLabelNeg.closest("div") as HTMLElement;
+
+    const saldoElNeg = within(bannerElNeg).getByText(/-R\$\s*1\.500,00/);
+    expect(saldoElNeg).toBeInTheDocument();
+    expect(saldoElNeg.className).toContain("text-danger");
+    expect(saldoElNeg.className).not.toContain("text-success");
+  });
+
+  it("não deve exibir o banner de saldo quando nenhum mês está aberto", async () => {
+    (getAllOpenMonthlyPeriods as Mock).mockResolvedValue([]);
+    (getMonthlyPeriods as Mock).mockResolvedValue([]);
+    (getBudgets as Mock).mockResolvedValue([]);
+    (getTransactionsByMonth as Mock).mockResolvedValue([]);
+    (getAccounts as Mock).mockResolvedValue([]);
+    (getCategories as Mock).mockResolvedValue([]);
+
+    render(<TransactionsPage />);
+
+    expect(await screen.findByText(/Nenhum mês está/i)).toBeInTheDocument();
+    expect(screen.queryByText("💰 Saldo do Mês")).not.toBeInTheDocument();
   });
 });
 

@@ -781,16 +781,18 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      <div
-        className={`mt-4 flex items-center justify-between p-3 rounded-lg border ${
-          saldoMes >= 0 ? "border-success-border bg-success-soft" : "border-danger-border bg-danger-soft"
-        }`}
-      >
-        <span className="text-sm font-bold text-muted-foreground">💰 Saldo do Mês</span>
-        <span className={`text-lg font-bold ${saldoMes >= 0 ? "text-success" : "text-danger"}`}>
-          {formatCurrency(saldoMes)}
-        </span>
-      </div>
+      {availableYears.length > 0 && (
+        <div
+          className={`mt-4 flex items-center justify-between p-3 rounded-lg border ${
+            saldoMes >= 0 ? "border-success-border bg-success-soft" : "border-danger-border bg-danger-soft"
+          }`}
+        >
+          <span className="text-sm font-bold text-muted-foreground">💰 Saldo do Mês</span>
+          <span className={`text-lg font-bold ${saldoMes >= 0 ? "text-success" : "text-danger"}`}>
+            {formatCurrency(saldoMes)}
+          </span>
+        </div>
+      )}
 
       {/* Mensagem caso nenhum mês esteja aberto */}
       {!loading && availableYears.length === 0 && (
@@ -923,13 +925,13 @@ export default function TransactionsPage() {
                   </table>
                 </div>
               </div>
-</div>
-        </div>
+            </div>
+          </div>
 
-        {/* ========================================================================= */}
-        {/* 2. ÁREA INFERIOR: CONTAS E CARTÕES (GRID DE 2 COLUNAS)                   */}
-        {/* ========================================================================= */}
-        <div className="flex flex-col gap-4 pt-4 border-t">
+          {/* ========================================================================= */}
+          {/* 2. ÁREA INFERIOR: CONTAS E CARTÕES (GRID DE 2 COLUNAS)                   */}
+          {/* ========================================================================= */}
+          <div className="flex flex-col gap-4 pt-4 border-t">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold tracking-tight">Contas e Cartões</h2>
               <Button onClick={handleOpenAccModal} variant="outline" size="sm">

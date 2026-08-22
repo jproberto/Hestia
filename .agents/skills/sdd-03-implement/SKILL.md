@@ -55,6 +55,7 @@ Para cada tarefa, na ordem em que aparece no plano:
 5. Execute localmente os validadores para garantir que não há erros de qualidade antes do fechamento (`npm run test`, `npx eslint .`, `npx tsc --noEmit`). Não avance sem que tudo passe localmente.
 6. Marque a tarefa como concluída (`completed` no TODO e no CLI via `task-complete`).
 7. Apresente o resultado da tarefa concluída ao parceiro humano e execute o commit via CLI (`node .agents/scripts/sdd.js commit "<mensagem-em-portugues>"`) EXCLUSIVAMENTE após a aprovação explícita em um turno posterior. ⚠️ **Parada Obrigatória de Turno:** É EXPRESSAMENTE PROIBIDO commitar automaticamente na mesma resposta em que a tarefa é concluída sem aguardar o sinal verde do usuário no chat.
+8. **Mudança de design durante a tarefa:** se o feedback do parceiro humano durante a implementação alterar decisão registrada na spec ou no plano (formato de UI, comportamento, arquitetura), atualize os artefatos afetados (`.agents/specs/` e `.agents/plans/`) e inclua-os no mesmo commit do código correspondente. Nunca deixe o plano descrever uma solução que o código não segue — artefato desatualizado transfere informação falsa para o próximo executor ou revisor.
 
 Não pule verificações para "economizar tempo" — uma tarefa marcada como concluída sem verificação passada é uma tarefa não concluída.
 

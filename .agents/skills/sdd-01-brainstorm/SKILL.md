@@ -162,6 +162,8 @@ Use escrita clara, objetiva e curta. Consulte references/writing-the-spec.md par
 
 Inclua o que for necessário para reconstruir o design aprovado: problema, decisão tomada, alternativas rejeitadas, comportamento esperado, restrições, riscos e critérios de aceite. Não use uma lista fixa de seções como checklist mecânico. Se uma seção não ajuda a entender ou implementar, deixe fora.
 
+**Features com impacto visual:** quando a feature altera interface, registre na spec as referências de estilo aplicáveis — tokens semânticos existentes no tema global (ex: cores centralizadas em `app/globals.css`), componentes ou padrões visuais a reutilizar e os estados visuais esperados (positivo/negativo/vazio/carregando etc.). Requisitos visuais deixados implícitos tendem a emergir apenas como retrabalho durante a homologação; descrevê-los em texto (sem código) reduz esse ciclo.
+
 ⚠️ **Regra Fundamental de Commit Aprovado**: 
 O commit da especificação via `node .agents/scripts/sdd.js commit` deve ser realizado EXCLUSIVAMENTE após a aprovação explícita e prévia do parceiro humano.
 

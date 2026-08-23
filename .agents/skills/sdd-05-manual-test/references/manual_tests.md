@@ -113,6 +113,19 @@ Estes cenários servem para validar manualmente o comportamento de edições e a
 1. **Ação:** Acesse [http://localhost:3000/pluto/transactions](http://localhost:3000/pluto/transactions) em um mês **Aberto**.
    * **Resultado Esperado:** Banner "💰 Saldo do Mês" exibido entre o checklist e os cards, com valor igual a Receitas − Despesas: verde se ≥ 0, vermelho se < 0.
 2. **Ação:** Lance uma despesa que torne o total negativo.
-   * **Resultado Esperado:** O banner muda para vermelho e exibe o valor negativo imediatamente após a atualização da lista.
+    * **Resultado Esperado:** O banner muda para vermelho e exibe o valor negativo imediatamente após a atualização da lista.
 
 ---
+
+## 9. Módulo Pluto (Guarda-Chuva / Regressão Rápida)
+
+**Objetivo:** Validação rápida pós-deploy de que o módulo financeiro (Pluto) está acessível, navega internamente e isola-se do prefixo antigo.
+
+1. **Ação:** Login → `/dashboard` → inspecionar card **"Pluto 💰"** → clicar.
+   * **Resultado:** Leva a `/pluto/budget` e carrega orçamento anual.
+2. **Ação:** Navegar pelas abas superiores: "Orçamento Anual" → "Meses e Períodos" → "Lançamentos".
+   * **Resultado:** Navega entre `/pluto/budget`, `/pluto/months`, `/pluto/transactions`; aba ativa destacada.
+3. **Ação:** Acesso direto a `/finance/budget` (prefixo antigo).
+   * **Resultado:** **404** (sem redirect).
+4. **Ação:** `node .agents/scripts/sdd.js start 01-orcamento` (CLI multi-módulo).
+   * **Resultado:** Exit 0, plano encontrado em `.agents/pluto/plans/`, spec em `.agents/pluto/specs/`, status "Concluído" do backlog do Pluto.

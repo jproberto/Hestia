@@ -11,7 +11,7 @@ Carregue o plano, revise criticamente, execute todas as tarefas na ordem, e repo
 
 **Anuncie no início:** "Estou usando a skill sdd-03-implement para implementar este plano."
 
-**Onde encontrar o plano:** planos gerados por `sdd-02-plan` ficam em `.agents/plans/YYYY-MM-DD-<topico>-plan.md`. Se o parceiro humano não indicar qual arquivo usar, procure o mais recente nesse diretório e peça confirmação antes de continuar.
+**Onde encontrar o plano:** planos gerados por `sdd-02-plan` ficam em `.agents/plans/` (transversais) ou em `.agents/<modulo>/plans/` (módulos registrados — consulte a tabela "Módulos Registrados" do backlog central). Se o parceiro humano não indicar qual arquivo usar, procure o mais recente nesses diretórios e peça confirmação antes de continuar.
 
 ## O Processo
 

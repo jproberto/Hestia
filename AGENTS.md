@@ -4,12 +4,17 @@
 Héstia é uma ferramenta pessoal para controle de finanças e de lista de tarefas familiar.
 
 ## Estrutura do Projeto
-- `.agents/`: Diretório do fluxo SDD.
-    - `backlog.md`: Painel central de status do projeto e backlog.
+- `.agents/`: Diretório do fluxo SDD (artefatos transversais na raiz).
+    - `backlog.md`: Painel central — contexto do produto-guarda-chuva, tabela de módulos registrados e itens estruturais.
     - `skills/`: Contém a documentação e instruções de cada skill (`SKILL.md`).
-    - `specs/`: Especificações funcionais e técnicas.
-    - `plans/`: Planos de implementação de tarefas.
+    - `specs/` e `plans/`: Artefatos transversais (itens estruturais e do núcleo Héstia).
+    - `<modulo>/`: Documentação de cada módulo registrado (`backlog.md`, `specs/`, `plans/`, `logs/`) — ex.: `.agents/pluto/`.
     - `scripts/`: Scripts de automação do fluxo (`sdd.js`).
+- Código comum/transversal (na raiz das camadas): `app/layout.tsx`, `app/page.tsx`, `app/globals.css`, `app/login/`, `app/dashboard/`, `components/ui/`, `lib/utils.ts`, `utils/supabase/`, `utils/migrations/`.
+- Módulo Pluto (financeiro): `app/pluto/`, `components/pluto/`, `lib/pluto/` (com `db/`) e testes espelhados em `__tests__/app/pluto/`, `__tests__/components/pluto/`, `__tests__/lib/pluto/`.
+
+## Padrão de Módulos
+Código específico de um módulo vive em `<camada>/<modulo>/` nas camadas `app`, `components`, `lib` e `__tests__`; o que é compartilhado permanece na raiz da camada. Documentação de módulo vive em `.agents/<modulo>/` (`backlog.md`, `specs/`, `plans/`, `logs/`); artefatos transversais ficam na raiz de `.agents/`. Para registrar um novo módulo: criar `.agents/<modulo>/backlog.md` e adicionar sua linha na tabela "Módulos Registrados" do backlog central — o `sdd.js` descobre os módulos por esse link. Não há scaffolding automático.
 
 ## Mapeamento de Skills e Ciclo de Vida SDD
 

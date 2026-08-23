@@ -15,7 +15,7 @@ Manter a documentação pública atualizada é um pilar de qualidade. Esta skill
 
 ### Passo 1: Analisar a Feature e Mudanças
 1. Obtenha a versão atual e a nova versão do projeto a partir do `package.json`.
-2. Analise o spec da feature (`.agents/specs/...-spec.md`) e os planos/logs de execução correspondentes.
+2. Analise o spec da feature (`.agents/specs/...-spec.md` para transversais ou `.agents/<modulo>/specs/...-spec.md` para módulos registrados) e os planos/logs de execução correspondentes.
 3. Colete a lista de modificações funcionais, melhorias técnicas, novas variáveis de ambiente e correções.
 
 ### Passo 2: Atualizar o CHANGELOG.md

@@ -35,7 +35,7 @@ Antes de alterar, criar ou commitar qualquer arquivo (incluindo o backlog, specs
 
 ### Passo 3: Consultar e Atualizar o Backlog
 
-Antes de iniciar as discussões, localize a funcionalidade correspondente no arquivo `.agents/backlog.md`:
+Antes de iniciar as discussões, localize a funcionalidade correspondente no backlog: `.agents/backlog.md` (itens estruturais/transversais) ou `.agents/<modulo>/backlog.md` (itens de um módulo registrado — consulte a tabela "Módulos Registrados" do backlog central):
 - Altere seu status para `Em Especificação`.
 - Use o ID desse item do backlog como prefixo para a futura spec e planos (ex: `01-contas-spec.md`).
 
@@ -43,7 +43,7 @@ Antes de iniciar as discussões, localize a funcionalidade correspondente no arq
 
 Antes de fazer perguntas detalhadas, verifique o estado atual do projeto:
 
-- O arquivo de backlog `.agents/backlog.md` para entender as restrições globais e dependências.
+- O arquivo de backlog correspondente (`.agents/backlog.md` e/ou o do módulo) para entender as restrições globais e dependências.
 - O guia de diretrizes de banco de dados `.agents/skills/sdd-01/brainstorm/references/db-preferences.md` (se existir) para convenções de modelagem.
 - Arquivos e pastas existentes.
 - Documentação disponível.
@@ -134,9 +134,12 @@ Escreva a spec:
 O padrão deste projeto é salvar em:
 
 ```text
-.agents/specs/<ID>-<slug>-spec.md
+.agents/specs/<ID>-<slug>-spec.md            # features transversais / núcleo Héstia
+.agents/<modulo>/specs/<ID>-<slug>-spec.md   # features de um módulo registrado
 ```
 *(Onde <ID> é o número do item no backlog e <slug> é o nome curto em inglês da funcionalidade. Exemplo: `01-contas-spec.md`)*
+
+**Onde fica o backlog da feature:** consulte a tabela "Módulos Registrados" no `.agents/backlog.md`. Se a feature pertencer a um módulo registrado (ex.: Pluto), use o backlog do módulo em `.agents/<modulo>/backlog.md` e salve a spec em `.agents/<modulo>/specs/`; caso contrário, use o backlog central e a raiz de `.agents/specs/`.
 
 **Specs de Correção/Patch**:
 Se o objetivo for corrigir ou estender uma especificação já existente após um ciclo de homologação/bug (um patch na spec):
@@ -146,7 +149,7 @@ Se o objetivo for corrigir ou estender uma especificação já existente após u
 Preferências explícitas do usuário ou do projeto sobrescrevem esse caminho. Se já existir uma convenção local para specs, use a convenção local.
 
 **Atualização do Backlog:**
-Após a aprovação da spec e o commit do artefato (próximo passo obrigatório), atualize o status do item no `.agents/backlog.md` para `Especificado`, adicionando o link para a spec `.agents/specs/<ID>-<slug>-spec.md`.
+Após a aprovação da spec e o commit do artefato (próximo passo obrigatório), atualize o status do item no backlog correspondente (`​.agents/backlog.md` para transversais; `.agents/<modulo>/backlog.md` para módulos) para `Especificado`, adicionando o link para a spec salva.
 
 **Fluxo recomendado:**
 1. Spec escrita e aprovada pelo usuário
@@ -262,8 +265,8 @@ Ao terminar esta skill, deve existir:
 
 - Design aprovado em conversa.
 - Branch confirmada ou criada, com prefixo adequado ao tipo de trabalho.
-- Spec salva em `.agents/specs/<ID>-<slug>-spec.md`, commitada no Git.
-- O arquivo `.agents/backlog.md` atualizado com o status `Especificado` para a feature correspondente, com o link para o arquivo da spec.
+- Spec salva no local convencional (`.agents/specs/<ID>-<slug>-spec.md` ou `.agents/<modulo>/specs/<ID>-<slug>-spec.md`), commitada no Git.
+- O arquivo de backlog correspondente (central ou do módulo) atualizado com o status `Especificado` para a feature, com o link para o arquivo da spec.
 - Auto-revisão executada.
 - Aprovação do usuário para seguir.
 - Próximo passo claro: `sdd-02-plan`.

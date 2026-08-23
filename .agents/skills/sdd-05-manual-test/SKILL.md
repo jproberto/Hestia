@@ -44,7 +44,7 @@ Esta skill formaliza a etapa de testes manuais, dividindo-os em duas frentes com
 1. Após a aprovação do parceiro humano e conclusão de todos os testes manuais e de regressão:
    *   **Invoque obrigatoriamente a skill `sdd-writer-changelog`** para inicializar ou atualizar os arquivos `CHANGELOG.md` e `README.md` com as novidades estáveis e homologadas.
    *   Verifique se o incremento de versão no `package.json` está consistente com as regras SemVer da feature.
-2. Transicione o status do backlog no `.agents/backlog.md` correspondente para `Concluído` e comite todas as alterações de release finais.
+2. Transicione o status da feature para `Concluído` no backlog correspondente (`​.agents/backlog.md` para transversais; `.agents/<modulo>/backlog.md` para módulos registrados) e comite todas as alterações de release finais.
 
 ## Quando Parar e Pedir Ajuda
 - Se o parceiro humano reportar um bug visual ou de fluxo cuja correção exija alterar regras definidas no spec original — pare e discuta o impacto de arquitetura/negócio.

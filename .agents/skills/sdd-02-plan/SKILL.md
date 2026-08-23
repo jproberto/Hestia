@@ -26,7 +26,7 @@ Princípios: DRY, YAGNI, TDD e commits frequentes.
 
 **Anuncie no início:** "Estou usando a skill sdd-02-plan para criar o plano de implementação."
 
-**Onde salvar o plano:** `.agents/plans/<ID>-<slug>-plan.md` *(Onde <ID> é o ID da funcionalidade no backlog e <slug> é o nome curto em inglês. Exemplo: `01-contas-plan.md`)*, salvo se o usuário ou o projeto já tiver outra convenção — nesse caso, use a convenção existente.
+**Onde salvar o plano:** `.agents/plans/<ID>-<slug>-plan.md` para features transversais/núcleo Héstia, ou `.agents/<modulo>/plans/<ID>-<slug>-plan.md` para features de um módulo registrado (consulte a tabela "Módulos Registrados" do backlog central) *(Onde <ID> é o ID da funcionalidade no backlog e <slug> é o nome curto em inglês. Exemplo: `01-contas-plan.md`)*, salvo se o usuário ou o projeto já tiver outra convenção — nesse caso, use a convenção existente.
 
 ## O Processo
 
@@ -235,7 +235,7 @@ Após a aprovação do plano pelo usuário (regra de Stop & Wait do Turno), o pr
 
 **Comando:** `node .agents/scripts/sdd.js commit "planning: <descrição do plano>"`
 
-**Artefato commitado:** `.agents/plans/<ID>-<slug>-plan.md`
+**Artefato commitado:** `.agents/plans/<ID>-<slug>-plan.md` ou `.agents/<modulo>/plans/<ID>-<slug>-plan.md`
 
 **Momento:** Apenas após o usuário responder explicitamente "aprovado" à apresentação do plano. Nunca commite o plano na mesma resposta em que ele é apresentado.
 
@@ -272,7 +272,7 @@ Após a aprovação do plano pelo usuário (regra de Stop & Wait do Turno), o pr
 
 **Comando:** `node .agents/scripts/sdd.js commit "planning: <descrição do plano>"`
 
-**Artefato commitado:** `.agents/plans/<ID>-<slug>-plan.md`
+**Artefato commitado:** `.agents/plans/<ID>-<slug>-plan.md` ou `.agents/<modulo>/plans/<ID>-<slug>-plan.md`
 
 **Momento:** Apenas após o usuário responder explicitamente "aprovado" à apresentação do plano. Nunca commite o plano na mesma resposta em que ele é apresentado.
 

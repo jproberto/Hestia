@@ -64,7 +64,7 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 | # | Feature | Descrição | Status | Specs | Planos |
 |---|---|---|---|---|---|
-| 26 | **Modularização: módulo Pluto** | Transforma o Héstia em um guarda-chuva de sub-sistemas: todo o código e documentação exclusivos do módulo financeiro passa a viver dentro das pastas `<camada>/pluto/` e `.agents/pluto/`, estabelecendo o padrão estrutural para os próximos módulos. Quebra limpa, sem convivência com legado. URLs `/finance/*` → `/pluto/*`. | Especificado | [.agents/specs/26-modularizacao-pluto-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/26-modularizacao-pluto-spec.md) | |
+| 26 | **Modularização: módulo Pluto** | Transforma o Héstia em um guarda-chuva de sub-sistemas: todo o código e documentação exclusivos do módulo financeiro passa a viver dentro das pastas `<camada>/pluto/` e `.agents/pluto/`, estabelecendo o padrão estrutural para os próximos módulos. Quebra limpa, sem convivência com legado. URLs `/finance/*` → `/pluto/*`. | Em Desenvolvimento | [.agents/specs/26-modularizacao-pluto-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/26-modularizacao-pluto-spec.md) | [.agents/plans/26-modularizacao-pluto-plan.md](file:///p:/workspace/IA/hestia/.agents/plans/26-modularizacao-pluto-plan.md) |
 
 ---
 

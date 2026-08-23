@@ -5,18 +5,27 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-08-23
+
+### Alterado
+- **Modularização — Módulo Pluto:** todo o domínio financeiro migra para `app/pluto/`, `components/pluto/`, `lib/pluto/` (com acesso a dados em `lib/pluto/db/`) e testes espelhados em `__tests__/**/pluto/`. O Pluto é o primeiro módulo a seguir o padrão guarda-chuva *módulo por camada*.
+- **Novas URLs:** `/pluto/budget`, `/pluto/months` e `/pluto/transactions` substituem as rotas do prefixo anterior, que deixam de existir no mesmo commit (sem redirect).
+- **Card do dashboard:** passa a apontar para `/pluto/budget` e exibir o nome "Pluto".
+- **Documentação:** specs, planos e backlog do domínio financeiro migrados para `.agents/pluto/` via `git mv` (histórico preservado); backlog central reestruturado com a tabela de módulos registrados.
+- **Tooling:** `sdd.js` passa a resolver specs, planos e status de backlog dentro de `.agents/<modulo>/` usando a tabela de módulos do backlog central.
+
 ## [0.6.0] - 2026-07-30
 
 ### Adicionado
 - Nova funcionalidade de **Edição e Exclusão de Lançamentos** (Feature 8).
-- Novas funções de backend `updateTransaction` e `deleteTransaction` em `lib/db/transactions.ts` com validação de status de mês aberto no Supabase.
-- Nova coluna de **Ações** na tabela de extrato da página `/finance/transactions` com botões e ícones para **Editar** e **Excluir**.
+- Novas funções de backend `updateTransaction` e `deleteTransaction` em `lib/pluto/db/transactions.ts` com validação de status de mês aberto no Supabase.
+- Nova coluna de **Ações** na tabela de extrato da página `/pluto/transactions` com botões e ícones para **Editar** e **Excluir**.
 - Modal de formulário reaproveitado para edição preenchido com os dados existentes da transação.
 - Modal dialog de confirmação de exclusão com exibição clara do nome e valor da transação a ser removida.
 - Restrição estrita de seleção de data no modal ao intervalo do mês visualizado na tela.
 - Tom de vermelho suavizado no modal de confirmação de exclusão de lançamentos.
 - Ordenação determinística de lançamentos por data (crescente) e ID interno (crescente) para desempate constante.
-- Suíte de testes unitários e de componente cobrindo edição e exclusão em `__tests__/lib/db/transactions.test.ts` e `__tests__/app/finance/transactions-page.test.tsx`.
+- Suíte de testes unitários e de componente cobrindo edição e exclusão em `__tests__/lib/pluto/db/transactions.test.ts` e `__tests__/app/pluto/transactions-page.test.tsx`.
 - Smoke test #6 em `.agents/skills/sdd-05-manual-test/references/manual_tests.md`.
 
 ### Alterado
@@ -28,8 +37,8 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 - **Funcionalidade de Overflow Orçamentário em Checklist**: validação de estouro ao incluir/editar itens globais do checklist, com modal de bloqueio guiado para ajuste de orçamento mensal.
 - **Banners Informativos de Orçamento**: exibição visual (rose-900 sobre rose-50) quando o total previsto de itens pontuais excede o orçamento planejado da categoria.
 - **Edição Global com Mudança de Categoria**: lógica que verifica o amount existente contra a nova categoria ao mudar `category_id` em itens globais, sem excluir o item original.
-- **Saldo do Mês em Destaque**: novo banner na página `/finance/transactions` exibindo a diferença entre receitas e despesas do período, com cores condicionais (verde para saldo ≥ 0, vermelho para negativo) e oculto automaticamente quando nenhum mês está aberto (Feature 10).
-- Testes automatizados cobrindo os estados do banner de saldo em `__tests__/app/finance/transactions-page.test.tsx`.
+- **Saldo do Mês em Destaque**: novo banner na página `/pluto/transactions` exibindo a diferença entre receitas e despesas do período, com cores condicionais (verde para saldo ≥ 0, vermelho para negativo) e oculto automaticamente quando nenhum mês está aberto (Feature 10).
+- Testes automatizados cobrindo os estados do banner de saldo em `__tests__/app/pluto/transactions-page.test.tsx`.
 - Smoke test #8 em `.agents/skills/sdd-05-manual-test/references/manual_tests.md`.
 
 ### Alterado
@@ -59,9 +68,9 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 - Nova funcionalidade de **Cadastro de Transações** (Feature 5).
 - Novas tabelas `public.accounts` e `public.transactions` no Supabase com suporte a RLS e auditoria transparente (`created_by`).
 - Script de migração SQL `utils/migrations/migration-feature-5.sql`.
-- Módulos de banco de dados `lib/db/accounts.ts` e `lib/db/transactions.ts` com validação de mês aberto em `monthly_periods`, suporte a estornos/reembolsos via flag `is_refund` e busca/criação inline de contas e categorias.
-- Nova rota e interface de usuário `/finance/transactions` com seletor de mês, cards de resumo financeiro (Total Entradas, Total Saídas e Resultado do Mês), modal/formulário de lançamentos e tabela de extrato.
-- Testes automatizados unitários e de UI em `__tests__/lib/db/accounts.test.ts`, `__tests__/lib/db/transactions.test.ts` e `__tests__/app/finance/transactions-page.test.tsx`.
+- Módulos de banco de dados `lib/pluto/db/accounts.ts` e `lib/pluto/db/transactions.ts` com validação de mês aberto em `monthly_periods`, suporte a estornos/reembolsos via flag `is_refund` e busca/criação inline de contas e categorias.
+- Nova rota e interface de usuário `/pluto/transactions` com seletor de mês, cards de resumo financeiro (Total Entradas, Total Saídas e Resultado do Mês), modal/formulário de lançamentos e tabela de extrato.
+- Testes automatizados unitários e de UI em `__tests__/lib/pluto/db/accounts.test.ts`, `__tests__/lib/pluto/db/transactions.test.ts` e `__tests__/app/pluto/transactions-page.test.tsx`.
 - Smoke test #5 em `.agents/skills/sdd-05-manual-test/references/manual_tests.md`.
 
 ### Alterado
@@ -72,11 +81,11 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 ### Adicionado
 - Nova funcionalidade de **Abertura de Mês** (Feature 4).
 - Nova tabela `public.monthly_periods` no Supabase com suporte a RLS e auditoria transparente para controle de períodos operacionais.
-- Módulo de serviço de banco de dados `lib/db/months.ts` para consulta, abertura e encerramento de meses.
-- Interface `/finance/months` com visualização em grid de 12 cards anuais, badges de status (Não Iniciado, Aberto, Encerrado), métricas de resumo anual e botões de ação contextualizados por mês.
-- Menu de navegação por abas superiores em Héstia Financeira integrando as telas de "Orçamento Anual" (`/finance/budget`) e "Meses e Períodos" (`/finance/months`).
+- Módulo de serviço de banco de dados `lib/pluto/db/months.ts` para consulta, abertura e encerramento de meses.
+- Interface `/pluto/months` com visualização em grid de 12 cards anuais, badges de status (Não Iniciado, Aberto, Encerrado), métricas de resumo anual e botões de ação contextualizados por mês.
+- Menu de navegação por abas superiores em Héstia Financeira integrando as telas de "Orçamento Anual" (`/pluto/budget`) e "Meses e Períodos" (`/pluto/months`).
 - Banner visual de feedback e tratamento amigável de erros de banco/autenticação na interface.
-- Suíte completa de testes automatizados unitários e de UI em `__tests__/lib/db/months.test.ts` e `__tests__/app/finance/months-page.test.tsx`.
+- Suíte completa de testes automatizados unitários e de UI em `__tests__/lib/pluto/db/months.test.ts` e `__tests__/app/pluto/months-page.test.tsx`.
 
 ### Alterado
 - Incrementada a versão do projeto em `package.json` para `0.4.0` (SemVer Minor).

@@ -35,11 +35,11 @@ export default function DashboardPage() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Link
-          href="/finance/budget"
+          href="/pluto/budget"
           className="group flex flex-col gap-2 rounded-lg border p-6 hover:bg-muted/40 transition-colors"
         >
           <h2 className="text-lg font-bold group-hover:text-primary transition-colors">
-            Héstia Financeira 💰
+            Pluto 💰
           </h2>
           <p className="text-sm text-muted-foreground">
             Acesse o controle de orçamento anual, categorias de receitas e despesas previstas.

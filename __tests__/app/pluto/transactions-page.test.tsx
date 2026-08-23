@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, cleanup, waitFor, within } from "@testing-library/react";
-import TransactionsPage from "@/app/finance/transactions/page";
+import TransactionsPage from "@/app/pluto/transactions/page";
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { getTransactionsByMonth, deleteTransaction } from "@/lib/pluto/db/transactions";
 import { getAccounts } from "@/lib/pluto/db/accounts";
@@ -41,7 +41,7 @@ vi.mock("@/lib/pluto/db/budget", () => ({
   getBudgets: vi.fn(),
 }));
 
-describe("Página de Cadastro de Transações /finance/transactions", () => {
+describe("Página de Cadastro de Transações /pluto/transactions", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();

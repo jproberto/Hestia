@@ -687,19 +687,19 @@ export default function TransactionsPage() {
       {/* Menu Superior Financeiro */}
       <div className="flex border-b pb-1 gap-6">
         <Link
-          href="/finance/budget"
+          href="/pluto/budget"
           className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           Orçamento Anual
         </Link>
         <Link
-          href="/finance/months"
+          href="/pluto/months"
           className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           Meses e Períodos
         </Link>
         <Link
-          href="/finance/transactions"
+          href="/pluto/transactions"
           className="pb-2 text-sm font-semibold border-b-2 border-primary text-foreground"
         >
           Lançamentos
@@ -800,7 +800,7 @@ export default function TransactionsPage() {
           <p className="text-muted-foreground">
             Nenhum mês está <strong className="text-emerald-600 dark:text-emerald-400">Aberto</strong> para lançamentos.
           </p>
-          <Link href="/finance/months">
+          <Link href="/pluto/months">
             <Button variant="outline">Ir para Gestão de Meses e Períodos 📅</Button>
           </Link>
         </div>

@@ -249,13 +249,13 @@ function BudgetPageContent() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
       {/* Menu Superior Financeiro */}
       <div className="flex border-b pb-1 gap-6">
-        <Link href="/finance/budget" className="pb-2 text-sm font-semibold border-b-2 border-primary text-foreground">
+        <Link href="/pluto/budget" className="pb-2 text-sm font-semibold border-b-2 border-primary text-foreground">
           Orçamento Anual
         </Link>
-        <Link href="/finance/months" className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+        <Link href="/pluto/months" className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground">
           Meses e Períodos
         </Link>
-        <Link href="/finance/transactions" className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+        <Link href="/pluto/transactions" className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground">
           Lançamentos
         </Link>
       </div>

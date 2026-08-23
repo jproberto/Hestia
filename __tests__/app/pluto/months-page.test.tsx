@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
-import MonthsPage from "@/app/finance/months/page";
+import MonthsPage from "@/app/pluto/months/page";
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { getMonthlyPeriods, openMonthlyPeriod } from "@/lib/pluto/db/months";
 
@@ -17,7 +17,7 @@ vi.mock("@/lib/pluto/db/months", () => ({
   closeMonthlyPeriod: vi.fn(),
 }));
 
-describe("Página de Gestão de Meses /finance/months", () => {
+describe("Página de Gestão de Meses /pluto/months", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();

@@ -134,7 +134,7 @@ export default function BudgetOverflowModal({
               O orçamento foi ajustado e o item do checklist foi gravado com sucesso.
             </p>
             <div className="flex flex-col gap-2 pt-2">
-              <Button type="button" onClick={() => router.push("/finance/budget")}>
+              <Button type="button" onClick={() => router.push("/pluto/budget")}>
                 Ir para a página de Orçamento
               </Button>
               <Button type="button" variant="outline" onClick={handleClose}>

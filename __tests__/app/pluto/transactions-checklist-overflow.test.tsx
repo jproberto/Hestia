@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
-import TransactionsPage from "@/app/finance/transactions/page";
+import TransactionsPage from "@/app/pluto/transactions/page";
 import * as checklistDb from "@/lib/pluto/db/checklist";
 import * as budgetDb from "@/lib/pluto/db/budget";
 import * as categoriesDb from "@/lib/pluto/db/categories";

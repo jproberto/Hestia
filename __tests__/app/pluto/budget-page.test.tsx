@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
-import BudgetPage from "@/app/finance/budget/page";
+import BudgetPage from "@/app/pluto/budget/page";
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { getBudgetAdjustment, getBudgets, getBudgetAdjustments, createBudgetAdjustment } from "@/lib/pluto/db/budget";
 import { useSearchParams } from "next/navigation";
@@ -30,7 +30,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: vi.fn()
 }));
 
-describe("Pagina de Orcamento Anual /finance/budget (Revisada por Ajustes)", () => {
+describe("Pagina de Orcamento Anual /pluto/budget (Revisada por Ajustes)", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();

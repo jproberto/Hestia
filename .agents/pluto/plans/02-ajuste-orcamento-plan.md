@@ -6,7 +6,7 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 
 **Objetivo:** Permitir aos usuários revisar e ajustar os limites mensais previstos por categoria, preservando o histórico de meses anteriores através do controle de revisões e vigências mensais do banco de dados, com navegação e edição inline fluida.
 
-**Arquitetura:** Criaremos a função `adjustBudgetItem` no backend para gerenciar a criação automática de revisões sob demanda e fazer o upsert do item. No frontend, a página de orçamento `/finance/budget` receberá um dropdown compacto de seleção de mês, exibirá os valores vigentes desse mês e trará suporte a edição inline direta na célula de valor (clique para editar, salva no Blur ou Enter), com bloqueio de meses anteriores ao mês aberto real (ou simulado via `?mockMonth=M` em ambiente de desenvolvimento).
+**Arquitetura:** Criaremos a função `adjustBudgetItem` no backend para gerenciar a criação automática de revisões sob demanda e fazer o upsert do item. No frontend, a página de orçamento `/pluto/budget` receberá um dropdown compacto de seleção de mês, exibirá os valores vigentes desse mês e trará suporte a edição inline direta na célula de valor (clique para editar, salva no Blur ou Enter), com bloqueio de meses anteriores ao mês aberto real (ou simulado via `?mockMonth=M` em ambiente de desenvolvimento).
 
 **Tech Stack:** Next.js (App Router), Supabase JS Client, React, TypeScript, Vitest.
 
@@ -21,8 +21,8 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 ### Tarefa 1: Desenvolver e Testar a Lógica do Serviço de Ajustes no Banco de Dados
 
 **Arquivos:**
-- Modificar: `lib/db/budget.ts`
-- Testar: `__tests__/lib/db/budget.test.ts`
+- Modificar: `lib/pluto/db/budget.ts`
+- Testar: `__tests__/lib/pluto/db/budget.test.ts`
 
 **Interfaces:**
 - Produz: a nova função `adjustBudgetItem` com a seguinte assinatura:
@@ -39,7 +39,7 @@ export async function adjustBudgetItem(
 ```
 
 - [ ] **Passo 1: Escreva os testes que falham**
-  Edite `__tests__/lib/db/budget.test.ts` e adicione os seguintes testes no bloco `describe("Serviço de Orçamento")`:
+  Edite `__tests__/lib/pluto/db/budget.test.ts` e adicione os seguintes testes no bloco `describe("Serviço de Orçamento")`:
   ```typescript
   describe("adjustBudgetItem", () => {
     it("deve criar uma nova revisão e inserir o item se a revisão para o mês não existir", async () => {
@@ -57,10 +57,10 @@ export async function adjustBudgetItem(
 
 - [ ] **Passo 2: Execute o teste para garantir que ele falha**
   Run: `npx vitest run`
-  Expected: FAIL (porque a função `adjustBudgetItem` não está exportada/definida em `lib/db/budget.ts`)
+  Expected: FAIL (porque a função `adjustBudgetItem` não está exportada/definida em `lib/pluto/db/budget.ts`)
 
 - [ ] **Passo 3: Escreva a implementação mínima**
-  Edite `lib/db/budget.ts` para exportar a função `adjustBudgetItem`:
+  Edite `lib/pluto/db/budget.ts` para exportar a função `adjustBudgetItem`:
   ```typescript
   export async function adjustBudgetItem(
     supabase: SupabaseClient,
@@ -123,7 +123,7 @@ export async function adjustBudgetItem(
 - [ ] **Passo 5: Commit local usando o SDD CLI**
   Antes de commitar, execute a conclusão da tarefa no CLI:
   Run: `node .agents/scripts/sdd.js task-complete 1`
-  Run: `git add lib/db/budget.ts __tests__/lib/db/budget.test.ts`
+  Run: `git add lib/pluto/db/budget.ts __tests__/lib/pluto/db/budget.test.ts`
   Run: `node .agents/scripts/sdd.js commit "feat: adiciona servico adjustBudgetItem com testes"`
 
 ---
@@ -131,14 +131,14 @@ export async function adjustBudgetItem(
 ### Tarefa 2: Atualizar a Interface do Orçamento e Incremento de Versão
 
 **Arquivos:**
-- Modificar: `app/finance/budget/page.tsx`
+- Modificar: `app/pluto/budget/page.tsx`
 - Modificar: `package.json`
 
 **Interfaces:**
-- Consome: a nova função `adjustBudgetItem` do arquivo `lib/db/budget.ts`.
+- Consome: a nova função `adjustBudgetItem` do arquivo `lib/pluto/db/budget.ts`.
 
 - [ ] **Passo 1: Preparar as modificações na interface do usuário**
-  Modifique `app/finance/budget/page.tsx` para:
+  Modifique `app/pluto/budget/page.tsx` para:
   1. Adicionar um estado para o mês selecionado (`month`, padrão é o mês atual: `new Date().getMonth() + 1`).
   2. Adicionar um dropdown de mês no topo (Janeiro a Dezembro) posicionado ao lado do dropdown de Ano.
   3. No `loadData`, buscar os itens do orçamento relativos ao mês selecionado:
@@ -199,5 +199,5 @@ export async function adjustBudgetItem(
 - [ ] **Passo 4: Concluir e Commitar a Tarefa 2**
   Execute a conclusão no SDD CLI e crie o commit correspondente:
   Run: `node .agents/scripts/sdd.js task-complete 2`
-  Run: `git add app/finance/budget/page.tsx package.json`
+  Run: `git add app/pluto/budget/page.tsx package.json`
   Run: `node .agents/scripts/sdd.js commit "feat: adiciona seletor de mes na UI de orcamento e edicao inline direta nas celulas"`

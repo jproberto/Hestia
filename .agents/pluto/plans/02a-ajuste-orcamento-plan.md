@@ -8,7 +8,7 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 
 **Arquitetura:** 
 - Preservar o schema físico do Supabase (`budget_revisions`, `budget_items`) para manter compatibilidade com dados existentes e a Feature 1.
-- Refatorar a camada de serviços (`lib/db/budget.ts`) e a interface Next.js para expor nomenclaturas limpas de linguagem ubíqua baseadas em "Ajustes".
+- Refatorar a camada de serviços (`lib/pluto/db/budget.ts`) e a interface Next.js para expor nomenclaturas limpas de linguagem ubíqua baseadas em "Ajustes".
 - Controlar a navegação e a editabilidade com base na vigência da revisão ativa comparada ao mês atual (calendário real ou mockMonth).
 
 **Tech Stack:** Next.js, Supabase JS client, Vitest, Testing Library.
@@ -20,11 +20,11 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 
 ---
 
-### Tarefa 1: Refatoração da Camada de Serviços (`lib/db/budget.ts`) e Testes Unitários
+### Tarefa 1: Refatoração da Camada de Serviços (`lib/pluto/db/budget.ts`) e Testes Unitários
 
 **Arquivos:**
-- Modificar: `lib/db/budget.ts`
-- Testar: `__tests__/lib/db/budget.test.ts`
+- Modificar: `lib/pluto/db/budget.ts`
+- Testar: `__tests__/lib/pluto/db/budget.test.ts`
 
 **Interfaces:**
 - Produz: `getBudgetAdjustments(supabase, year)` que retorna todas as revisões cadastradas no ano.
@@ -32,29 +32,29 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 - Produz: `adjustBudgetItem(...)` atualizado e com nomenclaturas de parâmetros semânticas baseadas em Ajustes.
 
 - [ ] **Passo 1: Escrever testes unitários que falham**
-  Adicionar em `__tests__/lib/db/budget.test.ts` testes para `getBudgetAdjustments` (garantindo ordenação por mês de início) e `createBudgetAdjustment`.
-  Run: `npx vitest run __tests__/lib/db/budget.test.ts`
+  Adicionar em `__tests__/lib/pluto/db/budget.test.ts` testes para `getBudgetAdjustments` (garantindo ordenação por mês de início) e `createBudgetAdjustment`.
+  Run: `npx vitest run __tests__/lib/pluto/db/budget.test.ts`
   Expected: FAIL (funções não existentes).
 
-- [ ] **Passo 2: Implementar serviços em `lib/db/budget.ts`**
+- [ ] **Passo 2: Implementar serviços em `lib/pluto/db/budget.ts`**
   Implementar as novas funções e atualizar as nomenclaturas internas de `revision` para `adjustment` nas variáveis de código locais, mantendo o mapeamento com as tabelas do Supabase.
 
 - [ ] **Passo 3: Executar testes unitários**
-  Run: `npx vitest run __tests__/lib/db/budget.test.ts`
+  Run: `npx vitest run __tests__/lib/pluto/db/budget.test.ts`
   Expected: PASS.
 
 - [ ] **Passo 4: Commit**
   ```bash
-  git add lib/db/budget.ts __tests__/lib/db/budget.test.ts
+  git add lib/pluto/db/budget.ts __tests__/lib/pluto/db/budget.test.ts
   git commit -m "feat: refatora camada de servicos de orcamentos para nomenclatura de ajustes"
   ```
 
 ---
 
-### Tarefa 2: Refatoração da UI (`app/finance/budget/page.tsx`) e Regras de Editabilidade
+### Tarefa 2: Refatoração da UI (`app/pluto/budget/page.tsx`) e Regras de Editabilidade
 
 **Arquivos:**
-- Modificar: `app/finance/budget/page.tsx`
+- Modificar: `app/pluto/budget/page.tsx`
 
 **Interfaces:**
 - Consome: `getBudgetAdjustments` e `createBudgetAdjustment` do banco.
@@ -73,7 +73,7 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 
 - [ ] **Passo 4: Commit**
   ```bash
-  git add app/finance/budget/page.tsx
+  git add app/pluto/budget/page.tsx
   git commit -m "feat: refatora UI de orcamentos com seletor de ajustes e bloqueio no mes corrente"
   ```
 
@@ -82,17 +82,17 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 ### Tarefa 3: Testes de UI Automatizados e Incremento de Versão (Patch)
 
 **Arquivos:**
-- Modificar: `__tests__/app/finance/budget-page.test.tsx`
+- Modificar: `__tests__/app/pluto/budget-page.test.tsx`
 - Modificar: `package.json`
 
 - [ ] **Passo 1: Escrever teste de UI que falham**
   Atualizar os mocks do Next.js e Supabase para retornar a lista de revisões (Ajustes) e reescrever as asserções de navegação de testes baseadas na seleção de ajustes (Outubro aberto para edição / Janeiro somente-leitura com botão "Criar Novo Ajuste").
-  Run: `npx vitest run __tests__/app/finance/budget-page.test.tsx`
+  Run: `npx vitest run __tests__/app/pluto/budget-page.test.tsx`
   Expected: FAIL.
 
 - [ ] **Passo 2: Ajustar asserções e seletores no teste**
   Garantir que os seletores de teste de UI buscam elementos usando as novas estruturas e textos.
-  Run: `npx vitest run __tests__/app/finance/budget-page.test.tsx`
+  Run: `npx vitest run __tests__/app/pluto/budget-page.test.tsx`
   Expected: PASS.
 
 - [ ] **Passo 3: Incrementar a versão patch no package.json**
@@ -104,7 +104,7 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 
 - [ ] **Passo 5: Commit**
   ```bash
-  git add __tests__/app/finance/budget-page.test.tsx package.json
+  git add __tests__/app/pluto/budget-page.test.tsx package.json
   git commit -m "feat: atualiza testes de UI para o fluxo de ajustes e bump patch version 0.3.1"
   ```
 
@@ -113,10 +113,10 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 ### Tarefa 4: Refatoração Física das Tabelas do Supabase no Código Next.js
 
 **Arquivos:**
-- Modificar: `lib/db/budget.ts`
-- Modificar: `app/finance/budget/page.tsx`
-- Modificar: `__tests__/lib/db/budget.test.ts`
-- Modificar: `__tests__/app/finance/budget-page.test.tsx`
+- Modificar: `lib/pluto/db/budget.ts`
+- Modificar: `app/pluto/budget/page.tsx`
+- Modificar: `__tests__/lib/pluto/db/budget.test.ts`
+- Modificar: `__tests__/app/pluto/budget-page.test.tsx`
 
 **Lógica:**
 - Modificar todas as chamadas de `.from("budget_revisions")` para `.from("budget_adjustments")`.
@@ -125,10 +125,10 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 - [ ] **Passo 1: Aplicar a migração SQL localmente**
   Executar o script SQL criado no Dashboard do Supabase.
 
-- [ ] **Passo 2: Atualizar o código em `lib/db/budget.ts`**
+- [ ] **Passo 2: Atualizar o código em `lib/pluto/db/budget.ts`**
   Substituir todas as ocorrências de `.from("budget_revisions")` por `.from("budget_adjustments")` e a chave estrangeira `revision_id` por `adjustment_id`.
 
-- [ ] **Passo 3: Atualizar as queries no front-end (`app/finance/budget/page.tsx`)**
+- [ ] **Passo 3: Atualizar as queries no front-end (`app/pluto/budget/page.tsx`)**
   Garantir que as chamadas ao Supabase usam as tabelas e campos corretos.
 
 - [ ] **Passo 4: Atualizar os arquivos de testes de unidade e UI**
@@ -140,7 +140,7 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 
 - [ ] **Passo 6: Commit**
   ```bash
-  git add lib/db/budget.ts app/finance/budget/page.tsx __tests__/
+  git add lib/pluto/db/budget.ts app/pluto/budget/page.tsx __tests__/
   git commit -m "feat: refatora nomenclatura de tabelas fisicas no banco de dados e codigo Next.js"
   ```
 
@@ -151,7 +151,7 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 ### Cenário 1: Visualização do Ajuste Mais Atual e Bloqueio Histórico
 *   **Dado** que o mês atual do calendário real (ou `?mockMonth=10`) é Outubro.
 *   **E** que existem cadastrados o "Orçamento Inicial" (Janeiro/mês 1) e o "Ajuste de Agosto" (mês 8).
-*   **Quando** acesso `/finance/budget`.
+*   **Quando** acesso `/pluto/budget`.
 *   **Então** a página carrega e seleciona por padrão o "Ajuste de Agosto" (por ser o mais atual do ano).
 *   **E** a tabela exibe os valores orçados vigentes herdados.
 *   **E** como a vigência do Ajuste selecionado (mês 8) é diferente do mês corrente (mês 10), toda a tabela de valores fica em modo somente-leitura.

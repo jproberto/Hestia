@@ -41,7 +41,7 @@ Ao salvar um ajuste para uma categoria no ano $Y$, mês $M$, valor $V$:
 
 ## 5. Interface do Usuário (UI/UX)
 
-A página de orçamento `/finance/budget` será atualizada:
+A página de orçamento `/pluto/budget` será atualizada:
 
 ### 5.1. Seleção de Mês e Ano
 *   No topo, ao lado do dropdown de Ano, haverá um dropdown compacto para selecionar o Mês (de Janeiro a Dezembro), seguindo a Opção B de design aprovada.
@@ -56,7 +56,7 @@ A página de orçamento `/finance/budget` será atualizada:
 
 ## 6. Estratégia de Testes
 
-### 6.1. Testes Unitários de Banco de Dados (`__tests__/lib/db/budget.test.ts`)
+### 6.1. Testes Unitários de Banco de Dados (`__tests__/lib/pluto/db/budget.test.ts`)
 *   **Caso de Teste 1**: `getBudgets` deve retornar valores vigentes corretos com múltiplos meses/ajustes.
 *   **Caso de Teste 2**: Adicionar testes para a nova lógica de ajustes em meses específicos e criação dinâmica de revisões.
 

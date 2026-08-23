@@ -89,7 +89,7 @@ Ao clicar em **"Salvar Ajuste e Incluir Item"**, o sistema:
 1. Grava o novo valor da categoria no Ajuste do Mês Atual.
 2. Grava o item do checklist global com sucesso.
 3. Exibe uma confirmação de sucesso e oferece ao usuário duas opções de navegação:
-   - **"Ir para a página de Orçamento"** — navega para `/finance/budget` com o Ajuste do Mês Atual selecionado, permitindo revisar outros valores.
+   - **"Ir para a página de Orçamento"** — navega para `/pluto/budget` com o Ajuste do Mês Atual selecionado, permitindo revisar outros valores.
    - **"Continuar no Checklist"** — fecha o modal e permanece na tela de lançamentos.
 
 ---
@@ -120,8 +120,8 @@ Ao clicar em **"Salvar Ajuste e Incluir Item"**, o sistema:
 
 ## 7. Artefatos e Dependências
 
-- **Spec Base:** [03-checklist-contas-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/03-checklist-contas-spec.md)
-- **Spec de Orçamento:** [02a-ajuste-orcamento-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/02a-ajuste-orcamento-spec.md)
+- **Spec Base:** [03-checklist-contas-spec.md](file:///p:/workspace/IA/hestia/.agents/pluto/specs/03-checklist-contas-spec.md)
+- **Spec de Orçamento:** [02a-ajuste-orcamento-spec.md](file:///p:/workspace/IA/hestia/.agents/pluto/specs/02a-ajuste-orcamento-spec.md)
 - **Tabelas Afetadas:** `public.checklist_items`, `public.budget_adjustments`, `public.budget_items`
-- **Páginas Afetadas:** `app/finance/transactions/page.tsx`, `components/finance/ChecklistCard.tsx`
-- **Funções de Banco Afetadas:** `lib/db/checklist.ts`, `lib/db/budget.ts`
+- **Páginas Afetadas:** `app/pluto/transactions/page.tsx`, `components/pluto/ChecklistCard.tsx`
+- **Funções de Banco Afetadas:** `lib/pluto/db/checklist.ts`, `lib/pluto/db/budget.ts`

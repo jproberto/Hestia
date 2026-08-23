@@ -4,12 +4,12 @@
 
 Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tarefa estiver concluída.
 
-**Objetivo:** Implementar o cadastro e visualização do orçamento anual com criação inline de categorias em `/finance/budget`, conectando ao banco de dados Supabase com auditoria completa de email e integridade física de exclusão, suportado por uma suite de testes automatizados com Vitest sob metodologia TDD.
+**Objetivo:** Implementar o cadastro e visualização do orçamento anual com criação inline de categorias em `/pluto/budget`, conectando ao banco de dados Supabase com auditoria completa de email e integridade física de exclusão, suportado por uma suite de testes automatizados com Vitest sob metodologia TDD.
 
 **Arquitetura:** 
 *   **Banco de Dados**: Três tabelas normalizadas (`categories`, `budget_revisions`, `budget_items`) no Supabase, com restrições `ON DELETE RESTRICT` e auditoria de e-mail em campo `TEXT`.
-*   **Backend/Services**: Funções de consulta e persistência no Next.js (`lib/db/budget.ts`) usando o cliente do Supabase. A consulta resolve a vigência acumulada do orçamento usando SQL `DISTINCT ON` ordenado por `start_month DESC`.
-*   **Interface**: Layout premium usando Tailwind CSS em `/finance/budget` com dropdown de ano, suporte a estado vazio para orçamento não iniciado, resumo financeiro (Receitas, Despesas, Saldo Planejado) e formulário inline para inserção de previsões.
+*   **Backend/Services**: Funções de consulta e persistência no Next.js (`lib/pluto/db/budget.ts`) usando o cliente do Supabase. A consulta resolve a vigência acumulada do orçamento usando SQL `DISTINCT ON` ordenado por `start_month DESC`.
+*   **Interface**: Layout premium usando Tailwind CSS em `/pluto/budget` com dropdown de ano, suporte a estado vazio para orçamento não iniciado, resumo financeiro (Receitas, Despesas, Saldo Planejado) e formulário inline para inserção de previsões.
 
 ## Restrições Globais
 *   Toda tabela deve preencher as colunas `created_at` e `created_by` (com o e-mail do usuário autenticado no formato `TEXT`).
@@ -182,26 +182,26 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 ### Tarefa 3: Desenvolver a Lógica de Negócio e Serviços de Categoria e Orçamento (TDD)
 
 **Arquivos:**
-*   Criar: `lib/db/categories.ts`
-*   Criar: `lib/db/budget.ts`
-*   Criar: `__tests__/lib/db/categories.test.ts`
-*   Criar: `__tests__/lib/db/budget.test.ts`
+*   Criar: `lib/pluto/db/categories.ts`
+*   Criar: `lib/pluto/db/budget.ts`
+*   Criar: `__tests__/lib/pluto/db/categories.test.ts`
+*   Criar: `__tests__/lib/pluto/db/budget.test.ts`
 
 **Interfaces:**
-*   Exporta em `lib/db/categories.ts`:
+*   Exporta em `lib/pluto/db/categories.ts`:
     *   `getCategories(supabaseClient: SupabaseClient, type?: 'receita' | 'despesa'): Promise<Category[]>` - Retorna as categorias cadastradas.
     *   `getOrCreateCategory(supabaseClient: SupabaseClient, name: string, type: 'receita' | 'despesa', email: string): Promise<string>` - Busca categoria existente por nome (case-insensitive se aplicável) ou cria uma nova inline, retornando seu ID.
-*   Exporta em `lib/db/budget.ts`:
+*   Exporta em `lib/pluto/db/budget.ts`:
     *   `initBudget(supabaseClient: SupabaseClient, year: number, email: string): Promise<string>` - Cria a revisão orçamentária inicial (`start_month = 1`) para o ano e retorna o ID da revisão.
     *   `getBudgetRevision(supabaseClient: SupabaseClient, year: number): Promise<BudgetRevision | null>` - Retorna a revisão inicial ativa daquele ano.
     *   `getBudgets(supabaseClient: SupabaseClient, year: number, month: number): Promise<BudgetItem[]>` - Retorna a lista de itens orçados vigentes para o mês e ano especificados.
     *   `addOrUpdateBudgetItem(supabaseClient: SupabaseClient, revisionId: string, categoryName: string, categoryType: 'receita' | 'despesa', amount: number, email: string): Promise<void>` - Adiciona/atualiza o valor previsto para a categoria na revisão informada, consumindo `getOrCreateCategory` internamente de forma desacoplada.
 
-- [ ] **Passo 1: Escrever os testes unitários de categorias em `__tests__/lib/db/categories.test.ts` (TDD - Red)**
+- [ ] **Passo 1: Escrever os testes unitários de categorias em `__tests__/lib/pluto/db/categories.test.ts` (TDD - Red)**
     *   Testar a listagem e o get-or-create de categorias:
     ```typescript
     import { describe, it, expect, vi, beforeEach } from "vitest";
-    import { getOrCreateCategory, getCategories } from "@/lib/db/categories";
+    import { getOrCreateCategory, getCategories } from "@/lib/pluto/db/categories";
 
     const mockSupabase = {
       from: vi.fn(),
@@ -227,11 +227,11 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
     });
     ```
 
-- [ ] **Passo 2: Escrever os testes unitários de orçamento em `__tests__/lib/db/budget.test.ts` (TDD - Red)**
+- [ ] **Passo 2: Escrever os testes unitários de orçamento em `__tests__/lib/pluto/db/budget.test.ts` (TDD - Red)**
     *   Validar cálculo de vigência acumulada por `start_month`:
     ```typescript
     import { describe, it, expect, vi, beforeEach } from "vitest";
-    import { getBudgets } from "@/lib/db/budget";
+    import { getBudgets } from "@/lib/pluto/db/budget";
 
     const mockSupabase = {
       from: vi.fn(),
@@ -272,7 +272,7 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
     *   Run: `npm run test`
     *   Expected: Falha de importação/compilação nos testes criados.
 
-- [ ] **Passo 4: Implementar o serviço de categorias `lib/db/categories.ts`**
+- [ ] **Passo 4: Implementar o serviço de categorias `lib/pluto/db/categories.ts`**
     *   Criar o arquivo de forma desacoplada:
     ```typescript
     import { SupabaseClient } from "@supabase/supabase-js";
@@ -326,7 +326,7 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
     }
     ```
 
-- [ ] **Passo 5: Implementar o serviço de orçamentos `lib/db/budget.ts`**
+- [ ] **Passo 5: Implementar o serviço de orçamentos `lib/pluto/db/budget.ts`**
     *   Criar o arquivo consumindo `getOrCreateCategory` do serviço de categorias:
     ```typescript
     import { SupabaseClient } from "@supabase/supabase-js";
@@ -440,27 +440,27 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
     *   Expected: Todos os testes de categoria e orçamento passando.
 
 - [ ] **Passo 7: Commit dos serviços desacoplados**
-    *   Run: `git add lib/db/ budget/ __tests__/`
+    *   Run: `git add lib/pluto/db/ budget/ __tests__/`
     *   Run: `node .agents/scripts/sdd.js commit "feat: implementa servicos desacoplados de categoria e orcamento com TDD"`
 
 ---
 
-### Tarefa 4: Criar a Página de Orçamento `/finance/budget`
+### Tarefa 4: Criar a Página de Orçamento `/pluto/budget`
 
 **Arquivos:**
-*   Criar: `app/finance/budget/page.tsx`
-*   Criar: `__tests__/app/finance/budget-page.test.tsx`
+*   Criar: `app/pluto/budget/page.tsx`
+*   Criar: `__tests__/app/pluto/budget-page.test.tsx`
 
 **Interfaces:**
-*   Consome: `getBudgetRevision()`, `initBudget()`, `getBudgets()`, `addOrUpdateBudgetItem()` em `lib/db/budget.ts`.
-*   Consome: `getCategories()` em `lib/db/categories.ts`.
-*   Produz: Interface do usuário reativa e premium em `/finance/budget` com suporte a sugestão de categorias.
+*   Consome: `getBudgetRevision()`, `initBudget()`, `getBudgets()`, `addOrUpdateBudgetItem()` em `lib/pluto/db/budget.ts`.
+*   Consome: `getCategories()` em `lib/pluto/db/categories.ts`.
+*   Produz: Interface do usuário reativa e premium em `/pluto/budget` com suporte a sugestão de categorias.
 
 - [ ] **Passo 1: Criar testes do componente de página (TDD - Red)**
-    *   Criar o arquivo `__tests__/app/finance/budget-page.test.tsx` para validar a exibição dos estados vazio e de preenchimento do orçamento:
+    *   Criar o arquivo `__tests__/app/pluto/budget-page.test.tsx` para validar a exibição dos estados vazio e de preenchimento do orçamento:
     ```typescript
     import { render, screen } from "@testing-library/react";
-    import BudgetPage from "@/app/finance/budget/page";
+    import BudgetPage from "@/app/pluto/budget/page";
     import { describe, it, expect, vi } from "vitest";
 
     vi.mock("@/utils/supabase/client", () => ({
@@ -471,18 +471,18 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
       })
     }));
 
-    vi.mock("@/lib/db/budget", () => ({
+    vi.mock("@/lib/pluto/db/budget", () => ({
       getBudgetRevision: vi.fn().mockResolvedValue(null),
       initBudget: vi.fn(),
       getBudgets: vi.fn().mockResolvedValue([]),
       addOrUpdateBudgetItem: vi.fn()
     }));
 
-    vi.mock("@/lib/db/categories", () => ({
+    vi.mock("@/lib/pluto/db/categories", () => ({
       getCategories: vi.fn().mockResolvedValue([])
     }));
 
-    describe("Pagina de Orcamento Anual /finance/budget", () => {
+    describe("Pagina de Orcamento Anual /pluto/budget", () => {
       it("deve exibir estado vazio e botao de iniciar orcamento se nenhuma revisao existir", async () => {
         render(<BudgetPage />);
         expect(await screen.findByText(/Nenhum orçamento cadastrado para o ano/i)).toBeInTheDocument();
@@ -495,9 +495,9 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
     *   Run: `npm run test`
     *   Expected: Falha de importação na página.
 
-- [ ] **Passo 3: Criar a página `app/finance/budget/page.tsx`**
+- [ ] **Passo 3: Criar a página `app/pluto/budget/page.tsx`**
     *   Implementar a interface com dropdown, resumos e sugestão de categorias existentes no banco.
-    *   Código completo a escrever em `app/finance/budget/page.tsx`:
+    *   Código completo a escrever em `app/pluto/budget/page.tsx`:
     ```typescript
     "use client";
 
@@ -510,8 +510,8 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
       addOrUpdateBudgetItem,
       BudgetRevision,
       BudgetItem
-    } from "@/lib/db/budget";
-    import { getCategories, Category } from "@/lib/db/categories";
+    } from "@/lib/pluto/db/budget";
+    import { getCategories, Category } from "@/lib/pluto/db/categories";
     import { Button } from "@/components/ui/button";
     import { Input } from "@/components/ui/input";
     import { Label } from "@/components/ui/label";
@@ -652,7 +652,7 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
     *   Expected: Todos os testes passando com sucesso.
 
 - [ ] **Passo 5: Commit da UI de orçamento**
-    *   Run: `git add app/finance/budget/page.tsx __tests__/app/finance/budget-page.test.tsx`
+    *   Run: `git add app/pluto/budget/page.tsx __tests__/app/pluto/budget-page.test.tsx`
     *   Run: `node .agents/scripts/sdd.js commit "feat: cria pagina e interface de orcamento anual"`
 
 ---
@@ -664,7 +664,7 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
 *   Modificar: `package.json`
 
 **Interfaces:**
-*   Modifica: Rota `/dashboard` para exibir um botão/card redirecionando para `/finance/budget`.
+*   Modifica: Rota `/dashboard` para exibir um botão/card redirecionando para `/pluto/budget`.
 *   Modifica: Bumping da versão do projeto para `0.2.0`.
 
 - [ ] **Passo 1: Alterar `app/dashboard/page.tsx`**
@@ -681,7 +681,7 @@ Use checkbox (`- [ ]`) para acompanhamento. Marque com o emoji ✅ quando a tare
           </div>
           <div className="grid grid-cols-2 gap-6">
             <Link
-              href="/finance/budget"
+              href="/pluto/budget"
               className="group flex flex-col gap-2 rounded-lg border p-6 hover:bg-muted/40 transition-colors"
             >
               <h2 className="text-lg font-bold group-hover:text-primary transition-colors">

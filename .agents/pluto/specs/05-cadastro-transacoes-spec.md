@@ -27,7 +27,7 @@ As transações dependem do conceito de **Conta** (corrente, cartão, reserva), 
   * *Decisão:* Lançados como despesa com valor positivo, ativando a opção/marcação **"Estorno / Reembolso"** (`is_refund = true`). O motor de cálculo abate o valor do gasto realizado daquela categoria sem inflar a receita bruta.
   * *Alternativas Rejeitadas:* Exigir digitação de valores negativos (rejeitado por UX contra-intuitiva) ou lançar como receita flexível em categoria de despesa (rejeitado por causar confusão visual no extrato).
 * **Navegação e Interface:**
-  * *Decisão:* Página dedicada `/finance/transactions` com seletor mensal, cards de resumo e modal de lançamento.
+  * *Decisão:* Página dedicada `/pluto/transactions` com seletor mensal, cards de resumo e modal de lançamento.
   * *Alternativas Rejeitadas:* Painel drawer embutido na tela de meses (rejeitado por limitar o espaço para tabelas de extrato longas).
 
 ---
@@ -122,7 +122,7 @@ VALUES (
 
 ## 5. Interface do Usuário (UI/UX)
 
-- Rota: `/finance/transactions`
+- Rota: `/pluto/transactions`
 - **Cabeçalho:** Barra de navegação financeira com atalhos para *Orçamento*, *Meses* e *Lançamentos*.
 - **Controles Superiores:** Seletor de Ano e Mês para filtrar a exibição dos lançamentos.
 - **Cards de Resumo:** 3 cards destacados exibindo Entradas (Verde), Saídas (Vermelho) e Resultado do Mês.

@@ -4,15 +4,15 @@
 
 **Objetivo:** Implementar a validação de estouro de orçamento ao criar/editar itens do checklist de contas, diferenciando itens globais (bloqueio guiado com fluxo de ajuste) e itens pontuais (aviso informativo não-bloqueante).
 
-**Arquitetura:** O cruzamento é calculado no frontend a partir de dados já carregados (`checklistItems` e `budgetItems` na página de transações). Para itens globais, a lógica de verificação consulta os itens globais ativos da categoria e compara com o orçamento vigente; se há estouro, um modal stepper bloqueia a gravação e guia o usuário a ajustar o orçamento. Para itens pontuais, a gravação acontece normalmente e um banner informativo é exibido no card quando a soma total (globais instanciados + pontuais) da categoria excede o orçamento. O fluxo de criação/reutilização do `budget_adjustment` do mês corrente já existe em `lib/db/budget.ts` via `createBudgetAdjustment` e `adjustBudgetItem`.
+**Arquitetura:** O cruzamento é calculado no frontend a partir de dados já carregados (`checklistItems` e `budgetItems` na página de transações). Para itens globais, a lógica de verificação consulta os itens globais ativos da categoria e compara com o orçamento vigente; se há estouro, um modal stepper bloqueia a gravação e guia o usuário a ajustar o orçamento. Para itens pontuais, a gravação acontece normalmente e um banner informativo é exibido no card quando a soma total (globais instanciados + pontuais) da categoria excede o orçamento. O fluxo de criação/reutilização do `budget_adjustment` do mês corrente já existe em `lib/pluto/db/budget.ts` via `createBudgetAdjustment` e `adjustBudgetItem`.
 
 **Tech Stack:** Next.js (App Router), React, TypeScript, Supabase (PostgreSQL + RLS), Tailwind CSS, Lucide React, Vitest, @testing-library/react.
 
 ## Restrições Globais
 
 - Não criar novas tabelas nem alterar schemas existentes — o patch usa tabelas `checklist_items`, `budget_adjustments` e `budget_items` como estão.
-- Reutilizar funções existentes de `lib/db/budget.ts`: `getBudgets`, `createBudgetAdjustment`, `adjustBudgetItem`.
-- Reutilizar funções existentes de `lib/db/checklist.ts`: `createChecklistItem`, `updateChecklistItem`, `getGlobalChecklistItems`.
+- Reutilizar funções existentes de `lib/pluto/db/budget.ts`: `getBudgets`, `createBudgetAdjustment`, `adjustBudgetItem`.
+- Reutilizar funções existentes de `lib/pluto/db/checklist.ts`: `createChecklistItem`, `updateChecklistItem`, `getGlobalChecklistItems`.
 - Convenção de testes: Vitest, diretório `__tests__/` espelhando a estrutura de código-fonte.
 - Convenção visual: variáveis CSS do tema (`bg-card`, `text-card-foreground`, `border`), sem cores estáticas inline. Avisos em amber: `text-amber-700 dark:text-amber-400`.
 - Moeda: BRL. Formatação: `Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })`.
@@ -28,8 +28,8 @@
 - Testar: `__tests__/lib/checklist-budget.test.ts`
 
 **Interfaces:**
-- Consome: `ChecklistItem` de `lib/db/checklist.ts` (`{ id, category_id, amount, month_id, is_active }`)
-- Consome: `BudgetItem` de `lib/db/budget.ts` (`{ category_id, amount }`)
+- Consome: `ChecklistItem` de `lib/pluto/db/checklist.ts` (`{ id, category_id, amount, month_id, is_active }`)
+- Consome: `BudgetItem` de `lib/pluto/db/budget.ts` (`{ category_id, amount }`)
 - Produz:
   ```typescript
   interface BudgetOverflowResult {
@@ -124,13 +124,13 @@ node .agents/scripts/sdd.js commit "feat(03a): adicionar funções puras de veri
 ### Tarefa 2: Componente `BudgetOverflowModal` (modal de bloqueio guiado) e testes de componente
 
 **Arquivos:**
-- Criar: `components/finance/BudgetOverflowModal.tsx`
-- Testar: `__tests__/components/finance/BudgetOverflowModal.test.tsx`
+- Criar: `components/pluto/BudgetOverflowModal.tsx`
+- Testar: `__tests__/components/pluto/BudgetOverflowModal.test.tsx`
 
 **Interfaces:**
 - Consome: `BudgetOverflowResult` de `lib/checklist-budget.ts`
-- Consome: `createBudgetAdjustment(supabase, year, month, email): Promise<string>` de `lib/db/budget.ts`
-- Consome: `adjustBudgetItem(supabase, year, month, categoryName, categoryType, amount, email): Promise<void>` de `lib/db/budget.ts`
+- Consome: `createBudgetAdjustment(supabase, year, month, email): Promise<string>` de `lib/pluto/db/budget.ts`
+- Consome: `adjustBudgetItem(supabase, year, month, categoryName, categoryType, amount, email): Promise<void>` de `lib/pluto/db/budget.ts`
 - Produz:
   ```typescript
   interface BudgetOverflowModalProps {
@@ -159,7 +159,7 @@ Run: `node .agents/scripts/sdd.js task-start 2`
 
 **Passo 2: Escrever os testes que falham**
 
-Criar `__tests__/components/finance/BudgetOverflowModal.test.tsx` com cenários:
+Criar `__tests__/components/pluto/BudgetOverflowModal.test.tsx` com cenários:
 
 1. Não renderiza nada quando `isOpen = false`.
 2. Renderiza a mensagem de bloqueio (Etapa 1) com nome da categoria, valores formatados em BRL, e botões "Ajustar Orçamento" e "Cancelar".
@@ -174,16 +174,16 @@ Mockar `next/navigation` com `vi.mock("next/navigation", () => ({ useRouter: () 
 
 **Passo 3: Executar os testes para garantir que falham**
 
-Run: `npx vitest run __tests__/components/finance/BudgetOverflowModal.test.tsx`
+Run: `npx vitest run __tests__/components/pluto/BudgetOverflowModal.test.tsx`
 Expected: FAIL — módulo não encontrado.
 
-**Passo 4: Implementar `components/finance/BudgetOverflowModal.tsx`**
+**Passo 4: Implementar `components/pluto/BudgetOverflowModal.tsx`**
 
-Criar o componente React com state interno `step` (1 | 3 | 4) e `newBudgetValue` (number). Usar o mesmo padrão visual dos modais existentes no projeto (`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`, `w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-lg`). Formatação de valores em BRL via `Intl.NumberFormat("pt-BR", ...)`. Etapa 4 (success) renderiza botão "Ir para a página de Orçamento" que usa `router.push("/finance/budget")` e botão "Continuar no Checklist" que chama `onCancel` (fechamento).
+Criar o componente React com state interno `step` (1 | 3 | 4) e `newBudgetValue` (number). Usar o mesmo padrão visual dos modais existentes no projeto (`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`, `w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-lg`). Formatação de valores em BRL via `Intl.NumberFormat("pt-BR", ...)`. Etapa 4 (success) renderiza botão "Ir para a página de Orçamento" que usa `router.push("/pluto/budget")` e botão "Continuar no Checklist" que chama `onCancel` (fechamento).
 
 **Passo 5: Executar os testes para garantir que passam**
 
-Run: `npx vitest run __tests__/components/finance/BudgetOverflowModal.test.tsx`
+Run: `npx vitest run __tests__/components/pluto/BudgetOverflowModal.test.tsx`
 Expected: PASS.
 
 **Passo 6: Executar suíte completa de regressão**
@@ -198,7 +198,7 @@ Run: `node .agents/scripts/sdd.js task-complete 2`
 **Passo 8: Commit**
 
 ```bash
-git add components/finance/BudgetOverflowModal.tsx __tests__/components/finance/BudgetOverflowModal.test.tsx
+git add components/pluto/BudgetOverflowModal.tsx __tests__/components/pluto/BudgetOverflowModal.test.tsx
 node .agents/scripts/sdd.js commit "feat(03a): criar componente BudgetOverflowModal com stepper de ajuste de orçamento"
 ```
 
@@ -207,16 +207,16 @@ node .agents/scripts/sdd.js commit "feat(03a): criar componente BudgetOverflowMo
 ### Tarefa 3: Integrar verificação de estouro no fluxo de criação/edição de itens globais (página de transações)
 
 **Arquivos:**
-- Modificar: `app/finance/transactions/page.tsx`
-- Testar: `__tests__/app/finance/transactions-checklist.test.tsx` (adicionar cenários)
+- Modificar: `app/pluto/transactions/page.tsx`
+- Testar: `__tests__/app/pluto/transactions-checklist.test.tsx` (adicionar cenários)
 
 **Interfaces:**
 - Consome: `checkGlobalBudgetOverflow(globalItems, budgetItems, categoryId, amount, excludeId?)` de `lib/checklist-budget.ts`
-- Consome: `BudgetOverflowModal` de `components/finance/BudgetOverflowModal.tsx` (props: `isOpen`, `overflowData`, `year`, `month`, `userEmail`, `onConfirm`, `onCancel`)
-- Consome: `getGlobalChecklistItems(supabase)` de `lib/db/checklist.ts`
-- Consome: `adjustBudgetItem(supabase, year, month, categoryName, categoryType, amount, email)` de `lib/db/budget.ts`
-- Consome: `createChecklistItem(supabase, input, isGlobal, monthId)` de `lib/db/checklist.ts`
-- Consome: `updateChecklistItem(supabase, id, input, updateGlobal, parentId)` de `lib/db/checklist.ts`
+- Consome: `BudgetOverflowModal` de `components/pluto/BudgetOverflowModal.tsx` (props: `isOpen`, `overflowData`, `year`, `month`, `userEmail`, `onConfirm`, `onCancel`)
+- Consome: `getGlobalChecklistItems(supabase)` de `lib/pluto/db/checklist.ts`
+- Consome: `adjustBudgetItem(supabase, year, month, categoryName, categoryType, amount, email)` de `lib/pluto/db/budget.ts`
+- Consome: `createChecklistItem(supabase, input, isGlobal, monthId)` de `lib/pluto/db/checklist.ts`
+- Consome: `updateChecklistItem(supabase, id, input, updateGlobal, parentId)` de `lib/pluto/db/checklist.ts`
 
 **Objetivo técnico:** Alterar os handlers `handleAddChecklistItem` e `handleEditChecklistItem` na página de transações para interceptar a gravação de itens globais com `amount` preenchido. Antes de gravar, chamar `checkGlobalBudgetOverflow` com os itens globais da categoria e o orçamento vigente. Se houver estouro, armazenar a operação pendente em state, exibir `BudgetOverflowModal` e aguardar a decisão do usuário. Se o usuário confirmar o ajuste (`onConfirm`), chamar `adjustBudgetItem` para gravar o novo valor no orçamento, depois completar a operação pendente (criar ou editar o item do checklist), atualizar os dados (`fetchData`) e avançar o modal para Etapa 4. Se o usuário cancelar, descartar a operação pendente.
 
@@ -235,7 +235,7 @@ Run: `node .agents/scripts/sdd.js task-start 3`
 
 **Passo 2: Escrever os testes que falham**
 
-Adicionar ao arquivo `__tests__/app/finance/transactions-checklist.test.tsx` (ou criar um novo `__tests__/app/finance/transactions-checklist-overflow.test.tsx` se o arquivo existente for muito grande) os seguintes cenários:
+Adicionar ao arquivo `__tests__/app/pluto/transactions-checklist.test.tsx` (ou criar um novo `__tests__/app/pluto/transactions-checklist-overflow.test.tsx` se o arquivo existente for muito grande) os seguintes cenários:
 
 1. Criar item global com `amount` que causa estouro: o item NÃO é gravado e o modal de bloqueio aparece.
 2. Criar item global sem `amount`: o item é gravado normalmente (sem bloqueio).
@@ -244,11 +244,11 @@ Adicionar ao arquivo `__tests__/app/finance/transactions-checklist.test.tsx` (ou
 5. Ao confirmar ajuste no modal: `adjustBudgetItem` é chamado com o valor e o item do checklist é gravado.
 6. Ao cancelar o modal: operação é descartada e nenhuma chamada de gravação ocorre.
 
-Mockar `@/lib/db/budget`, `@/lib/db/checklist`, `@/utils/supabase/client` conforme padrão existente em `transactions-checklist.test.tsx`.
+Mockar `@/lib/pluto/db/budget`, `@/lib/pluto/db/checklist`, `@/utils/supabase/client` conforme padrão existente em `transactions-checklist.test.tsx`.
 
 **Passo 3: Executar os testes para garantir que falham**
 
-Run: `npx vitest run __tests__/app/finance/transactions-checklist-overflow.test.tsx`
+Run: `npx vitest run __tests__/app/pluto/transactions-checklist-overflow.test.tsx`
 Expected: FAIL — lógica de intercepção não implementada.
 
 **Passo 4: Implementar as alterações em `page.tsx`**
@@ -257,7 +257,7 @@ Modificar conforme descrito no objetivo técnico acima.
 
 **Passo 5: Executar os testes para garantir que passam**
 
-Run: `npx vitest run __tests__/app/finance/transactions-checklist-overflow.test.tsx`
+Run: `npx vitest run __tests__/app/pluto/transactions-checklist-overflow.test.tsx`
 Expected: PASS.
 
 **Passo 6: Executar suíte completa de regressão**
@@ -272,7 +272,7 @@ Run: `node .agents/scripts/sdd.js task-complete 3`
 **Passo 8: Commit**
 
 ```bash
-git add app/finance/transactions/page.tsx __tests__/app/finance/transactions-checklist-overflow.test.tsx
+git add app/pluto/transactions/page.tsx __tests__/app/pluto/transactions-checklist-overflow.test.tsx
 node .agents/scripts/sdd.js commit "feat(03a): integrar bloqueio de estouro no fluxo de criação/edição de itens globais"
 ```
 
@@ -281,13 +281,13 @@ node .agents/scripts/sdd.js commit "feat(03a): integrar bloqueio de estouro no f
 ### Tarefa 4: Banner informativo não-bloqueante para itens pontuais no `ChecklistCard`
 
 **Arquivos:**
-- Modificar: `components/finance/ChecklistCard.tsx`
-- Modificar: `app/finance/transactions/page.tsx` (passar `budgetItems` como nova prop)
-- Testar: `__tests__/components/finance/ChecklistCard.test.tsx` (adicionar cenários)
+- Modificar: `components/pluto/ChecklistCard.tsx`
+- Modificar: `app/pluto/transactions/page.tsx` (passar `budgetItems` como nova prop)
+- Testar: `__tests__/components/pluto/ChecklistCard.test.tsx` (adicionar cenários)
 
 **Interfaces:**
 - Consome: `checkMonthBudgetOverflow(monthItems, budgetItems, categoryId)` de `lib/checklist-budget.ts`
-- Consome: `BudgetItem` de `lib/db/budget.ts` (`{ category_id, category_name, amount }`)
+- Consome: `BudgetItem` de `lib/pluto/db/budget.ts` (`{ category_id, category_name, amount }`)
 - Nova prop no `ChecklistCardProps`:
   ```typescript
   budgetItems: BudgetItem[];
@@ -307,7 +307,7 @@ Run: `node .agents/scripts/sdd.js task-start 4`
 
 **Passo 2: Escrever os testes que falham**
 
-Adicionar a `__tests__/components/finance/ChecklistCard.test.tsx`:
+Adicionar a `__tests__/components/pluto/ChecklistCard.test.tsx`:
 
 1. Quando a soma de itens de uma categoria excede o orçamento, renderiza o banner de aviso com o texto correto formatado em BRL.
 2. Quando a soma de itens de uma categoria NÃO excede o orçamento, o banner NÃO é renderizado.
@@ -319,17 +319,17 @@ Fornecer os dados de `budgetItems` nos testes como nova prop.
 
 **Passo 3: Executar os testes para garantir que falham**
 
-Run: `npx vitest run __tests__/components/finance/ChecklistCard.test.tsx`
+Run: `npx vitest run __tests__/components/pluto/ChecklistCard.test.tsx`
 Expected: FAIL — prop `budgetItems` não existe ainda.
 
 **Passo 4: Implementar as alterações**
 
-1. Em `ChecklistCard.tsx`: adicionar `budgetItems: BudgetItem[]` à interface `ChecklistCardProps`. Importar `checkMonthBudgetOverflow` de `@/lib/checklist-budget` e `BudgetItem` de `@/lib/db/budget`. Calcular as categorias em estouro e renderizar os banners.
+1. Em `ChecklistCard.tsx`: adicionar `budgetItems: BudgetItem[]` à interface `ChecklistCardProps`. Importar `checkMonthBudgetOverflow` de `@/lib/checklist-budget` e `BudgetItem` de `@/lib/pluto/db/budget`. Calcular as categorias em estouro e renderizar os banners.
 2. Em `page.tsx`: adicionar `budgetItems={budgetItems}` à invocação de `<ChecklistCard>`.
 
 **Passo 5: Executar os testes para garantir que passam**
 
-Run: `npx vitest run __tests__/components/finance/ChecklistCard.test.tsx`
+Run: `npx vitest run __tests__/components/pluto/ChecklistCard.test.tsx`
 Expected: PASS.
 
 **Passo 6: Executar suíte completa de regressão**
@@ -344,7 +344,7 @@ Run: `node .agents/scripts/sdd.js task-complete 4`
 **Passo 8: Commit**
 
 ```bash
-git add components/finance/ChecklistCard.tsx app/finance/transactions/page.tsx __tests__/components/finance/ChecklistCard.test.tsx
+git add components/pluto/ChecklistCard.tsx app/pluto/transactions/page.tsx __tests__/components/pluto/ChecklistCard.test.tsx
 node .agents/scripts/sdd.js commit "feat(03a): adicionar banner informativo de estouro por categoria para itens pontuais"
 ```
 
@@ -353,8 +353,8 @@ node .agents/scripts/sdd.js commit "feat(03a): adicionar banner informativo de e
 ### Tarefa 5: Integrar verificação de estouro na edição com mudança de categoria
 
 **Arquivos:**
-- Modificar: `app/finance/transactions/page.tsx`
-- Testar: `__tests__/app/finance/transactions-checklist-overflow.test.tsx` (adicionar cenários)
+- Modificar: `app/pluto/transactions/page.tsx`
+- Testar: `__tests__/app/pluto/transactions-checklist-overflow.test.tsx` (adicionar cenários)
 
 **Interfaces:**
 - Consome: `checkGlobalBudgetOverflow(globalItems, budgetItems, categoryId, amount, excludeId?)` de `lib/checklist-budget.ts`
@@ -368,7 +368,7 @@ Run: `node .agents/scripts/sdd.js task-start 5`
 
 **Passo 2: Escrever os testes que falham**
 
-Adicionar a `__tests__/app/finance/transactions-checklist-overflow.test.tsx`:
+Adicionar a `__tests__/app/pluto/transactions-checklist-overflow.test.tsx`:
 
 1. Editar item global mudando `category_id` para uma categoria onde a soma resultante causa estouro: modal aparece.
 2. Editar item global mudando `category_id` para uma categoria onde a soma não causa estouro: gravação normal.
@@ -376,7 +376,7 @@ Adicionar a `__tests__/app/finance/transactions-checklist-overflow.test.tsx`:
 
 **Passo 3: Executar os testes para garantir que falham**
 
-Run: `npx vitest run __tests__/app/finance/transactions-checklist-overflow.test.tsx`
+Run: `npx vitest run __tests__/app/pluto/transactions-checklist-overflow.test.tsx`
 Expected: FAIL — lógica de mudança de categoria não implementada.
 
 **Passo 4: Implementar as alterações**
@@ -385,7 +385,7 @@ Ajustar o handler `handleEditChecklistItem` para receber ou consultar o item ori
 
 **Passo 5: Executar os testes para garantir que passam**
 
-Run: `npx vitest run __tests__/app/finance/transactions-checklist-overflow.test.tsx`
+Run: `npx vitest run __tests__/app/pluto/transactions-checklist-overflow.test.tsx`
 Expected: PASS.
 
 **Passo 6: Executar suíte completa de regressão**
@@ -400,7 +400,7 @@ Run: `node .agents/scripts/sdd.js task-complete 5`
 **Passo 8: Commit**
 
 ```bash
-git add app/finance/transactions/page.tsx __tests__/app/finance/transactions-checklist-overflow.test.tsx
+git add app/pluto/transactions/page.tsx __tests__/app/pluto/transactions-checklist-overflow.test.tsx
 node .agents/scripts/sdd.js commit "feat(03a): verificar estouro ao alterar category_id de item global"
 ```
 

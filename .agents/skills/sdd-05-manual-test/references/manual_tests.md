@@ -8,7 +8,7 @@ Estes cenários servem para validar manualmente o comportamento de edições e a
 **Objetivo:** Validar que o parâmetro `?mockMonth=M` bloqueia edições em meses anteriores e permite em meses vigentes/futuros.
 
 1. **Ação:** Acesse a página com o query param do mês de Maio:
-   [http://localhost:3000/finance/budget?mockMonth=5](http://localhost:3000/finance/budget?mockMonth=5)
+   [http://localhost:3000/pluto/budget?mockMonth=5](http://localhost:3000/pluto/budget?mockMonth=5)
 2. **Ação:** No dropdown de seleção de Mês (no cabeçalho), mude para **"Abril"** (mês 4, anterior ao mockMonth 5).
    *   **Resultado Esperado:**
        *   A etiqueta visual **"Fechado"** (vermelha) deve aparecer ao lado de "Previsões Cadastradas".
@@ -56,9 +56,9 @@ Estes cenários servem para validar manualmente o comportamento de edições e a
 ---
 
 ## 4. Gestão de Meses e Períodos
-**Objetivo:** Validar que o usuário consegue abrir e encerrar um mês operacional na tela `/finance/months`.
+**Objetivo:** Validar que o usuário consegue abrir e encerrar um mês operacional na tela `/pluto/months`.
 
-1. **Ação:** Acesse a tela de gestão de meses em [http://localhost:3000/finance/months](http://localhost:3000/finance/months).
+1. **Ação:** Acesse a tela de gestão de meses em [http://localhost:3000/pluto/months](http://localhost:3000/pluto/months).
 2. **Ação:** No grid de cards, clique em **"Abrir Mês"** para qualquer mês no status "Não Iniciado".
    *   **Resultado Esperado:** O status do mês muda para **"Aberto"** (cor verde) e o botão muda para **"Encerrar Mês"**.
 3. **Ação:** No card do mês aberto, clique em **"Encerrar Mês"**.
@@ -66,10 +66,10 @@ Estes cenários servem para validar manualmente o comportamento de edições e a
 
 ---
 
-## 5. Cadastro de Transações (`/finance/transactions`)
+## 5. Cadastro de Transações (`/pluto/transactions`)
 **Objetivo:** Validar o registro de receitas, despesas, estornos e criação inline de contas e categorias.
 
-1. **Ação:** Acesse a tela de lançamentos em [http://localhost:3000/finance/transactions](http://localhost:3000/finance/transactions).
+1. **Ação:** Acesse a tela de lançamentos em [http://localhost:3000/pluto/transactions](http://localhost:3000/pluto/transactions).
 2. **Ação:** Clique em **"+ Nova Transação"**.
 3. **Ação:** Preencha Descrição (ex: "Supermercado"), Valor (ex: "150.00"), Tipo ("Despesa"), Conta (ex: "Itaú") e Categoria (ex: "Alimentação"). Clique em **"Salvar Transação"**.
    * **Resultado Esperado:** Se o mês selecionado no topo estiver 'Aberto', o lançamento aparece na tabela e o card "Total Saídas" é recalculado.
@@ -78,10 +78,10 @@ Estes cenários servem para validar manualmente o comportamento de edições e a
 
 ---
 
-## 6. Edição e Exclusão de Lançamentos (`/finance/transactions`)
+## 6. Edição e Exclusão de Lançamentos (`/pluto/transactions`)
 **Objetivo:** Validar a alteração e remoção pontual de um lançamento em mês aberto.
 
-1. **Ação:** Acesse [http://localhost:3000/finance/transactions](http://localhost:3000/finance/transactions) em um mês com status **Aberto**.
+1. **Ação:** Acesse [http://localhost:3000/pluto/transactions](http://localhost:3000/pluto/transactions) em um mês com status **Aberto**.
 2. **Ação:** Na linha de qualquer lançamento da tabela de extrato da conta, clique no ícone de **Lápis (Editar)**.
    * **Resultado Esperado:** O modal abre com os dados atuais da transação. Altere o valor ou a descrição e clique em **Salvar**. A lista reflete a edição imediatamente.
 3. **Ação:** Na linha de um lançamento, clique no ícone de **Lixeira (Excluir)**.
@@ -93,7 +93,7 @@ Estes cenários servem para validar manualmente o comportamento de edições e a
 
 **Objetivo:** Validar a detecção e exibição de estouro de orçamento para itens do checklist (itens globais e itens pontuais).
 
-1. **Ação:** Acesse a página de transações em [http://localhost:3000/finance/transactions](http://localhost:3000/finance/transactions) com um mês **aberto**.
+1. **Ação:** Acesse a página de transações em [http://localhost:3000/pluto/transactions](http://localhost:3000/pluto/transactions) com um mês **aberto**.
 2. **Ação:** No checklist card, tente adicionar um item global quando o total já excede o orçamento da categoria.
    * **Resultado Esperado:** Modal de "Estouro de Orçamento Detectado" aparece, bloqueando a gravação e oferecendo passo a passo para ajuste de orçamento.
 3. **Ação:** Visualizar checklist com itens pontuais que excedem o orçamento da categoria.
@@ -106,11 +106,11 @@ Estes cenários servem para validar manualmente o comportamento de edições e a
 
 ---
 
-## 8. Saldo do Mês (`/finance/transactions`)
+## 8. Saldo do Mês (`/pluto/transactions`)
 
 **Objetivo:** Validar que o banner de saldo do mês reflete a diferença entre os totais dos cards Receitas e Despesas.
 
-1. **Ação:** Acesse [http://localhost:3000/finance/transactions](http://localhost:3000/finance/transactions) em um mês **Aberto**.
+1. **Ação:** Acesse [http://localhost:3000/pluto/transactions](http://localhost:3000/pluto/transactions) em um mês **Aberto**.
    * **Resultado Esperado:** Banner "💰 Saldo do Mês" exibido entre o checklist e os cards, com valor igual a Receitas − Despesas: verde se ≥ 0, vermelho se < 0.
 2. **Ação:** Lance uma despesa que torne o total negativo.
    * **Resultado Esperado:** O banner muda para vermelho e exibe o valor negativo imediatamente após a atualização da lista.

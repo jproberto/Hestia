@@ -4,7 +4,7 @@
 
 **Objetivo:** Implementar as funções de backend e a interface de usuário para permitir a edição e exclusão de lançamentos financeiros em meses com status aberto.
 
-**Arquitetura:** Adicionar funções de atualização (`updateTransaction`) e exclusão (`deleteTransaction`) em `lib/db/transactions.ts` com validação de período aberto. Atualizar a página `app/finance/transactions/page.tsx` para incluir a coluna de Ações na tabela de lançamentos, integrar o modal de edição reutilizando o formulário existente e exibir um modal de confirmação antes de excluir.
+**Arquitetura:** Adicionar funções de atualização (`updateTransaction`) e exclusão (`deleteTransaction`) em `lib/pluto/db/transactions.ts` com validação de período aberto. Atualizar a página `app/pluto/transactions/page.tsx` para incluir a coluna de Ações na tabela de lançamentos, integrar o modal de edição reutilizando o formulário existente e exibir um modal de confirmação antes de excluir.
 
 **Tech Stack:** Next.js (App Router), React, TypeScript, Supabase Client, Vitest, Testing Library.
 
@@ -17,21 +17,21 @@
 
 ## Estrutura de Arquivos
 
-- Modificar: `lib/db/transactions.ts` (Adicionar `updateTransaction` e `deleteTransaction`)
-- Modificar: `app/finance/transactions/page.tsx` (Adicionar coluna Ações, botões de Editar/Excluir, modal de edição e modal de confirmação de exclusão)
+- Modificar: `lib/pluto/db/transactions.ts` (Adicionar `updateTransaction` e `deleteTransaction`)
+- Modificar: `app/pluto/transactions/page.tsx` (Adicionar coluna Ações, botões de Editar/Excluir, modal de edição e modal de confirmação de exclusão)
 - Modificar: `package.json` (Bump de versão para `0.8.0`)
 - Modificar: `.agents/backlog.md` (Atualizar nota na Feature 7 sobre geração individual de parcelas)
-- Modificar/Criar Testes: `__tests__/lib/db/transactions.test.ts` e `__tests__/app/finance/transactions-page.test.tsx`
+- Modificar/Criar Testes: `__tests__/lib/pluto/db/transactions.test.ts` e `__tests__/app/pluto/transactions-page.test.tsx`
 
 ---
 
 ## Tarefas de Implementação
 
-### Tarefa 1: Funções de Backend para Edição e Exclusão (`lib/db/transactions.ts`)
+### Tarefa 1: Funções de Backend para Edição e Exclusão (`lib/pluto/db/transactions.ts`)
 
 **Arquivos:**
-- Modificar: `lib/db/transactions.ts`
-- Modificar: `__tests__/lib/db/transactions.test.ts`
+- Modificar: `lib/pluto/db/transactions.ts`
+- Modificar: `__tests__/lib/pluto/db/transactions.test.ts`
 
 **Interfaces:**
 - Consome: `SupabaseClient`, `TransactionInput`, `TransactionWithDetails`, tabela `monthly_periods`, tabela `transactions`.
@@ -42,7 +42,7 @@
 **Passo 1: Iniciar tarefa no CLI do SDD**
 Run: `node .agents/scripts/sdd.js task-start 1`
 
-**Passo 2: Escrever testes unitários em `__tests__/lib/db/transactions.test.ts`**
+**Passo 2: Escrever testes unitários em `__tests__/lib/pluto/db/transactions.test.ts`**
 - Testar se `updateTransaction` atualiza os campos com sucesso quando o mês da data do lançamento está aberto.
 - Testar se `updateTransaction` lança erro quando o mês da data do lançamento não está aberto.
 - Testar se `deleteTransaction` remove o lançamento com sucesso quando o mês está aberto.
@@ -52,7 +52,7 @@ Run: `node .agents/scripts/sdd.js task-start 1`
 Run: `npm run test`
 Expected: FAIL informando que `updateTransaction` e `deleteTransaction` não existem.
 
-**Passo 4: Implementar as funções em `lib/db/transactions.ts`**
+**Passo 4: Implementar as funções em `lib/pluto/db/transactions.ts`**
 - `updateTransaction`:
   1. Extrair ano e mês da nova data informada no `input`.
   2. Consultar `monthly_periods` para verificar se o mês está com `status === 'aberto'`. Se não estiver aberto, lançar erro informando que o período não permite edições.
@@ -73,26 +73,26 @@ Run: `node .agents/scripts/sdd.js task-complete 1`
 
 **Passo 7: Commit**
 ```bash
-git add lib/db/transactions.ts __tests__/lib/db/transactions.test.ts
+git add lib/pluto/db/transactions.ts __tests__/lib/pluto/db/transactions.test.ts
 node .agents/scripts/sdd.js commit "feat(db): adiciona funções updateTransaction e deleteTransaction com validação de mês aberto"
 ```
 
 ---
 
-### Tarefa 2: Interface de Edição e Exclusão (`app/finance/transactions/page.tsx`)
+### Tarefa 2: Interface de Edição e Exclusão (`app/pluto/transactions/page.tsx`)
 
 **Arquivos:**
-- Modificar: `app/finance/transactions/page.tsx`
-- Modificar: `__tests__/app/finance/transactions-page.test.tsx`
+- Modificar: `app/pluto/transactions/page.tsx`
+- Modificar: `__tests__/app/pluto/transactions-page.test.tsx`
 
 **Interfaces:**
-- Consome: `updateTransaction`, `deleteTransaction` de `lib/db/transactions.ts`, ícones de lápis (`Pencil`) e lixeira (`Trash2`) de `lucide-react`.
+- Consome: `updateTransaction`, `deleteTransaction` de `lib/pluto/db/transactions.ts`, ícones de lápis (`Pencil`) e lixeira (`Trash2`) de `lucide-react`.
 - Produz: Coluna de Ações na tabela de lançamentos, modal de edição e modal de confirmação de exclusão.
 
 **Passo 1: Iniciar tarefa no CLI do SDD**
 Run: `node .agents/scripts/sdd.js task-start 2`
 
-**Passo 2: Escrever/atualizar testes de interface em `__tests__/app/finance/transactions-page.test.tsx`**
+**Passo 2: Escrever/atualizar testes de interface em `__tests__/app/pluto/transactions-page.test.tsx`**
 - Testar se os botões de editar e excluir aparecem para cada linha da tabela de transações.
 - Testar se clicar no botão de editar abre o modal de formulário preenchido com os dados atuais.
 - Testar se enviar o formulário de edição chama `updateTransaction` e recarrega os dados.
@@ -103,7 +103,7 @@ Run: `node .agents/scripts/sdd.js task-start 2`
 Run: `npm run test`
 Expected: FAIL informando que os botões/modais de ação não foram encontrados.
 
-**Passo 4: Implementar os componentes e modais em `app/finance/transactions/page.tsx`**
+**Passo 4: Implementar os componentes e modais em `app/pluto/transactions/page.tsx`**
 1. **Coluna de Ações na Tabela:**
    - Adicionar o cabeçalho `<th>Ações</th>` e a célula `<td>` contendo os botões de Editar (lápis) e Excluir (lixeira) em cada linha.
 2. **Modal de Edição (Reutilização do Formulário):**
@@ -125,7 +125,7 @@ Run: `node .agents/scripts/sdd.js task-complete 2`
 
 **Passo 7: Commit**
 ```bash
-git add app/finance/transactions/page.tsx __tests__/app/finance/transactions-page.test.tsx
+git add app/pluto/transactions/page.tsx __tests__/app/pluto/transactions-page.test.tsx
 node .agents/scripts/sdd.js commit "feat(ui): adiciona coluna de ações, modal de edição e modal de exclusão de lançamentos"
 ```
 

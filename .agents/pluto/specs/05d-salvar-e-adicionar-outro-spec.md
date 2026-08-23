@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-Este documento especifica o aprimoramento de UX no modal de cadastro de transações da página financeira (`/finance/transactions`). O objetivo é otimizar o fluxo de entrada em lote para usuários que realizam múltiplos lançamentos em sequência (como preenchimento de faturas de cartão de crédito ou extratos bancários), evitando a necessidade de reabrir o modal a cada novo item.
+Este documento especifica o aprimoramento de UX no modal de cadastro de transações da página financeira (`/pluto/transactions`). O objetivo é otimizar o fluxo de entrada em lote para usuários que realizam múltiplos lançamentos em sequência (como preenchimento de faturas de cartão de crédito ou extratos bancários), evitando a necessidade de reabrir o modal a cada novo item.
 
 ---
 

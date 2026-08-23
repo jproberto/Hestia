@@ -44,11 +44,11 @@ Run: `node .agents/scripts/sdd.js commit "feat(db): adiciona migracao da tabela 
 
 ---
 
-### Tarefa 2: Criar a Camada de Banco de Dados (`lib/db/checklist.ts`) e Testes de Unidade
+### Tarefa 2: Criar a Camada de Banco de Dados (`lib/pluto/db/checklist.ts`) e Testes de Unidade
 
 **Arquivos:**
-- Criar: `lib/db/checklist.ts`
-- Criar: `__tests__/lib/db/checklist.test.ts`
+- Criar: `lib/pluto/db/checklist.ts`
+- Criar: `__tests__/lib/pluto/db/checklist.test.ts`
 
 **Interfaces:**
 - Consome: `SupabaseClient` de `@supabase/supabase-js`, tabela `public.checklist_items`.
@@ -66,24 +66,24 @@ Run: `node .agents/scripts/sdd.js commit "feat(db): adiciona migracao da tabela 
 Run: `node .agents/scripts/sdd.js task-start 2`
 
 **Passo 2: Escrever o teste unitário que falha (RED)**
-Crie `__tests__/lib/db/checklist.test.ts` testando a estrutura de retorno das funções `getChecklistItemsByMonth`, `createChecklistItem`, `updateChecklistItem`, `deleteChecklistItem` e `instantiateGlobalChecklistItemsForMonth` utilizando mocks do Supabase.
+Crie `__tests__/lib/pluto/db/checklist.test.ts` testando a estrutura de retorno das funções `getChecklistItemsByMonth`, `createChecklistItem`, `updateChecklistItem`, `deleteChecklistItem` e `instantiateGlobalChecklistItemsForMonth` utilizando mocks do Supabase.
 
 **Passo 3: Executar o teste e verificar que falha**
-Run: `npm test __tests__/lib/db/checklist.test.ts`
-Expected: FAIL informando que a biblioteca `@/lib/db/checklist` ou suas funções não existem.
+Run: `npm test __tests__/lib/pluto/db/checklist.test.ts`
+Expected: FAIL informando que a biblioteca `@/lib/pluto/db/checklist` ou suas funções não existem.
 
-**Passo 4: Implementar a camada `lib/db/checklist.ts` (GREEN)**
-Crie `lib/db/checklist.ts` exportando as interfaces e implementando as funções de consulta, criação, atualização, exclusão e instanciação com Supabase Client.
+**Passo 4: Implementar a camada `lib/pluto/db/checklist.ts` (GREEN)**
+Crie `lib/pluto/db/checklist.ts` exportando as interfaces e implementando as funções de consulta, criação, atualização, exclusão e instanciação com Supabase Client.
 
 **Passo 5: Executar o teste e confirmar sucesso**
-Run: `npm test __tests__/lib/db/checklist.test.ts`
+Run: `npm test __tests__/lib/pluto/db/checklist.test.ts`
 Expected: PASS
 
 **Passo 6: Executar conclusão da tarefa no CLI do SDD**
 Run: `node .agents/scripts/sdd.js task-complete 2`
 
 **Passo 7: Commit**
-Run: `git add lib/db/checklist.ts __tests__/lib/db/checklist.test.ts`
+Run: `git add lib/pluto/db/checklist.ts __tests__/lib/pluto/db/checklist.test.ts`
 Run: `node .agents/scripts/sdd.js commit "feat(db): implementa camada db e testes unitarios para checklist_items"`
 
 ---
@@ -91,35 +91,35 @@ Run: `node .agents/scripts/sdd.js commit "feat(db): implementa camada db e teste
 ### Tarefa 3: Integrar a Instanciação dos Modelos do Checklist na Abertura do Mês
 
 **Arquivos:**
-- Modificar: `lib/db/months.ts`
-- Modificar ou Criar: `__tests__/lib/db/months-checklist.test.ts`
+- Modificar: `lib/pluto/db/months.ts`
+- Modificar ou Criar: `__tests__/lib/pluto/db/months-checklist.test.ts`
 
 **Interfaces:**
-- Consome: `instantiateGlobalChecklistItemsForMonth` de `lib/db/checklist.ts`, `openMonthlyPeriod` de `lib/db/months.ts`.
+- Consome: `instantiateGlobalChecklistItemsForMonth` de `lib/pluto/db/checklist.ts`, `openMonthlyPeriod` de `lib/pluto/db/months.ts`.
 - Produz: Atualização em `openMonthlyPeriod` para que, após upsert na tabela `monthly_periods`, obtenha o `id` daquele período e invoque a cópia dos modelos globais ativos (`is_active = true`).
 
 **Passo 1: Executar o início da tarefa no CLI do SDD**
 Run: `node .agents/scripts/sdd.js task-start 3`
 
 **Passo 2: Escrever o teste unitário que falha (RED)**
-Crie ou altere `__tests__/lib/db/months-checklist.test.ts` verificando que a chamada a `openMonthlyPeriod` invoca a função de clonagem dos itens do checklist para o mês que foi aberto.
+Crie ou altere `__tests__/lib/pluto/db/months-checklist.test.ts` verificando que a chamada a `openMonthlyPeriod` invoca a função de clonagem dos itens do checklist para o mês que foi aberto.
 
 **Passo 3: Executar o teste e verificar que falha**
-Run: `npm test __tests__/lib/db/months-checklist.test.ts`
+Run: `npm test __tests__/lib/pluto/db/months-checklist.test.ts`
 Expected: FAIL pois a clonagem de modelos ainda não é chamada em `openMonthlyPeriod`.
 
-**Passo 4: Modificar `lib/db/months.ts` (GREEN)**
+**Passo 4: Modificar `lib/pluto/db/months.ts` (GREEN)**
 Atualize `openMonthlyPeriod` para selecionar o ID do registro inserido/atualizado em `monthly_periods` e executar `instantiateGlobalChecklistItemsForMonth(supabase, monthId, email)`.
 
 **Passo 5: Executar o teste e confirmar sucesso**
-Run: `npm test __tests__/lib/db/months-checklist.test.ts`
+Run: `npm test __tests__/lib/pluto/db/months-checklist.test.ts`
 Expected: PASS
 
 **Passo 6: Executar conclusão da tarefa no CLI do SDD**
 Run: `node .agents/scripts/sdd.js task-complete 3`
 
 **Passo 7: Commit**
-Run: `git add lib/db/months.ts __tests__/lib/db/months-checklist.test.ts`
+Run: `git add lib/pluto/db/months.ts __tests__/lib/pluto/db/months-checklist.test.ts`
 Run: `node .agents/scripts/sdd.js commit "feat(db): integra instanciacao automatica do checklist na abertura de mes"`
 
 ---
@@ -127,11 +127,11 @@ Run: `node .agents/scripts/sdd.js commit "feat(db): integra instanciacao automat
 ### Tarefa 4: Criar o Componente `ChecklistCard` (Alertas de Cores, Modais de Ação e Disparo de Transação)
 
 **Arquivos:**
-- Criar: `components/finance/ChecklistCard.tsx`
-- Criar: `__tests__/components/finance/ChecklistCard.test.tsx`
+- Criar: `components/pluto/ChecklistCard.tsx`
+- Criar: `__tests__/components/pluto/ChecklistCard.test.tsx`
 
 **Interfaces:**
-- Consome: `ChecklistItem` de `@/lib/db/checklist`, `Category` de `@/lib/db/categories`, funções de CRUD do checklist.
+- Consome: `ChecklistItem` de `@/lib/pluto/db/checklist`, `Category` de `@/lib/pluto/db/categories`, funções de CRUD do checklist.
 - Produz: Componente React `ChecklistCard` que aceita os props:
   - `items: ChecklistItem[]`
   - `categories: Category[]`
@@ -148,56 +148,56 @@ Run: `node .agents/scripts/sdd.js commit "feat(db): integra instanciacao automat
 Run: `node .agents/scripts/sdd.js task-start 4`
 
 **Passo 2: Escrever o teste visual/interativo que falha (RED)**
-Crie `__tests__/components/finance/ChecklistCard.test.tsx` testando:
+Crie `__tests__/components/pluto/ChecklistCard.test.tsx` testando:
 1. Renderização das faixas de urgência (vermelho para vencidos, amarelo para 0-3 dias, verde para 4+ dias, cinza tachado para marcados).
 2. Clique no checkbox invocando `onToggleItem` e disparando `onTriggerTransactionModal` com a conta em branco.
 3. Desabilitação de interações se `isMonthOpen` for falso.
 
 **Passo 3: Executar o teste e verificar que falha**
-Run: `npm test __tests__/components/finance/ChecklistCard.test.tsx`
-Expected: FAIL informando que `@/components/finance/ChecklistCard` não existe.
+Run: `npm test __tests__/components/pluto/ChecklistCard.test.tsx`
+Expected: FAIL informando que `@/components/pluto/ChecklistCard` não existe.
 
-**Passo 4: Criar o componente `components/finance/ChecklistCard.tsx` (GREEN)**
+**Passo 4: Criar o componente `components/pluto/ChecklistCard.tsx` (GREEN)**
 Implemente o componente com tabela/cards de itens, ordenação por dia, badge de status/cor de urgência, checkbox de conclusão, botões de edição/exclusão com modal de confirmação de escopo ("Apenas neste mês" vs "No modelo global") e formulário modal de inclusão de novo item.
 
 **Passo 5: Executar o teste e confirmar sucesso**
-Run: `npm test __tests__/components/finance/ChecklistCard.test.tsx`
+Run: `npm test __tests__/components/pluto/ChecklistCard.test.tsx`
 Expected: PASS
 
 **Passo 6: Executar conclusão da tarefa no CLI do SDD**
 Run: `node .agents/scripts/sdd.js task-complete 4`
 
 **Passo 7: Commit**
-Run: `git add components/finance/ChecklistCard.tsx __tests__/components/finance/ChecklistCard.test.tsx`
+Run: `git add components/pluto/ChecklistCard.tsx __tests__/components/pluto/ChecklistCard.test.tsx`
 Run: `node .agents/scripts/sdd.js commit "feat(ui): cria componente ChecklistCard com urgencia visual e modais de escopo"`
 
 ---
 
-### Tarefa 5: Integrar o Checklist na Tela de Transações do Mês Aberto (`app/finance/transactions/page.tsx`)
+### Tarefa 5: Integrar o Checklist na Tela de Transações do Mês Aberto (`app/pluto/transactions/page.tsx`)
 
 **Arquivos:**
-- Modificar: `app/finance/transactions/page.tsx`
-- Criar ou Modificar: `__tests__/app/finance/transactions-checklist.test.tsx`
+- Modificar: `app/pluto/transactions/page.tsx`
+- Criar ou Modificar: `__tests__/app/pluto/transactions-checklist.test.tsx`
 
 **Interfaces:**
-- Consome: `ChecklistCard` de `@/components/finance/ChecklistCard`, funções de DB em `lib/db/checklist.ts`.
-- Produz: Integração do card de checklist na página do mês aberto (`app/finance/transactions/page.tsx`), buscando os itens do checklist do mês selecionado, permitindo adicionar/editar/deletar/marcar e abrindo o modal de transações com os dados pré-preenchidos (descrição, tipo, valor, categoria e data) mantendo o seletor de Conta em branco.
+- Consome: `ChecklistCard` de `@/components/pluto/ChecklistCard`, funções de DB em `lib/pluto/db/checklist.ts`.
+- Produz: Integração do card de checklist na página do mês aberto (`app/pluto/transactions/page.tsx`), buscando os itens do checklist do mês selecionado, permitindo adicionar/editar/deletar/marcar e abrindo o modal de transações com os dados pré-preenchidos (descrição, tipo, valor, categoria e data) mantendo o seletor de Conta em branco.
 
 **Passo 1: Executar o início da tarefa no CLI do SDD**
 Run: `node .agents/scripts/sdd.js task-start 5`
 
 **Passo 2: Escrever o teste de integração que falha (RED)**
-Crie `__tests__/app/finance/transactions-checklist.test.tsx` simulando o fluxo de carregar a página de transações, carregar o checklist do mês, marcar um item do checklist e verificar se o modal de transação abre com a descrição, valor e categoria preenchidos, deixando a conta vazia.
+Crie `__tests__/app/pluto/transactions-checklist.test.tsx` simulando o fluxo de carregar a página de transações, carregar o checklist do mês, marcar um item do checklist e verificar se o modal de transação abre com a descrição, valor e categoria preenchidos, deixando a conta vazia.
 
 **Passo 3: Executar o teste e verificar que falha**
-Run: `npm test __tests__/app/finance/transactions-checklist.test.tsx`
+Run: `npm test __tests__/app/pluto/transactions-checklist.test.tsx`
 Expected: FAIL informando que o checklist não é renderizado na página de transações.
 
-**Passo 4: Modificar `app/finance/transactions/page.tsx` (GREEN)**
+**Passo 4: Modificar `app/pluto/transactions/page.tsx` (GREEN)**
 Adicione a busca de `checklistItems` na função de carregamento da página, renderize o `ChecklistCard` acima ou ao lado das transações e conecte o handler de marcação do checklist para abrir o modal de nova transação preenchendo os estados correspondentes do formulário com a conta zerada/em branco.
 
 **Passo 5: Executar o teste e confirmar sucesso**
-Run: `npm test __tests__/app/finance/transactions-checklist.test.tsx`
+Run: `npm test __tests__/app/pluto/transactions-checklist.test.tsx`
 Expected: PASS
 
 **Passo 6: Executar a suíte completa de testes para garantir que nada quebrou**
@@ -208,7 +208,7 @@ Expected: ALL PASS
 Run: `node .agents/scripts/sdd.js task-complete 5`
 
 **Passo 8: Commit**
-Run: `git add app/finance/transactions/page.tsx __tests__/app/finance/transactions-checklist.test.tsx`
+Run: `git add app/pluto/transactions/page.tsx __tests__/app/pluto/transactions-checklist.test.tsx`
 Run: `node .agents/scripts/sdd.js commit "feat(ui): integra checklist de contas a pagar na tela de transacoes"`
 
 ---

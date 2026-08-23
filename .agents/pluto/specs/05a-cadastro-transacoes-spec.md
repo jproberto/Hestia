@@ -9,7 +9,7 @@
 
 ## 1. Visão Geral e Objetivos
 
-Este refinamento tem como objetivo transformar a página de Lançamentos (`/finance/transactions`) em um painel integrado de **Acompanhamento Orçado vs. Real** e **Extrato por Contas/Cartões**, atendendo rigorosamente à linguagem visual do projeto Héstia (Tailwind CSS + componentes padrão).
+Este refinamento tem como objetivo transformar a página de Lançamentos (`/pluto/transactions`) em um painel integrado de **Acompanhamento Orçado vs. Real** e **Extrato por Contas/Cartões**, atendendo rigorosamente à linguagem visual do projeto Héstia (Tailwind CSS + componentes padrão).
 
 ---
 
@@ -68,7 +68,7 @@ Exibir duas áreas dispostas lado a lado (grid responsivo de 2 colunas):
 
 ## 4. Critérios de Aceite
 
-- [ ] A página `/finance/transactions` segue o padrão visual Tailwind CSS / Héstia igual a `/finance/budget` e `/finance/months`.
+- [ ] A página `/pluto/transactions` segue o padrão visual Tailwind CSS / Héstia igual a `/pluto/budget` e `/pluto/months`.
 - [ ] O dropdown de Anos exibe apenas os anos com meses abertos.
 - [ ] O dropdown de Meses exibe apenas os meses abertos do ano escolhido.
 - [ ] O formulário limita o seletor de data estritamente aos dias do mês selecionado.

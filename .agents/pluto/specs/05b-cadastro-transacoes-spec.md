@@ -9,7 +9,7 @@
 
 ## 1. Visão Geral e Ajustes Solicitados
 
-Este patch aprimora a ergonomia visual, o contraste de cores e o fluxo de cadastro da tela `/finance/transactions`, implementando:
+Este patch aprimora a ergonomia visual, o contraste de cores e o fluxo de cadastro da tela `/pluto/transactions`, implementando:
 1. **Melhoria do Contraste Visual:** Ajuste nos cabeçalhos de Receitas e Despesas para garantirem contraste forte e legibilidade, removendo a expressão `(Orçado vs Real)`.
 2. **Grid de 2 Colunas para Contas/Cartões:** Exibição dos blocos de extrato de contas em layout de 2 colunas responsivas (`grid grid-cols-1 md:grid-cols-2`).
 3. **Ação Contextual por Conta:** Cada Conta/Cartão terá o seu próprio botão **"+ Nova Transação"**. Ao clicar, o modal abre com a conta pré-fixada e desabilitada para alteração (sem necessidade de digitar/selecionar a conta).

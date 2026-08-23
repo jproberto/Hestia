@@ -6,10 +6,10 @@
 
 **Arquitetura:** 
 - Tabela `public.accounts` e `public.transactions` no Supabase com RLS.
-- Módulo `lib/db/accounts.ts` para gerenciamento e busca/criação inline de contas.
-- Módulo `lib/db/categories.ts` estendido para suporte a busca/criação inline de categorias.
-- Módulo `lib/db/transactions.ts` para criação e consulta de lançamentos com validação server-side de mês aberto.
-- Rota e Interface Next.js App Router em `/finance/transactions` contendo seletor de mês, cards de resumo (Entradas, Saídas, Resultado) e modal de lançamento.
+- Módulo `lib/pluto/db/accounts.ts` para gerenciamento e busca/criação inline de contas.
+- Módulo `lib/pluto/db/categories.ts` estendido para suporte a busca/criação inline de categorias.
+- Módulo `lib/pluto/db/transactions.ts` para criação e consulta de lançamentos com validação server-side de mês aberto.
+- Rota e Interface Next.js App Router em `/pluto/transactions` contendo seletor de mês, cards de resumo (Entradas, Saídas, Resultado) e modal de lançamento.
 
 **Tech Stack:** Next.js, React, Supabase Client, TypeScript, Jest / React Testing Library, Tailwind CSS / CSS Vanilla.
 
@@ -25,15 +25,15 @@
 
 ### Criar:
 - `utils/migrations/migration-feature-5.sql`
-- `lib/db/accounts.ts`
-- `lib/db/transactions.ts`
-- `__tests__/lib/db/accounts.test.ts`
-- `__tests__/lib/db/transactions.test.ts`
-- `app/finance/transactions/page.tsx`
-- `__tests__/app/finance/transactions-page.test.tsx`
+- `lib/pluto/db/accounts.ts`
+- `lib/pluto/db/transactions.ts`
+- `__tests__/lib/pluto/db/accounts.test.ts`
+- `__tests__/lib/pluto/db/transactions.test.ts`
+- `app/pluto/transactions/page.tsx`
+- `__tests__/app/pluto/transactions-page.test.tsx`
 
 ### Modificar:
-- `lib/db/categories.ts` (se necessário para busca/criação inline)
+- `lib/pluto/db/categories.ts` (se necessário para busca/criação inline)
 - `package.json` (bump da versão minor)
 
 ---
@@ -61,90 +61,90 @@
 
 ---
 
-### Tarefa 2: Camada de Acesso a Dados de Contas (`lib/db/accounts.ts`) e Categorias Inline
+### Tarefa 2: Camada de Acesso a Dados de Contas (`lib/pluto/db/accounts.ts`) e Categorias Inline
 **Objetivo:** Desenvolver as funções para busca e criação inline de contas e suporte à busca/criação inline de categorias.
 
 **Arquivos:**
-- Criar: `lib/db/accounts.ts`
-- Modificar: `lib/db/categories.ts`
-- Criar: `__tests__/lib/db/accounts.test.ts`
+- Criar: `lib/pluto/db/accounts.ts`
+- Modificar: `lib/pluto/db/categories.ts`
+- Criar: `__tests__/lib/pluto/db/accounts.test.ts`
 
 **Interfaces:**
-- Produz: Funções `getAccounts` e `findOrCreateAccount` em `lib/db/accounts.ts`.
-- Produz: Função `findOrCreateCategory` em `lib/db/categories.ts`.
+- Produz: Funções `getAccounts` e `findOrCreateAccount` em `lib/pluto/db/accounts.ts`.
+- Produz: Função `findOrCreateCategory` em `lib/pluto/db/categories.ts`.
 
 **Passos de Execução:**
 1. Iniciar a tarefa no CLI do SDD:
    `node .agents/scripts/sdd.js task-start 2`
-2. Criar arquivo de teste `__tests__/lib/db/accounts.test.ts` que valida a listagem de contas e a criação de conta nova ou reaproveitamento de conta existente por nome.
+2. Criar arquivo de teste `__tests__/lib/pluto/db/accounts.test.ts` que valida a listagem de contas e a criação de conta nova ou reaproveitamento de conta existente por nome.
 3. Executar o teste e confirmar falha (Red):
-   `npx jest __tests__/lib/db/accounts.test.ts`
-4. Implementar o módulo `lib/db/accounts.ts` com as funções tipadas e adicionar a busca/criação inline em `lib/db/categories.ts`.
+   `npx jest __tests__/lib/pluto/db/accounts.test.ts`
+4. Implementar o módulo `lib/pluto/db/accounts.ts` com as funções tipadas e adicionar a busca/criação inline em `lib/pluto/db/categories.ts`.
 5. Executar o teste e confirmar sucesso (Green):
-   `npx jest __tests__/lib/db/accounts.test.ts`
+   `npx jest __tests__/lib/pluto/db/accounts.test.ts`
 6. Concluir a tarefa no CLI do SDD:
    `node .agents/scripts/sdd.js task-complete 2`
 7. Commit:
-   `git add lib/db/accounts.ts lib/db/categories.ts __tests__/lib/db/accounts.test.ts`
+   `git add lib/pluto/db/accounts.ts lib/pluto/db/categories.ts __tests__/lib/pluto/db/accounts.test.ts`
    `node .agents/scripts/sdd.js commit "feat(lib): adicionar abstracao de banco para contas e categorias inline"`
 
 ---
 
-### Tarefa 3: Camada de Acesso a Dados de Transações e Lógica de Mês Aberto (`lib/db/transactions.ts`)
+### Tarefa 3: Camada de Acesso a Dados de Transações e Lógica de Mês Aberto (`lib/pluto/db/transactions.ts`)
 **Objetivo:** Implementar o cadastro e consulta de transações por mês, garantindo a trava de segurança que impede lançamentos em meses não abertos.
 
 **Arquivos:**
-- Criar: `lib/db/transactions.ts`
-- Criar: `__tests__/lib/db/transactions.test.ts`
+- Criar: `lib/pluto/db/transactions.ts`
+- Criar: `__tests__/lib/pluto/db/transactions.test.ts`
 
 **Interfaces:**
-- Consome: `getMonthlyPeriods` de `lib/db/months.ts`, `accounts` e `categories`.
-- Produz: Funções `getTransactionsByMonth` e `createTransaction` em `lib/db/transactions.ts`.
+- Consome: `getMonthlyPeriods` de `lib/pluto/db/months.ts`, `accounts` e `categories`.
+- Produz: Funções `getTransactionsByMonth` e `createTransaction` em `lib/pluto/db/transactions.ts`.
 
 **Passos de Execução:**
 1. Iniciar a tarefa no CLI do SDD:
    `node .agents/scripts/sdd.js task-start 3`
-2. Criar arquivo de teste `__tests__/lib/db/transactions.test.ts` cobrindo os cenários:
+2. Criar arquivo de teste `__tests__/lib/pluto/db/transactions.test.ts` cobrindo os cenários:
    - Inserção de transação em mês com `status = 'aberto'` (sucesso).
    - Inserção de transação em mês sem status `'aberto'` ou não iniciado (deve lançar erro).
    - Cálculo de despesas normais vs despesas com `is_refund = true`.
 3. Executar os testes e confirmar falha (Red):
-   `npx jest __tests__/lib/db/transactions.test.ts`
-4. Implementar as funções em `lib/db/transactions.ts` incluindo a verificação do estado do mês em `monthly_periods` antes da inserção.
+   `npx jest __tests__/lib/pluto/db/transactions.test.ts`
+4. Implementar as funções em `lib/pluto/db/transactions.ts` incluindo a verificação do estado do mês em `monthly_periods` antes da inserção.
 5. Executar os testes e confirmar sucesso (Green):
-   `npx jest __tests__/lib/db/transactions.test.ts`
+   `npx jest __tests__/lib/pluto/db/transactions.test.ts`
 6. Concluir a tarefa no CLI do SDD:
    `node .agents/scripts/sdd.js task-complete 3`
 7. Commit:
-   `git add lib/db/transactions.ts __tests__/lib/db/transactions.test.ts`
+   `git add lib/pluto/db/transactions.ts __tests__/lib/pluto/db/transactions.test.ts`
    `node .agents/scripts/sdd.js commit "feat(lib): adicionar operacoes de transacoes com validacao de mes aberto"`
 
 ---
 
-### Tarefa 4: Interface do Usuário e Tela de Transações (`app/finance/transactions/page.tsx`)
-**Objetivo:** Construir a página `/finance/transactions` com seletor mensal, resumo financeiro (Entradas, Saídas, Resultado), modal de formulário com suporte a criação inline e tabela de extrato.
+### Tarefa 4: Interface do Usuário e Tela de Transações (`app/pluto/transactions/page.tsx`)
+**Objetivo:** Construir a página `/pluto/transactions` com seletor mensal, resumo financeiro (Entradas, Saídas, Resultado), modal de formulário com suporte a criação inline e tabela de extrato.
 
 **Arquivos:**
-- Criar: `app/finance/transactions/page.tsx`
-- Criar: `__tests__/app/finance/transactions-page.test.tsx`
+- Criar: `app/pluto/transactions/page.tsx`
+- Criar: `__tests__/app/pluto/transactions-page.test.tsx`
 
 **Interfaces:**
 - Consome: `getTransactionsByMonth`, `createTransaction`, `getAccounts`, `findOrCreateAccount`, `findOrCreateCategory`.
-- Produz: Interface responsiva em `/finance/transactions`.
+- Produz: Interface responsiva em `/pluto/transactions`.
 
 **Passos de Execução:**
 1. Iniciar a tarefa no CLI do SDD:
    `node .agents/scripts/sdd.js task-start 4`
-2. Criar teste de UI `__tests__/app/finance/transactions-page.test.tsx` validando renderização da página, formulário e tratamentos de erro.
+2. Criar teste de UI `__tests__/app/pluto/transactions-page.test.tsx` validando renderização da página, formulário e tratamentos de erro.
 3. Executar o teste e confirmar falha (Red):
-   `npx jest __tests__/app/finance/transactions-page.test.tsx`
-4. Implementar a página `app/finance/transactions/page.tsx` garantindo a inclusão das abas de navegação, seletores, cards de resumo, formulário/modal com toggle `is_refund` e tabela de lançamentos.
+   `npx jest __tests__/app/pluto/transactions-page.test.tsx`
+4. Implementar a página `app/pluto/transactions/page.tsx` garantindo a inclusão das abas de navegação, seletores, cards de resumo, formulário/modal com toggle `is_refund` e tabela de lançamentos.
 5. Executar os testes e confirmar sucesso (Green):
-   `npx jest __tests__/app/finance/transactions-page.test.tsx`
+   `npx jest __tests__/app/pluto/transactions-page.test.tsx`
 6. Concluir a tarefa no CLI do SDD:
    `node .agents/scripts/sdd.js task-complete 4`
 7. Commit:
-   `git add app/finance/transactions/page.tsx __tests__/app/finance/transactions-page.test.tsx`
+   `git add app/pluto/transactions/page.tsx __tests__/app/pluto/transactions-page.test.tsx`
    `node .agents/scripts/sdd.js commit "feat(ui): implementar pagina e formulario de cadastro de transacoes"`
 
 ---
@@ -174,7 +174,7 @@
 ## Cenários de Teste Manuais de Aceitação
 
 ### Cenário 1: Tentar Lançar em Mês Fechado / Não Iniciado
-- **Dado** que o usuário está na página `/finance/transactions`.
+- **Dado** que o usuário está na página `/pluto/transactions`.
 - **Quando** ele tentar registrar uma transação com uma data cujo mês não está 'aberto'.
 - **Então** o sistema deve bloquear o envio e exibir um alerta explicativo.
 

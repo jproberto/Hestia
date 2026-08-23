@@ -82,7 +82,7 @@ Para todos os itens **não concluídos** (`is_completed = falso`) exibidos em um
 
 ## 4. Experiência de Uso (UX) e Layout
 
-1. **Localização:** O checklist é exibido em um card/seção dedicado dentro da página do Mês Aberto (`app/finance/months/[id]`), posicionado de forma visível em conjunto com o resumo do mês e a lista de transações.
+1. **Localização:** O checklist é exibido em um card/seção dedicado dentro da página do Mês Aberto (`app/pluto/months/[id]`), posicionado de forma visível em conjunto com o resumo do mês e a lista de transações.
 2. **Ordenação:** Os itens do checklist são exibidos ordenados primariamente pelo dia de vencimento (`day` em ordem crescente) e secundariamente pela descrição.
 3. **Indicador Visual de Urgência:** Cada linha exibe um selo ou indicador colorido de acordo com a faixa de urgência (Vermelho, Amarelo, Verde ou Cinza tachado).
 4. **Formulário de Item:** Modal ou formulário inline simples contendo os campos: Dia, Descrição, Tipo, Categoria, Valor Previsto (opcional) e seletor de escopo ("Apenas neste mês" vs "No modelo global").

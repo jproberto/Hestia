@@ -25,7 +25,7 @@
 ### Tarefa 1: Ajuste Visual da Exibição do Saldo
 
 **Arquivos:**
-* Modificar: `app/finance/transactions/page.tsx` (ou componente relevante de lista de lançamentos)
+* Modificar: `app/pluto/transactions/page.tsx` (ou componente relevante de lista de lançamentos)
 
 **Interfaces:**
 * Consome: Agregadores existentes de `totalReceitas` e `totalDespesas` da página
@@ -58,7 +58,7 @@ Run: `node .agents/scripts/sdd.js task-complete 1`
 **Passo 7: Commit**
 Run:
 ```bash
-git add app/finance/transactions/page.tsx
+git add app/pluto/transactions/page.tsx
 node .agents/scripts/sdd.js commit "feat: exibir saldo do mês em destaque na página de lançamentos"
 ```
 
@@ -67,7 +67,7 @@ node .agents/scripts/sdd.js commit "feat: exibir saldo do mês em destaque na p�
 ### Tarefa 2: Verificação Final e Integração
 
 **Arquivos:**
-* Modificar: `app/finance/transactions/page.tsx` (eventual ajuste fino)
+* Modificar: `app/pluto/transactions/page.tsx` (eventual ajuste fino)
 
 **Interfaces:**
 * Consome: Mesmo agregadores da Tarefa 1
@@ -91,7 +91,7 @@ Run: `node .agents/scripts/sdd.js task-complete 2`
 **Passo 5: Commit**
 Run:
 ```bash
-git add app/finance/transactions/page.tsx
+git add app/pluto/transactions/page.tsx
 node .agents/scripts/sdd.js commit "feat: ajuste fino de integração do saldo destacado"
 ```
 

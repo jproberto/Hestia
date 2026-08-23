@@ -4,7 +4,7 @@
 
 **Objetivo:** Permitir a abertura operacional explícita de meses orçamentários para possibilitar futuros lançamentos e assegurar restrições de alterações financeiras.
 
-**Arquitetura:** Criação de uma tabela de banco de dados independente (`monthly_periods`) no Supabase, contendo as funções de leitura e atualização no backend (`lib/db/months.ts`), uma interface de gerenciamento anual no Next.js (`app/finance/months/page.tsx`) e atalhos de navegação entre o Dashboard e as telas de finanças.
+**Arquitetura:** Criação de uma tabela de banco de dados independente (`monthly_periods`) no Supabase, contendo as funções de leitura e atualização no backend (`lib/pluto/db/months.ts`), uma interface de gerenciamento anual no Next.js (`app/pluto/months/page.tsx`) e atalhos de navegação entre o Dashboard e as telas de finanças.
 
 **Tech Stack:** Next.js (App Router, React 18, React DOM), Tailwind CSS, TypeScript, Supabase, Vitest, Testing Library.
 
@@ -80,8 +80,8 @@ node .agents/scripts/sdd.js commit "feat: adiciona migracao sql para controle de
 ### Tarefa 2: Abstração de Acesso a Dados (Lib / DB)
 
 **Arquivos:**
-* Criar: `lib/db/months.ts`
-* Testar: `__tests__/lib/db/months.test.ts`
+* Criar: `lib/pluto/db/months.ts`
+* Testar: `__tests__/lib/pluto/db/months.test.ts`
 
 **Interfaces:**
 * Consome: Tabela `public.monthly_periods`
@@ -95,11 +95,11 @@ node .agents/scripts/sdd.js commit "feat: adiciona migracao sql para controle de
 Run: `node .agents/scripts/sdd.js task-start 2`
 
 **Passo 2: Escrever os testes que falham**
-Criar o arquivo `__tests__/lib/db/months.test.ts` mockando o cliente Supabase para testar as operações da lib:
+Criar o arquivo `__tests__/lib/pluto/db/months.test.ts` mockando o cliente Supabase para testar as operações da lib:
 
 ```typescript
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod } from "@/lib/db/months";
+import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod } from "@/lib/pluto/db/months";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 const mockSupabase = {
@@ -171,11 +171,11 @@ describe("Serviço de Períodos Mensais", () => {
 ```
 
 **Passo 3: Executar o teste e garantir que falha**
-Run: `npx vitest run __tests__/lib/db/months.test.ts`
-Expected: FAIL (Cannot find module '@/lib/db/months')
+Run: `npx vitest run __tests__/lib/pluto/db/months.test.ts`
+Expected: FAIL (Cannot find module '@/lib/pluto/db/months')
 
 **Passo 4: Criar a implementação mínima**
-Criar o arquivo `lib/db/months.ts`:
+Criar o arquivo `lib/pluto/db/months.ts`:
 
 ```typescript
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -241,7 +241,7 @@ export async function closeMonthlyPeriod(
 ```
 
 **Passo 5: Executar os testes e garantir que passam**
-Run: `npx vitest run __tests__/lib/db/months.test.ts`
+Run: `npx vitest run __tests__/lib/pluto/db/months.test.ts`
 Expected: PASS
 
 **Passo 6: Concluir e marcar tarefa como concluída**
@@ -250,7 +250,7 @@ Run: `node .agents/scripts/sdd.js task-complete 2`
 **Passo 7: Commit**
 Run:
 ```bash
-git add lib/db/months.ts __tests__/lib/db/months.test.ts
+git add lib/pluto/db/months.ts __tests__/lib/pluto/db/months.test.ts
 node .agents/scripts/sdd.js commit "feat: adiciona servico e testes para gerenciamento de periodos mensais"
 ```
 
@@ -259,26 +259,26 @@ node .agents/scripts/sdd.js commit "feat: adiciona servico e testes para gerenci
 ### Tarefa 3: Tela de Gestão de Meses (UI Next.js)
 
 **Arquivos:**
-* Criar: `app/finance/months/page.tsx`
-* Testar: `__tests__/app/finance/months-page.test.tsx`
+* Criar: `app/pluto/months/page.tsx`
+* Testar: `__tests__/app/pluto/months-page.test.tsx`
 
 **Interfaces:**
 * Consome:
   * Componentes do UI do Shadcn (`@/components/ui/button`, etc.)
-  * Funções da lib `getMonthlyPeriods`, `openMonthlyPeriod`, `closeMonthlyPeriod` de `@/lib/db/months`
+  * Funções da lib `getMonthlyPeriods`, `openMonthlyPeriod`, `closeMonthlyPeriod` de `@/lib/pluto/db/months`
   * Supabase Client de `@/utils/supabase/client`
 
 **Passo 1: Iniciar a tarefa no CLI**
 Run: `node .agents/scripts/sdd.js task-start 3`
 
 **Passo 2: Escrever testes unitários para a página**
-Criar `__tests__/app/finance/months-page.test.tsx`:
+Criar `__tests__/app/pluto/months-page.test.tsx`:
 
 ```tsx
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
-import MonthsPage from "@/app/finance/months/page";
+import MonthsPage from "@/app/pluto/months/page";
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
-import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod } from "@/lib/db/months";
+import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod } from "@/lib/pluto/db/months";
 
 vi.mock("@/utils/supabase/client", () => ({
   createClient: () => ({
@@ -288,13 +288,13 @@ vi.mock("@/utils/supabase/client", () => ({
   })
 }));
 
-vi.mock("@/lib/db/months", () => ({
+vi.mock("@/lib/pluto/db/months", () => ({
   getMonthlyPeriods: vi.fn(),
   openMonthlyPeriod: vi.fn(),
   closeMonthlyPeriod: vi.fn(),
 }));
 
-describe("Página de Gestão de Meses /finance/months", () => {
+describe("Página de Gestão de Meses /pluto/months", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -343,18 +343,18 @@ describe("Página de Gestão de Meses /finance/months", () => {
 ```
 
 **Passo 3: Executar o teste e garantir que falha**
-Run: `npx vitest run __tests__/app/finance/months-page.test.tsx`
-Expected: FAIL (Cannot find module '@/app/finance/months/page')
+Run: `npx vitest run __tests__/app/pluto/months-page.test.tsx`
+Expected: FAIL (Cannot find module '@/app/pluto/months/page')
 
 **Passo 4: Criar a implementação da página de Gestão de Meses**
-Criar `app/finance/months/page.tsx`:
+Criar `app/pluto/months/page.tsx`:
 
 ```tsx
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod, MonthlyPeriod } from "@/lib/db/months";
+import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod, MonthlyPeriod } from "@/lib/pluto/db/months";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
@@ -437,10 +437,10 @@ export default function MonthsPage() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
       {/* Menu Superior Financeiro */}
       <div className="flex border-b pb-1 gap-6">
-        <Link href="/finance/budget" className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+        <Link href="/pluto/budget" className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground">
           Orçamento Anual
         </Link>
-        <Link href="/finance/months" className="pb-2 text-sm font-semibold border-b-2 border-primary text-foreground">
+        <Link href="/pluto/months" className="pb-2 text-sm font-semibold border-b-2 border-primary text-foreground">
           Meses e Períodos
         </Link>
       </div>
@@ -562,7 +562,7 @@ export default function MonthsPage() {
 ```
 
 **Passo 5: Executar os testes e garantir que passam**
-Run: `npx vitest run __tests__/app/finance/months-page.test.tsx`
+Run: `npx vitest run __tests__/app/pluto/months-page.test.tsx`
 Expected: PASS
 
 **Passo 6: Concluir e marcar tarefa como concluída**
@@ -571,7 +571,7 @@ Run: `node .agents/scripts/sdd.js task-complete 3`
 **Passo 7: Commit**
 Run:
 ```bash
-git add app/finance/months/page.tsx __tests__/app/finance/months-page.test.tsx
+git add app/pluto/months/page.tsx __tests__/app/pluto/months-page.test.tsx
 node .agents/scripts/sdd.js commit "feat: cria tela de gestao de meses com grid interativo"
 ```
 
@@ -581,7 +581,7 @@ node .agents/scripts/sdd.js commit "feat: cria tela de gestao de meses com grid 
 
 **Arquivos:**
 * Modificar: `app/dashboard/page.tsx`
-* Modificar: `app/finance/budget/page.tsx`
+* Modificar: `app/pluto/budget/page.tsx`
 * Modificar: `package.json`
 * Modificar: `.agents/backlog.md`
 
@@ -603,7 +603,7 @@ Modificar `app/dashboard/page.tsx` para adicionar o novo card de gestão de mese
 -      <div className="grid grid-cols-2 gap-6">
 +      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
          <Link
-           href="/finance/budget"
+           href="/pluto/budget"
            className="group flex flex-col gap-2 rounded-lg border p-6 hover:bg-muted/40 transition-colors"
          >
            <h2 className="text-lg font-bold group-hover:text-primary transition-colors">
@@ -615,7 +615,7 @@ Modificar `app/dashboard/page.tsx` para adicionar o novo card de gestão de mese
          </Link>
 +
 +        <Link
-+          href="/finance/months"
++          href="/pluto/months"
 +          className="group flex flex-col gap-2 rounded-lg border p-6 hover:bg-muted/40 transition-colors"
 +        >
 +          <h2 className="text-lg font-bold group-hover:text-primary transition-colors">
@@ -630,7 +630,7 @@ Modificar `app/dashboard/page.tsx` para adicionar o novo card de gestão de mese
 ```
 
 **Passo 3: Adicionar a barra de abas superior na tela de Orçamento**
-Modificar `app/finance/budget/page.tsx` para incluir o menu de navegação de abas idêntico ao criado na tela de meses.
+Modificar `app/pluto/budget/page.tsx` para incluir o menu de navegação de abas idêntico ao criado na tela de meses.
 Use a ferramenta `replace_file_content` para inserir as abas no início do retorno da página de orçamento (por volta da linha 248):
 
 ```diff
@@ -640,17 +640,17 @@ Use a ferramenta `replace_file_content` para inserir as abas no início do retor
      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
 +      {/* Menu Superior Financeiro */}
 +      <div className="flex border-b pb-1 gap-6">
-+        <Link href="/finance/budget" className="pb-2 text-sm font-semibold border-b-2 border-primary text-foreground">
++        <Link href="/pluto/budget" className="pb-2 text-sm font-semibold border-b-2 border-primary text-foreground">
 +          Orçamento Anual
 +        </Link>
-+        <Link href="/finance/months" className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground">
++        <Link href="/pluto/months" className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground">
 +          Meses e Períodos
 +        </Link>
 +      </div>
 +
        <div className="flex items-center justify-between border-b pb-4">
 ```
-*Observação: Não esqueça de adicionar a importação de `Link` se ela não existir no topo de `app/finance/budget/page.tsx` (já existe na linha 3).*
+*Observação: Não esqueça de adicionar a importação de `Link` se ela não existir no topo de `app/pluto/budget/page.tsx` (já existe na linha 3).*
 
 **Passo 4: Atualizar versão do package.json**
 Modificar o arquivo `package.json` alterando o campo `"version"` de `"0.3.1"` para `"0.4.0"` (SemVer Minor).
@@ -671,7 +671,7 @@ Run: `node .agents/scripts/sdd.js task-complete 4`
 **Passo 7: Commit final do plano**
 Run:
 ```bash
-git add app/dashboard/page.tsx app/finance/budget/page.tsx package.json
+git add app/dashboard/page.tsx app/pluto/budget/page.tsx package.json
 node .agents/scripts/sdd.js commit "feat: integra navegacao superior e atualiza versao do projeto para 0.4.0"
 ```
 
@@ -680,7 +680,7 @@ node .agents/scripts/sdd.js commit "feat: integra navegacao superior e atualiza 
 ## Cenários de Teste Manuais de Aceitação
 
 ### Cenário 1: Fluxo de Abertura de Período Não Iniciado
-* **Dado** que o usuário está autenticado e navega para `/finance/months`.
+* **Dado** que o usuário está autenticado e navega para `/pluto/months`.
 * **Quando** o usuário seleciona o ano `2026` e visualiza o grid de cards.
 * **Então** o card de `Janeiro` deve estar rotulado como **"Não Iniciado"** em cor cinza e com o botão **"Abrir Mês"** ativo.
 * **Quando** o usuário clica no botão **"Abrir Mês"** de `Janeiro`.

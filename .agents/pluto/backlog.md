@@ -1,6 +1,6 @@
-# Backlog — Painel de Controle Financeiro e Orçamentário Familiar
+# Backlog — Módulo Pluto (Finanças Familiares)
 
-## Contexto do produto
+## Contexto do módulo
 
 - **Stack:** Next.js hospedado na Vercel, banco de dados Supabase.
 - **Usuários:** 2 (login individual já implementado, vinculado à mesma família).
@@ -24,13 +24,13 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 | # | Feature | Descrição | Status | Specs | Planos |
 |---|---|---|---|---|--- |
 | 1 | **Orçamento anual por categoria** | É o ponto de partida do produto: antes de qualquer lançamento existir, o usuário define quanto pretende receber e gastar em cada categoria, mês a mês, para o ano inteiro. É aqui que a Categoria nasce como conceito — ao informar a primeira previsão, se a categoria não existir, ela é criada na hora, só com um nome. Não existe tela de cadastro de categoria separada; ela é sempre consequência de uma ação dentro do orçamento. | Concluído | [.agents/pluto/specs/01-orcamento-spec.md](file:///p:/workspace/IA/hestia/.agents/pluto/specs/01-orcamento-spec.md) | [.agents/pluto/plans/01-orcamento-plan.md](file:///p:/workspace/IA/hestia/.agents/pluto/plans/01-orcamento-plan.md) |
-| 2 | **Ajuste de orçamento ao longo do ano** | Complementa o item anterior: como a vida real diverge do planejado, o usuário precisa poder revisar os valores previstos de qualquer categoria. A regra de negócio importante aqui é que o adjustment vale a partir do mês em que está sendo feito em diante — meses que já passaram nunca são reescritos, preservando o histórico do que foi realmente planejado em cada momento. | Concluído | [.agents/pluto/specs/02-ajuste-orcamento-spec.md](file:///p:/workspace/IA/hestia/.agents/pluto/specs/02-ajuste-orcamento-spec.md) (Original) <br> [.agents/pluto/specs/02a-ajuste-orcamento-spec.md](file:///p:/workspace/IA/hestia/.agents/pluto/specs/02a-ajuste-orcamento-spec.md) (Patch/Correção) | [.agents/pluto/plans/02a-ajuste-orcamento-plan.md](file:///p:/workspace/IA/hestia/.agents/pluto/plans/02a-ajuste-orcamento-plan.md) <br> [.agents/logs/02a-ajuste-orcamento-tracker.md](file:///p:/workspace/IA/hestia/.agents/logs/02a-ajuste-orcamento-tracker.md) |
+| 2 | **Ajuste de orçamento ao longo do ano** | Complementa o item anterior: como a vida real diverge do planejado, o usuário precisa poder revisar os valores previstos de qualquer categoria. A regra de negócio importante aqui é que o adjustment vale a partir do mês em que está sendo feito em diante — meses que já passaram nunca são reescritos, preservando o histórico do que foi realmente planejado em cada momento. | Concluído | [.agents/pluto/specs/02-ajuste-orcamento-spec.md](file:///p:/workspace/IA/hestia/.agents/pluto/specs/02-ajuste-orcamento-spec.md) (Original) <br> [.agents/pluto/specs/02a-ajuste-orcamento-spec.md](file:///p:/workspace/IA/hestia/.agents/pluto/specs/02a-ajuste-orcamento-spec.md) (Patch/Correção) | [.agents/pluto/plans/02a-ajuste-orcamento-plan.md](file:///p:/workspace/IA/hestia/.agents/pluto/plans/02a-ajuste-orcamento-plan.md) <br> [.agents/pluto/logs/02a-ajuste-orcamento-tracker.md](file:///p:/workspace/IA/hestia/.agents/pluto/logs/02a-ajuste-orcamento-tracker.md) |
 
 ### Bloco 2 — Contas a pagar
 
 | # | Feature | Descrição | Status | Specs | Planos |
 |---|---|---|---|---|---|
-| 3 | **Checklist de contas a pagar** | Uma lista simples de compromissos financeiros do mês, com data de vencimento e um status de paga/não paga. É deliberadamente desacoplada do cadastro de transações — marcar uma conta como paga aqui não gera automaticamente um lançamento financeiro. Serve como um lembrete operacional, não como parte do cálculo de saldo. Por não depender de categoria nem de conta, pode ser construída em paralelo a qualquer outro bloco. | Concluído | [.agents/pluto/specs/03-checklist-contas-spec.md](file:///p:/workspace/IA/hestia/.agents/pluto/specs/03-checklist-contas-spec.md) <br> [.agents/specs/03a-checklist-contas-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/03a-checklist-contas-spec.md) (Patch) | [.agents/pluto/plans/03-checklist-contas-plan.md](file:///p:/workspace/IA/hestia/.agents/pluto/plans/03-checklist-contas-plan.md) <br> [.agents/plans/03a-checklist-contas-plan.md](file:///p:/workspace/IA/hestia/.agents/plans/03a-checklist-contas-plan.md) (Patch) |
+| 3 | **Checklist de contas a pagar** | Uma lista simples de compromissos financeiros do mês, com data de vencimento e um status de paga/não paga. É deliberadamente desacoplada do cadastro de transações — marcar uma conta como paga aqui não gera automaticamente um lançamento financeiro. Serve como um lembrete operacional, não como parte do cálculo de saldo. Por não depender de categoria nem de conta, pode ser construída em paralelo a qualquer outro bloco. | Concluído | [.agents/pluto/specs/03-checklist-contas-spec.md](file:///p:/workspace/IA/hestia/.agents/pluto/specs/03-checklist-contas-spec.md) <br> [.agents/pluto/specs/03a-checklist-orcamento-spec.md](file:///p:/workspace/IA/hestia/.agents/pluto/specs/03a-checklist-orcamento-spec.md) (Patch) | [.agents/pluto/plans/03-checklist-contas-plan.md](file:///p:/workspace/IA/hestia/.agents/pluto/plans/03-checklist-contas-plan.md) <br> [.agents/pluto/plans/03a-checklist-orcamento-plan.md](file:///p:/workspace/IA/hestia/.agents/pluto/plans/03a-checklist-orcamento-plan.md) (Patch) |
 
 ### Bloco 3 — Lançamentos
 
@@ -57,14 +57,6 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 |---|---|---|---|---|---|
 | 13 | **Encerramento de mês** | Uma vez que a conciliação bate e o saldo já foi destinado, o mês é travado para novas edições e passa a existir apenas para consulta. Inclui uma opção de reabertura, pensada para exceções pontuais, mas que não deve ser o caminho padrão de uso. | |  |  |
 | 14 | **Histórico de meses anteriores** | A consulta de meses já encerrados — orçamento planejado x realizado, saldo final e destinação dada a ele. Depende de todos os blocos anteriores estarem funcionando, já que reaproveita os mesmos dados e cálculos, apenas em modo somente-leitura. | |  |  |
-
----
-
-## Backlog — Estrutural / Infraestrutura
-
-| # | Feature | Descrição | Status | Specs | Planos |
-|---|---|---|---|---|---|
-| 26 | **Modularização: módulo Pluto** | Transforma o Héstia em um guarda-chuva de sub-sistemas: todo o código e documentação exclusivos do módulo financeiro passa a viver dentro das pastas `<camada>/pluto/` e `.agents/pluto/`, estabelecendo o padrão estrutural para os próximos módulos. Quebra limpa, sem convivência com legado. URLs `/finance/*` → `/pluto/*`. | Em Desenvolvimento | [.agents/specs/26-modularizacao-pluto-spec.md](file:///p:/workspace/IA/hestia/.agents/specs/26-modularizacao-pluto-spec.md) | [.agents/plans/26-modularizacao-pluto-plan.md](file:///p:/workspace/IA/hestia/.agents/plans/26-modularizacao-pluto-plan.md) |
 
 ---
 

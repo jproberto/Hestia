@@ -50,7 +50,7 @@ VALUES (
 
 ---
 
-## 3. Abstração de Acesso a Dados (`lib/db/months.ts`)
+## 3. Abstração de Acesso a Dados (`lib/pluto/db/months.ts`)
 
 Encapsularemos as operações do banco de dados relativas aos períodos mensais nas seguintes funções:
 
@@ -128,9 +128,9 @@ export async function closeMonthlyPeriod(
 
 ---
 
-## 4. Interface do Usuário (`app/finance/months/page.tsx`)
+## 4. Interface do Usuário (`app/pluto/months/page.tsx`)
 
-Criaremos uma nova página `/finance/months` com um design premium e responsivo.
+Criaremos uma nova página `/pluto/months` com um design premium e responsivo.
 
 ### Funcionalidades da Tela:
 1. **Seletor de Ano:** Um dropdown contendo opções (2026, 2027, 2028), inicializado no ano corrente.
@@ -141,8 +141,8 @@ Criaremos uma nova página `/finance/months` com um design premium e responsivo.
    * **Aberto (Verde):** Período com `status = 'aberto'`. Exibe badge verde e um botão **"Encerrar Mês"** (para suportar o ciclo de vida futuro).
    * **Encerrado (Vermelho/Escuro):** Período com `status = 'encerrado'`. Exibe badge correspondente e um botão **"Reabrir Mês"**.
 5. **Navegação Integrada:** Adição de abas de atalho rápido no cabeçalho financeiro para transição fluida entre:
-   * **Metas de Orçamento (`/finance/budget`)**
-   * **Meses e Períodos (`/finance/months`)**
+   * **Metas de Orçamento (`/pluto/budget`)**
+   * **Meses e Períodos (`/pluto/months`)**
 
 ---
 
@@ -154,11 +154,11 @@ Criaremos uma nova página `/finance/months` com um design premium e responsivo.
 * O estado é alterado dinamicamente na UI com feedbacks de carregamento local por card para evitar "flashes" de tela inteira.
 
 ### Plano de Testes Automatizados
-* **Testes de Integração de Banco (`__tests__/lib/db/months.test.ts`):**
+* **Testes de Integração de Banco (`__tests__/lib/pluto/db/months.test.ts`):**
   * Verificar inserção de um período aberto.
   * Verificar alteração de status para encerrado.
   * Verificar comportamento de unicidade de `(year, month)`.
   * Garantir leitura por ano.
-* **Testes de Interface (`__tests__/app/finance/months-page.test.tsx`):**
+* **Testes de Interface (`__tests__/app/pluto/months-page.test.tsx`):**
   * Verificar renderização dos 12 meses do ano selecionado.
   * Validar cliques em "Abrir Mês", "Encerrar Mês" e "Reabrir Mês" disparando as respectivas chamadas à API do banco.

@@ -2,16 +2,16 @@
 
 ## Visão Geral
 
-Este plano descreve as etapas técnicas para implementar a funcionalidade de gravação em lote no modal de transação (`/finance/transactions`), permitindo ao usuário clicar em "Salvar e Adicionar Outro" para persisir a transação atual, atualizar a lista em segundo plano e manter o modal aberto com os campos de `Descrição`, `Valor`, `Categoria` e `Reembolso` limpos, preservando a `Conta`, `Data` e `Tipo`, e direcionando o foco automaticamente para o campo `Descrição`.
+Este plano descreve as etapas técnicas para implementar a funcionalidade de gravação em lote no modal de transação (`/pluto/transactions`), permitindo ao usuário clicar em "Salvar e Adicionar Outro" para persisir a transação atual, atualizar a lista em segundo plano e manter o modal aberto com os campos de `Descrição`, `Valor`, `Categoria` e `Reembolso` limpos, preservando a `Conta`, `Data` e `Tipo`, e direcionando o foco automaticamente para o campo `Descrição`.
 
 ---
 
 ## Estrutura de Arquivos
 
 - **Visualização / Interface:**
-  - [app/finance/transactions/page.tsx](file:///p:/workspace/IA/hestia/app/finance/transactions/page.tsx) — Adicionar estado de feedback visual, referência do input de descrição (`descInputRef`), manipulador de envio em lote e renderização do botão "Salvar e Adicionar Outro".
+  - [app/pluto/transactions/page.tsx](file:///p:/workspace/IA/hestia/app/pluto/transactions/page.tsx) — Adicionar estado de feedback visual, referência do input de descrição (`descInputRef`), manipulador de envio em lote e renderização do botão "Salvar e Adicionar Outro".
 - **Testes Automatizados:**
-  - [__tests__/app/finance/transactions-page.test.tsx](file:///p:/workspace/IA/hestia/__tests__/app/finance/transactions-page.test.tsx) — Teste de UI cobrindo a presença do botão "Salvar e Adicionar Outro" no modal.
+  - [__tests__/app/pluto/transactions-page.test.tsx](file:///p:/workspace/IA/hestia/__tests__/app/pluto/transactions-page.test.tsx) — Teste de UI cobrindo a presença do botão "Salvar e Adicionar Outro" no modal.
 
 ---
 
@@ -42,7 +42,7 @@ Este plano descreve as etapas técnicas para implementar a funcionalidade de gra
 ---
 
 ### Tarefa 3: Atualização da Suíte de Testes de UI em `transactions-page.test.tsx`
-- **Descrição:** Adicionar asserção em `__tests__/app/finance/transactions-page.test.tsx` validando que ao abrir o modal de transação o botão "Salvar e Adicionar Outro" está presente e acessível.
+- **Descrição:** Adicionar asserção em `__tests__/app/pluto/transactions-page.test.tsx` validando que ao abrir o modal de transação o botão "Salvar e Adicionar Outro" está presente e acessível.
 - **Passos:**
   1. Atualizar o teste do modal de transação verificando `expect(screen.getByRole("button", { name: /Salvar e Adicionar Outro/i })).toBeInTheDocument();`.
 - **Verificação:** Executar os testes automatizados do Vitest.

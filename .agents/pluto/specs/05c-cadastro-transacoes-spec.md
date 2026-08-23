@@ -9,7 +9,7 @@
 
 ## 1. Visão Geral e Objetivos
 
-Este refinamento estende a modelagem conceitual e a interface de lançamentos do projeto Héstia para suportar o conceito de **Agregador de Transações** (`financial_accounts`), englobando especificamente **Contas Correntes** e **Cartões de Crédito**, além de aperfeiçoar o fluxo e a posição dos botões de ação na tela `/finance/transactions`.
+Este refinamento estende a modelagem conceitual e a interface de lançamentos do projeto Héstia para suportar o conceito de **Agregador de Transações** (`financial_accounts`), englobando especificamente **Contas Correntes** e **Cartões de Crédito**, além de aperfeiçoar o fluxo e a posição dos botões de ação na tela `/pluto/transactions`.
 
 ### Principais Definições:
 1. **Regra de Governança de Commits:** NENHUM commit (specs, planos ou código) será executado sem a autorização prévia e explícita do parceiro humano.
@@ -35,7 +35,7 @@ Este refinamento estende a modelagem conceitual e a interface de lançamentos do
 
 ---
 
-## 3. Requisitos de Interface e UX (`/finance/transactions`)
+## 3. Requisitos de Interface e UX (`/pluto/transactions`)
 
 ### 3.1. Seção "Contas e Cartões"
 - **Título da Seção:** `"Contas e Cartões"`.

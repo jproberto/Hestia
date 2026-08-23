@@ -4,7 +4,7 @@
 
 O orçamento anual por categoria é o ponto de partida do gerenciamento financeiro do Héstia. Antes que qualquer lançamento real de receita ou despesa exista no sistema, o usuário define quanto a família planeja arrecadar e gastar em cada categoria para o ano inteiro.
 
-Esta especificação define o cadastro do orçamento inicial, a criação inline de categorias, as tabelas de banco de dados normalizadas com auditoria transparente e a interface do usuário em `/finance/budget`.
+Esta especificação define o cadastro do orçamento inicial, a criação inline de categorias, as tabelas de banco de dados normalizadas com auditoria transparente e a interface do usuário em `/pluto/budget`.
 
 ## 2. Regras de Negócio
 
@@ -80,9 +80,9 @@ ORDER BY bi.category_id, br.start_month DESC;
 ## 5. Interface do Usuário (UI/UX)
 
 ### 5.1. Dashboard Principal (`/dashboard`)
-*   Será adicionado um link ou card de atalho para a ferramenta financeira: **"Héstia Financeira"**, que redireciona para a rota `/finance/budget`.
+*   Será adicionado um link ou card de atalho para a ferramenta financeira: **"Héstia Financeira"**, que redireciona para a rota `/pluto/budget`.
 
-### 5.2. Página de Orçamento Anual (`/finance/budget`)
+### 5.2. Página de Orçamento Anual (`/pluto/budget`)
 A interface terá o seguinte fluxo de estados:
 
 1.  **Escolha do Ano**: Um dropdown no topo com o ano selecionado (padrão é o ano atual).
@@ -127,7 +127,7 @@ Para garantir a integridade da lógica de negócios, os seguintes testes unitár
 2.  **Criação Inline de Categorias**:
     *   **Caso de Teste 1**: Se o nome da categoria digitado já existe no banco de dados, o sistema deve associar a previsão à categoria existente (não criar duplicada).
     *   **Caso de Teste 2**: Se o nome não existe, o sistema deve registrar a nova categoria antes de criar a previsão.
-3.  **UI da Página de Orçamento (`/finance/budget`)**:
+3.  **UI da Página de Orçamento (`/pluto/budget`)**:
     *   **Caso de Teste 1**: Verificar se a tela renderiza corretamente o estado vazio caso não haja orçamento iniciado.
     *   **Caso de Teste 2**: Verificar se, após clicar em "Iniciar Orçamento", a grade de receitas/despesas e o formulário de inserção inline aparecem corretamente.
     *   **Caso de Teste 3**: Validar se o saldo planejado mensal atualiza dinamicamente conforme previsões são adicionadas.

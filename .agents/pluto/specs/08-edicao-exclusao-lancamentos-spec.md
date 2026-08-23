@@ -30,7 +30,7 @@ Esta funcionalidade estende o módulo de lançamentos (Feature 05), permitindo q
 
 ## Jornada do Usuário e Experiência de Uso (UX)
 
-1. **Acesso:** Na tela de lançamentos (`/finance/transactions`), cada linha da tabela de transações do mês aberto possui uma coluna de "Ações".
+1. **Acesso:** Na tela de lançamentos (`/pluto/transactions`), cada linha da tabela de transações do mês aberto possui uma coluna de "Ações".
 2. **Fluxo de Edição:**
    - O usuário clica no ícone de edição (Lápis).
    - O modal de lançamento abre preenchido com os dados da transação.

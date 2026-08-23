@@ -20,7 +20,7 @@ Copiadas da spec `.agents/specs/26-modularizacao-pluto-spec.md`. Toda task herda
 6. **Interpretação operacional da auditoria final (Critério 8 da spec):** a busca por "finance" é aplicada como padrões de CAMINHO (`/finance`, `lib/db`, `lib\db`), conforme a própria spec define na mitigação de riscos ("resquícios de 'finance' em caminhos de código"). Palavras da língua portuguesa como "financeiro(a)" em prosa de documentos NÃO são alvo da auditoria e não devem ser reescritas. Links cruzados e referências técnicas a caminhos antigos EM DOCUMENTAÇÃO (incluindo specs/planos históricos e entradas antigas do CHANGELOG/README) SÃO atualizados mecanicamente pelas regras R1–R5 da Tarefa 4.
 7. **Versionamento (SemVer):** o bump de versão no `package.json` NÃO faz parte deste plano. Ocorre exclusivamente no fim do ciclo de homologação/revisão, imediatamente antes do `git push`.
 8. **Commits:** mensagens em português, via `node .agents/scripts/sdd.js commit "<mensagem>"`, somente após verificações verdes, nunca misturando tarefas independentes.
-9. **Ambiente Windows/PowerShell:** comandos de busca usam `findstr` (nativo; `rg` não está disponível no shell). Não usar `Set-Content`/`Out-File` para editar arquivos existentes (risco de corromper encoding UTF-8 de arquivos com acentuação) — usar ferramenta de edição de arquivo.
+9. **Ambiente Windows/PowerShell:** comandos de busca usam `findstr` (nativo; `rg` não está disponível no shell). ATENÇÃO: ao buscar recursivamente, o findstr exige wildcard no diretório (`pasta\*.*`); um diretório passado sem `\*.*` é tratado como nome de arquivo literal e produz falso negativo silencioso — a ferramenta Grep do agente é alternativa equivalente (e preferível para auditorias) quando disponível. Não usar `Set-Content`/`Out-File` para editar arquivos existentes (risco de corromper encoding UTF-8 de arquivos com acentuação) — usar ferramenta de edição de arquivo.
 10. **Verificações de gate por tarefa:** `npx eslint .` e `npx tsc --noEmit` são executados automaticamente por `node .agents/scripts/sdd.js task-complete N`; rodar `npm test` adicionalmente em toda tarefa que tocar código/testes. Baseline esperado: todas verdes ANTES de iniciar a Tarefa 1.
 
 ---
@@ -89,11 +89,11 @@ Arquivos a editar:
 
 **Passo 5: Confirmar que nenhum import antigo restou em código**
 
-Run: `findstr /s /n /c:"@/lib/db/" app components lib __tests__`
+Run: `findstr /s /n /c:"@/lib/db/" app\*.* components\*.* lib\*.* __tests__\*.*`
 Expected: nenhuma linha impressa.
 
-Run: `findstr /s /n /c:"@/lib/checklist-budget" app components lib __tests__`
-Expected: apenas linhas contendo `@/lib/pluto/checklist-budget` (o padrão casa com o novo path por sufixo comum; nenhuma linha pode exibir `@/lib/checklist-budget` sem `/pluto`).
+Run: `findstr /s /n /c:"checklist-budget" app\*.* components\*.* lib\*.* __tests__\*.*`
+Expected: TODAS as linhas retornadas contêm `@/lib/pluto/checklist-budget`; nenhuma linha pode conter o import antigo `@/lib/checklist-budget`.
 
 **Passo 6: Rodar a suíte de testes**
 
@@ -366,10 +366,10 @@ Notas:
 
 **Passo 5: Verificar os cross-links**
 
-Run: `findstr /s /n /c:"/finance" .agents *.md`
+Run: `findstr /s /n /c:"/finance" .agents\*.* *.md`
 Expected: ocorrências APENAS nos 2 arquivos isentos. Nenhuma outra.
 
-Run: `findstr /s /n /c:"lib/db" .agents *.md`
+Run: `findstr /s /n /c:"lib/db" .agents\*.* *.md`
 Expected: nenhuma linha impressa fora dos 2 isentos.
 
 Run: `findstr /s /n /c:".agents/specs/" .agents\backlog.md .agents\pluto\backlog.md CHANGELOG.md README.md`
@@ -469,7 +469,7 @@ Expected: a linha do módulo Pluto na tabela "Módulos Registrados" contendo `.a
 Run: `findstr /n /c:"| 26 |" .agents\backlog.md`
 Expected: exatamente UMA linha — o item estrutural, com status vigente e link para `.agents/specs/26-modularizacao-pluto-spec.md`.
 
-Run: `findstr /s /n /c:"/finance" .agents\skills .agents\backlog.md AGENTS.md`
+Run: `findstr /s /n /c:"/finance" .agents\skills\*.* .agents\backlog.md AGENTS.md`
 Expected: nenhuma linha impressa.
 
 **Passo 6: Marcar a tarefa como concluída no CLI do SDD**
@@ -621,21 +621,21 @@ Expected: `[INFO] Tarefa 8 marcada como Em Andamento no CLI.`
 
 **Passo 2: Auditoria de caminhos antigos em código, testes e configurações**
 
-Run: `findstr /s /n /c:"/finance" app components lib utils __tests__ *.json *.mjs *.ts proxy.ts`
+Run: `findstr /s /n /c:"/finance" app\*.* components\*.* lib\*.* utils\*.* __tests__\*.* *.json *.mjs *.ts proxy.ts`
 Expected: nenhuma linha impressa.
 
-Run: `findstr /s /n /c:"lib/db" app components lib utils __tests__ *.json *.mjs *.ts proxy.ts`
+Run: `findstr /s /n /c:"lib/db" app\*.* components\*.* lib\*.* utils\*.* __tests__\*.* *.json *.mjs *.ts proxy.ts`
 Expected: nenhuma linha impressa.
 
-Run: `findstr /s /n /c:"components\finance" app components lib __tests__`
+Run: `findstr /s /n /c:"components\finance" app\*.* components\*.* lib\*.* __tests__\*.*`
 Expected: nenhuma linha impressa.
 
 **Passo 3: Auditoria de caminhos antigos em documentação**
 
-Run: `findstr /s /n /c:"/finance" .agents *.md`
+Run: `findstr /s /n /c:"/finance" .agents\*.* *.md`
 Expected: ocorrências SOMENTE nos isentos `.agents\specs\26-modularizacao-pluto-spec.md` e `.agents\plans\26-modularizacao-pluto-plan.md`.
 
-Run: `findstr /s /n /c:"lib/db" .agents *.md`
+Run: `findstr /s /n /c:"lib/db" .agents\*.* *.md`
 Expected: ocorrências somente nos mesmos isentos.
 
 **Passo 4: Verificar que só restam testes de código comum fora de pluto**

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ChecklistCard from "@/components/finance/ChecklistCard";
-import { ChecklistItem } from "@/lib/db/checklist";
-import { Category } from "@/lib/db/categories";
-import { BudgetItem } from "@/lib/db/budget";
+import { ChecklistItem } from "@/lib/pluto/db/checklist";
+import { Category } from "@/lib/pluto/db/categories";
+import { BudgetItem } from "@/lib/pluto/db/budget";
 
 const mockCategories: Category[] = [
   { id: "cat-1", name: "Moradia", type: "despesa", created_at: "2026-01-01", created_by: "user@test.com" },

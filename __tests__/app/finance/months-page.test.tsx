@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import MonthsPage from "@/app/finance/months/page";
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
-import { getMonthlyPeriods, openMonthlyPeriod } from "@/lib/db/months";
+import { getMonthlyPeriods, openMonthlyPeriod } from "@/lib/pluto/db/months";
 
 vi.mock("@/utils/supabase/client", () => ({
   createClient: () => ({
@@ -11,7 +11,7 @@ vi.mock("@/utils/supabase/client", () => ({
   })
 }));
 
-vi.mock("@/lib/db/months", () => ({
+vi.mock("@/lib/pluto/db/months", () => ({
   getMonthlyPeriods: vi.fn(),
   openMonthlyPeriod: vi.fn(),
   closeMonthlyPeriod: vi.fn(),

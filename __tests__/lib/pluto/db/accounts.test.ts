@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getAccounts, getOrCreateAccount } from "@/lib/db/accounts";
+import { getAccounts, getOrCreateAccount } from "@/lib/pluto/db/accounts";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 const mockSupabase = {

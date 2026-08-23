@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getTransactionsByMonth, createTransaction, updateTransaction, deleteTransaction } from "@/lib/db/transactions";
+import { getTransactionsByMonth, createTransaction, updateTransaction, deleteTransaction } from "@/lib/pluto/db/transactions";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 const mockSupabase = {

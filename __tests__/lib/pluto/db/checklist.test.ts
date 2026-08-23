@@ -6,7 +6,7 @@ import {
   toggleChecklistItemCompletion,
   instantiateGlobalChecklistItemsForMonth,
   ChecklistItemInput,
-} from "@/lib/db/checklist";
+} from "@/lib/pluto/db/checklist";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 const mockSupabase = {

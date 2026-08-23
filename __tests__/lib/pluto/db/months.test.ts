@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod } from "@/lib/db/months";
-import * as checklistDb from "@/lib/db/checklist";
+import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod } from "@/lib/pluto/db/months";
+import * as checklistDb from "@/lib/pluto/db/checklist";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 const mockSupabase = {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod, MonthlyPeriod } from "@/lib/db/months";
+import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod, MonthlyPeriod } from "@/lib/pluto/db/months";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { parseErrorMessage } from "@/lib/utils";

@@ -1,9 +1,9 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
 import TransactionsPage from "@/app/finance/transactions/page";
-import * as checklistDb from "@/lib/db/checklist";
-import * as budgetDb from "@/lib/db/budget";
-import * as categoriesDb from "@/lib/db/categories";
+import * as checklistDb from "@/lib/pluto/db/checklist";
+import * as budgetDb from "@/lib/pluto/db/budget";
+import * as categoriesDb from "@/lib/pluto/db/categories";
 
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn(() => ({ push: vi.fn() })),
@@ -17,7 +17,7 @@ vi.mock("@/utils/supabase/client", () => ({
   }),
 }));
 
-vi.mock("@/lib/db/checklist", async (importOriginal) => {
+vi.mock("@/lib/pluto/db/checklist", async (importOriginal) => {
   const actual = await importOriginal<typeof checklistDb>();
   return {
     ...actual,
@@ -28,7 +28,7 @@ vi.mock("@/lib/db/checklist", async (importOriginal) => {
   };
 });
 
-vi.mock("@/lib/db/budget", async (importOriginal) => {
+vi.mock("@/lib/pluto/db/budget", async (importOriginal) => {
   const actual = await importOriginal<typeof budgetDb>();
   return {
     ...actual,
@@ -37,11 +37,11 @@ vi.mock("@/lib/db/budget", async (importOriginal) => {
   };
 });
 
-vi.mock("@/lib/db/months", () => ({
+vi.mock("@/lib/pluto/db/months", () => ({
   getAllOpenMonthlyPeriods: vi.fn(() => Promise.resolve([{ id: "m1", month: 10, year: 2026, status: "aberto" }])),
 }));
 
-vi.mock("@/lib/db/categories", async (importOriginal) => {
+vi.mock("@/lib/pluto/db/categories", async (importOriginal) => {
   const actual = await importOriginal<typeof categoriesDb>();
   return {
     ...actual,
@@ -49,11 +49,11 @@ vi.mock("@/lib/db/categories", async (importOriginal) => {
   };
 });
 
-vi.mock("@/lib/db/accounts", () => ({
+vi.mock("@/lib/pluto/db/accounts", () => ({
   getAccounts: vi.fn(() => Promise.resolve([])),
 }));
 
-vi.mock("@/lib/db/transactions", () => ({
+vi.mock("@/lib/pluto/db/transactions", () => ({
   getTransactionsByMonth: vi.fn(() => Promise.resolve([])),
 }));
 

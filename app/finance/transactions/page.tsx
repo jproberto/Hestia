@@ -9,11 +9,11 @@ import {
   updateTransaction,
   deleteTransaction,
   TransactionWithDetails,
-} from "@/lib/db/transactions";
-import { getAccounts, getOrCreateAccount, Account } from "@/lib/db/accounts";
-import { getCategories, getOrCreateCategory, Category } from "@/lib/db/categories";
-import { getAllOpenMonthlyPeriods, MonthlyPeriod } from "@/lib/db/months";
-import { getBudgets, BudgetItem } from "@/lib/db/budget";
+} from "@/lib/pluto/db/transactions";
+import { getAccounts, getOrCreateAccount, Account } from "@/lib/pluto/db/accounts";
+import { getCategories, getOrCreateCategory, Category } from "@/lib/pluto/db/categories";
+import { getAllOpenMonthlyPeriods, MonthlyPeriod } from "@/lib/pluto/db/months";
+import { getBudgets, BudgetItem } from "@/lib/pluto/db/budget";
 import ChecklistCard from "@/components/finance/ChecklistCard";
 import {
   getChecklistItemsByMonth,
@@ -23,16 +23,16 @@ import {
   toggleChecklistItemCompletion,
   ChecklistItem,
   ChecklistItemInput,
-} from "@/lib/db/checklist";
+} from "@/lib/pluto/db/checklist";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { parseErrorMessage } from "@/lib/utils";
 import { Pencil, Trash2 } from "lucide-react";
 import BudgetOverflowModal from "@/components/finance/BudgetOverflowModal";
-import { checkGlobalBudgetOverflow, BudgetOverflowResult } from "@/lib/checklist-budget";
-import { getGlobalChecklistItems } from "@/lib/db/checklist";
-import { adjustBudgetItem } from "@/lib/db/budget";
+import { checkGlobalBudgetOverflow, BudgetOverflowResult } from "@/lib/pluto/checklist-budget";
+import { getGlobalChecklistItems } from "@/lib/pluto/db/checklist";
+import { adjustBudgetItem } from "@/lib/pluto/db/budget";
 
 const MONTH_NAMES = [
   "Janeiro",

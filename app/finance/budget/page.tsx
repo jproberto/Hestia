@@ -12,8 +12,8 @@ import {
   createBudgetAdjustment,
   BudgetAdjustment,
   BudgetItem
-} from "@/lib/db/budget";
-import { getCategories, Category } from "@/lib/db/categories";
+} from "@/lib/pluto/db/budget";
+import { getCategories, Category } from "@/lib/pluto/db/categories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

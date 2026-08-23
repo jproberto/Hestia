@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkGlobalBudgetOverflow, checkMonthBudgetOverflow, BudgetItem } from '@/lib/checklist-budget';
+import { checkGlobalBudgetOverflow, checkMonthBudgetOverflow, BudgetItem } from '@/lib/pluto/checklist-budget';
 
 describe('checkGlobalBudgetOverflow', () => {
   it('retorna isOverflow: false quando soma prevista <= orçamento', () => {

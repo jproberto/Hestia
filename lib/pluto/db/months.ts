@@ -1,5 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { instantiateGlobalChecklistItemsForMonth } from "@/lib/db/checklist";
+import { instantiateGlobalChecklistItemsForMonth } from "@/lib/pluto/db/checklist";
 
 export interface MonthlyPeriod {
   id: string;

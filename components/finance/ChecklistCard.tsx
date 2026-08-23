@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChecklistItem, ChecklistItemInput } from "@/lib/db/checklist";
-import { Category } from "@/lib/db/categories";
-import { BudgetItem } from "@/lib/db/budget";
+import { ChecklistItem, ChecklistItemInput } from "@/lib/pluto/db/checklist";
+import { Category } from "@/lib/pluto/db/categories";
+import { BudgetItem } from "@/lib/pluto/db/budget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +38,7 @@ const formatCurrency = (value?: number | null) => {
   }).format(value);
 };
 
-import { checkMonthBudgetOverflow, BudgetOverflowResult } from "@/lib/checklist-budget";
+import { checkMonthBudgetOverflow, BudgetOverflowResult } from "@/lib/pluto/checklist-budget";
 
 export default function ChecklistCard({
   items,

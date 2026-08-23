@@ -1,11 +1,11 @@
 import { render, screen, fireEvent, cleanup, waitFor, within } from "@testing-library/react";
 import TransactionsPage from "@/app/finance/transactions/page";
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
-import { getTransactionsByMonth, deleteTransaction } from "@/lib/db/transactions";
-import { getAccounts } from "@/lib/db/accounts";
-import { getCategories } from "@/lib/db/categories";
-import { getMonthlyPeriods, getAllOpenMonthlyPeriods } from "@/lib/db/months";
-import { getBudgets } from "@/lib/db/budget";
+import { getTransactionsByMonth, deleteTransaction } from "@/lib/pluto/db/transactions";
+import { getAccounts } from "@/lib/pluto/db/accounts";
+import { getCategories } from "@/lib/pluto/db/categories";
+import { getMonthlyPeriods, getAllOpenMonthlyPeriods } from "@/lib/pluto/db/months";
+import { getBudgets } from "@/lib/pluto/db/budget";
 
 vi.mock("@/utils/supabase/client", () => ({
   createClient: () => ({
@@ -15,29 +15,29 @@ vi.mock("@/utils/supabase/client", () => ({
   }),
 }));
 
-vi.mock("@/lib/db/transactions", () => ({
+vi.mock("@/lib/pluto/db/transactions", () => ({
   getTransactionsByMonth: vi.fn(),
   createTransaction: vi.fn(),
   updateTransaction: vi.fn(),
   deleteTransaction: vi.fn(),
 }));
 
-vi.mock("@/lib/db/accounts", () => ({
+vi.mock("@/lib/pluto/db/accounts", () => ({
   getAccounts: vi.fn(),
   getOrCreateAccount: vi.fn(),
 }));
 
-vi.mock("@/lib/db/categories", () => ({
+vi.mock("@/lib/pluto/db/categories", () => ({
   getCategories: vi.fn(),
   getOrCreateCategory: vi.fn(),
 }));
 
-vi.mock("@/lib/db/months", () => ({
+vi.mock("@/lib/pluto/db/months", () => ({
   getMonthlyPeriods: vi.fn(),
   getAllOpenMonthlyPeriods: vi.fn(),
 }));
 
-vi.mock("@/lib/db/budget", () => ({
+vi.mock("@/lib/pluto/db/budget", () => ({
   getBudgets: vi.fn(),
 }));
 

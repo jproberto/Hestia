@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
-import { getBudgets, adjustBudgetItem, getBudgetAdjustments, createBudgetAdjustment, getBudgetAdjustment } from "@/lib/db/budget";
+import { getBudgets, adjustBudgetItem, getBudgetAdjustments, createBudgetAdjustment, getBudgetAdjustment } from "@/lib/pluto/db/budget";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 const mockSupabase = {

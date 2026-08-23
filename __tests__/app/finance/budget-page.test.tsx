@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import BudgetPage from "@/app/finance/budget/page";
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
-import { getBudgetAdjustment, getBudgets, getBudgetAdjustments, createBudgetAdjustment } from "@/lib/db/budget";
+import { getBudgetAdjustment, getBudgets, getBudgetAdjustments, createBudgetAdjustment } from "@/lib/pluto/db/budget";
 import { useSearchParams } from "next/navigation";
 
 vi.mock("@/utils/supabase/client", () => ({
@@ -12,7 +12,7 @@ vi.mock("@/utils/supabase/client", () => ({
   })
 }));
 
-vi.mock("@/lib/db/budget", () => ({
+vi.mock("@/lib/pluto/db/budget", () => ({
   getBudgetAdjustment: vi.fn(),
   initBudget: vi.fn(),
   getBudgets: vi.fn(),
@@ -22,7 +22,7 @@ vi.mock("@/lib/db/budget", () => ({
   addOrUpdateBudgetItem: vi.fn()
 }));
 
-vi.mock("@/lib/db/categories", () => ({
+vi.mock("@/lib/pluto/db/categories", () => ({
   getCategories: vi.fn().mockResolvedValue([])
 }));
 

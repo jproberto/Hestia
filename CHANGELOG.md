@@ -5,7 +5,7 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.0.html).
 
-## [Não lançado] - 2026-08-22
+## [0.8.0] - 2026-08-23
 
 ### Alterado
 - **Modularização — Módulo Pluto:** todo o domínio financeiro migra para `app/pluto/`, `components/pluto/`, `lib/pluto/` (com acesso a dados em `lib/pluto/db/`) e testes espelhados em `__tests__/**/pluto/`. O Pluto é o primeiro módulo a seguir o padrão guarda-chuva *módulo por camada*.

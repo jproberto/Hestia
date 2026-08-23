@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import BudgetOverflowModal from "@/components/finance/BudgetOverflowModal";
+import BudgetOverflowModal from "@/components/pluto/BudgetOverflowModal";
 import { useRouter } from "next/navigation";
 
 vi.mock("next/navigation", () => ({

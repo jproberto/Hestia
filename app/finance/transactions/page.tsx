@@ -14,7 +14,7 @@ import { getAccounts, getOrCreateAccount, Account } from "@/lib/pluto/db/account
 import { getCategories, getOrCreateCategory, Category } from "@/lib/pluto/db/categories";
 import { getAllOpenMonthlyPeriods, MonthlyPeriod } from "@/lib/pluto/db/months";
 import { getBudgets, BudgetItem } from "@/lib/pluto/db/budget";
-import ChecklistCard from "@/components/finance/ChecklistCard";
+import ChecklistCard from "@/components/pluto/ChecklistCard";
 import {
   getChecklistItemsByMonth,
   createChecklistItem,
@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { parseErrorMessage } from "@/lib/utils";
 import { Pencil, Trash2 } from "lucide-react";
-import BudgetOverflowModal from "@/components/finance/BudgetOverflowModal";
+import BudgetOverflowModal from "@/components/pluto/BudgetOverflowModal";
 import { checkGlobalBudgetOverflow, BudgetOverflowResult } from "@/lib/pluto/checklist-budget";
 import { getGlobalChecklistItems } from "@/lib/pluto/db/checklist";
 import { adjustBudgetItem } from "@/lib/pluto/db/budget";

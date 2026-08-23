@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import ChecklistCard from "@/components/finance/ChecklistCard";
+import ChecklistCard from "@/components/pluto/ChecklistCard";
 import { ChecklistItem } from "@/lib/pluto/db/checklist";
 import { Category } from "@/lib/pluto/db/categories";
 import { BudgetItem } from "@/lib/pluto/db/budget";

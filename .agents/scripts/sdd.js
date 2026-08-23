@@ -12,7 +12,6 @@ const { execSync } = require("child_process");
 
 const ROOT_DIR = path.resolve(__dirname, "../../");
 const AGENTS_DIR = path.join(ROOT_DIR, ".agents");
-const SPECS_DIR = path.join(AGENTS_DIR, "specs");
 const PLANS_DIR = path.join(AGENTS_DIR, "plans");
 
 function logInfo(msg) {
@@ -35,12 +34,50 @@ function runCmd(cmd) {
   }
 }
 
-// Localiza o arquivo de plano com base no slug
+// Descobre os módulos registrados na tabela de módulos do backlog central.
+// A âncora é o link markdown `.agents/<modulo>/backlog.md` presente na tabela.
+function getRegisteredModules() {
+  const centralBacklogPath = path.join(AGENTS_DIR, "backlog.md");
+  if (!fs.existsSync(centralBacklogPath)) return [];
+  const content = fs.readFileSync(centralBacklogPath, "utf8");
+  const modules = [];
+  const seen = new Set();
+  const regex = /\.agents\/([a-zA-Z0-9_-]+)\/backlog\.md/g;
+  let m;
+  while ((m = regex.exec(content)) !== null) {
+    const name = m[1];
+    if (seen.has(name)) continue;
+    seen.add(name);
+    modules.push({
+      name,
+      dir: path.join(AGENTS_DIR, name),
+      backlogPath: path.join(AGENTS_DIR, name, "backlog.md"),
+    });
+  }
+  return modules;
+}
+
+// Localiza o arquivo de plano com base no slug, procurando na raiz transversal
+// (.agents/plans/) e nos diretórios de planos dos módulos registrados
+// (.agents/<modulo>/plans/). Retorna { path, module } ou null.
 function findPlanFile(slug) {
-  if (!fs.existsSync(PLANS_DIR)) return null;
-  const files = fs.readdirSync(PLANS_DIR);
-  const match = files.find((f) => f.startsWith(slug) && f.endsWith("-plan.md"));
-  return match ? path.join(PLANS_DIR, match) : null;
+  const candidates = [{ dir: PLANS_DIR, module: null }];
+  for (const mod of getRegisteredModules()) {
+    candidates.push({ dir: path.join(mod.dir, "plans"), module: mod });
+  }
+  const found = [];
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate.dir)) continue;
+    const files = fs.readdirSync(candidate.dir);
+    const match = files.find((f) => f.startsWith(slug) && f.endsWith("-plan.md"));
+    if (match) found.push({ path: path.join(candidate.dir, match), module: candidate.module });
+  }
+  if (found.length === 0) return null;
+  if (found.length > 1) {
+    logWarn(`Plano '${slug}' encontrado em múltiplos locais. Usando o primeiro:`);
+    for (const f of found) logWarn(`  - ${f.path}`);
+  }
+  return found[0];
 }
 
 // Comando: start
@@ -65,25 +102,28 @@ function cmdStart(slug) {
     logWarn("Não foi possível validar a branch git ativa. Continuando...");
   }
 
-  const planPath = findPlanFile(slug);
-  if (!planPath) {
-    logError(`Plano de implementação para o slug '${slug}' não foi encontrado em .agents/plans/`);
+  const planFound = findPlanFile(slug);
+  if (!planFound) {
+    logError(`Plano de implementação para o slug '${slug}' não foi encontrado em .agents/plans/ nem em .agents/<modulo>/plans/`);
     process.exit(1);
   }
+  const planPath = planFound.path;
+  const scopeLabel = planFound.module ? `.agents/${planFound.module.name}/` : ".agents/";
 
   // 2. Verifica se existe especificação correspondente (regra de fluxo)
+  // A spec fica no diretório specs/ irmão do diretório plans/ onde o plano foi encontrado.
   const specName = path.basename(planPath).replace("-plan.md", "-spec.md");
-  const specPath = path.join(SPECS_DIR, specName);
+  const specPath = path.join(path.dirname(planPath), "..", "specs", specName);
   if (!fs.existsSync(specPath)) {
-    logError(`VIOLAÇÃO DE PROCESSO: Arquivo de especificação '${specName}' não foi encontrado em .agents/specs/.`);
+    logError(`VIOLAÇÃO DE PROCESSO: Arquivo de especificação '${specName}' não foi encontrado em ${scopeLabel}specs/.`);
     logError("O fluxo SDD exige que a especificação seja concluída, aprovada pelo usuário e salva antes de iniciar o plano.");
     process.exit(1);
   } else {
     logInfo(`Guardian: Spec correspondente encontrada.`);
   }
 
-  // 3. Checagem do status no backlog.md
-  const backlogPath = path.join(ROOT_DIR, ".agents/backlog.md");
+  // 3. Checagem do status no backlog correspondente (central ou do módulo)
+  const backlogPath = planFound.module ? planFound.module.backlogPath : path.join(ROOT_DIR, ".agents/backlog.md");
   if (fs.existsSync(backlogPath)) {
     const backlogContent = fs.readFileSync(backlogPath, "utf8");
     const matchId = slug.match(/^(\d+)/);
@@ -130,13 +170,13 @@ function cmdTaskStart(taskId) {
   try {
     const gitStatus = runCmd("git status --porcelain");
     const lines = gitStatus.split("\n");
-    const uncommittedDocs = lines.filter(line => {
-      const trimmed = line.trim();
-      return (
-        trimmed.includes(".agents/specs/") ||
-        trimmed.includes(".agents/plans/")
-      );
-    });
+      const uncommittedDocs = lines.filter(line => {
+        const trimmed = line.trim();
+        return (
+          trimmed.includes(".agents") &&
+          (trimmed.includes("/specs/") || trimmed.includes("/plans/"))
+        );
+      });
 
     if (uncommittedDocs.length > 0) {
       logError("Abortando: Existem arquivos de especificação ou planejamento modificados ou não commitados no Git!");
@@ -420,7 +460,7 @@ switch (command) {
   default:
     console.log(`
 Uso do SDD CLI Copilot:
-  node sdd.js start <slug>                 Inicializa a validação do plano e roda o guardian.
+  node sdd.js start <slug>                 Inicializa a validação do plano (raiz .agents/plans/ ou módulos em .agents/<modulo>/plans/) e roda o guardian.
   node sdd.js task-start <task-id>         Marca uma tarefa como em andamento.
   node sdd.js task-complete <task-id>      Valida linter/build e marca tarefa como concluída.
   node sdd.js task-block <task-id> <motivo> Marca uma tarefa como bloqueada com o motivo.

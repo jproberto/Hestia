@@ -1,0 +1,11 @@
+{
+  "sessionId": "olympus-mvp-001",
+  "objective": "Sistema multi-agentes Héstia (Olympus) — MVP Zeus + Hera",
+  "currentPhase": "SPEC_DRAFT",
+  "history": [],
+  "approvals": {
+    "spec": "pending",
+    "review": "pending"
+  },
+  "decisions": []
+}

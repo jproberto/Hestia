@@ -5,6 +5,24 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-08-27
+
+### Adicionado
+- **Sistema Multi-Agentes Olympus:** 8 agentes (`Zeus` primary + `Hera`, `Atena`, `Hefesto`, `Minos`, `Argos`, `Mnemósine`, `Caronte`) com system prompts em `.agents/olimpo/*.md` (frontmatter `mode/color/temperature/permission` + anti-hallucination), state machine 9 fases (`SPEC_DRAFT`→`COMMITTED`) com 2 checkpoints humanos (`approve-spec`/`approve-review`) e guardian nativo (`checkpoint.json.validTransitions`).
+- **FEATURE_DIR + `.agents/current`:** estado por feature em `.agents/modules/<modulo>/<slug>/` (`spec.md`, `plan.md`, `tasks.json` `{tasks:[]}`, `context.json`, `checkpoint.json`, `diff.patch`, `test-report.json`, `review-report.json`, `test-scenarios.md`) isolado e permanente — substitui `.agents/state/` global e `specs/`/`plans/` na raiz (histórico preservado via `git mv`).
+- **Orquestração via Task tool:** Zeus delega aos 7 especialistas via Task tool nativo da plataforma (resiliência nativa timeout/retry); Caronte usa `git_retry` bash 3× exponencial para operações git remoto.
+- **`regression.md` por módulo:** acervo permanente de smokes manuais (≤3 passos) em `.agents/modules/<modulo>/regression.md` e `.agents/modules/hestia/regression.md` promovido por Minos a partir de `test-scenarios.md`.
+- **`migrate-skills.js`:** script one-shot para migração `skills/` → `archive/`.
+
+### Alterado
+- **Estrutura de diretórios:** `.agents/backlog.md` → `.agents/modules/hestia/backlog.md`; `specs/`+`plans/` raiz e `pluto/specs|plans` reorganizados por slug (`01-orcamento/`, `02-ajuste-orcamento/`...); `.agents/current` como ponteiro `FEATURE_DIR`.
+- **Hefesto:** nunca escreve testes — recebe teste de contrato RED de Minos (outside-in) → GREEN → refatora; debug-first com `BLOCKED` contendo erro+hipóteses+tentativas.
+- **Orquestração:** sem CLI externo — Zeus coordena via Task tool + `read`/`write`/`bash`; Caronte executa git com `git_retry`.
+- **Documentação:** `AGENTS.md` reescrito para mapeamento Olympus, padrão de módulos `modules/<modulo>/<slug>/` e fluxo conversacional Zeus; `README.md` com guia Olympus.
+
+### Removido
+- **Skills SDD legadas + `sdd.js`:** movidos para `.agents/archive/skills/` e `.agents/archive/scripts/sdd.js` (sem coexistência); `skills.md` removido.
+
 ## [0.8.0] - 2026-08-23
 
 ### Alterado

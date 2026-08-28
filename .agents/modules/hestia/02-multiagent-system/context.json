@@ -1,0 +1,97 @@
+{
+  "sessionId": "olympus-mvp-001",
+  "objective": "Sistema multi-agentes Héstia (Olympus) — Arquitetura completa 8 agentes + Caronte",
+  "module": "hestia",
+  "slug": "02-multiagent-system",
+  "currentPhase": "COMMITTED",
+  "history": [
+    {
+      "phase": "SPEC_DRAFT",
+      "agent": "Zeus",
+      "timestamp": "2026-08-24T16:42:00.000Z",
+      "summary": "FEATURE_DIR criado. Iniciando brainstorming com Hera."
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "agent": "Zeus",
+      "timestamp": "2026-08-28T01:21:59.714Z",
+      "summary": "Spec aprovada pelo humano. Transição para SPEC_APPROVED."
+    },
+    {
+      "phase": "PLAN_READY",
+      "agent": "Zeus",
+      "timestamp": "2026-08-28T02:00:00.000Z",
+      "summary": "Atena produziu plan.md + tasks.json. Zeus validou DAG."
+    },
+    {
+      "phase": "TASKS_READY",
+      "agent": "Zeus",
+      "timestamp": "2026-08-28T02:05:00.000Z",
+      "summary": "Tasks validadas. Caronte commitou spec+plan."
+    },
+    {
+      "phase": "CODING",
+      "agent": "Zeus",
+      "timestamp": "2026-08-28T02:10:00.000Z",
+      "summary": "Loop Minos→Hefesto→Caronte por task concluído (8 tasks)."
+    },
+    {
+      "phase": "TESTING",
+      "agent": "Zeus",
+      "timestamp": "2026-08-28T02:30:00.000Z",
+      "summary": "Minos suite completa: 100% pass, coverage 85%. test-report.json + test-scenarios.md gerados."
+    },
+    {
+      "phase": "REVIEW",
+      "agent": "Zeus",
+      "timestamp": "2026-08-28T02:35:00.000Z",
+      "summary": "Argos review aprovado. diff.patch analisado vs spec+plan. review-report.json: approved."
+    },
+    {
+      "phase": "APPROVED",
+      "agent": "Zeus",
+      "timestamp": "2026-08-28T02:40:00.000Z",
+      "summary": "Humano executou cenários de test-scenarios.md e aprovou diff."
+    },
+    {
+      "phase": "COMMITTED",
+      "agent": "Zeus",
+      "timestamp": "2026-08-28T02:45:00.000Z",
+      "summary": "Mnemósine atualizou AGENTS.md/CHANGELOG.md/README.md. Caronte commitou docs + feat final + push. Backlog atualizado para Concluído."
+    }
+  ],
+  "approvals": {
+    "spec": "approved",
+    "review": "approved"
+  },
+  "decisions": [
+    {
+      "id": "dec-1",
+      "question": "CLI externo (olympus.js) vs Zeus nativo via Task tool?",
+      "options": ["Manter olympus.js CLI", "Zeus faz tudo via read/write/bash/task"],
+      "chosen": "Zeus nativo sem CLI externo",
+      "rationale": "Fluxo conversacional humano↔Zeus; Task tool já tem resiliência nativa; Caronte usa git_retry bash para git remoto"
+    },
+    {
+      "id": "dec-2",
+      "question": "Quem gera diff.patch para Argos?",
+      "options": ["olympus.js phase REVIEW", "Zeus via bash git diff"],
+      "chosen": "Zeus via bash",
+      "rationale": "Zeus já resolve FEATURE_DIR via .agents/current; evita CLI extra"
+    },
+    {
+      "id": "dec-3",
+      "question": "Resiliência para invocação de agentes?",
+      "options": ["Wrapper em olympus.js", "Task tool nativo da plataforma"],
+      "chosen": "Task tool nativo",
+      "rationale": "Plataforma (opencode) já trata timeout/retry/circuit breaker na invocação"
+    },
+    {
+      "id": "dec-4",
+      "question": "Resiliência para operações git remoto (push/pull)?",
+      "options": ["Node helper com retry", "git_retry bash function no Caronte"],
+      "chosen": "git_retry bash no Caronte",
+      "rationale": "Simples, sem dependência, Caronte já tem bash: allow"
+    }
+  ]
+}

@@ -56,7 +56,7 @@ Entregar a **arquitetura completa do sistema multi-agentes Olympus**: 8 agentes 
 | **Minos** | Testador | **Antes** (por task): testes de contrato RED; **Durante/Depois**: suite completa, cobertura ≥80%, `test-report.json` + `test-scenarios.md` (Dado/Quando/Então) + promoção de smoke para `regression.md`. Não corrige código | read, write, edit, glob, grep, bash |
 | **Argos** | Revisor | Analisa `diff.patch` (develop...HEAD) vs `spec.md`+`plan.md`+padrões em 5 eixos, gera `review-report.json` aprovado/bloqueado com `blocker.category` para roteamento | read, write, glob, grep, bash |
 | **Mnemósine** | Documentadora | Atualiza `AGENTS.md`, `CHANGELOG.md`, `README.md` + propõe melhorias de processo; lê todo `FEATURE_DIR` + diff; só atua em `APPROVED` | read, write, edit, glob, grep, bash |
-| **Caronte** | Commitador (Agente) | **Único que commita** — valida branch `feature/<slug>` de `develop`, pre-commit, `git add <arquivos>` explícito, Conventional Commits PT-BR, push (Actions abre PR). Invocado por Zeus em Step 0, após Atena, após cada task, após Mnemósine, final | read, glob, grep, bash |
+| **Caronte** | Commitador (Agente) | **Único que commita** — valida branch `feature/<modulo>/<slug>` (ou `feature/hestia/<slug>` se transversal) de `develop`, pre-commit, `git add <arquivos>` explícito, Conventional Commits PT-BR, push (Actions abre PR). Invocado por Zeus em Step 0, após Atena, após cada task, após Mnemósine, final | read, glob, grep, bash |
 
 ---
 
@@ -120,7 +120,7 @@ Retornos: TESTING→CODING, REVIEW→CODING|TASKS_READY|PLAN_READY|SPEC_DRAFT, A
 
 | Momento | Ação | Commit? | Mensagem Padrão |
 |---------|------|---------|-----------------|
-| **Step 0 — Início Feature** | Caronte valida `git status` clean, sem PRs não aprovados em `develop`, cria branch `feature/<slug>` | **Sim** (inicial) | `feat: branch feature/<slug> iniciada — Olympus` |
+| **Step 0 — Início Feature** | Caronte valida `git status` clean, sem PRs não aprovados em `develop`, cria branch `feature/<modulo>/<slug>` (ou `feature/hestia/<slug>` se transversal) | **Sim** (inicial) | `feat: branch feature/<modulo>/<slug> iniciada — Olympus` |
 | **Após Fase 3 (Atena)** | `plan.md` + `tasks.json` produzidos | **Sim** (obrigatório) | `feat: spec + plan registradas para feature <nome>` |
 | **Após cada Task (Fase 4)** | Hefesto conclui task + Minos testes passam | **Sim** (por task) | `feat: <descrição-da-task>` |
 | **Após Mnemósine (Fase 7)** | Docs atualizadas (AGENTS.md, CHANGELOG.md, README.md) | **Sim** | `docs: atualizar documentação da feature <nome>` |
@@ -289,7 +289,7 @@ Retornos: TESTING→CODING, REVIEW→CODING|TASKS_READY|PLAN_READY|SPEC_DRAFT, A
 | **T10.2** | Verifica sem PRs não aprovados em `develop` | Validado |
 | **T10.3** | `git add <arquivos exatos>` (olimpo, FEATURE_DIR, codebase, docs, testes — `.env` nunca) | Staged explícito |
 | **T10.4** | Commit final: `feat: feature <nome> concluída — Olympus` (valida `package.json` SemVer bump por Mnemósine) | Commit criado |
-| **T10.5** | `git push -u origin feature/<slug>` (se branch nova) ou `git push`; GitHub Actions abre PR para `develop` | PR aberta via Actions |
+| **T10.5** | `git push -u origin feature/<modulo>/<slug>` (ou `feature/hestia/<slug>` se transversal, se branch nova) ou `git push`; GitHub Actions abre PR para `develop` | PR aberta via Actions |
 | **T10.6** | Zeus: atualiza `.agents/modules/<modulo>/backlog.md` para `Concluído` | Backlog atualizado |
 | **T10.7** | Zeus: mantém `FEATURE_DIR` como histórico permanente (não limpa) + mantém `.agents/current` apontando | Histórico preservado |
 

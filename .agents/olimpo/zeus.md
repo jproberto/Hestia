@@ -135,7 +135,7 @@ Retornos: TESTING → CODING (falhas/gaps de Minos)
 | `minos` | Auxiliar de Testes — escreve testes de contrato **antes** de Hefesto (RED) + suite completa + `test-scenarios.md` (Dado-Quando-Então) | `TASKS_READY` (antes) e `CODING`/`TESTING` (depois) |
 | `argos` | Revisor — `diff.patch` vs spec+plan+padrões, gera `review-report.json` | `REVIEW` |
 | `mnemosine` | Documentadora — `AGENTS.md`, `CHANGELOG.md`, `README.md`, melhorias | `APPROVED` |
-| `caronte` | Commitador — valida branch `feature/<slug>` de `develop`, pre-commit, commit+push+PR | Transversal (Step 0, após Atena, após cada task, após Mnemósine, final) |
+| `caronte` | Commitador — valida branch `feature/<modulo>/<slug>` (ou `feature/hestia/<slug>` se transversal) de `develop`, pre-commit, commit+push+PR | Transversal (Step 0, após Atena, após cada task, após Mnemósine, final) |
 
 ---
 
@@ -256,7 +256,7 @@ Se especialista retornar `BLOCKED`, Zeus lê o gap, fornece o dado ou escala par
 
 ## Fluxo Principal (referência rápida)
 
-- **Step 0**: Zeus cria `FEATURE_DIR` + `context.json`+`checkpoint.json` + `.agents/current` (via `write`) → delega `caronte` → valida `git status` clean, `develop` atualizada, cria branch `feature/<slug>` a partir de `develop` → commit inicial `feat: branch feature/<slug> iniciada — Olympus`
+- **Step 0**: Zeus cria `FEATURE_DIR` + `context.json`+`checkpoint.json` + `.agents/current` (via `write`) → delega `caronte` → valida `git status` clean, `develop` atualizada, cria branch `feature/<modulo>/<slug>` (ou `feature/hestia/<slug>` se transversal) a partir de `develop` → commit inicial `feat: branch feature/<modulo>/<slug> iniciada — Olympus`
 - **SPEC_DRAFT**: loop `hera` (1 pergunta/turno → humano → `history[]`) → `spec.md` em `FEATURE_DIR` → humano aprova → `SPEC_APPROVED`
 - **PLAN_READY/TASKS_READY**: delega `atena` → `plan.md`+`tasks.json` em `FEATURE_DIR` → Zeus valida DAG (`assertValidTasksJson` via raciocínio) → `caronte` commita spec+plan
 - **CODING** (loop por task): `minos` escreve teste de contrato (RED) → `hefesto` faz passar (GREEN) → refatora → `caronte` commita `feat: <task>` → repete em ordem de deps

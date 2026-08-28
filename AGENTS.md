@@ -29,7 +29,7 @@ Todo agente DEVE consultar seu prompt em `.agents/olimpo/<agente>.md` antes de a
 | 5. Revisão | **Argos** (`argos.md`) | Avalia `diff.patch` (develop...HEAD) vs spec/plan em 5 eixos, `review-report.json` (approved/blocked + category). |
 | 6. Homologação | Humano + `test-scenarios.md` | Executa cenários Dado/Quando/Então, aprova diff → `approve-review`. |
 | 7. Documentação | **Mnemósine** (`mnemosine.md`) | Atualiza `AGENTS.md`, `CHANGELOG.md`, `README.md`, propõe melhorias. |
-| 8. Commit | **Caronte** (`caronte.md`) | Agente transversal — único que commita: valida branch `feature/<slug>`, pre-commit, `git add <arquivos>` explícito, Conventional Commits PT-BR, push (Actions abre PR). |
+| 8. Commit | **Caronte** (`caronte.md`) | Agente transversal — único que commita: valida branch `feature/<modulo>/<slug>` (ou `feature/hestia/<slug>` se transversal), pre-commit, `git add <arquivos>` explícito, Conventional Commits PT-BR, push (Actions abre PR). |
 
 ### Agentes / Skills
 - **Zeus** (`zeus.md`, primary): orquestrador, state machine 9 fases (`SPEC_DRAFT`→`COMMITTED`), guardian, delega via Task tool, resolve `FEATURE_DIR` via `.agents/current`, valida DAG `tasks.json`, gera `diff.patch`, persiste estado via `read`/`write`.

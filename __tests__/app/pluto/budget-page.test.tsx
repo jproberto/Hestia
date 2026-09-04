@@ -2,7 +2,11 @@ import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/re
 import BudgetPage from "@/app/pluto/budget/page";
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { getBudgetAdjustment, getBudgets, getBudgetAdjustments, createBudgetAdjustment } from "@/lib/pluto/db/budget";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
+import { MascotProvider } from "@/lib/hestia/MascotProvider";
+
+const mockUsePathname = vi.hoisted(() => vi.fn(() => '/pluto/budget'));
+const mockUseRouter = vi.hoisted(() => vi.fn(() => ({ push: vi.fn(), refresh: vi.fn(), back: vi.fn(), prefetch: vi.fn() })));
 
 vi.mock("@/utils/supabase/client", () => ({
   createClient: () => ({
@@ -27,13 +31,25 @@ vi.mock("@/lib/pluto/db/categories", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useSearchParams: vi.fn()
+  useSearchParams: vi.fn(),
+  usePathname: mockUsePathname,
+  useRouter: mockUseRouter,
 }));
+
+function renderWithMascotProvider(ui: React.ReactElement) {
+  return render(
+    <MascotProvider>
+      {ui}
+    </MascotProvider>
+  );
+}
 
 describe("Pagina de Orcamento Anual /pluto/budget (Revisada por Ajustes)", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
+    mockUsePathname.mockReturnValue('/pluto/budget');
+    mockUseRouter.mockReturnValue({ push: vi.fn(), refresh: vi.fn(), back: vi.fn(), prefetch: vi.fn() });
   });
 
   it("deve exibir estado vazio e botao de iniciar orcamento se nenhuma revisao existir", async () => {
@@ -42,7 +58,7 @@ describe("Pagina de Orcamento Anual /pluto/budget (Revisada por Ajustes)", () =>
     (getBudgetAdjustments as Mock).mockResolvedValue([]);
     (getBudgets as Mock).mockResolvedValue([]);
 
-    render(<BudgetPage />);
+    renderWithMascotProvider(<BudgetPage />);
 
     expect(await screen.findByText(/Nenhum orçamento cadastrado para o ano/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Iniciar Orçamento/i })).toBeInTheDocument();
@@ -64,7 +80,7 @@ describe("Pagina de Orcamento Anual /pluto/budget (Revisada por Ajustes)", () =>
       { category_id: "cat-1", category_name: "Alimentação", category_type: "despesa", amount: 1000, start_month: 1 }
     ]);
 
-    render(<BudgetPage />);
+    renderWithMascotProvider(<BudgetPage />);
 
     // 1. Deve carregar a tabela e focar por padrao no ajuste mais recente (Agosto)
     expect(await screen.findByText("Alimentação")).toBeInTheDocument();
@@ -78,29 +94,42 @@ describe("Pagina de Orcamento Anual /pluto/budget (Revisada por Ajustes)", () =>
     expect(createBtn).toBeInTheDocument();
 
     // 4. Ao clicar em Criar Novo Ajuste
-    (createBudgetAdjustment as Mock).mockResolvedValue("rev-outubro");
-    
-    // Atualiza o mock para incluir o novo ajuste de Outubro cadastrado
-    const mockAdjsWithOct = [
-      ...mockAdjs,
-      { id: "rev-outubro", year: 2026, start_month: 10, description: "Ajuste de Outubro", created_by: "teste" }
-    ];
-    (getBudgetAdjustments as Mock).mockResolvedValue(mockAdjsWithOct);
-
     fireEvent.click(createBtn);
 
-    // 5. O teste deve verificar se recarregou e focou em Outubro (agora editavel)
-    await waitFor(() => {
-      expect(createBudgetAdjustment).toHaveBeenCalledWith(expect.any(Object), 2026, 10, "teste@hestia.com");
-    });
+    // 5. Deve abrir o modal de novo ajuste
+    const modal = await screen.findByText(/Novo Ajuste de Orçamento/i);
+    expect(modal).toBeInTheDocument();
 
-    await waitFor(() => {
-      // O botao "Criar Novo Ajuste" some pois agora existe um ajuste para o mes corrente
-      expect(screen.queryByRole("button", { name: /Criar Novo Ajuste/i })).not.toBeInTheDocument();
-      // O botao "Adicionar Previsão" passa a aparecer (esta aberto para edicao)
-      expect(screen.getByRole("button", { name: /Adicionar Previsão/i })).toBeInTheDocument();
-      // O cursor da celula vira pointer
-      expect(screen.getByText(/1\.000,00/, { selector: "span" })).toHaveClass("cursor-pointer");
-    });
+    // 6. Preencher dados do novo ajuste
+    fireEvent.change(screen.getByLabelText(/Mês de Início/i), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText(/Descrição/i), { target: { value: "Ajuste de Outubro" } });
+
+    // 7. Adicionar item de previsão
+    fireEvent.change(screen.getByLabelText(/Categoria/i), { target: { value: "Transporte" } });
+    fireEvent.change(screen.getByLabelText(/Valor/i), { target: { value: "500" } });
+    fireEvent.click(screen.getByRole("button", { name: /Adicionar Previsão/i }));
+
+    // 8. Verificar que o item foi adicionado
+    expect(await screen.findByText("Transporte")).toBeInTheDocument();
+    expect(await screen.findByText("500,00")).toBeInTheDocument();
+
+    // 9. Salvar o ajuste
+    fireEvent.click(screen.getByRole("button", { name: /Salvar Ajuste/i }));
+
+    // 10. Verificar que o ajuste foi criado
+    expect(createBudgetAdjustment).toHaveBeenCalledWith(
+      expect.anything(),
+      2026,
+      10,
+      "Ajuste de Outubro",
+      expect.arrayContaining([
+        expect.objectContaining({
+          category_name: "Transporte",
+          amount: 500,
+          start_month: 10,
+        })
+      ]),
+      "teste@hestia.com"
+    );
   });
 });

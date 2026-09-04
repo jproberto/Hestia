@@ -30,8 +30,28 @@
     },
     {
       "phase": "CODING",
-      "action": "task-1-css-foundation: Minos wrote 21 contract tests (RED). Hefesto implemented lib/hestia/mascot-lqip.ts, components/ui/MascotBackground.tsx, app/globals.css. Blocked by toHaveStyle asymmetric matcher limitation. Minos fixed test assertions. All 21 tests GREEN. lint + build pass.",
+      "action": "task-1-css-foundation: Minos wrote 21 contract tests (RED). Hefesto implemented lib/hestia/mascot-lqip.ts, components/ui/MascotBackground.tsx, app/globals.css. Blocked by toHaveStyle asymmetric matcher limitation. Minos fixed test assertions. All 21 tests GREEN. lint + build pass. Caronte committed: feat(hestia): adiciona fundação CSS e LQIP para identidade visual de mascotes (3c206e7).",
       "timestamp": "2026-08-29T13:30:00.000Z"
+    },
+    {
+      "phase": "CODING",
+      "action": "task-2-provider-hook: Minos wrote 31 contract tests (RED). Hefesto implemented lib/hestia/useMascotBackground.ts, extended MascotProvider.tsx, added MascotBgMode type. All 31 tests GREEN. lint + build pass. Caronte committed: feat(hestia): implement MascotProvider e hook useMascotBackground (3ac97c7).",
+      "timestamp": "2026-08-29T16:00:00.000Z"
+    },
+    {
+      "phase": "CODING",
+      "action": "task-3-login-page: Minos wrote 12 contract tests (RED). Hefesto wrapped page with MascotBackground mode='prominent', mascotKey='hestia', removed inline Mascot icon. All 12 tests GREEN. lint + build pass. Caronte committed: feat(login): adiciona background proeminente Hestia na página de login (commit hash pending).",
+      "timestamp": "2026-08-29T16:30:00.000Z"
+    },
+    {
+      "phase": "CODING",
+      "action": "task-4-dashboard-page: Minos wrote 15 contract tests (RED). Hefesto implemented dynamic mode switching with useMascotBackground hook. Fixed test mocking for has-data state. All 15 tests GREEN. lint + build pass. Caronte committed: feat(dashboard): implementa página do dashboard com mascotes (f37ff92).",
+      "timestamp": "2026-08-29T17:30:00.000Z"
+    },
+    {
+      "phase": "CODING",
+      "action": "Transitioning to task-5-pluto-pages: Pluto Pages (Budget, Months, Transactions) - Pluto Background shared pattern. Minos to write contract tests first.",
+      "timestamp": "2026-08-29T18:00:00.000Z"
     }
   ],
   "approvals": {
@@ -48,6 +68,10 @@
     "LQIP = 1x1px base64 (não blur-hash) — simpler, 20B inline",
     "Watermark: opacity 0.12, bottom-right, content-visibility: auto",
     "Overlay: ::before pseudo-element, 70% dark, white text — WCAG AA",
-    "previousMascotKey em MascotProvider para cross-fade"
+    "previousMascotKey em MascotProvider para cross-fade",
+    "MascotBgMode type exportado em mascots.ts",
+    "useMascotBackground hook exportado de MascotProvider.tsx",
+    "Login page: mode='prominent' sempre (sem estado de dados)",
+    "Dashboard: dynamic mode baseado em loading/empty/has-data"
   ]
 }

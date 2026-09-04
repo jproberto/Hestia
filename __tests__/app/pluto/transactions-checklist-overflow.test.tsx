@@ -4,9 +4,15 @@ import TransactionsPage from "@/app/pluto/transactions/page";
 import * as checklistDb from "@/lib/pluto/db/checklist";
 import * as budgetDb from "@/lib/pluto/db/budget";
 import * as categoriesDb from "@/lib/pluto/db/categories";
+import { usePathname, useRouter } from "next/navigation";
+import { MascotProvider } from "@/lib/hestia/MascotProvider";
+
+const mockUsePathname = vi.hoisted(() => vi.fn(() => '/pluto/transactions'));
+const mockUseRouter = vi.hoisted(() => vi.fn(() => ({ push: vi.fn(), refresh: vi.fn(), back: vi.fn(), prefetch: vi.fn() })));
 
 vi.mock("next/navigation", () => ({
-  useRouter: vi.fn(() => ({ push: vi.fn() })),
+  usePathname: mockUsePathname,
+  useRouter: mockUseRouter,
 }));
 
 vi.mock("@/utils/supabase/client", () => ({
@@ -14,7 +20,7 @@ vi.mock("@/utils/supabase/client", () => ({
     auth: {
       getUser: () => Promise.resolve({ data: { user: { email: "teste@hestia.com" } } }),
     },
-  }),
+  })
 }));
 
 vi.mock("@/lib/pluto/db/checklist", async (importOriginal) => {
@@ -57,16 +63,172 @@ vi.mock("@/lib/pluto/db/transactions", () => ({
   getTransactionsByMonth: vi.fn(() => Promise.resolve([])),
 }));
 
+function renderWithMascotProvider(ui: React.ReactElement) {
+  return render(
+    <MascotProvider>
+      {ui}
+    </MascotProvider>
+  );
+}
+
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
+import TransactionsPage from "@/app/pluto/transactions/page";
+import * as checklistDb from "@/lib/pluto/db/checklist";
+import * as budgetDb from "@/lib/pluto/db/budget";
+import * as categoriesDb from "@/lib/pluto/db/categories";
+import { usePathname, useRouter } from "next/navigation";
+import { MascotProvider } from "@/lib/hestia/MascotProvider";
+
+const mockUsePathname = vi.hoisted(() => vi.fn(() => '/pluto/transactions'));
+const mockUseRouter = vi.hoisted(() => vi.fn(() => ({ push: vi.fn(), refresh: vi.fn(), back: vi.fn(), prefetch: vi.fn() })));
+
+vi.mock("next/navigation", () => ({
+  usePathname: mockUsePathname,
+  useRouter: mockUseRouter,
+}));
+
+vi.mock("@/utils/supabase/client", () => ({
+  createClient: () => ({
+    auth: {
+      getUser: () => Promise.resolve({ data: { user: { email: "teste@hestia.com" } } }),
+    },
+  })
+});
+
+vi.mock("@/lib/pluto/db/checklist", async (importOriginal) => {
+  const actual = await importOriginal<typeof checklistDb>();
+  return {
+    ...actual,
+    getChecklistItemsByMonth: vi.fn(() => Promise.resolve([])),
+    getGlobalChecklistItems: vi.fn(() => Promise.resolve([])),
+    createChecklistItem: vi.fn(() => Promise.resolve({})),
+    updateChecklistItem: vi.fn(() => Promise.resolve()),
+  };
+});
+
+vi.mock("@/lib/pluto/db/budget", async (importOriginal) => {
+  const actual = await importOriginal<typeof budgetDb>();
+  return {
+    ...actual,
+    getBudgets: vi.fn(() => Promise.resolve([])),
+    adjustBudgetItem: vi.fn(() => Promise.resolve()),
+  };
+});
+
+vi.mock("@/lib/pluto/db/months", () => ({
+  getAllOpenMonthlyPeriods: vi.fn(() => Promise.resolve([{ id: "m1", month: 10, year: 2026, status: "aberto" }])),
+}));
+
+vi.mock("@/lib/pluto/db/categories", async (importOriginal) => {
+  const actual = await importOriginal<typeof categoriesDb>();
+  return {
+    ...actual,
+    getCategories: vi.fn(() => Promise.resolve([{ id: "cat1", name: "Contas", type: "despesa" }])),
+  };
+});
+
+vi.mock("@/lib/pluto/db/accounts", () => ({
+  getAccounts: vi.fn(() => Promise.resolve([])),
+}));
+
+vi.mock("@/lib/pluto/db/transactions", () => ({
+  getTransactionsByMonth: vi.fn(() => Promise.resolve([])),
+}));
+
+function renderWithMascotProvider(ui: React.ReactElement) {
+  return render(
+    <MascotProvider>
+      {ui}
+    </MascotProvider>
+  );
+}
+
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
+import TransactionsPage from "@/app/pluto/transactions/page";
+import * as checklistDb from "@/lib/pluto/db/checklist";
+import * as budgetDb from "@/lib/pluto/db/budget";
+import * as categoriesDb from "@/lib/pluto/db/categories";
+import { usePathname, useRouter } from "next/navigation";
+import { MascotProvider } from "@/lib/hestia/MascotProvider";
+
+const mockUsePathname = vi.hoisted(() => vi.fn(() => '/pluto/transactions'));
+const mockUseRouter = vi.hoisted(() => vi.fn(() => ({ push: vi.fn(), refresh: vi.fn(), back: vi.fn(), prefetch: vi.fn() })));
+
+vi.mock("next/navigation", () => ({
+  usePathname: mockUsePathname,
+  useRouter: mockUseRouter,
+}));
+
+vi.mock("@/utils/supabase/client", () => ({
+  createClient: () => ({
+    auth: {
+      getUser: () => Promise.resolve({ data: { user: { email: "teste@hestia.com" } } }),
+    },
+  })
+});
+
+vi.mock("@/lib/pluto/db/checklist", async (importOriginal) => {
+  const actual = await importOriginal<typeof checklistDb>();
+  return {
+    ...actual,
+    getChecklistItemsByMonth: vi.fn(() => Promise.resolve([])),
+    getGlobalChecklistItems: vi.fn(() => Promise.resolve([])),
+    createChecklistItem: vi.fn(() => Promise.resolve({})),
+    updateChecklistItem: vi.fn(() => Promise.resolve()),
+  };
+});
+
+vi.mock("@/lib/pluto/db/budget", async (importOriginal) => {
+  const actual = await importOriginal<typeof budgetDb>();
+  return {
+    ...actual,
+    getBudgets: vi.fn(() => Promise.resolve([])),
+    adjustBudgetItem: vi.fn(() => Promise.resolve()),
+  };
+});
+
+vi.mock("@/lib/pluto/db/months", () => ({
+  getAllOpenMonthlyPeriods: vi.fn(() => Promise.resolve([{ id: "m1", month: 10, year: 2026, status: "aberto" }])),
+}));
+
+vi.mock("@/lib/pluto/db/categories", async (importOriginal) => {
+  const actual = await importOriginal<typeof categoriesDb>();
+  return {
+    ...actual,
+    getCategories: vi.fn(() => Promise.resolve([{ id: "cat1", name: "Contas", type: "despesa" }])),
+  };
+});
+
+vi.mock("@/lib/pluto/db/accounts", () => ({
+  getAccounts: vi.fn(() => Promise.resolve([])),
+}));
+
+vi.mock("@/lib/pluto/db/transactions", () => ({
+  getTransactionsByMonth: vi.fn(() => Promise.resolve([])),
+}));
+
+function renderWithMascotProvider(ui: React.ReactElement) {
+  return render(
+    <MascotProvider>
+      {ui}
+    </MascotProvider>
+  );
+}
+
 describe("TransactionsPage Checklist Overflow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUsePathname.mockReturnValue('/pluto/transactions');
+    mockUseRouter.mockReturnValue({ push: vi.fn(), refresh: vi.fn(), back: vi.fn(), prefetch: vi.fn() });
   });
 
   it("cria item global com amount causando estouro -> modal aparece", async () => {
     (budgetDb.getBudgets as Mock).mockResolvedValue([{ category_id: "cat1", amount: 100 }]);
     (checklistDb.getGlobalChecklistItems as Mock).mockResolvedValue([{ id: "g1", category_id: "cat1", amount: 80, month_id: null, is_active: true }]);
 
-    render(<TransactionsPage />);
+    renderWithMascotProvider(<TransactionsPage />);
     
     await waitFor(() => {
       expect(screen.getByText("Extrato & Orçado vs. Real")).toBeInTheDocument();
@@ -97,7 +259,7 @@ describe("TransactionsPage Checklist Overflow", () => {
     (budgetDb.getBudgets as Mock).mockResolvedValue([{ category_id: "cat1", amount: 100 }]);
     (checklistDb.getGlobalChecklistItems as Mock).mockResolvedValue([{ id: "g1", category_id: "cat1", amount: 80, month_id: null, is_active: true }]);
 
-    render(<TransactionsPage />);
+    renderWithMascotProvider(<TransactionsPage />);
     
     await waitFor(() => {
       expect(screen.getByText("Extrato & Orçado vs. Real")).toBeInTheDocument();
@@ -136,7 +298,7 @@ describe("TransactionsPage Checklist Overflow", () => {
     (budgetDb.getBudgets as Mock).mockResolvedValue([{ category_id: "cat1", amount: 100 }]);
     (checklistDb.getGlobalChecklistItems as Mock).mockResolvedValue([{ id: "g1", category_id: "cat1", amount: 80, month_id: null, is_active: true }]);
 
-    render(<TransactionsPage />);
+    renderWithMascotProvider(<TransactionsPage />);
     
     await waitFor(() => {
       expect(screen.getByText("Extrato & Orçado vs. Real")).toBeInTheDocument();
@@ -174,7 +336,7 @@ describe("TransactionsPage Checklist Overflow", () => {
     (checklistDb.getChecklistItemsByMonth as Mock).mockResolvedValue([]);
     (vi.mocked(checklistDb.getChecklistItemsByMonth) as Mock).mockResolvedValue([]);
 
-    render(<TransactionsPage />);
+    renderWithMascotProvider(<TransactionsPage />);
     
     await waitFor(() => {
       expect(screen.getByText("Extrato & Orçado vs. Real")).toBeInTheDocument();

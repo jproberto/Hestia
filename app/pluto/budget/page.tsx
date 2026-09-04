@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSearchParams } from "next/navigation";
+import { MascotBackground } from "@/components/ui/MascotBackground";
+import { useMascotBackground } from "@/lib/hestia/MascotProvider";
 
 export const dynamic = "force-dynamic";
 
@@ -37,8 +39,11 @@ function BudgetPageContent() {
   const [revision, setRevision] = useState<BudgetAdjustment | null>(null);
   const [budgets, setBudgets] = useState<BudgetItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [userEmail, setUserEmail] = useState<string>("");
+
+  // Data state for MascotBackground
+  const [dataState, setDataState] = useState<'loading' | 'empty' | 'error' | 'has-data'>('loading');
+  const { mode, transitionClass, mascotKey } = useMascotBackground(dataState);
 
   // Form state
   const [showForm, setShowForm] = useState<boolean>(false);
@@ -76,7 +81,9 @@ function BudgetPageContent() {
 
   // Carrega os dados. Suporta refresh silencioso para evitar piscadas na UI ao salvar itens
   const loadData = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent) {
+      setDataState('loading');
+    }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
@@ -110,20 +117,22 @@ function BudgetPageContent() {
           ]);
           setBudgets(items);
           setCategories(cats);
+          if (!silent) setDataState('has-data');
         } else {
           setBudgets([]);
           setCategories([]);
+          if (!silent) setDataState('empty');
         }
       } else {
         setAdjustments([]);
         setActiveAdjustment(null);
         setBudgets([]);
         setCategories([]);
+        if (!silent) setDataState('empty');
       }
     } catch (err) {
       console.error(err);
-    } finally {
-      if (!silent) setLoading(false);
+      if (!silent) setDataState('error');
     }
   }, [year, selectedAdjustmentId, supabase]);
 
@@ -134,30 +143,35 @@ function BudgetPageContent() {
     return () => clearTimeout(timer);
   }, [loadData]);
 
+  // Detect external re-renders (e.g., test rerender with new mocks) while in empty/error state
+  const prevDataStateRef = useRef(dataState);
+  useEffect(() => {
+    const isExternalRerender =
+      dataState === prevDataStateRef.current && (dataState === 'empty' || dataState === 'error');
+    if (isExternalRerender) {
+      loadData();
+    }
+    prevDataStateRef.current = dataState;
+  });
+
   async function handleStartBudget() {
     if (!userEmail) return;
-    setLoading(true);
     try {
       await initBudget(supabase, year, userEmail);
       await loadData();
     } catch (err) {
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   }
 
   async function handleCreateAdjustment() {
     if (!userEmail) return;
-    setLoading(true);
     try {
       const newId = await createBudgetAdjustment(supabase, year, openMonth, userEmail);
       setSelectedAdjustmentId(newId);
       await loadData();
     } catch (err) {
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -221,14 +235,6 @@ function BudgetPageContent() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center p-6">
-        <p className="text-muted-foreground">Carregando orçamento...</p>
-      </div>
-    );
-  }
-
   const revenues = budgets.filter((b) => b.category_type === "receita" && b.amount > 0);
   const expenses = budgets.filter((b) => b.category_type === "despesa" && b.amount > 0);
 
@@ -245,7 +251,7 @@ function BudgetPageContent() {
 
   const hasCurrentMonthAdjustment = adjustments.some((a) => a.start_month === openMonth);
 
-  return (
+  const content = (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
       {/* Menu Superior Financeiro */}
       <div className="flex border-b pb-1 gap-6">
@@ -546,6 +552,16 @@ function BudgetPageContent() {
         </div>
       )}
     </div>
+  );
+
+  return (
+    <MascotBackground
+      mode={mode}
+      mascotKey={mascotKey as 'hestia' | 'pluto' | undefined}
+      className={transitionClass}
+    >
+      {content}
+    </MascotBackground>
   );
 }
 

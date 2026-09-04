@@ -1,0 +1,239 @@
+{
+  "tasks": [
+    {
+      "id": "task-1-css-foundation",
+      "title": "CSS Foundation + LQIP Utility + MascotBackground Component",
+      "description": "Create globals.css mascot variables, mascot-lqip.ts utility, and MascotBackground.tsx component with unit tests. Establishes the visual primitive.",
+      "dependencies": [],
+      "files": {
+        "create": [
+          "lib/hestia/mascot-lqip.ts",
+          "components/ui/MascotBackground.tsx",
+          "__tests__/lib/hestia/mascot-lqip.test.ts",
+          "__tests__/components/ui/MascotBackground.test.tsx"
+        ],
+        "modify": [
+          "app/globals.css"
+        ]
+      },
+      "interfaces": {
+        "consumes": [],
+        "produces": [
+          "CSS variables: --mascot-bg, --mascot-bg-opacity, --mascot-bg-lqip, --mascot-transition-duration, --mascot-overlay-bg, --mascot-overlay-text",
+          "lib/hestia/mascot-lqip.ts: generateLQIP(mascotKey) → { lqipBase64: string, blurHash?: string }",
+          "components/ui/MascotBackground.tsx: MascotBackgroundProps { children, mode?: 'prominent'|'watermark', className? }"
+        ]
+      },
+      "acceptanceCriteria": [
+        "globals.css defines all mascot CSS variables with correct defaults (hestia prominent)",
+        "prefers-reduced-motion media query sets --mascot-transition-duration: 0ms",
+        "generateLQIP('hestia') returns valid base64 1x1px PNG data URI",
+        "MascotBackground renders a div with inline --mascot-bg-lqip style",
+        "MascotBackground applies mode via --mascot-bg-opacity (1 vs 0.12)",
+        "MascotBackground adds transition class for cross-fade",
+        "Watermark mode uses content-visibility: auto",
+        "Prominent mode includes ::before overlay with --mascot-overlay-bg and text color --mascot-overlay-text",
+        "Unit tests pass: LQIP generation, component render modes, CSS var application"
+      ]
+    },
+    {
+      "id": "task-2-provider-hook",
+      "title": "Extend MascotProvider + create useMascotBackground Hook",
+      "description": "Add previousMascotKey tracking to MascotProvider context. Create useMascotBackground hook that derives mode (prominent/watermark) from page data state and provides transition class.",
+      "dependencies": ["task-1-css-foundation"],
+      "files": {
+        "create": [
+          "lib/hestia/useMascotBackground.ts",
+          "__tests__/lib/hestia/useMascotBackground.test.ts"
+        ],
+        "modify": [
+          "lib/hestia/MascotProvider.tsx",
+          "lib/hestia/mascots.ts"
+        ]
+      },
+      "interfaces": {
+        "consumes": [
+          "MascotProvider context: { mascot, isFallback, previousMascotKey }",
+          "Page data state: 'loading' | 'empty' | 'error' | 'has-data'"
+        ],
+        "produces": [
+          "MascotProvider context extended with previousMascotKey: MascotKey | null",
+          "useMascotBackground(dataState) → { mascotKey, previousMascotKey, mode, transitionClass, lqipStyle }",
+          "lib/hestia/mascots.ts: export type MascotBgMode = 'prominent' | 'watermark'"
+        ]
+      },
+      "acceptanceCriteria": [
+        "MascotProvider tracks previousMascotKey on pathname change (useEffect + ref)",
+        "Cross-fade transitionClass = 'mascot-transition' normally, 'mascot-transition-reduced' when prefers-reduced-motion",
+        "useMascotBackground('loading') → mode='prominent'",
+        "useMascotBackground('empty') → mode='prominent'",
+        "useMascotBackground('error') → mode='prominent'",
+        "useMascotBackground('has-data') → mode='watermark'",
+        "lqipStyle contains --mascot-bg-lqip for current mascotKey",
+        "Unit tests pass: provider transition tracking, hook mode derivation, reduced-motion detection"
+      ]
+    },
+    {
+      "id": "task-3-login-page",
+      "title": "Login Page - Prominent Hestia Background",
+      "description": "Integrate MascotBackground into login page. Login is always prominent (no data state). Remove inline Mascot icon from header.",
+      "dependencies": ["task-2-provider-hook"],
+      "files": {
+        "modify": [
+          "app/login/page.tsx"
+        ],
+        "create": [
+          "__tests__/app/login/page.test.tsx"
+        ]
+      },
+      "interfaces": {
+        "consumes": [
+          "MascotBackground component",
+          "useMascotBackground hook (static 'prominent' mode)"
+        ],
+        "produces": [
+          "Login page with full-viewport Hestia background (cover), dark overlay, white text",
+          "No inline <Mascot /> in header"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Login page renders MascotBackground wrapping entire page content",
+        "Background is Hestia (cover), opacity 1, dark overlay 70%, text white",
+        "LQIP inline style present on SSR (no layout shift)",
+        "Header no longer contains <Mascot size='sm' /> (removed in task-6, but login header is local)",
+        "Integration test: renders prominent background, axe-core no violations"
+      ]
+    },
+    {
+      "id": "task-4-dashboard-page",
+      "title": "Dashboard Page - Empty→Prominent, Data→Watermark",
+      "description": "Integrate MascotBackground into dashboard. Derive data state from existing loading/empty/data logic. Remove inline Mascot icon from header.",
+      "dependencies": ["task-2-provider-hook"],
+      "files": {
+        "modify": [
+          "app/dashboard/page.tsx"
+        ],
+        "create": [
+          "__tests__/app/dashboard/page.test.tsx"
+        ]
+      },
+      "interfaces": {
+        "consumes": [
+          "MascotBackground component",
+          "useMascotBackground hook",
+          "Existing dashboard data state (loading, revision/budgets existence)"
+        ],
+        "produces": [
+          "Dashboard with dynamic background: prominent when loading/empty, watermark when has data",
+          "No inline <Mascot size='md' /> in header"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Dashboard wraps content in MascotBackground",
+        "Initial load (loading=true) → prominent Hestia background",
+        "Empty state (no revision) → prominent Hestia background",
+        "Has data (revision exists) → watermark Hestia (12% opacity, bottom-right)",
+        "Transition between states uses cross-fade 300ms",
+        "Integration test: verifies mode switching, cross-fade class applied"
+      ]
+    },
+    {
+      "id": "task-5-pluto-pages",
+      "title": "Pluto Pages (Budget, Months, Transactions) - Pluto Background",
+      "description": "Integrate MascotBackground into all three Pluto pages. Shared pattern: prominent Pluto on loading/empty/error, watermark on has-data. Remove inline Mascot icons from headers.",
+      "dependencies": ["task-2-provider-hook"],
+      "files": {
+        "modify": [
+          "app/pluto/budget/page.tsx",
+          "app/pluto/months/page.tsx",
+          "app/pluto/transactions/page.tsx"
+        ],
+        "create": [
+          "__tests__/app/pluto/budget/page.test.tsx",
+          "__tests__/app/pluto/months/page.test.tsx",
+          "__tests__/app/pluto/transactions/page.test.tsx"
+        ]
+      },
+      "interfaces": {
+        "consumes": [
+          "MascotBackground component",
+          "useMascotBackground hook",
+          "Each page's existing loading/error/data state"
+        ],
+        "produces": [
+          "All Pluto pages with dynamic Pluto background",
+          "No inline <Mascot size='md' /> in any Pluto page header"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Budget page: loading/empty (no revision) → prominent Pluto; has revision → watermark Pluto",
+        "Months page: loading/error → prominent Pluto; has periods → watermark Pluto",
+        "Transactions page: loading/error/no-open-months → prominent Pluto; has data → watermark Pluto",
+        "Cross-fade 300ms when navigating between Pluto pages (same mascot, no visual change but transition ready)",
+        "Cross-fade 300ms when navigating Dashboard (Hestia) → Pluto pages (Pluto)",
+        "Integration tests: each page verifies mode per state, cross-fade on route change"
+      ]
+    },
+    {
+      "id": "task-6-cleanup-legacy-icons",
+      "title": "Remove Legacy Mascot Icons + ChecklistCard Empty State",
+      "description": "Remove all remaining inline <Mascot /> components from headers (layout.tsx, dashboard, pluto pages). Update ChecklistCard empty state to rely on page-level background (remove Mascot import/usage).",
+      "dependencies": ["task-3-login-page", "task-4-dashboard-page", "task-5-pluto-pages"],
+      "files": {
+        "modify": [
+          "app/layout.tsx",
+          "components/pluto/ChecklistCard.tsx"
+        ]
+      },
+      "interfaces": {
+        "consumes": [
+          "Page-level MascotBackground already in place"
+        ],
+        "produces": [
+          "Root layout header without <Mascot size='sm' />",
+          "ChecklistCard empty state without <Mascot size='lg' aria-hidden />",
+          "Mascot component still exists for potential future icon use but unused in current pages"
+        ]
+      },
+      "acceptanceCriteria": [
+        "app/layout.tsx header no longer imports or renders <Mascot />",
+        "components/pluto/ChecklistCard.tsx no longer imports or renders <Mascot />",
+        "All pages still display correct background via MascotBackground",
+        "No regression in background behavior",
+        "Visual verification: no duplicate mascots (icon + background)"
+      ]
+    },
+    {
+      "id": "task-7-a11y-verification",
+      "title": "Accessibility Audit + Cross-Fade Verification + Mobile Testing",
+      "description": "Run axe-core on all pages in all states. Verify cross-fade 300ms works and respects prefers-reduced-motion. Test mobile viewport background cover and watermark non-interference.",
+      "dependencies": ["task-6-cleanup-legacy-icons"],
+      "files": {
+        "create": [
+          "__tests__/a11y/mascot-background.a11y.test.tsx",
+          "__tests__/integration/cross-fade.test.tsx",
+          "__tests__/integration/mobile-background.test.tsx"
+        ]
+      },
+      "interfaces": {
+        "consumes": [
+          "All integrated pages",
+          "CSS prefers-reduced-motion media query"
+        ],
+        "produces": [
+          "Axe-core report: zero violations on login, dashboard, budget, months, transactions",
+          "Cross-fade timing test: 300ms ±50ms normal, 0ms reduced-motion",
+          "Mobile test: background covers viewport, watermark at 12% opacity bottom-right"
+        ]
+      },
+      "acceptanceCriteria": [
+        "axe-core: 0 violations across all 5 pages × 4 states (loading, empty, error, has-data)",
+        "prefers-reduced-motion: cross-fade disabled (instant swap verified)",
+        "Cross-fade: 300ms transition on mascotKey change (Hestia↔Pluto)",
+        "Mobile (375px): background-size: cover works, watermark doesn't overlap content",
+        "PNGs served from /public/mascots/ with identical hash (no optimization)",
+        "SSR: LQIP inline, no CLS (layout shift < 0.1)"
+      ]
+    }
+  ]
+}

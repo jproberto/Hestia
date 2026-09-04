@@ -1,0 +1,53 @@
+{
+  "sessionId": "visual-identity-mascots-2026-08-29",
+  "objective": "Rethink layout to display mascots prominently as BACKGROUND images (not small icons), preserving original PNGs in public/mascots/ (hestia.png 2.2MB, pluto.png 2.3MB) - must NOT be modified/optimized/resized",
+  "currentPhase": "CODING",
+  "history": [
+    {
+      "phase": "SPEC_DRAFT",
+      "action": "Feature initialized by Zeus. Delegating to Hera for new spec addressing mascot backgrounds.",
+      "timestamp": "2026-08-29T00:00:00.000Z"
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "action": "Hera completed 5-step discovery: (1) Intenção: identidade visual + reconhecimento módulo; (2) Jornada: background por estado (vazio/carregando/erro=proeminente, com dados=watermark), cross-fade módulos; (3) Regras: CSS vars + content-visibility + LQIP, prefers-reduced-motion, PNGs intactos; (4) YAGNI: milon, otimização PNGs, temas, animações complexas, SW, interatividade fora; (5) Alternativas: A (CSS vars+Context) recomendada vs B (Framer Motion) vs C (next/image - bloqueada). Spec.md escrito.",
+      "timestamp": "2026-08-29T01:30:00.000Z"
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "action": "Human approved spec (approve-spec). Transitioning to PLAN_READY.",
+      "timestamp": "2026-08-29T02:00:00.000Z"
+    },
+    {
+      "phase": "PLAN_READY",
+      "action": "Atena produced plan.md + tasks.json (7 tasks, DAG valid). Architecture: CSS vars + Context + CSS transitions + LQIP. Tasks cover: CSS foundation, Provider/hook, Login, Dashboard, Pluto pages, cleanup, a11y verification.",
+      "timestamp": "2026-08-29T03:00:00.000Z"
+    },
+    {
+      "phase": "TASKS_READY",
+      "action": "Zeus validated tasks.json DAG (7 tasks, acyclic, criteria testable). Ready for Minos (contract tests) → Hefesto (impl) loop starting with task-1-css-foundation.",
+      "timestamp": "2026-08-29T03:30:00.000Z"
+    },
+    {
+      "phase": "CODING",
+      "action": "task-1-css-foundation: Minos wrote 21 contract tests (RED). Hefesto implemented lib/hestia/mascot-lqip.ts, components/ui/MascotBackground.tsx, app/globals.css. Blocked by toHaveStyle asymmetric matcher limitation. Minos fixed test assertions. All 21 tests GREEN. lint + build pass.",
+      "timestamp": "2026-08-29T13:30:00.000Z"
+    }
+  ],
+  "approvals": {
+    "spec": "approved",
+    "review": "pending"
+  },
+  "decisions": [
+    "Background por estado (C): vazio/carregando/erro=proeminente, com dados=watermark 10-15%",
+    "CSS Variables + Context + CSS Transitions + content-visibility + LQIP (B)",
+    "Cross-fade 300ms entre módulos, respects prefers-reduced-motion",
+    "PNGs originais 2.2MB/2.3MB intocados — servidos estaticamente de /public/mascots/",
+    "YAGNI: milon, otimização, temas, animações complexas, SW, lazy-load avançado, interatividade",
+    "Alternativa A selecionada: CSS vars (--mascot-bg) + MascotProvider existente + CSS transitions nativas",
+    "LQIP = 1x1px base64 (não blur-hash) — simpler, 20B inline",
+    "Watermark: opacity 0.12, bottom-right, content-visibility: auto",
+    "Overlay: ::before pseudo-element, 70% dark, white text — WCAG AA",
+    "previousMascotKey em MascotProvider para cross-fade"
+  ]
+}

@@ -76,6 +76,11 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+    --mascot-bg: url('/mascots/hestia.png');
+    --mascot-bg-opacity: 1;
+    --mascot-bg-position: center;
+    --mascot-bg-size: cover;
+    --mascot-transition-duration: 300ms;
   }
   .dark {
     --background: oklch(0.145 0 0);
@@ -125,4 +130,42 @@
   html {
     @apply font-sans;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --mascot-transition-duration: 0ms; }
+}
+
+.mascot-background {
+  position: relative;
+  background-image: var(--mascot-bg);
+  background-position: var(--mascot-bg-position);
+  background-size: var(--mascot-bg-size);
+  background-repeat: no-repeat;
+  transition: background-image var(--mascot-transition-duration) ease,
+    opacity var(--mascot-transition-duration) ease;
+}
+
+.mascot-background::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: var(--mascot-overlay-bg);
+  opacity: var(--mascot-bg-opacity);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.mascot-background > * {
+  position: relative;
+  z-index: 1;
+}
+
+.mascot-background[style*="--mascot-bg-opacity: 0.12"]::before {
+  display: none;
+}
+
+.mascot-background[style*="--mascot-bg-opacity: 0.12"] {
+  background-position: bottom right;
+  background-repeat: no-repeat;
 }

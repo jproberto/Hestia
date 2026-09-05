@@ -1,6 +1,5 @@
 "use client";
 
-import { MascotProvider } from "@/lib/hestia/MascotProvider";
 import { ReactNode } from "react";
 
 export default function DashboardLayout({
@@ -8,5 +7,5 @@ export default function DashboardLayout({
 }: Readonly<{
   children: ReactNode;
 }>) {
-  return <MascotProvider>{children}</MascotProvider>;
+  return <div>{children}</div>;
 }

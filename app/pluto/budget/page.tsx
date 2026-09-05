@@ -18,8 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSearchParams } from "next/navigation";
-import { MascotBackground } from "@/components/ui/MascotBackground";
-import { useMascotBackground } from "@/lib/hestia/MascotProvider";
 
 export const dynamic = "force-dynamic";
 
@@ -40,18 +38,10 @@ function BudgetPageContent() {
   const [budgets, setBudgets] = useState<BudgetItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [userEmail, setUserEmail] = useState<string>("");
-
-  // Data state for MascotBackground
-  const [dataState, setDataState] = useState<'loading' | 'empty' | 'error' | 'has-data'>('loading');
-  const { mode, transitionClass, mascotKey } = useMascotBackground(dataState);
-
-  // Form state
   const [showForm, setShowForm] = useState<boolean>(false);
   const [categoryName, setCategoryName] = useState<string>("");
   const [categoryType, setCategoryType] = useState<"receita" | "despesa">("despesa");
   const [amount, setAmount] = useState<string>("");
-
-  // Inline editing state
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [tempAmount, setTempAmount] = useState<string>("");
   const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
@@ -81,9 +71,6 @@ function BudgetPageContent() {
 
   // Carrega os dados. Suporta refresh silencioso para evitar piscadas na UI ao salvar itens
   const loadData = useCallback(async (silent = false) => {
-    if (!silent) {
-      setDataState('loading');
-    }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
@@ -103,11 +90,6 @@ function BudgetPageContent() {
           currentAdj = adjs.find((a) => a.id === selectedAdjustmentId) || null;
         }
 
-        if (!currentAdj && adjs.length > 0) {
-          currentAdj = adjs[adjs.length - 1];
-          setSelectedAdjustmentId(currentAdj.id);
-        }
-
         setActiveAdjustment(currentAdj);
 
         if (currentAdj) {
@@ -117,22 +99,15 @@ function BudgetPageContent() {
           ]);
           setBudgets(items);
           setCategories(cats);
-          if (!silent) setDataState('has-data');
-        } else {
-          setBudgets([]);
-          setCategories([]);
-          if (!silent) setDataState('empty');
         }
       } else {
         setAdjustments([]);
         setActiveAdjustment(null);
         setBudgets([]);
         setCategories([]);
-        if (!silent) setDataState('empty');
       }
     } catch (err) {
       console.error(err);
-      if (!silent) setDataState('error');
     }
   }, [year, selectedAdjustmentId, supabase]);
 
@@ -144,14 +119,14 @@ function BudgetPageContent() {
   }, [loadData]);
 
   // Detect external re-renders (e.g., test rerender with new mocks) while in empty/error state
-  const prevDataStateRef = useRef(dataState);
+  const prevDataStateRef = useRef("");
   useEffect(() => {
     const isExternalRerender =
-      dataState === prevDataStateRef.current && (dataState === 'empty' || dataState === 'error');
+      prevDataStateRef.current === "empty" || prevDataStateRef.current === "error";
     if (isExternalRerender) {
       loadData();
     }
-    prevDataStateRef.current = dataState;
+    prevDataStateRef.current = "";
   });
 
   async function handleStartBudget() {
@@ -267,9 +242,17 @@ function BudgetPageContent() {
       </div>
 
       <div className="flex items-center justify-between border-b pb-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Orçamento Anual</h1>
-          <p className="text-sm text-muted-foreground">Planeje suas metas financeiras para o ano.</p>
+        <div className="flex items-center gap-3">
+          <img
+            src="/mascots/pluto.png"
+            alt="Pluto mascote"
+            className="h-16 w-16 object-cover"
+            style={{ flexShrink: 0 }}
+          />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Orçamento Anual</h1>
+            <p className="text-sm text-muted-foreground">Planeje suas metas financeiras para o ano.</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Label htmlFor="adjustment-select">Ajuste:</Label>
@@ -555,13 +538,9 @@ function BudgetPageContent() {
   );
 
   return (
-    <MascotBackground
-      mode={mode}
-      mascotKey={mascotKey as 'hestia' | 'pluto' | undefined}
-      className={transitionClass}
-    >
+    <div className="relative">
       {content}
-    </MascotBackground>
+    </div>
   );
 }
 

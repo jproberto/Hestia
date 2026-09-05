@@ -1,6 +1,6 @@
 {
-  "currentPhase": "TASKS_READY",
-  "validTransitions": ["CODING", "PLAN_READY"],
+  "currentPhase": "COMMITTED",
+  "validTransitions": [],
   "phaseHistory": [
     {
       "phase": "SPEC_DRAFT",
@@ -17,7 +17,19 @@
     {
       "phase": "TASKS_READY",
       "timestamp": "2026-08-29T03:30:00.000Z"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-08-29T13:30:00.000Z"
+    },
+    {
+      "phase": "REIMPLEMENTATION",
+      "timestamp": "2026-08-29T19:30:00.000Z"
+    },
+    {
+      "phase": "COMMITTED",
+      "timestamp": "2026-08-29T19:45:00.000Z"
     }
   ],
-  "lastUpdated": "2026-08-29T03:30:00.000Z"
+  "lastUpdated": "2026-08-29T19:45:00.000Z"
 }

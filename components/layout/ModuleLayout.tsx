@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
+import { Home, LogOut } from "lucide-react";
 
 export interface ModuleLayoutProps {
   mascot: string;
@@ -39,12 +40,12 @@ export function ModuleLayout({
       {/* Topo: Ações globais (Dashboard + Logout) alinhados à direita */}
       <div className="flex justify-end gap-2 mb-2">
         {!isDashboard && (
-          <Link href="/dashboard" className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            ← Dashboard
+          <Link href="/dashboard" className="flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors" title="Voltar ao Dashboard">
+            <Home className="w-5 h-5" />
           </Link>
         )}
-        <Button variant="ghost" size="sm" onClick={handleLogout} className="text-sm">
-          Sair
+        <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Sair">
+          <LogOut className="w-5 h-5" />
         </Button>
       </div>
 

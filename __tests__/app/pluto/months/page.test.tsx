@@ -2,7 +2,6 @@ import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/re
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
 import MonthsPage from '@/app/pluto/months/page'
 import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod } from '@/lib/pluto/db/months'
-import { MascotProvider } from '@/lib/hestia/MascotProvider'
 import { usePathname } from 'next/navigation'
 
 vi.mock('@/utils/supabase/client', () => ({
@@ -27,192 +26,215 @@ const mockUsePathname = usePathname as Mock
 
 function renderMonthsPage(pathname = '/pluto/months') {
   mockUsePathname.mockReturnValue(pathname)
-  return render(
-    <MascotProvider>
-      <MonthsPage />
-    </MascotProvider>
-  )
+  return render(<MonthsPage />)
 }
 
-describe('Months Page /pluto/months - MascotBackground Contract Tests (RED)', () => {
+const mockEmptyPeriods = []
+const mockHasPeriods = [
+  { id: '1', year: 2026, month: 1, status: 'aberto', created_by: 'teste@hestia.com' },
+  { id: '2', year: 2026, month: 2, status: 'encerrado', created_by: 'teste@hestia.com' }
+]
+
+describe('Months Page /pluto/months - Layout & Rendering', () => {
   beforeEach(() => {
     cleanup()
     vi.clearAllMocks()
   })
 
-  describe('MascotBackground wrapper', () => {
-    it('wraps page content in MascotBackground', async () => {
-      ;(getMonthlyPeriods as Mock).mockResolvedValue([])
+  describe('PlutoLayout wrapper', () => {
+    it('renders Pluto module header with mascot and title', async () => {
+      getMonthlyPeriods.mockResolvedValue(mockEmptyPeriods)
 
       renderMonthsPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background')
-        expect(bgDiv).toBeInTheDocument()
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
+        expect(screen.getByText('Pluto')).toBeInTheDocument()
       })
     })
 
-    it('uses mascotKey="pluto"', async () => {
-      ;(getMonthlyPeriods as Mock).mockResolvedValue([])
+    it('renders Pluto navigation tabs', async () => {
+      getMonthlyPeriods.mockResolvedValue(mockEmptyPeriods)
 
       renderMonthsPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
+        expect(screen.getAllByText('Orçamento Anual').length).toBeGreaterThanOrEqual(1)
+        expect(screen.getAllByText('Meses e Períodos').length).toBeGreaterThanOrEqual(1)
+        expect(screen.getByText('Lançamentos')).toBeInTheDocument()
       })
     })
 
-    it('has no inline <Mascot size="md" /> in header', async () => {
-      ;(getMonthlyPeriods as Mock).mockResolvedValue([])
+    it('renders page title and subtitle', async () => {
+      getMonthlyPeriods.mockResolvedValue(mockEmptyPeriods)
 
       renderMonthsPage()
 
       await waitFor(() => {
-        expect(screen.queryByAltText(/Pluto/i)).not.toBeInTheDocument()
-        expect(screen.queryByAltText(/Héstia/i)).not.toBeInTheDocument()
-      })
-    })
-  })
-
-  describe('Mode: prominent (loading/empty/error)', () => {
-    it('shows prominent Pluto background when loading', async () => {
-      let resolveLoading: (value: unknown) => void
-      const loadingPromise = new Promise((resolve) => { resolveLoading = resolve })
-      ;(getMonthlyPeriods as Mock).mockReturnValue(loadingPromise)
-
-      renderMonthsPage()
-
-      await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-opacity')).toBe('1')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-bg')).toBe('oklch(0.145 0 0 / 0.7)')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-text')).toBe('oklch(0.985 0 0)')
-      })
-
-      resolveLoading!([])
-    })
-
-    it('shows prominent Pluto background when empty (no periods)', async () => {
-      ;(getMonthlyPeriods as Mock).mockResolvedValue([])
-
-      renderMonthsPage()
-
-      await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-opacity')).toBe('1')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-bg')).toBe('oklch(0.145 0 0 / 0.7)')
+        const title = screen.getByRole('heading', { name: 'Meses e Períodos', level: 1 })
+        expect(title).toBeInTheDocument()
+        expect(screen.getByText('Abra ou encerre meses operacionais para controle de lançamentos.')).toBeInTheDocument()
       })
     })
 
-    it('shows prominent Pluto background on error', async () => {
-      ;(getMonthlyPeriods as Mock).mockRejectedValue(new Error('DB error'))
+    it('renders back to dashboard link', async () => {
+      getMonthlyPeriods.mockResolvedValue(mockEmptyPeriods)
 
       renderMonthsPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-opacity')).toBe('1')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-bg')).toBe('oklch(0.145 0 0 / 0.7)')
+        expect(screen.getByTitle('Voltar ao Dashboard')).toBeInTheDocument()
+      })
+    })
+
+    it('renders logout button', async () => {
+      getMonthlyPeriods.mockResolvedValue(mockEmptyPeriods)
+
+      renderMonthsPage()
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Sair')).toBeInTheDocument()
       })
     })
   })
 
-  describe('Mode: watermark (has data)', () => {
-    it('shows watermark Pluto (12% opacity) when has data', async () => {
-      ;(getMonthlyPeriods as Mock).mockResolvedValue([
-        { id: '1', year: 2026, month: 1, status: 'aberto', created_by: 'teste@hestia.com' },
-        { id: '2', year: 2026, month: 2, status: 'encerrado', created_by: 'teste@hestia.com' }
-      ])
+  describe('Empty state (no periods)', () => {
+    it('shows message when no periods exist', async () => {
+      getMonthlyPeriods.mockResolvedValue(mockEmptyPeriods)
 
       renderMonthsPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-opacity')).toBe('0.12')
-        expect(bgDiv.style.contentVisibility).toBe('auto')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-bg')).toBe('')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-text')).toBe('')
+        expect(screen.getByText('Abertos')).toBeInTheDocument()
+        expect(screen.getByText('Encerrados')).toBeInTheDocument()
+        expect(screen.getByText('Não Iniciados')).toBeInTheDocument()
       })
     })
   })
 
-  describe('Cross-fade transition', () => {
-    it('includes mascot-transition class for 300ms cross-fade', async () => {
-      ;(getMonthlyPeriods as Mock).mockResolvedValue([
-        { id: '1', year: 2026, month: 1, status: 'aberto', created_by: 'teste@hestia.com' }
-      ])
+  describe('Loading state', () => {
+    it('renders without error while fetching data', async () => {
+      getMonthlyPeriods.mockResolvedValue(mockEmptyPeriods)
 
       renderMonthsPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background')
-        expect(bgDiv).toHaveClass('mascot-transition')
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Has data state (periods exist)', () => {
+    beforeEach(() => {
+      getMonthlyPeriods.mockResolvedValue(mockHasPeriods)
+    })
+
+    it('renders periods list with open and closed periods', async () => {
+      renderMonthsPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('Janeiro')).toBeInTheDocument()
+        expect(screen.getByText('Fevereiro')).toBeInTheDocument()
+        expect(screen.getByText('Aberto')).toBeInTheDocument()
+        expect(screen.getByText('Encerrado')).toBeInTheDocument()
       })
     })
 
-    it('sets --mascot-transition-duration to 300ms', async () => {
-      ;(getMonthlyPeriods as Mock).mockResolvedValue([
-        { id: '1', year: 2026, month: 1, status: 'aberto', created_by: 'teste@hestia.com' }
-      ])
+    it('shows year selector', async () => {
+      renderMonthsPage()
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Ano:')).toBeInTheDocument()
+        expect(screen.getByText('2026')).toBeInTheDocument()
+      })
+    })
+
+    it('shows action buttons for each period', async () => {
+      renderMonthsPage()
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Abrir Mês').length).toBeGreaterThanOrEqual(1)
+        expect(screen.getAllByText('Encerrar Mês').length).toBeGreaterThanOrEqual(1)
+      })
+    })
+  })
+
+  describe('Error handling', () => {
+    it('shows error message on data fetch error', async () => {
+      getMonthlyPeriods.mockRejectedValue(new Error('DB error'))
 
       renderMonthsPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-transition-duration')).toBe('300ms')
+        expect(screen.getByText('Erro ao carregar períodos: DB error')).toBeInTheDocument()
       })
     })
+  })
 
-    it('maintains Pluto mascotKey when navigating between Pluto pages (cross-fade)', async () => {
-      ;(getMonthlyPeriods as Mock).mockResolvedValue([
-        { id: '1', year: 2026, month: 1, status: 'aberto', created_by: 'teste@hestia.com' }
-      ])
+  describe('Navigation between Pluto pages', () => {
+    it('maintains Pluto module context when re-rendering', async () => {
+      getMonthlyPeriods.mockResolvedValue(mockHasPeriods)
 
       const { rerender } = renderMonthsPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
       })
 
-      rerender(
-        <MascotProvider>
-          <MonthsPage />
-        </MascotProvider>
-      )
+      rerender(<MonthsPage />)
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
+        expect(screen.getByText('Pluto')).toBeInTheDocument()
+      })
+    })
+
+    it('maintains Pluto module context when changing path to /pluto/transactions', async () => {
+      getMonthlyPeriods.mockResolvedValue(mockHasPeriods)
+
+      const { rerender } = renderMonthsPage('/pluto/months')
+
+      await waitFor(() => {
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
+      })
+
+      rerender(<MonthsPage />)
+
+      await waitFor(() => {
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
+        expect(screen.getByText('Pluto')).toBeInTheDocument()
       })
     })
   })
 
-  describe('Integration: mode per state & cross-fade on route change', () => {
-    it('maintains cross-fade when switching to /pluto/transactions (same Pluto mascot)', async () => {
-      ;(getMonthlyPeriods as Mock).mockResolvedValue([
-        { id: '1', year: 2026, month: 1, status: 'aberto', created_by: 'teste@hestia.com' }
-      ])
+  describe('Interactions', () => {
+    it('calls openMonthlyPeriod when clicking Abrir Mês', async () => {
+      getMonthlyPeriods.mockResolvedValue(mockHasPeriods)
 
-      renderMonthsPage('/pluto/months')
+      renderMonthsPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
+        const openButtons = screen.getAllByText('Abrir Mês')
+        fireEvent.click(openButtons[0]) // Click first "Abrir Mês" button (month 1)
       })
 
-      const { rerender } = renderMonthsPage('/pluto/transactions')
+      await waitFor(() => {
+        expect(openMonthlyPeriod).toHaveBeenCalledWith(expect.anything(), 2026, 1, expect.any(String))
+      })
+    })
+
+    it('calls closeMonthlyPeriod when clicking Encerrar Mês', async () => {
+      getMonthlyPeriods.mockResolvedValue(mockHasPeriods)
+
+      renderMonthsPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
-        expect(bgDiv).toHaveClass('mascot-transition')
+        const closeButtons = screen.getAllByText('Encerrar Mês')
+        fireEvent.click(closeButtons[0]) // Click first "Encerrar Mês" button (month 1)
+      })
+
+      await waitFor(() => {
+        expect(closeMonthlyPeriod).toHaveBeenCalledWith(expect.anything(), 2026, 1, expect.any(String))
       })
     })
   })

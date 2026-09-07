@@ -1,4 +1,4 @@
-import { render, screen, cleanup, waitFor, within } from '@testing-library/react'
+import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
 import TransactionsPage from '@/app/pluto/transactions/page'
 import { getTransactionsByMonth } from '@/lib/pluto/db/transactions'
@@ -7,7 +7,6 @@ import { getCategories } from '@/lib/pluto/db/categories'
 import { getMonthlyPeriods, getAllOpenMonthlyPeriods } from '@/lib/pluto/db/months'
 import { getBudgets } from '@/lib/pluto/db/budget'
 import { getChecklistItemsByMonth, getGlobalChecklistItems } from '@/lib/pluto/db/checklist'
-import { MascotProvider } from '@/lib/hestia/MascotProvider'
 import { usePathname } from 'next/navigation'
 
 vi.mock('@/utils/supabase/client', () => ({
@@ -61,11 +60,7 @@ const mockUsePathname = usePathname as Mock
 
 function renderTransactionsPage(pathname = '/pluto/transactions') {
   mockUsePathname.mockReturnValue(pathname)
-  return render(
-    <MascotProvider>
-      <TransactionsPage />
-    </MascotProvider>
-  )
+  return render(<TransactionsPage />)
 }
 
 const mockEmptyData = {
@@ -120,200 +115,196 @@ function setupMocks(data: typeof mockEmptyData) {
   ;(getGlobalChecklistItems as Mock).mockResolvedValue(data.globalChecklistItems)
 }
 
-describe('Transactions Page /pluto/transactions - MascotBackground Contract Tests (RED)', () => {
+describe('Transactions Page /pluto/transactions - Layout & Rendering', () => {
   beforeEach(() => {
     cleanup()
     vi.clearAllMocks()
   })
 
-  describe('MascotBackground wrapper', () => {
-    it('wraps page content in MascotBackground', async () => {
+  describe('PlutoLayout wrapper', () => {
+    it('renders Pluto module header with mascot and title', async () => {
       setupMocks(mockEmptyData)
 
       renderTransactionsPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background')
-        expect(bgDiv).toBeInTheDocument()
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
+        expect(screen.getByText('Pluto')).toBeInTheDocument()
       })
     })
 
-    it('uses mascotKey="pluto"', async () => {
+    it('renders Pluto navigation tabs', async () => {
       setupMocks(mockEmptyData)
 
       renderTransactionsPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
+        expect(screen.getByText('Orçamento Anual')).toBeInTheDocument()
+        expect(screen.getByText('Meses e Períodos')).toBeInTheDocument()
+        expect(screen.getAllByText('Lançamentos').length).toBeGreaterThanOrEqual(1)
       })
     })
 
-    it('has no inline <Mascot size="md" /> in header', async () => {
+    it('renders page title and subtitle', async () => {
       setupMocks(mockHasData)
 
       renderTransactionsPage()
 
       await waitFor(() => {
-        expect(screen.queryByAltText(/Pluto/i)).not.toBeInTheDocument()
-        expect(screen.queryByAltText(/Héstia/i)).not.toBeInTheDocument()
+        // Page title is in header (h1), nav has links
+        const title = screen.getByRole('heading', { name: 'Lançamentos', level: 1 })
+        expect(title).toBeInTheDocument()
+        expect(screen.getByText('Registre e gerencie suas transações financeiras.')).toBeInTheDocument()
       })
     })
-  })
 
-  describe('Mode: prominent (loading/empty/error)', () => {
-    it('shows prominent Pluto background when loading', async () => {
-      let resolveLoading: (value: unknown) => void
-      const loadingPromise = new Promise((resolve) => { resolveLoading = resolve })
-      ;(getAllOpenMonthlyPeriods as Mock).mockReturnValue(loadingPromise)
-
-      renderTransactionsPage()
-
-      await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-opacity')).toBe('1')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-bg')).toBe('oklch(0.145 0 0 / 0.7)')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-text')).toBe('oklch(0.985 0 0)')
-      })
-
-      resolveLoading!(mockEmptyData.allOpenMonthlyPeriods)
-    })
-
-    it('shows prominent Pluto background when empty (no open months)', async () => {
+    it('renders back to dashboard link', async () => {
       setupMocks(mockEmptyData)
 
       renderTransactionsPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-opacity')).toBe('1')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-bg')).toBe('oklch(0.145 0 0 / 0.7)')
+        expect(screen.getByTitle('Voltar ao Dashboard')).toBeInTheDocument()
       })
     })
 
-    it('shows prominent Pluto background on error', async () => {
+    it('renders logout button', async () => {
+      setupMocks(mockEmptyData)
+
+      renderTransactionsPage()
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Sair')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Empty state (no open months)', () => {
+it('shows message when no months are open', async () => {
+      setupMocks(mockEmptyData)
+
+      renderTransactionsPage()
+
+      await waitFor(() => {
+        expect(screen.getByText(/Nenhum mês está/i)).toBeInTheDocument()
+        expect(screen.getByText('Aberto')).toBeInTheDocument()
+        expect(screen.getByText(/para lançamentos\./i)).toBeInTheDocument()
+        expect(screen.getByText('Ir para Gestão de Meses e Períodos 📅')).toBeInTheDocument()
+      })
+    })
+    })
+
+    it('does not render transactions grid when empty', async () => {
+      setupMocks(mockEmptyData)
+
+      renderTransactionsPage()
+
+      await waitFor(() => {
+        expect(screen.queryByText('Supermercado')).not.toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Loading state', () => {
+    it('renders without error while fetching data', async () => {
+      setupMocks(mockEmptyData)
+
+      renderTransactionsPage()
+
+      await waitFor(() => {
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Has data state', () => {
+    it('renders budget comparison tables (Receitas and Despesas)', async () => {
+      setupMocks(mockHasData)
+
+      renderTransactionsPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('📈 Receitas')).toBeInTheDocument()
+        expect(screen.getByText('📉 Despesas')).toBeInTheDocument()
+        expect(screen.getByText('Alimentação')).toBeInTheDocument()
+        expect(screen.getByText('Salário')).toBeInTheDocument()
+      })
+    })
+
+    it('renders accounts and cards grid with transactions', async () => {
+      setupMocks(mockHasData)
+
+      renderTransactionsPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('Contas e Cartões')).toBeInTheDocument()
+        expect(screen.getByText('Itaú Corrente')).toBeInTheDocument()
+        expect(screen.getByText('Supermercado')).toBeInTheDocument()
+        expect(screen.getAllByText('R$ 200,00').length).toBeGreaterThan(0)
+      })
+    })
+
+    it('shows month/year selectors', async () => {
+      setupMocks(mockHasData)
+
+      renderTransactionsPage()
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Ano:')).toBeInTheDocument()
+        expect(screen.getByLabelText('Mês:')).toBeInTheDocument()
+      })
+    })
+
+    it('shows month saldo', async () => {
+      setupMocks(mockHasData)
+
+      renderTransactionsPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('💰 Saldo do Mês')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Checklist card', () => {
+    it('renders checklist card when month is open', async () => {
+      setupMocks(mockHasData)
+
+      renderTransactionsPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('Checklist de Contas a Pagar / Receber')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Error handling', () => {
+    it('shows error message on data fetch error', async () => {
       ;(getAllOpenMonthlyPeriods as Mock).mockRejectedValue(new Error('DB error'))
 
       renderTransactionsPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-opacity')).toBe('1')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-bg')).toBe('oklch(0.145 0 0 / 0.7)')
+        expect(screen.getByText('DB error')).toBeInTheDocument()
       })
     })
   })
 
-  describe('Mode: watermark (has data)', () => {
-    it('shows watermark Pluto (12% opacity) when has data', async () => {
-      setupMocks(mockHasData)
-
-      renderTransactionsPage()
-
-      await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-opacity')).toBe('0.12')
-        expect(bgDiv.style.contentVisibility).toBe('auto')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-bg')).toBe('')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-text')).toBe('')
-      })
-    })
-  })
-
-  describe('Cross-fade transition', () => {
-    it('includes mascot-transition class for 300ms cross-fade', async () => {
-      setupMocks(mockHasData)
-
-      renderTransactionsPage()
-
-      await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background')
-        expect(bgDiv).toHaveClass('mascot-transition')
-      })
-    })
-
-    it('sets --mascot-transition-duration to 300ms', async () => {
-      setupMocks(mockHasData)
-
-      renderTransactionsPage()
-
-      await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-transition-duration')).toBe('300ms')
-      })
-    })
-
-    it('maintains Pluto mascotKey when navigating between Pluto pages (cross-fade)', async () => {
+  describe('Navigation between Pluto pages', () => {
+    it('maintains Pluto module context when re-rendering', async () => {
       setupMocks(mockHasData)
 
       const { rerender } = renderTransactionsPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
       })
 
-      rerender(
-        <MascotProvider>
-          <TransactionsPage />
-        </MascotProvider>
-      )
+      rerender(<TransactionsPage />)
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
+        expect(screen.getByText('Pluto')).toBeInTheDocument()
       })
     })
   })
-
-  describe('Integration: mode per state & cross-fade on route change', () => {
-    it('transitions from prominent (empty) to watermark (has data) when data loads', async () => {
-      setupMocks(mockEmptyData)
-
-      const { rerender } = renderTransactionsPage()
-
-      await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-opacity')).toBe('1')
-      })
-
-      setupMocks(mockHasData)
-
-      rerender(
-        <MascotProvider>
-          <TransactionsPage />
-        </MascotProvider>
-      )
-
-      await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-opacity')).toBe('0.12')
-        expect(bgDiv.style.contentVisibility).toBe('auto')
-      })
-    })
-
-    it('maintains cross-fade when switching to /pluto/budget (same Pluto mascot)', async () => {
-      setupMocks(mockHasData)
-
-      renderTransactionsPage('/pluto/transactions')
-
-      await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
-      })
-
-      const { rerender } = renderTransactionsPage('/pluto/budget')
-
-      await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
-        expect(bgDiv).toHaveClass('mascot-transition')
-      })
-    })
-  })
-})

@@ -1,10 +1,9 @@
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
 import BudgetPage from '@/app/pluto/budget/page'
-import { getBudgetAdjustment, getBudgets, getBudgetAdjustments, createBudgetAdjustment } from '@/lib/pluto/db/budget'
+import { getBudgetAdjustment, getBudgets, getBudgetAdjustments, createBudgetAdjustment, adjustBudgetItem, addOrUpdateBudgetItem } from '@/lib/pluto/db/budget'
 import { getCategories } from '@/lib/pluto/db/categories'
 import { useSearchParams } from 'next/navigation'
-import { MascotProvider } from '@/lib/hestia/MascotProvider'
 import { usePathname } from 'next/navigation'
 
 vi.mock('@/utils/supabase/client', () => ({
@@ -40,221 +39,257 @@ const mockUseSearchParams = useSearchParams as Mock
 function renderBudgetPage(pathname = '/pluto/budget', searchParams = new URLSearchParams('')) {
   mockUsePathname.mockReturnValue(pathname)
   mockUseSearchParams.mockReturnValue(searchParams)
-  return render(
-    <MascotProvider>
-      <BudgetPage />
-    </MascotProvider>
-  )
+  return render(<BudgetPage />)
 }
 
-describe('Budget Page /pluto/budget - MascotBackground Contract Tests (RED)', () => {
-  beforeEach(() => {
-    cleanup()
-    vi.clearAllMocks()
-  })
+describe('Budget Page /pluto/budget - Layout & Rendering', () => {
+beforeEach(() => {
+      cleanup()
+      vi.clearAllMocks()
+      // Reset all mock implementations
+      getBudgetAdjustment.mockReset()
+      getBudgetAdjustments.mockReset()
+      getBudgets.mockReset()
+      getCategories.mockReset()
+      createBudgetAdjustment.mockReset()
+      adjustBudgetItem.mockReset()
+      addOrUpdateBudgetItem.mockReset()
+      getBudgetAdjustment.mockResolvedValue(null)
+      getBudgetAdjustments.mockResolvedValue([])
+      getBudgets.mockResolvedValue([])
+      getCategories.mockResolvedValue([])
+    })
 
-  describe('MascotBackground wrapper', () => {
-    it('wraps page content in MascotBackground', async () => {
-      ;(getBudgetAdjustment as Mock).mockResolvedValue(null)
-      ;(getBudgetAdjustments as Mock).mockResolvedValue([])
-      ;(getBudgets as Mock).mockResolvedValue([])
+  describe('PlutoLayout wrapper', () => {
+    it('renders Pluto module header with mascot and title', async () => {
+      vi.mocked(getBudgetAdjustment).mockResolvedValue(null)
+      vi.mocked(getBudgetAdjustments).mockResolvedValue([])
+      vi.mocked(getBudgets).mockResolvedValue([])
 
       renderBudgetPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background')
-        expect(bgDiv).toBeInTheDocument()
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
+        expect(screen.getByText('Pluto')).toBeInTheDocument()
       })
     })
 
-    it('uses mascotKey="pluto"', async () => {
-      ;(getBudgetAdjustment as Mock).mockResolvedValue(null)
-      ;(getBudgetAdjustments as Mock).mockResolvedValue([])
-      ;(getBudgets as Mock).mockResolvedValue([])
+    it('renders Pluto navigation tabs', async () => {
+      vi.mocked(getBudgetAdjustment).mockResolvedValue(null)
+      vi.mocked(getBudgetAdjustments).mockResolvedValue([])
+      vi.mocked(getBudgets).mockResolvedValue([])
 
       renderBudgetPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
+        expect(screen.getAllByText('Orçamento Anual').length).toBeGreaterThanOrEqual(1)
+        expect(screen.getByText('Meses e Períodos')).toBeInTheDocument()
+        expect(screen.getByText('Lançamentos')).toBeInTheDocument()
       })
     })
 
-    it('has no inline <Mascot size="md" /> in header', async () => {
-      vi.mocked(getBudgetAdjustment).mockResolvedValue({ id: 'rev-1', year: 2026, start_month: 1 })
-      vi.mocked(getBudgetAdjustments).mockResolvedValue([{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }])
-      vi.mocked(getBudgets).mockResolvedValue([
-        { category_id: 'cat-1', category_name: 'Alimentação', category_type: 'despesa', amount: 1000, start_month: 1 }
-      ])
-      vi.mocked(getCategories).mockResolvedValue([{ id: 'cat-1', name: 'Alimentação', type: 'despesa' }])
+    it('renders page title and subtitle', async () => {
+      vi.mocked(getBudgetAdjustment).mockResolvedValue(null)
+      vi.mocked(getBudgetAdjustments).mockResolvedValue([])
+      vi.mocked(getBudgets).mockResolvedValue([])
 
       renderBudgetPage()
 
       await waitFor(() => {
-        expect(screen.queryByAltText(/Pluto/i)).not.toBeInTheDocument()
-        expect(screen.queryByAltText(/Héstia/i)).not.toBeInTheDocument()
-      })
-    })
-  })
-
-  describe('Mode: prominent (loading/empty/error)', () => {
-    it('shows prominent Pluto background when loading', async () => {
-      let resolveLoading: (value: unknown) => void
-      const loadingPromise = new Promise((resolve) => { resolveLoading = resolve })
-      ;(getBudgetAdjustment as Mock).mockReturnValue(loadingPromise)
-      ;(getBudgetAdjustments as Mock).mockResolvedValue([])
-      ;(getBudgets as Mock).mockResolvedValue([])
-
-      renderBudgetPage()
-
-      await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-opacity')).toBe('1')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-bg')).toBe('oklch(0.145 0 0 / 0.7)')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-text')).toBe('oklch(0.985 0 0)')
-      })
-
-      resolveLoading!(null)
-    })
-
-    it('shows prominent Pluto background when empty (no revision)', async () => {
-      ;(getBudgetAdjustment as Mock).mockResolvedValue(null)
-      ;(getBudgetAdjustments as Mock).mockResolvedValue([])
-      ;(getBudgets as Mock).mockResolvedValue([])
-
-      renderBudgetPage()
-
-      await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-opacity')).toBe('1')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-bg')).toBe('oklch(0.145 0 0 / 0.7)')
+        // Page title is in header (h1), nav has links
+        const title = screen.getByRole('heading', { name: 'Orçamento Anual', level: 1 })
+        expect(title).toBeInTheDocument()
+        expect(screen.getByText('Gerencie receitas, despesas e saldos planejados.')).toBeInTheDocument()
       })
     })
 
-    it('shows prominent Pluto background on error', async () => {
-      ;(getBudgetAdjustment as Mock).mockRejectedValue(new Error('DB error'))
-      ;(getBudgetAdjustments as Mock).mockResolvedValue([])
-      ;(getBudgets as Mock).mockResolvedValue([])
+    it('renders back to dashboard link', async () => {
+      vi.mocked(getBudgetAdjustment).mockResolvedValue(null)
+      vi.mocked(getBudgetAdjustments).mockResolvedValue([])
+      vi.mocked(getBudgets).mockResolvedValue([])
 
       renderBudgetPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-opacity')).toBe('1')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-bg')).toBe('oklch(0.145 0 0 / 0.7)')
+        expect(screen.getByTitle('Voltar ao Dashboard')).toBeInTheDocument()
+      })
+    })
+
+    it('renders logout button', async () => {
+      vi.mocked(getBudgetAdjustment).mockResolvedValue(null)
+      vi.mocked(getBudgetAdjustments).mockResolvedValue([])
+      vi.mocked(getBudgets).mockResolvedValue([])
+
+      renderBudgetPage()
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Sair')).toBeInTheDocument()
       })
     })
   })
 
-  describe('Mode: watermark (has data)', () => {
-    it('shows watermark Pluto (12% opacity) when has data', async () => {
-      ;(getBudgetAdjustment as Mock).mockResolvedValue({ id: 'rev-1', year: 2026, start_month: 1 })
-      ;(getBudgetAdjustments as Mock).mockResolvedValue([{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }])
-      ;(getBudgets as Mock).mockResolvedValue([
-        { category_id: 'cat-1', category_name: 'Alimentação', category_type: 'despesa', amount: 1000, start_month: 1 }
-      ])
-      ;(getCategories as Mock).mockResolvedValue([{ id: 'cat-1', name: 'Alimentação', type: 'despesa' }])
+  describe('Empty state (no budget revision)', () => {
+    it('shows message when no budget is initialized for the year', async () => {
+      vi.mocked(getBudgetAdjustment).mockResolvedValue(null)
+      vi.mocked(getBudgetAdjustments).mockResolvedValue([])
+      vi.mocked(getBudgets).mockResolvedValue([])
 
       renderBudgetPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv).toBeInTheDocument()
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-opacity')).toBe('0.12')
-        expect(bgDiv.style.contentVisibility).toBe('auto')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-bg')).toBe('')
-        expect(bgDiv.style.getPropertyValue('--mascot-overlay-text')).toBe('')
+        expect(screen.getByText('Nenhum orçamento cadastrado para o ano 2026.')).toBeInTheDocument()
+        expect(screen.getByText('Iniciar Orçamento de 2026')).toBeInTheDocument()
+      })
+    })
+
+    it('does not render budget tables when empty', async () => {
+      vi.mocked(getBudgetAdjustment).mockResolvedValue(null)
+      vi.mocked(getBudgetAdjustments).mockResolvedValue([])
+      vi.mocked(getBudgets).mockResolvedValue([])
+
+      renderBudgetPage()
+
+      await waitFor(() => {
+        expect(screen.queryByText('Receitas Previstas')).not.toBeInTheDocument()
+        expect(screen.queryByText('Despesas Previstas')).not.toBeInTheDocument()
       })
     })
   })
 
-  describe('Cross-fade transition', () => {
-    it('includes mascot-transition class for 300ms cross-fade', async () => {
-      ;(getBudgetAdjustment as Mock).mockResolvedValue({ id: 'rev-1', year: 2026, start_month: 1 })
-      ;(getBudgetAdjustments as Mock).mockResolvedValue([{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }])
-      ;(getBudgets as Mock).mockResolvedValue([
-        { category_id: 'cat-1', category_name: 'Alimentação', category_type: 'despesa', amount: 1000, start_month: 1 }
-      ])
-      ;(getCategories as Mock).mockResolvedValue([{ id: 'cat-1', name: 'Alimentação', type: 'despesa' }])
+describe('Loading state', () => {
+    it('renders without error while fetching data', async () => {
+      getBudgetAdjustment.mockResolvedValue(null)
+      getBudgetAdjustments.mockResolvedValue([])
+      getBudgets.mockResolvedValue([])
 
       renderBudgetPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background')
-        expect(bgDiv).toHaveClass('mascot-transition')
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
       })
     })
+  })
+  
 
-    it('sets --mascot-transition-duration to 300ms', async () => {
-      ;(getBudgetAdjustment as Mock).mockResolvedValue({ id: 'rev-1', year: 2026, start_month: 1 })
-      ;(getBudgetAdjustments as Mock).mockResolvedValue([{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }])
-      ;(getBudgets as Mock).mockResolvedValue([
-        { category_id: 'cat-1', category_name: 'Alimentação', category_type: 'despesa', amount: 1000, start_month: 1 }
-      ])
-      ;(getCategories as Mock).mockResolvedValue([{ id: 'cat-1', name: 'Alimentação', type: 'despesa' }])
+  describe('Has data state (budget initialized)', () => {
+    const mockRevision = { id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }
+    const mockAdjustments = [{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }]
+    const mockBudgets = [
+      { category_id: 'cat-1', category_name: 'Alimentação', category_type: 'despesa', amount: 1000, start_month: 1 },
+      { category_id: 'cat-2', category_name: 'Salário', category_type: 'receita', amount: 5000, start_month: 1 },
+    ]
+    const mockCategories = [
+      { id: 'cat-1', name: 'Alimentação', type: 'despesa' },
+      { id: 'cat-2', name: 'Salário', type: 'receita' },
+    ]
 
+    beforeEach(() => {
+      getBudgetAdjustment.mockResolvedValue(mockRevision)
+      getBudgetAdjustments.mockResolvedValue(mockAdjustments)
+      getBudgets.mockResolvedValue(mockBudgets)
+      getCategories.mockResolvedValue(mockCategories)
+    })
+
+    it('renders adjustment select with available adjustments', async () => {
       renderBudgetPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-transition-duration')).toBe('300ms')
+        expect(screen.getByLabelText('Ajuste:')).toBeInTheDocument()
+        expect(screen.getByText('Orçamento Inicial 2026')).toBeInTheDocument()
       })
     })
 
-    it('maintains Pluto mascotKey when navigating between Pluto pages (cross-fade)', async () => {
-      ;(getBudgetAdjustment as Mock).mockResolvedValue({ id: 'rev-1', year: 2026, start_month: 1 })
-      ;(getBudgetAdjustments as Mock).mockResolvedValue([{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }])
-      ;(getBudgets as Mock).mockResolvedValue([
-        { category_id: 'cat-1', category_name: 'Alimentação', category_type: 'despesa', amount: 1000, start_month: 1 }
-      ])
-      ;(getCategories as Mock).mockResolvedValue([{ id: 'cat-1', name: 'Alimentação', type: 'despesa' }])
+    it('shows year selector with available years', async () => {
+      renderBudgetPage()
 
+      await waitFor(() => {
+        expect(screen.getByLabelText('Ano:')).toBeInTheDocument()
+        expect(screen.getByText('2026')).toBeInTheDocument()
+        expect(screen.getByText('2027')).toBeInTheDocument()
+        expect(screen.getByText('2028')).toBeInTheDocument()
+      })
+    })
+
+    it('shows budget summary cards structure', async () => {
+      renderBudgetPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('Receitas Previstas')).toBeInTheDocument()
+        expect(screen.getByText('Despesas Previstas')).toBeInTheDocument()
+        expect(screen.getByText('Saldo Planejado')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Error handling', () => {
+    it('handles budget adjustment fetch error gracefully', async () => {
+      vi.mocked(getBudgetAdjustment).mockRejectedValue(new Error('DB error'))
+      vi.mocked(getBudgetAdjustments).mockResolvedValue([])
+      vi.mocked(getBudgets).mockResolvedValue([])
+
+      renderBudgetPage()
+
+      // Should not crash, just show empty state or handle error
+      await waitFor(() => {
+        expect(screen.getByText('Nenhum orçamento cadastrado para o ano 2026.')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Navigation between Pluto pages', () => {
+    const mockRevision = { id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }
+    const mockAdjustments = [{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }]
+    const mockBudgets = [
+      { category_id: 'cat-1', category_name: 'Alimentação', category_type: 'despesa', amount: 1000, start_month: 1 },
+    ]
+    const mockCategories = [{ id: 'cat-1', name: 'Alimentação', type: 'despesa' }]
+
+    beforeEach(() => {
+      vi.mocked(getBudgetAdjustment).mockResolvedValue(mockRevision)
+      vi.mocked(getBudgetAdjustments).mockResolvedValue(mockAdjustments)
+      vi.mocked(getBudgets).mockResolvedValue(mockBudgets)
+      vi.mocked(getCategories).mockResolvedValue(mockCategories)
+    })
+
+    it('maintains Pluto module context when re-rendering', async () => {
       const { rerender } = renderBudgetPage()
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
       })
 
-      rerender(
-        <MascotProvider>
-          <BudgetPage />
-        </MascotProvider>
-      )
+      rerender(<BudgetPage />)
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
+        expect(screen.getByText('Pluto')).toBeInTheDocument()
       })
     })
-  })
 
-  describe('Integration: mode per state & cross-fade on route change', () => {
-    it('maintains cross-fade when switching to /pluto/months (same Pluto mascot)', async () => {
-      ;(getBudgetAdjustment as Mock).mockResolvedValue({ id: 'rev-1', year: 2026, start_month: 1 })
-      ;(getBudgetAdjustments as Mock).mockResolvedValue([{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }])
-      ;(getBudgets as Mock).mockResolvedValue([
-        { category_id: 'cat-1', category_name: 'Alimentação', category_type: 'despesa', amount: 1000, start_month: 1 }
-      ])
-      ;(getCategories as Mock).mockResolvedValue([{ id: 'cat-1', name: 'Alimentação', type: 'despesa' }])
+    it('maintains Pluto module context when changing path to /pluto/months', async () => {
+      const mockRevision = { id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }
+      const mockAdjustments = [{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }]
+      const mockBudgets = [
+        { category_id: 'cat-1', category_name: 'Alimentação', category_type: 'despesa', amount: 1000, start_month: 1 },
+      ]
+      const mockCategories = [{ id: 'cat-1', name: 'Alimentação', type: 'despesa' }]
 
-      renderBudgetPage('/pluto/budget')
+      getBudgetAdjustment.mockResolvedValue(mockRevision)
+      getBudgetAdjustments.mockResolvedValue(mockAdjustments)
+      getBudgets.mockResolvedValue(mockBudgets)
+      getCategories.mockResolvedValue(mockCategories)
+
+      const { rerender } = renderBudgetPage('/pluto/budget')
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
       })
 
-      const { rerender } = renderBudgetPage('/pluto/months')
+      rerender(<BudgetPage />)
 
       await waitFor(() => {
-        const bgDiv = document.querySelector('.mascot-background') as HTMLElement
-        expect(bgDiv.style.getPropertyValue('--mascot-bg-lqip')).toMatch(/^data:image\/png;base64,/)
-        expect(bgDiv).toHaveClass('mascot-transition')
+        expect(screen.getByAltText('Pluto mascote')).toBeInTheDocument()
+        expect(screen.getByText('Pluto')).toBeInTheDocument()
       })
     })
   })

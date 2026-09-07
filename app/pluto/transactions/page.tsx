@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
+import { PlutoLayout } from "@/components/layout/PlutoLayout";
 import { createClient } from "@/utils/supabase/client";
 import {
   getTransactionsByMonth,
@@ -33,8 +34,6 @@ import BudgetOverflowModal from "@/components/pluto/BudgetOverflowModal";
 import { checkGlobalBudgetOverflow, BudgetOverflowResult } from "@/lib/pluto/checklist-budget";
 import { getGlobalChecklistItems } from "@/lib/pluto/db/checklist";
 import { adjustBudgetItem } from "@/lib/pluto/db/budget";
-import { MascotBackground } from "@/components/ui/MascotBackground";
-import { useMascotBackground } from "@/lib/hestia/MascotProvider";
 
 const MONTH_NAMES = [
   "Janeiro",
@@ -84,10 +83,6 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Data state for MascotBackground
-  const [dataState, setDataState] = useState<'loading' | 'empty' | 'error' | 'has-data'>('loading');
-  const { mode, transitionClass, mascotKey } = useMascotBackground(dataState);
-
   // Budget Overflow Modal State
   const [isOverflowModalOpen, setIsOverflowModalOpen] = useState<boolean>(false);
   const [overflowData, setOverflowData] = useState<BudgetOverflowResult & {
@@ -130,7 +125,6 @@ export default function TransactionsPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    setDataState('loading');
     try {
       const {
         data: { user },
@@ -150,7 +144,6 @@ export default function TransactionsPage() {
         setTransactions([]);
         setBudgetItems([]);
         setLoading(false);
-        setDataState('empty');
         return;
       }
 
@@ -190,12 +183,9 @@ export default function TransactionsPage() {
       setBudgetItems(budgetData || []);
       setChecklistItems(chkData || []);
       setGlobalChecklistItems(globalChkData || []);
-      
-      setDataState('has-data');
     } catch (err: unknown) {
       console.error("Erro ao carregar lançamentos:", err);
       setErrorMsg(parseErrorMessage(err));
-      setDataState('error');
     } finally {
       setLoading(false);
     }
@@ -213,17 +203,6 @@ export default function TransactionsPage() {
       isMounted = false;
     };
   }, [fetchData]);
-
-  // Detect external re-renders (e.g., test rerender with new mocks) while in empty/error state
-  const prevDataStateRef = useRef(dataState);
-  useEffect(() => {
-    const isExternalRerender =
-      dataState === prevDataStateRef.current && (dataState === 'empty' || dataState === 'error');
-    if (isExternalRerender) {
-      fetchData();
-    }
-    prevDataStateRef.current = dataState;
-  });
 
   // Delimitadores do Date Input para travar dentro do Mês e Ano selecionados
   const minDateStr = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
@@ -706,38 +685,9 @@ export default function TransactionsPage() {
   };
 
   const content = (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
-      {/* Menu Superior Financeiro */}
-      <div className="flex border-b pb-1 gap-6">
-        <Link
-          href="/pluto/budget"
-          className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-        >
-          Orçamento Anual
-        </Link>
-        <Link
-          href="/pluto/months"
-          className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-        >
-          Meses e Períodos
-        </Link>
-        <Link
-          href="/pluto/transactions"
-          className="pb-2 text-sm font-semibold border-b-2 border-primary text-foreground"
-        >
-          Lançamentos
-        </Link>
-      </div>
-
-      {/* Header e Seletores */}
+    <>
+      {/* Seletores de Ano/Mês */}
       <div className="flex items-center justify-between border-b pb-4 flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Extrato & Orçado vs. Real</h1>
-          <p className="text-sm text-muted-foreground">
-            Acompanhe o desempenho do orçamento e os lançamentos detalhados por conta.
-          </p>
-        </div>
-
         <div className="flex items-center gap-3 flex-wrap">
           {availableYears.length > 0 && (
             <div className="flex items-center gap-1.5">
@@ -840,9 +790,9 @@ export default function TransactionsPage() {
               {/* Tabela de Receitas (Esquerda) */}
               <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
                 <div className="bg-success-soft p-3 border-b border-success-border flex items-center justify-between">
-                  <h3 className="font-bold text-sm text-success">
-                    📈 Receitas
-                  </h3>
+<h3 className="font-bold text-sm text-[#35472D] font-['CaesarDressing'] tracking-wider">
+                      📈 Receitas
+                    </h3>
                   <div className="text-xs text-success font-bold">
                     Real: {formatCurrency(totalReceitaReal)}
                   </div>
@@ -851,7 +801,7 @@ export default function TransactionsPage() {
                 <div className="overflow-x-auto flex-1">
                   <table className="w-full text-left text-sm border-collapse">
                     <thead>
-                      <tr className="border-b bg-muted/40 text-muted-foreground text-xs font-semibold">
+                      <tr className="border-b bg-muted/40 text-[#35472D] text-xs font-['CaesarDressing'] tracking-wider">
                         <th className="p-2.5">Categoria</th>
                         <th className="p-2.5 text-right">Previsto</th>
                         <th className="p-2.5 text-right">Real</th>
@@ -896,9 +846,9 @@ export default function TransactionsPage() {
               {/* Tabela de Despesas (Direita) */}
               <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
                 <div className="bg-danger-soft p-3 border-b border-danger-border flex items-center justify-between">
-                  <h3 className="font-bold text-sm text-danger">
-                    📉 Despesas
-                  </h3>
+<h3 className="font-bold text-sm text-[#35472D] font-['CaesarDressing'] tracking-wider">
+                      📉 Despesas
+                    </h3>
                   <div className="text-xs text-danger font-bold">
                     Real: {formatCurrency(totalDespesaReal)}
                   </div>
@@ -907,7 +857,7 @@ export default function TransactionsPage() {
                 <div className="overflow-x-auto flex-1">
                   <table className="w-full text-left text-sm border-collapse">
                     <thead>
-                      <tr className="border-b bg-muted/40 text-muted-foreground text-xs font-semibold">
+                      <tr className="border-b bg-muted/40 text-[#35472D] text-xs font-['CaesarDressing'] tracking-wider">
                         <th className="p-2.5">Categoria</th>
                         <th className="p-2.5 text-right">Previsto</th>
                         <th className="p-2.5 text-right">Real</th>
@@ -956,20 +906,20 @@ export default function TransactionsPage() {
           {/* ========================================================================= */}
           <div className="flex flex-col gap-4 pt-4 border-t">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold tracking-tight">Contas e Cartões</h2>
+              <h2 className="text-xl font-['CaesarDressing'] text-[#35472D] tracking-wider">Contas e Cartões</h2>
               <Button onClick={handleOpenAccModal} variant="outline" size="sm">
                 + Nova Conta / Cartão
               </Button>
             </div>
 
             {loading ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">
+              <div className="p-8 text-center text-sm font-['CaesarDressing'] text-[#35472D] tracking-wider">
                 Carregando contas e lançamentos...
               </div>
             ) : accountCardsList.length === 0 ? (
-              <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm flex flex-col items-center gap-2">
+              <div className="rounded-lg border bg-card p-8 text-center text-sm font-['CaesarDressing'] text-[#35472D] tracking-wider shadow-sm flex flex-col items-center gap-2">
                 <p>Nenhuma conta ou cartão cadastrado ainda.</p>
-                <Button onClick={handleOpenAccModal} size="sm">
+                <Button onClick={handleOpenAccModal} size="sm" className="font-['CaesarDressing'] tracking-wider">
                   + Cadastrar Primeira Conta ou Cartão
                 </Button>
               </div>
@@ -992,13 +942,12 @@ export default function TransactionsPage() {
                       <div className="bg-muted/40 p-3 border-b flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-base">{isCard ? "💳" : "🏦"}</span>
-                          <h3 className="font-bold text-sm tracking-tight">{account.name}</h3>
-                          <span
-                            className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                              isCard
-                                ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300"
-                                : "bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-300"
-                            }`}
+                          <h3 className="font-['CaesarDressing'] text-[#35472D] text-sm tracking-wider">{account.name}</h3>
+                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-['CaesarDressing'] uppercase tracking-wider ${
+                            isCard
+                              ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300"
+                              : "bg-[#35472D]/10 text-[#35472D]"
+                          }`}
                           >
                             {isCard ? "Cartão" : "Conta"}
                           </span>
@@ -1019,13 +968,13 @@ export default function TransactionsPage() {
                       {/* Tabela de Transações */}
                       <div className="overflow-x-auto flex-1">
                         {txs.length === 0 ? (
-                          <div className="p-6 text-center text-xs text-muted-foreground">
+                          <div className="p-6 text-center text-xs font-['CaesarDressing'] text-[#35472D] tracking-wider">
                             Nenhum lançamento nesta conta no mês de {MONTH_NAMES[selectedMonth - 1]}.
                           </div>
                         ) : (
                           <table className="w-full text-left text-sm border-collapse">
                             <thead>
-                              <tr className="border-b bg-muted/20 text-muted-foreground text-xs font-semibold">
+                              <tr className="border-b bg-muted/20 text-[#35472D] text-xs font-['CaesarDressing'] tracking-wider">
                                 <th className="p-2.5">Data</th>
                                 <th className="p-2.5">Descrição</th>
                                 <th className="p-2.5">Categoria</th>
@@ -1096,7 +1045,7 @@ export default function TransactionsPage() {
                           size="sm"
                           variant="secondary"
                           onClick={() => handleOpenTxModal(account)}
-                          className="h-8 text-xs font-semibold w-full sm:w-auto"
+                          className="h-8 text-xs font-['CaesarDressing'] w-full sm:w-auto tracking-wider"
                         >
                           + Nova Transação
                         </Button>
@@ -1398,16 +1347,12 @@ export default function TransactionsPage() {
           onCancel={handleOverflowCancel}
         />
       )}
-    </div>
+    </>
   );
 
   return (
-    <MascotBackground
-      mode={mode}
-      mascotKey={mascotKey as 'hestia' | 'pluto' | undefined}
-      className={transitionClass}
-    >
+    <PlutoLayout pageTitle="Lançamentos" pageSubtitle="Registre e gerencie suas transações financeiras.">
       {content}
-    </MascotBackground>
+    </PlutoLayout>
   );
 }

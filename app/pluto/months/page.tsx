@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { parseErrorMessage } from "@/lib/utils";
 import Link from "next/link";
-import { MascotBackground } from "@/components/ui/MascotBackground";
-import { useMascotBackground } from "@/lib/hestia/MascotProvider";
+import { PlutoLayout } from "@/components/layout/PlutoLayout";
 
 const MONTH_NAMES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -24,14 +23,7 @@ export default function MonthsPage() {
   const [actionLoading, setActionLoading] = useState<Record<number, boolean>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Data state for MascotBackground
-  const [dataState, setDataState] = useState<'loading' | 'empty' | 'error' | 'has-data'>('loading');
-  const { mode, transitionClass, mascotKey } = useMascotBackground(dataState);
-
   const loadPeriods = useCallback(async (silent = false) => {
-    if (!silent) {
-      setDataState('loading');
-    }
     setErrorMessage(null);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -41,9 +33,6 @@ export default function MonthsPage() {
 
       const data = await getMonthlyPeriods(supabase, year);
       setPeriods(data);
-      if (!silent) {
-        setDataState(data.length > 0 ? 'has-data' : 'empty');
-      }
     } catch (err: unknown) {
       console.error("Erro ao carregar períodos:", err);
       const msg = parseErrorMessage(err);
@@ -52,7 +41,6 @@ export default function MonthsPage() {
       } else {
         setErrorMessage("Erro ao carregar períodos: " + msg);
       }
-if (!silent) setDataState('error');
     }
   }, [year]);
 
@@ -62,17 +50,6 @@ if (!silent) setDataState('error');
     }, 0);
     return () => clearTimeout(timer);
   }, [loadPeriods]);
-
-  // Detect external re-renders (e.g., test rerender with new mocks) while in empty/error state
-  const prevDataStateRef = useRef(dataState);
-  useEffect(() => {
-    const isExternalRerender =
-      dataState === prevDataStateRef.current && (dataState === 'empty' || dataState === 'error');
-    if (isExternalRerender) {
-      loadPeriods();
-    }
-    prevDataStateRef.current = dataState;
-  });
 
   const getOrFetchUserEmail = async (): Promise<string | null> => {
     if (userEmail) return userEmail;
@@ -143,53 +120,33 @@ if (!silent) setDataState('error');
   const totalClosed = periods.filter((p) => p.status === "encerrado").length;
   const totalNotStarted = 12 - (totalOpen + totalClosed);
 
-  const content = (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
-      {/* Menu Superior Financeiro */}
-      <div className="flex border-b pb-1 gap-6">
-        <Link href="/pluto/budget" className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground">
-          Orçamento Anual
-        </Link>
-        <Link href="/pluto/months" className="pb-2 text-sm font-semibold border-b-2 border-primary text-foreground">
-          Meses e Períodos
-        </Link>
-        <Link href="/pluto/transactions" className="pb-2 text-sm font-medium text-muted-foreground hover:text-foreground">
-          Lançamentos
-        </Link>
-      </div>
-
-      <div className="flex items-center justify-between border-b pb-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Meses e Períodos</h1>
-          <p className="text-sm text-muted-foreground">Abra ou encerre meses operacionais para controle de lançamentos.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="year-select">Ano:</Label>
-          <select
-            id="year-select"
-            value={year}
-            onChange={(e) => setYear(parseInt(e.target.value))}
-            className="rounded border p-1 bg-card text-card-foreground text-sm"
-          >
-            <option value={2026}>2026</option>
-            <option value={2027}>2027</option>
-            <option value={2028}>2028</option>
-          </select>
-        </div>
+  return (
+    <PlutoLayout pageTitle="Meses e Períodos" pageSubtitle="Abra ou encerre meses operacionais para controle de lançamentos.">
+      <div className="flex items-center justify-between gap-2">
+        <Label htmlFor="year-select">Ano:</Label>
+        <select
+          id="year-select"
+          value={year}
+          onChange={(e) => setYear(parseInt(e.target.value))}
+          className="rounded border p-1 bg-card text-card-foreground text-sm"
+        >
+          <option value={2026}>2026</option>
+          <option value={2027}>2027</option>
+          <option value={2028}>2028</option>
+        </select>
       </div>
 
       {errorMessage && (
         <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
           <div className="flex items-center justify-between">
             <p className="font-medium">{errorMessage}</p>
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              type="button"
               className="h-auto p-1 text-rose-800 hover:bg-rose-100"
               onClick={() => setErrorMessage(null)}
             >
               Fechar ✕
-            </Button>
+            </button>
           </div>
         </div>
       )}
@@ -197,15 +154,15 @@ if (!silent) setDataState('error');
       {/* Resumo Anual */}
       <div className="grid grid-cols-3 gap-4 rounded-lg border p-4 bg-muted/20">
         <div className="text-center">
-          <p className="text-xs text-muted-foreground uppercase font-semibold">Abertos</p>
+          <p className="text-xs font-['CaesarDressing'] text-[#35472D] uppercase tracking-wider">Abertos</p>
           <p className="text-2xl font-bold text-emerald-600">{totalOpen}</p>
         </div>
         <div className="text-center border-x">
-          <p className="text-xs text-muted-foreground uppercase font-semibold">Encerrados</p>
+          <p className="text-xs font-['CaesarDressing'] text-[#35472D] uppercase tracking-wider">Encerrados</p>
           <p className="text-2xl font-bold text-rose-600">{totalClosed}</p>
         </div>
         <div className="text-center">
-          <p className="text-xs text-muted-foreground uppercase font-semibold">Não Iniciados</p>
+          <p className="text-xs font-['CaesarDressing'] text-[#35472D] uppercase tracking-wider">Não Iniciados</p>
           <p className="text-2xl font-bold text-zinc-500">{totalNotStarted}</p>
         </div>
       </div>
@@ -223,14 +180,14 @@ if (!silent) setDataState('error');
             </span>
           );
           let actionButton = (
-            <Button
-              size="sm"
-              className="w-full mt-2"
+            <button
+              type="button"
+              className="w-full mt-2 rounded border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
               disabled={isActLoading}
               onClick={() => handleOpenMonth(monthNum)}
             >
               {isActLoading ? "Processando..." : "Abrir Mês"}
-            </Button>
+            </button>
           );
 
           if (period?.status === "aberto") {
@@ -240,15 +197,14 @@ if (!silent) setDataState('error');
               </span>
             );
             actionButton = (
-              <Button
-                variant="outline"
-                size="sm"
+              <button
+                type="button"
                 className="w-full mt-2 border-rose-200 text-rose-700 hover:bg-rose-50"
                 disabled={isActLoading}
                 onClick={() => handleCloseMonth(monthNum)}
               >
                 {isActLoading ? "Processando..." : "Encerrar Mês"}
-              </Button>
+              </button>
             );
           } else if (period?.status === "encerrado") {
             statusBadge = (
@@ -257,15 +213,14 @@ if (!silent) setDataState('error');
               </span>
             );
             actionButton = (
-              <Button
-                variant="secondary"
-                size="sm"
+              <button
+                type="button"
                 className="w-full mt-2"
                 disabled={isActLoading}
                 onClick={() => handleOpenMonth(monthNum)}
               >
                 {isActLoading ? "Processando..." : "Reabrir Mês"}
-              </Button>
+              </button>
             );
           }
 
@@ -273,7 +228,7 @@ if (!silent) setDataState('error');
             <div key={name} className="flex flex-col justify-between rounded-lg border p-4 hover:shadow-md transition-shadow bg-card">
               <div>
                 <div className="flex items-center justify-between gap-2 border-b pb-2 mb-2">
-                  <h3 className="font-bold text-sm">{name}</h3>
+                  <h3 className="text-sm font-['CaesarDressing'] text-[#35472D] tracking-wider">{name}</h3>
                   {statusBadge}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -285,16 +240,6 @@ if (!silent) setDataState('error');
           );
         })}
       </div>
-    </div>
-  );
-
-  return (
-    <MascotBackground
-      mode={mode}
-      mascotKey={mascotKey as 'hestia' | 'pluto' | undefined}
-      className={transitionClass}
-    >
-      {content}
-    </MascotBackground>
+    </PlutoLayout>
   );
 }

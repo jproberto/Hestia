@@ -24,28 +24,53 @@ O Héstia é um **guarda-chuva de sub-sistemas** organizado pelo padrão *módul
 * **Módulo Pluto (financeiro):** `app/pluto/`, `components/pluto/`, `lib/pluto/` (com acesso a dados em `lib/pluto/db/`) e testes espelhados em `__tests__/app/pluto/`, `__tests__/components/pluto/` e `__tests__/lib/pluto/`.
 * **Comum/transversal:** `app/layout.tsx`, `app/page.tsx`, `app/globals.css`, `app/login/`, `app/dashboard/`, `components/ui/`, `lib/utils.ts`, `utils/supabase/` e `utils/migrations/`.
 
-O **Pluto** é o módulo financeiro do Héstia e o primeiro a seguir esse padrão; novos módulos são registrados na tabela "Módulos Registrados" do backlog central (`.agents/backlog.md`) com sua documentação em `.agents/<modulo>/`.
+O **Pluto** é o módulo financeiro do Héstia e o primeiro a seguir esse padrão; novos módulos são registrados na tabela "Módulos Registrados" do backlog central (`.agents/modules/hestia/backlog.md`) com documentação por feature em `.agents/modules/<modulo>/<slug>/` (`spec.md`, `plan.md`, `tasks.json`, `context.json`, `checkpoint.json`).
+
+### Arquitetura de Agentes (Olympus)
+
+Orquestração multi-agentes via `.agents/olimpo/` (8 agentes com frontmatter `mode/color/temperature/permission` + anti-hallucination):
+
+* **Zeus** (primary): state machine 9 fases + guardian nativo; delega via Task tool (plataforma trata timeout/retry); persiste estado via `read`/`write`.
+* **Hera** → spec, **Atena** → plan+tasks, **Hefesto** (só implementa, nunca testa) + **Minos** (contratos RED + suite + coverage ≥80% + `test-scenarios.md` → `regression.md`), **Argos** → review 5 eixos, **Mnemósine** → docs, **Caronte** → único que commita (bash + `git_retry` 3× para remoto).
+* Estado por feature: `FEATURE_DIR=.agents/modules/<modulo>/<slug>/` + ponteiro `.agents/current`; histórico permanente após `COMMITTED`; skills legadas em `.agents/archive/`.
 
 ## Como Executar
 
 1. Instale as dependências:
-   ```bash
-   npm install
-   ```
+    ```bash
+    npm install
+    ```
 
 2. Execute o servidor de desenvolvimento:
-   ```bash
-   npm run dev
-   ```
-   Acesse [http://localhost:3000](http://localhost:3000) no seu navegador.
+    ```bash
+    npm run dev
+    ```
+    Acesse [http://localhost:3000](http://localhost:3000) no seu navegador.
 
 3. Executar os testes automatizados:
-   ```bash
-   npm run test
-   ```
+    ```bash
+    npm run test
+    ```
 
 4. Executar o linter e o compilador TypeScript:
-   ```bash
-   npx eslint .
-   npx tsc --noEmit
-   ```
+    ```bash
+    npx eslint .
+    npx tsc --noEmit
+    ```
+
+### Fluxo de Desenvolvimento (Olympus)
+
+O ciclo é orquestrado por **Zeus** via conversa — não há CLI externo. Exemplo:
+
+```
+Você: "Quero adicionar página de configurações do usuário"
+Zeus: cria FEATURE_DIR, invoca Hera → brainstorming → spec.md
+Você: aprova spec → Zeus invoca Atena → plan.md + tasks.json
+Zeus: loop Minos (teste RED) → Hefesto (GREEN) → Caronte commit por task
+Zeus: Minos suite completa → Argos review → você testa cenários manuais
+Zeus: Mnemósine atualiza docs → Caronte commit final + push (PR via Actions)
+```
+
+Checkpoints humanos (via conversa com Zeus):
+- `approve-spec` — após Hera entregar `spec.md`
+- `approve-review` — após Argos aprovar + você executar `test-scenarios.md`

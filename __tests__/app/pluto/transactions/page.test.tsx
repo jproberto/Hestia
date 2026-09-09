@@ -8,6 +8,25 @@ import { getMonthlyPeriods, getAllOpenMonthlyPeriods } from '@/lib/pluto/db/mont
 import { getBudgets } from '@/lib/pluto/db/budget'
 import { getChecklistItemsByMonth, getGlobalChecklistItems } from '@/lib/pluto/db/checklist'
 import { usePathname } from 'next/navigation'
+import type {
+  Account,
+  BudgetItem,
+  Category,
+  ChecklistItem,
+  MonthlyPeriod,
+  TransactionWithDetails,
+} from '@/lib/pluto/types'
+
+interface TransactionsPageMockData {
+  allOpenMonthlyPeriods: MonthlyPeriod[];
+  monthlyPeriods: MonthlyPeriod[];
+  budgets: BudgetItem[];
+  transactions: TransactionWithDetails[];
+  accounts: Account[];
+  categories: Category[];
+  checklistItems: ChecklistItem[];
+  globalChecklistItems: ChecklistItem[];
+}
 
 vi.mock('@/utils/supabase/client', () => ({
   createClient: () => ({
@@ -15,6 +34,13 @@ vi.mock('@/utils/supabase/client', () => ({
       getUser: () => Promise.resolve({ data: { user: { email: 'teste@hestia.com' } } })
     }
   })
+}))
+
+vi.mock('@/lib/shared/supabaseClient', () => ({
+  createBrowserDatabaseClient: () => ({
+    from: () => { throw new Error('use mocked db barrels in tests') },
+    getUserEmail: () => Promise.resolve('teste@hestia.com'),
+  }),
 }))
 
 vi.mock('@/lib/pluto/db/transactions', () => ({
@@ -41,6 +67,7 @@ vi.mock('@/lib/pluto/db/months', () => ({
 
 vi.mock('@/lib/pluto/db/budget', () => ({
   getBudgets: vi.fn(),
+  adjustBudgetItem: vi.fn(),
 }))
 
 vi.mock('@/lib/pluto/db/checklist', () => ({
@@ -63,7 +90,7 @@ function renderTransactionsPage(pathname = '/pluto/transactions') {
   return render(<TransactionsPage />)
 }
 
-const mockEmptyData = {
+const mockEmptyData: TransactionsPageMockData = {
   allOpenMonthlyPeriods: [],
   monthlyPeriods: [],
   budgets: [],
@@ -74,12 +101,12 @@ const mockEmptyData = {
   globalChecklistItems: [],
 }
 
-const mockHasData = {
+const mockHasData: TransactionsPageMockData = {
   allOpenMonthlyPeriods: [
-    { id: 'p1', year: 2026, month: 3, status: 'aberto' },
+    { id: 'p1', year: 2026, month: 3, status: 'aberto', created_at: '2026-03-01T00:00:00Z', created_by: 'teste@hestia.com' },
   ],
   monthlyPeriods: [
-    { id: 'p1', year: 2026, month: 3, status: 'aberto' },
+    { id: 'p1', year: 2026, month: 3, status: 'aberto', created_at: '2026-03-01T00:00:00Z', created_by: 'teste@hestia.com' },
   ],
   budgets: [
     { category_id: 'c1', category_name: 'Alimentação', category_type: 'despesa', amount: 1000, start_month: 1 },
@@ -93,18 +120,21 @@ const mockHasData = {
       type: 'despesa',
       is_refund: false,
       date: '2026-03-15',
+      category_id: 'c1',
+      account_id: 'a1',
       category_name: 'Alimentação',
       account_name: 'Itaú Corrente',
+      created_at: '2026-03-15T00:00:00Z',
       created_by: 'teste@hestia.com',
     },
   ],
-  accounts: [{ id: 'a1', name: 'Itaú Corrente', type: 'conta' }],
-  categories: [{ id: 'c1', name: 'Alimentação', type: 'despesa' }],
+  accounts: [{ id: 'a1', name: 'Itaú Corrente', type: 'conta', created_at: null, created_by: null }],
+  categories: [{ id: 'c1', name: 'Alimentação', type: 'despesa', created_at: '2026-01-01T00:00:00Z', created_by: 'teste@hestia.com' }],
   checklistItems: [],
   globalChecklistItems: [],
 }
 
-function setupMocks(data: typeof mockEmptyData) {
+function setupMocks(data: TransactionsPageMockData) {
   ;(getAllOpenMonthlyPeriods as Mock).mockResolvedValue(data.allOpenMonthlyPeriods)
   ;(getMonthlyPeriods as Mock).mockResolvedValue(data.monthlyPeriods)
   ;(getBudgets as Mock).mockResolvedValue(data.budgets)

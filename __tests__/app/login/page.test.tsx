@@ -1,12 +1,12 @@
 import { render, screen, cleanup } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import LoginPage from '@/app/login/page'
 import { MascotProvider } from '@/lib/hestia/MascotProvider'
 import { usePathname, useRouter } from 'next/navigation'
 import { axe, toHaveNoViolations } from 'jest-axe'
 
 vi.mock('next/navigation', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual = (await importOriginal()) as Record<string, unknown>
   return {
     ...actual,
     usePathname: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock('next/navigation', async (importOriginal) => {
   }
 })
 
-const mockUsePathname = usePathname as vi.Mock
+const mockUsePathname = usePathname as Mock
 
 expect.extend(toHaveNoViolations)
 
@@ -113,8 +113,8 @@ describe('Login Page - Contract Tests (RED)', () => {
       renderWithMascotProvider(<LoginPage />)
       const title = screen.getByText('Hestia')
       expect(title).toBeInTheDocument()
-      expect(title).toHaveClass('text-2xl')
-      expect(title).toHaveClass('font-semibold')
+      expect(title).toHaveClass('text-9xl')
+      expect(title).toHaveClass("font-['CaesarDressing']")
     })
   })
 

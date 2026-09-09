@@ -5,6 +5,7 @@ import { getBudgetAdjustment, getBudgets, getBudgetAdjustments, createBudgetAdju
 import { getCategories } from '@/lib/pluto/db/categories'
 import { useSearchParams } from 'next/navigation'
 import { usePathname } from 'next/navigation'
+import type { BudgetAdjustment, BudgetItem, Category } from '@/lib/pluto/types'
 
 vi.mock('@/utils/supabase/client', () => ({
   createClient: () => ({
@@ -12,6 +13,13 @@ vi.mock('@/utils/supabase/client', () => ({
       getUser: () => Promise.resolve({ data: { user: { email: 'teste@hestia.com' } } })
     }
   })
+}))
+
+vi.mock('@/lib/shared/supabaseClient', () => ({
+  createBrowserDatabaseClient: () => ({
+    from: () => { throw new Error('use mocked db barrels in tests') },
+    getUserEmail: () => Promise.resolve('teste@hestia.com'),
+  }),
 }))
 
 vi.mock('@/lib/pluto/db/budget', () => ({
@@ -47,17 +55,17 @@ beforeEach(() => {
       cleanup()
       vi.clearAllMocks()
       // Reset all mock implementations
-      getBudgetAdjustment.mockReset()
-      getBudgetAdjustments.mockReset()
-      getBudgets.mockReset()
-      getCategories.mockReset()
-      createBudgetAdjustment.mockReset()
-      adjustBudgetItem.mockReset()
-      addOrUpdateBudgetItem.mockReset()
-      getBudgetAdjustment.mockResolvedValue(null)
-      getBudgetAdjustments.mockResolvedValue([])
-      getBudgets.mockResolvedValue([])
-      getCategories.mockResolvedValue([])
+      vi.mocked(getBudgetAdjustment).mockReset()
+      vi.mocked(getBudgetAdjustments).mockReset()
+      vi.mocked(getBudgets).mockReset()
+      vi.mocked(getCategories).mockReset()
+      vi.mocked(createBudgetAdjustment).mockReset()
+      vi.mocked(adjustBudgetItem).mockReset()
+      vi.mocked(addOrUpdateBudgetItem).mockReset()
+      vi.mocked(getBudgetAdjustment).mockResolvedValue(null)
+      vi.mocked(getBudgetAdjustments).mockResolvedValue([])
+      vi.mocked(getBudgets).mockResolvedValue([])
+      vi.mocked(getCategories).mockResolvedValue([])
     })
 
   describe('PlutoLayout wrapper', () => {
@@ -158,9 +166,9 @@ beforeEach(() => {
 
 describe('Loading state', () => {
     it('renders without error while fetching data', async () => {
-      getBudgetAdjustment.mockResolvedValue(null)
-      getBudgetAdjustments.mockResolvedValue([])
-      getBudgets.mockResolvedValue([])
+      vi.mocked(getBudgetAdjustment).mockResolvedValue(null)
+      vi.mocked(getBudgetAdjustments).mockResolvedValue([])
+      vi.mocked(getBudgets).mockResolvedValue([])
 
       renderBudgetPage()
 
@@ -172,22 +180,22 @@ describe('Loading state', () => {
   
 
   describe('Has data state (budget initialized)', () => {
-    const mockRevision = { id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }
-    const mockAdjustments = [{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }]
-    const mockBudgets = [
+    const mockRevision: BudgetAdjustment = { id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial', created_by: 'teste@hestia.com' }
+    const mockAdjustments: BudgetAdjustment[] = [{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial', created_by: 'teste@hestia.com' }]
+    const mockBudgets: BudgetItem[] = [
       { category_id: 'cat-1', category_name: 'Alimentação', category_type: 'despesa', amount: 1000, start_month: 1 },
       { category_id: 'cat-2', category_name: 'Salário', category_type: 'receita', amount: 5000, start_month: 1 },
     ]
-    const mockCategories = [
-      { id: 'cat-1', name: 'Alimentação', type: 'despesa' },
-      { id: 'cat-2', name: 'Salário', type: 'receita' },
+    const mockCategories: Category[] = [
+      { id: 'cat-1', name: 'Alimentação', type: 'despesa', created_at: '2026-01-01T00:00:00Z', created_by: 'teste@hestia.com' },
+      { id: 'cat-2', name: 'Salário', type: 'receita', created_at: '2026-01-01T00:00:00Z', created_by: 'teste@hestia.com' },
     ]
 
     beforeEach(() => {
-      getBudgetAdjustment.mockResolvedValue(mockRevision)
-      getBudgetAdjustments.mockResolvedValue(mockAdjustments)
-      getBudgets.mockResolvedValue(mockBudgets)
-      getCategories.mockResolvedValue(mockCategories)
+      vi.mocked(getBudgetAdjustment).mockResolvedValue(mockRevision)
+      vi.mocked(getBudgetAdjustments).mockResolvedValue(mockAdjustments)
+      vi.mocked(getBudgets).mockResolvedValue(mockBudgets)
+      vi.mocked(getCategories).mockResolvedValue(mockCategories)
     })
 
     it('renders adjustment select with available adjustments', async () => {
@@ -237,12 +245,12 @@ describe('Loading state', () => {
   })
 
   describe('Navigation between Pluto pages', () => {
-    const mockRevision = { id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }
-    const mockAdjustments = [{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }]
-    const mockBudgets = [
+    const mockRevision: BudgetAdjustment = { id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial', created_by: 'teste@hestia.com' }
+    const mockAdjustments: BudgetAdjustment[] = [{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial', created_by: 'teste@hestia.com' }]
+    const mockBudgets: BudgetItem[] = [
       { category_id: 'cat-1', category_name: 'Alimentação', category_type: 'despesa', amount: 1000, start_month: 1 },
     ]
-    const mockCategories = [{ id: 'cat-1', name: 'Alimentação', type: 'despesa' }]
+    const mockCategories: Category[] = [{ id: 'cat-1', name: 'Alimentação', type: 'despesa', created_at: '2026-01-01T00:00:00Z', created_by: 'teste@hestia.com' }]
 
     beforeEach(() => {
       vi.mocked(getBudgetAdjustment).mockResolvedValue(mockRevision)
@@ -267,17 +275,17 @@ describe('Loading state', () => {
     })
 
     it('maintains Pluto module context when changing path to /pluto/months', async () => {
-      const mockRevision = { id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }
-      const mockAdjustments = [{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial' }]
-      const mockBudgets = [
+      const mockRevision: BudgetAdjustment = { id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial', created_by: 'teste@hestia.com' }
+      const mockAdjustments: BudgetAdjustment[] = [{ id: 'rev-1', year: 2026, start_month: 1, description: 'Inicial', created_by: 'teste@hestia.com' }]
+      const mockBudgets: BudgetItem[] = [
         { category_id: 'cat-1', category_name: 'Alimentação', category_type: 'despesa', amount: 1000, start_month: 1 },
       ]
-      const mockCategories = [{ id: 'cat-1', name: 'Alimentação', type: 'despesa' }]
+      const mockCategories: Category[] = [{ id: 'cat-1', name: 'Alimentação', type: 'despesa', created_at: '2026-01-01T00:00:00Z', created_by: 'teste@hestia.com' }]
 
-      getBudgetAdjustment.mockResolvedValue(mockRevision)
-      getBudgetAdjustments.mockResolvedValue(mockAdjustments)
-      getBudgets.mockResolvedValue(mockBudgets)
-      getCategories.mockResolvedValue(mockCategories)
+      vi.mocked(getBudgetAdjustment).mockResolvedValue(mockRevision)
+      vi.mocked(getBudgetAdjustments).mockResolvedValue(mockAdjustments)
+      vi.mocked(getBudgets).mockResolvedValue(mockBudgets)
+      vi.mocked(getCategories).mockResolvedValue(mockCategories)
 
       const { rerender } = renderBudgetPage('/pluto/budget')
 

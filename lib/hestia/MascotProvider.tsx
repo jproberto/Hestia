@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
-import { MascotConfig, resolveMascotKey, MASCOT_REGISTRY, ROUTE_TO_MASCOT, type MascotKey } from './mascots'
+import { MascotConfig, resolveMascotKey, MASCOT_REGISTRY, ROUTE_TO_MASCOT, type MascotKey, type MascotBgMode } from './mascots'
 
 interface MascotContextValue {
   mascot: MascotConfig
@@ -30,9 +30,14 @@ function isModulePathWithoutMascot(pathname: string): boolean {
   return firstSegment.startsWith('modulo-') && !isKnownModulePrefix(firstSegment)
 }
 
-export function MascotProvider({ children }: { children: ReactNode }) {
+interface MascotProviderProps {
+  children: ReactNode
+  mascotKey?: MascotKey
+}
+
+export function MascotProvider({ children, mascotKey: explicitMascotKey }: MascotProviderProps) {
   const pathname = usePathname()
-  const resolvedKey = resolveMascotKey(pathname)
+  const resolvedKey = explicitMascotKey ?? resolveMascotKey(pathname)
   const fallback = isModulePathWithoutMascot(pathname)
   const mascot = MASCOT_REGISTRY[resolvedKey] ?? MASCOT_REGISTRY.hestia
 

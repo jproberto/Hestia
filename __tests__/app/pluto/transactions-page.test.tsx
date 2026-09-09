@@ -18,7 +18,14 @@ vi.mock("@/utils/supabase/client", () => ({
       getUser: () => Promise.resolve({ data: { user: { email: "teste@hestia.com" } } }),
     },
   }),
-));
+}));
+
+vi.mock("@/lib/shared/supabaseClient", () => ({
+  createBrowserDatabaseClient: () => ({
+    from: () => { throw new Error("use mocked db barrels in tests"); },
+    getUserEmail: () => Promise.resolve("teste@hestia.com"),
+  }),
+}));
 
 vi.mock("@/lib/pluto/db/transactions", () => ({
   getTransactionsByMonth: vi.fn(),
@@ -96,7 +103,7 @@ describe("Página de Cadastro de Transações /pluto/transactions", () => {
 
     renderWithMascotProvider(<TransactionsPage />);
 
-    expect(await screen.findByText("Lançamentos")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Lançamentos" })).toBeInTheDocument();
     expect(await screen.findByText(/^📈 Receitas$/i)).toBeInTheDocument();
   });
 
@@ -114,6 +121,7 @@ describe("Página de Cadastro de Transações /pluto/transactions", () => {
 
     renderWithMascotProvider(<TransactionsPage />);
 
+    await screen.findByLabelText("Ano:");
     const newAccBtn = screen.getByRole("button", { name: /\+ Nova Conta \/ Cartão/i });
     fireEvent.click(newAccBtn);
 
@@ -136,11 +144,12 @@ describe("Página de Cadastro de Transações /pluto/transactions", () => {
 
     renderWithMascotProvider(<TransactionsPage />);
 
+    await screen.findByRole("heading", { name: "Itaú Corrente" });
     const footerBtn = screen.getByRole("button", { name: /\+ Nova Transação/i });
     fireEvent.click(footerBtn);
 
     await waitFor(() => {
-      expect(screen.getByText("Nova Transação")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Nova Transação/ })).toBeInTheDocument();
     });
 
     const accountSelect = screen.getByRole("combobox", { name: /Conta \/ Cartão/i });
@@ -173,16 +182,17 @@ describe("Página de Cadastro de Transações /pluto/transactions", () => {
 
     renderWithMascotProvider(<TransactionsPage />);
 
+    await screen.findAllByText("Supermercado");
     const editBtn = screen.getByRole("button", { name: /Editar lançamento Supermercado/i });
     fireEvent.click(editBtn);
 
     await waitFor(() => {
-      expect(screen.getByText("Editar Transação")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Editar Transação/ })).toBeInTheDocument();
     });
 
     expect(screen.getByDisplayValue("Supermercado")).toBeInTheDocument();
     expect(screen.getByDisplayValue("200")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("despesa")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Despesa")).toBeInTheDocument();
   });
 
   it("deve abrir modal de confirmação ao clicar no botão excluir e chamar deleteTransaction ao confirmar", async () => {
@@ -211,11 +221,13 @@ describe("Página de Cadastro de Transações /pluto/transactions", () => {
 
     renderWithMascotProvider(<TransactionsPage />);
 
+    await screen.findAllByText("Supermercado");
     const deleteBtn = screen.getByRole("button", { name: /Excluir lançamento Supermercado/i });
     fireEvent.click(deleteBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/Tem certeza que deseja excluir "Supermercado"/i)).toBeInTheDocument();
+      expect(screen.getByText(/Tem certeza que deseja excluir o lançamento/i)).toBeInTheDocument();
+      expect(screen.getAllByText("Supermercado")).toHaveLength(2);
     });
 
     fireEvent.click(screen.getByRole("button", { name: /Confirmar Exclusão/i }));
@@ -265,10 +277,13 @@ describe("Página de Cadastro de Transações /pluto/transactions", () => {
 
     renderWithMascotProvider(<TransactionsPage />);
 
-    const saldoBanner = await screen.findByText(/Saldo do Mês/i);
-    expect(saldoBanner).toBeInTheDocument();
-    expect(saldoBanner).toHaveTextContent(/4\.800,00/);
-    expect(saldoBanner).toHaveClass("text-emerald");
+    await screen.findAllByText("Salário");
+    const saldoLabel = screen.getByText(/Saldo do Mês/i);
+    expect(saldoLabel).toBeInTheDocument();
+    const banner = saldoLabel.parentElement as HTMLElement;
+    const saldoValue = within(banner).getByText(/4\.800,00/);
+    expect(saldoValue).toBeInTheDocument();
+    expect(saldoValue).toHaveClass("text-success");
   });
 
   it("deve exibir o banner de saldo do mês em vermelho quando despesas superam receitas", async () => {
@@ -297,10 +312,13 @@ describe("Página de Cadastro de Transações /pluto/transactions", () => {
 
     renderWithMascotProvider(<TransactionsPage />);
 
-    const saldoBanner = await screen.findByText(/Saldo do Mês/i);
-    expect(saldoBanner).toBeInTheDocument();
-    expect(saldoBanner).toHaveTextContent(/200,00/);
-    expect(saldoBanner).toHaveClass("text-rose");
+    await screen.findAllByText("Supermercado");
+    const saldoLabel = screen.getByText(/Saldo do Mês/i);
+    expect(saldoLabel).toBeInTheDocument();
+    const banner = saldoLabel.parentElement as HTMLElement;
+    const saldoValue = within(banner).getByText(/200,00/);
+    expect(saldoValue).toBeInTheDocument();
+    expect(saldoValue).toHaveClass("text-danger");
   });
 
   it("não deve exibir o banner de saldo quando nenhum mês está aberto", async () => {

@@ -5,27 +5,12 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const MONTH_NAMES = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
-
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-};
+import { BudgetOverflowResult, MONTH_NAMES, formatCurrency } from "@/lib/pluto/types";
 
 export interface BudgetOverflowModalProps {
   isOpen: boolean;
-  overflowData: {
-    categoryId: string;
-    categoryName: string;
+  overflowData: BudgetOverflowResult & {
     categoryType: "receita" | "despesa";
-    totalChecklist: number;
-    budgetAmount: number;
     operationLabel: string;
   };
   month: number;

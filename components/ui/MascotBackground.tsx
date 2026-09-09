@@ -8,6 +8,7 @@ export interface MascotBackgroundProps {
   mode?: 'prominent' | 'watermark'
   className?: string
   mascotKey?: 'hestia' | 'pluto'
+  style?: React.CSSProperties
 }
 
 export function MascotBackground({
@@ -15,6 +16,7 @@ export function MascotBackground({
   mode = 'prominent',
   className,
   mascotKey = 'hestia',
+  style: styleProp,
   ...rest
 }: MascotBackgroundProps) {
   const { lqipBase64 } = generateLQIP(mascotKey)
@@ -22,20 +24,22 @@ export function MascotBackground({
   const isProminent = mode === 'prominent'
   const isWatermark = mode === 'watermark'
 
-  const style: Record<string, string | number | undefined> = {
+  const internalStyle: React.CSSProperties & Record<string, string | number> = {
     '--mascot-bg-lqip': lqipBase64,
     '--mascot-bg-opacity': isProminent ? 1 : 0.12,
     '--mascot-transition-duration': '300ms',
   }
 
   if (isProminent) {
-    style['--mascot-overlay-bg'] = 'oklch(0.145 0 0 / 0.7)'
-    style['--mascot-overlay-text'] = 'oklch(0.985 0 0)'
+    internalStyle['--mascot-overlay-bg'] = 'oklch(0.145 0 0 / 0.7)'
+    internalStyle['--mascot-overlay-text'] = 'oklch(0.985 0 0)'
   }
 
   if (isWatermark) {
-    style['contentVisibility'] = 'auto'
+    internalStyle['contentVisibility'] = 'auto'
   }
+
+  const mergedStyle = { ...internalStyle, ...styleProp }
 
   const transitionClass = `mascot-transition${isWatermark ? '' : ''}`
 
@@ -48,7 +52,7 @@ export function MascotBackground({
   return (
     <div
       className={classNames}
-      style={style}
+      style={mergedStyle}
       {...rest}
     >
       {children}

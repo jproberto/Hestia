@@ -131,21 +131,21 @@ describe('Mascot Registry & Resolver (TASK-1)', () => {
 
   describe('MascotConfig without width/height (NEW: TASK-1 spec v2)', () => {
     it('MascotConfig type does not have width property', () => {
-      // @ts-expect-error width should not exist on MascotConfig
       const config: MascotConfig = {
         key: 'hestia',
         src: '/mascots/hestia.svg',
         alt: 'Héstia, mascote do sistema Héstia',
+        // @ts-expect-error width should not exist on MascotConfig
         width: 120,
       }
     })
 
     it('MascotConfig type does not have height property', () => {
-      // @ts-expect-error height should not exist on MascotConfig
       const config: MascotConfig = {
         key: 'hestia',
         src: '/mascots/hestia.svg',
         alt: 'Héstia, mascote do sistema Héstia',
+        // @ts-expect-error height should not exist on MascotConfig
         height: 120,
       }
     })

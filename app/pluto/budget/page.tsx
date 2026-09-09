@@ -1,34 +1,20 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
+import { useState, useCallback, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/client";
-import {
-  getBudgetAdjustment,
-  initBudget,
-  getBudgets,
-  adjustBudgetItem,
-  getBudgetAdjustments,
-  createBudgetAdjustment,
-  BudgetAdjustment,
-  BudgetItem
-} from "@/lib/pluto/db/budget";
-import { getCategories, Category } from "@/lib/pluto/db/categories";
+import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
+import { initBudget, createBudgetAdjustment, getBudgetAdjustment, getBudgetAdjustments, adjustBudgetItem } from "@/lib/pluto/db/budget";
+import { getCategories } from "@/lib/pluto/db/categories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSearchParams } from "next/navigation";
 import { PlutoLayout } from "@/components/layout/PlutoLayout";
+import { formatCurrency, MONTH_NAMES } from "@/lib/pluto/types";
+import { useBudgets, useCategories } from "@/lib/pluto/hooks";
+import type { BudgetAdjustment, BudgetItem, Category } from "@/lib/pluto/types";
 
 export const dynamic = "force-dynamic";
-
-// Formatação brasileira de moeda (BRL)
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL"
-  }).format(value);
-}
 
 function BudgetPageContent() {
   const [year, setYear] = useState<number>(new Date().getFullYear());
@@ -36,8 +22,6 @@ function BudgetPageContent() {
   const [selectedAdjustmentId, setSelectedAdjustmentId] = useState<string | null>(null);
   const [activeAdjustment, setActiveAdjustment] = useState<BudgetAdjustment | null>(null);
   const [revision, setRevision] = useState<BudgetAdjustment | null>(null);
-  const [budgets, setBudgets] = useState<BudgetItem[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [userEmail, setUserEmail] = useState<string>("");
   const [showForm, setShowForm] = useState<boolean>(false);
   const [categoryName, setCategoryName] = useState<string>("");
@@ -47,11 +31,11 @@ function BudgetPageContent() {
   const [tempAmount, setTempAmount] = useState<string>("");
   const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
 
-  const supabase = useMemo(() => createClient(), []);
+  const db = createBrowserDatabaseClient();
   const searchParams = useSearchParams();
 
-  // Obter o mês corrente de forma segura (suportando mockMonth para simulação de data da linha do tempo)
-  const getOpenMonth = useCallback(() => {
+  // Use hooks for data fetching
+  const openMonth = useMemo(() => {
     const mockMonthParam = searchParams.get("mockMonth");
     if (mockMonthParam) {
       const parsed = parseInt(mockMonthParam, 10);
@@ -62,7 +46,16 @@ function BudgetPageContent() {
     return new Date().getMonth() + 1;
   }, [searchParams]);
 
-  const openMonth = getOpenMonth();
+  const { data: budgets, loading: budgetsLoading, refetch: refetchBudgets } = useBudgets({
+    year,
+    month: activeAdjustment?.start_month ?? openMonth,
+    enabled: !!activeAdjustment,
+  });
+
+  const { data: categories, loading: categoriesLoading } = useCategories({
+    enabled: !!activeAdjustment,
+  });
+
   const isMostRecent = activeAdjustment
     ? !adjustments.some((a) => a.start_month > activeAdjustment.start_month)
     : false;
@@ -70,20 +63,18 @@ function BudgetPageContent() {
     ? (activeAdjustment.start_month === openMonth && isMostRecent)
     : false;
 
-  // Carrega os dados. Suporta refresh silencioso para evitar piscadas na UI ao salvar itens
   const loadData = useCallback(async (silent = false) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        setUserEmail(user.email);
+      const email = await db.getUserEmail();
+      if (email) {
+        setUserEmail(email);
       }
 
-      // Busca a revisão de Janeiro para saber se o orçamento anual foi iniciado
-      const activeRevision = await getBudgetAdjustment(supabase, year);
+      const activeRevision = await getBudgetAdjustment(db, year);
       setRevision(activeRevision);
 
       if (activeRevision) {
-        const adjs = await getBudgetAdjustments(supabase, year);
+        const adjs = await getBudgetAdjustments(db, year);
         setAdjustments(adjs);
 
         let currentAdj: BudgetAdjustment | null = null;
@@ -92,48 +83,33 @@ function BudgetPageContent() {
         }
 
         setActiveAdjustment(currentAdj);
-
-        if (currentAdj) {
-          const [items, cats] = await Promise.all([
-            getBudgets(supabase, year, currentAdj.start_month),
-            getCategories(supabase)
-          ]);
-          setBudgets(items);
-          setCategories(cats);
-        }
       } else {
         setAdjustments([]);
         setActiveAdjustment(null);
-        setBudgets([]);
-        setCategories([]);
       }
     } catch (err) {
       console.error(err);
     }
-  }, [year, selectedAdjustmentId, supabase]);
+  }, [year, selectedAdjustmentId, db]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadData();
+      void loadData();
     }, 0);
     return () => clearTimeout(timer);
   }, [loadData]);
 
-  // Detect external re-renders (e.g., test rerender with new mocks) while in empty/error state
-  const prevDataStateRef = useRef("");
+  // Refetch budgets when activeAdjustment changes
   useEffect(() => {
-    const isExternalRerender =
-      prevDataStateRef.current === "empty" || prevDataStateRef.current === "error";
-    if (isExternalRerender) {
-      loadData();
+    if (activeAdjustment) {
+      refetchBudgets();
     }
-    prevDataStateRef.current = "";
-  });
+  }, [activeAdjustment, refetchBudgets]);
 
   async function handleStartBudget() {
     if (!userEmail) return;
     try {
-      await initBudget(supabase, year, userEmail);
+      await initBudget(db, year, userEmail);
       await loadData();
     } catch (err) {
       console.error(err);
@@ -143,7 +119,7 @@ function BudgetPageContent() {
   async function handleCreateAdjustment() {
     if (!userEmail) return;
     try {
-      const newId = await createBudgetAdjustment(supabase, year, openMonth, userEmail);
+      const newId = await createBudgetAdjustment(db, year, openMonth, userEmail);
       setSelectedAdjustmentId(newId);
       await loadData();
     } catch (err) {
@@ -157,7 +133,7 @@ function BudgetPageContent() {
 
     try {
       await adjustBudgetItem(
-        supabase,
+        db,
         year,
         activeAdjustment.start_month,
         categoryName,
@@ -168,7 +144,7 @@ function BudgetPageContent() {
       setCategoryName("");
       setAmount("");
       setShowForm(false);
-      await loadData(true); // silent refresh
+      await loadData(true);
     } catch (err) {
       console.error(err);
     }
@@ -194,7 +170,7 @@ function BudgetPageContent() {
     try {
       if (!userEmail || !activeAdjustment) return;
       await adjustBudgetItem(
-        supabase,
+        db,
         year,
         activeAdjustment.start_month,
         categoryName,
@@ -202,7 +178,7 @@ function BudgetPageContent() {
         value,
         userEmail
       );
-      await loadData(true); // silent refresh
+      await loadData(true);
     } catch (err) {
       console.error("Erro ao salvar ajuste inline:", err);
     } finally {
@@ -211,6 +187,7 @@ function BudgetPageContent() {
     }
   };
 
+  // Derived state - all declared at top before JSX
   const revenues = budgets.filter((b) => b.category_type === "receita" && b.amount > 0);
   const expenses = budgets.filter((b) => b.category_type === "despesa" && b.amount > 0);
 
@@ -227,7 +204,7 @@ function BudgetPageContent() {
 
   const hasCurrentMonthAdjustment = adjustments.some((a) => a.start_month === openMonth);
 
-  const mainContent = !revision ? (
+  const emptyState = !revision ? (
     <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed p-12 text-center">
       <h3 className="text-xl font-['CaesarDressing'] text-[#35472D] tracking-wider">Nenhum orçamento cadastrado para o ano {year}.</h3>
       <p className="text-sm text-muted-foreground max-w-sm">
@@ -237,7 +214,9 @@ function BudgetPageContent() {
         Iniciar Orçamento de {year}
       </button>
     </div>
-  ) : (
+  ) : null;
+
+  const mainContent = revision ? (
     <div className="flex flex-col gap-8">
       <div className="grid grid-cols-3 gap-4">
         <div className="rounded-lg border p-4 bg-muted/40">
@@ -470,7 +449,7 @@ function BudgetPageContent() {
         </div>
       </div>
     </div>
-  );
+  ) : null;
 
   return (
     <PlutoLayout pageTitle="Orçamento Anual" pageSubtitle="Gerencie receitas, despesas e saldos planejados.">
@@ -511,6 +490,7 @@ function BudgetPageContent() {
             </select>
           </div>
 
+          {emptyState}
           {mainContent}
         </div>
     </PlutoLayout>

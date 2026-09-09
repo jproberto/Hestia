@@ -1,5 +1,5 @@
 import { render, screen, cleanup } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { MascotBackground } from '@/components/ui/MascotBackground'
 import { MascotProvider } from '@/lib/hestia/MascotProvider'
 import { usePathname } from 'next/navigation'
@@ -8,7 +8,7 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
 }))
 
-const mockUsePathname = usePathname as vi.Mock
+const mockUsePathname = usePathname as Mock
 
 function renderWithMascotProvider(ui: React.ReactElement, pathname = '/login') {
   mockUsePathname.mockReturnValue(pathname)

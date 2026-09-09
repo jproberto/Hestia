@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
 import MonthsPage from '@/app/pluto/months/page'
 import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod } from '@/lib/pluto/db/months'
 import { usePathname } from 'next/navigation'
+import type { MonthlyPeriod } from '@/lib/pluto/types'
 
 vi.mock('@/utils/supabase/client', () => ({
   createClient: () => ({
@@ -10,6 +11,13 @@ vi.mock('@/utils/supabase/client', () => ({
       getUser: () => Promise.resolve({ data: { user: { email: 'teste@hestia.com' } } })
     }
   })
+}))
+
+vi.mock('@/lib/shared/supabaseClient', () => ({
+  createBrowserDatabaseClient: () => ({
+    from: () => { throw new Error('use mocked db barrels in tests') },
+    getUserEmail: () => Promise.resolve('teste@hestia.com'),
+  }),
 }))
 
 vi.mock('@/lib/pluto/db/months', () => ({
@@ -29,10 +37,10 @@ function renderMonthsPage(pathname = '/pluto/months') {
   return render(<MonthsPage />)
 }
 
-const mockEmptyPeriods = []
-const mockHasPeriods = [
-  { id: '1', year: 2026, month: 1, status: 'aberto', created_by: 'teste@hestia.com' },
-  { id: '2', year: 2026, month: 2, status: 'encerrado', created_by: 'teste@hestia.com' }
+const mockEmptyPeriods: MonthlyPeriod[] = []
+const mockHasPeriods: MonthlyPeriod[] = [
+  { id: '1', year: 2026, month: 1, status: 'aberto', created_at: '2026-01-01T00:00:00Z', created_by: 'teste@hestia.com' },
+  { id: '2', year: 2026, month: 2, status: 'encerrado', created_at: '2026-02-01T00:00:00Z', created_by: 'teste@hestia.com' }
 ]
 
 describe('Months Page /pluto/months - Layout & Rendering', () => {
@@ -43,7 +51,7 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
 
   describe('PlutoLayout wrapper', () => {
     it('renders Pluto module header with mascot and title', async () => {
-      getMonthlyPeriods.mockResolvedValue(mockEmptyPeriods)
+      vi.mocked(getMonthlyPeriods).mockResolvedValue(mockEmptyPeriods)
 
       renderMonthsPage()
 
@@ -54,7 +62,7 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
     })
 
     it('renders Pluto navigation tabs', async () => {
-      getMonthlyPeriods.mockResolvedValue(mockEmptyPeriods)
+      vi.mocked(getMonthlyPeriods).mockResolvedValue(mockEmptyPeriods)
 
       renderMonthsPage()
 
@@ -66,7 +74,7 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
     })
 
     it('renders page title and subtitle', async () => {
-      getMonthlyPeriods.mockResolvedValue(mockEmptyPeriods)
+      vi.mocked(getMonthlyPeriods).mockResolvedValue(mockEmptyPeriods)
 
       renderMonthsPage()
 
@@ -78,7 +86,7 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
     })
 
     it('renders back to dashboard link', async () => {
-      getMonthlyPeriods.mockResolvedValue(mockEmptyPeriods)
+      vi.mocked(getMonthlyPeriods).mockResolvedValue(mockEmptyPeriods)
 
       renderMonthsPage()
 
@@ -88,7 +96,7 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
     })
 
     it('renders logout button', async () => {
-      getMonthlyPeriods.mockResolvedValue(mockEmptyPeriods)
+      vi.mocked(getMonthlyPeriods).mockResolvedValue(mockEmptyPeriods)
 
       renderMonthsPage()
 
@@ -100,7 +108,7 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
 
   describe('Empty state (no periods)', () => {
     it('shows message when no periods exist', async () => {
-      getMonthlyPeriods.mockResolvedValue(mockEmptyPeriods)
+      vi.mocked(getMonthlyPeriods).mockResolvedValue(mockEmptyPeriods)
 
       renderMonthsPage()
 
@@ -114,7 +122,7 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
 
   describe('Loading state', () => {
     it('renders without error while fetching data', async () => {
-      getMonthlyPeriods.mockResolvedValue(mockEmptyPeriods)
+      vi.mocked(getMonthlyPeriods).mockResolvedValue(mockEmptyPeriods)
 
       renderMonthsPage()
 
@@ -126,7 +134,7 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
 
   describe('Has data state (periods exist)', () => {
     beforeEach(() => {
-      getMonthlyPeriods.mockResolvedValue(mockHasPeriods)
+      vi.mocked(getMonthlyPeriods).mockResolvedValue(mockHasPeriods)
     })
 
     it('renders periods list with open and closed periods', async () => {
@@ -161,7 +169,7 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
 
   describe('Error handling', () => {
     it('shows error message on data fetch error', async () => {
-      getMonthlyPeriods.mockRejectedValue(new Error('DB error'))
+      vi.mocked(getMonthlyPeriods).mockRejectedValue(new Error('DB error'))
 
       renderMonthsPage()
 
@@ -173,7 +181,7 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
 
   describe('Navigation between Pluto pages', () => {
     it('maintains Pluto module context when re-rendering', async () => {
-      getMonthlyPeriods.mockResolvedValue(mockHasPeriods)
+      vi.mocked(getMonthlyPeriods).mockResolvedValue(mockHasPeriods)
 
       const { rerender } = renderMonthsPage()
 
@@ -190,7 +198,7 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
     })
 
     it('maintains Pluto module context when changing path to /pluto/transactions', async () => {
-      getMonthlyPeriods.mockResolvedValue(mockHasPeriods)
+      vi.mocked(getMonthlyPeriods).mockResolvedValue(mockHasPeriods)
 
       const { rerender } = renderMonthsPage('/pluto/months')
 
@@ -209,7 +217,7 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
 
   describe('Interactions', () => {
     it('calls openMonthlyPeriod when clicking Abrir Mês', async () => {
-      getMonthlyPeriods.mockResolvedValue(mockHasPeriods)
+      vi.mocked(getMonthlyPeriods).mockResolvedValue(mockHasPeriods)
 
       renderMonthsPage()
 
@@ -224,7 +232,7 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
     })
 
     it('calls closeMonthlyPeriod when clicking Encerrar Mês', async () => {
-      getMonthlyPeriods.mockResolvedValue(mockHasPeriods)
+      vi.mocked(getMonthlyPeriods).mockResolvedValue(mockHasPeriods)
 
       renderMonthsPage()
 

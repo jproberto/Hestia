@@ -1,5 +1,5 @@
 import { render, screen, waitFor, cleanup, act } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import DashboardPage from '@/app/dashboard/page'
 import { usePathname } from 'next/navigation'
 import { MascotProvider, useMascotBackground } from '@/lib/hestia/MascotProvider'
@@ -24,7 +24,14 @@ vi.mock('@/lib/pluto/db/budget', () => ({
   getBudgetAdjustment: vi.fn(),
 }))
 
-const mockUsePathname = usePathname as vi.Mock
+vi.mock('@/lib/shared/supabaseClient', () => ({
+  createBrowserDatabaseClient: () => ({
+    from: () => { throw new Error('use mocked db barrels in tests') },
+    getUserEmail: () => Promise.resolve('teste@hestia.com'),
+  }),
+}))
+
+const mockUsePathname = usePathname as Mock
 const mockGetBudgetAdjustment = vi.mocked(await import('@/lib/pluto/db/budget')).getBudgetAdjustment
 
 function renderDashboardWithProvider(pathname = '/dashboard') {

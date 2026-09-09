@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import { MascotProvider, useMascotBackground } from '@/lib/hestia/MascotProvider'
 import { usePathname } from 'next/navigation'
@@ -7,7 +7,7 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
 }))
 
-const mockUsePathname = usePathname as vi.Mock
+const mockUsePathname = usePathname as Mock
 
 function TestComponent({ dataState }: { dataState: 'loading' | 'empty' | 'error' | 'has-data' }) {
   const { mascotKey, previousMascotKey, mode, transitionClass, lqipStyle } = useMascotBackground(dataState)

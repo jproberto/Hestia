@@ -1,20 +1,17 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { createClient } from "@/utils/supabase/client";
-import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod, MonthlyPeriod } from "@/lib/pluto/db/months";
+import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
+import { getMonthlyPeriods, openMonthlyPeriod, closeMonthlyPeriod } from "@/lib/pluto/db/months";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { parseErrorMessage } from "@/lib/utils";
 import Link from "next/link";
 import { PlutoLayout } from "@/components/layout/PlutoLayout";
+import { MONTH_NAMES } from "@/lib/pluto/types";
+import type { MonthlyPeriod } from "@/lib/pluto/types";
 
-const MONTH_NAMES = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
-
-const supabase = createClient();
+const db = createBrowserDatabaseClient();
 
 export default function MonthsPage() {
   const [year, setYear] = useState<number>(2026);
@@ -26,12 +23,12 @@ export default function MonthsPage() {
   const loadPeriods = useCallback(async (silent = false) => {
     setErrorMessage(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        setUserEmail(user.email);
+      const email = await db.getUserEmail();
+      if (email) {
+        setUserEmail(email);
       }
 
-      const data = await getMonthlyPeriods(supabase, year);
+      const data = await getMonthlyPeriods(db, year);
       setPeriods(data);
     } catch (err: unknown) {
       console.error("Erro ao carregar períodos:", err);
@@ -54,10 +51,10 @@ export default function MonthsPage() {
   const getOrFetchUserEmail = async (): Promise<string | null> => {
     if (userEmail) return userEmail;
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        setUserEmail(user.email);
-        return user.email;
+      const email = await db.getUserEmail();
+      if (email) {
+        setUserEmail(email);
+        return email;
       }
     } catch (e) {
       console.error("Erro ao obter usuário:", e);
@@ -75,7 +72,7 @@ export default function MonthsPage() {
         return;
       }
 
-      await openMonthlyPeriod(supabase, year, monthIndex, email);
+      await openMonthlyPeriod(db, year, monthIndex, email);
       await loadPeriods(true);
     } catch (err: unknown) {
       console.error("Erro ao abrir mês:", err);
@@ -100,7 +97,7 @@ export default function MonthsPage() {
         return;
       }
 
-      await closeMonthlyPeriod(supabase, year, monthIndex, email);
+      await closeMonthlyPeriod(db, year, monthIndex, email);
       await loadPeriods(true);
     } catch (err: unknown) {
       console.error("Erro ao encerrar mês:", err);

@@ -16,6 +16,13 @@ vi.mock("@/utils/supabase/client", () => ({
   })
 }));
 
+vi.mock("@/lib/shared/supabaseClient", () => ({
+  createBrowserDatabaseClient: () => ({
+    from: () => { throw new Error("use mocked db barrels in tests"); },
+    getUserEmail: () => Promise.resolve("teste@hestia.com"),
+  }),
+}));
+
 vi.mock("@/lib/pluto/db/months", () => ({
   getMonthlyPeriods: vi.fn(),
   openMonthlyPeriod: vi.fn(),

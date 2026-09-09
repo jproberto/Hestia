@@ -16,6 +16,13 @@ vi.mock("@/utils/supabase/client", () => ({
   })
 }));
 
+vi.mock("@/lib/shared/supabaseClient", () => ({
+  createBrowserDatabaseClient: () => ({
+    from: () => { throw new Error("use mocked db barrels in tests"); },
+    getUserEmail: () => Promise.resolve("teste@hestia.com"),
+  }),
+}));
+
 vi.mock("@/lib/pluto/db/budget", () => ({
   getBudgetAdjustment: vi.fn(),
   initBudget: vi.fn(),
@@ -74,62 +81,39 @@ describe("Pagina de Orcamento Anual /pluto/budget (Revisada por Ajustes)", () =>
       { id: "rev-agosto", year: 2026, start_month: 8, description: "Ajuste de Agosto", created_by: "teste" }
     ];
 
-    (getBudgetAdjustment as Mock).mockResolvedValue({ id: "rev-inicial", year: 2026, start_month: 1 });
+    (getBudgetAdjustment as Mock).mockResolvedValue({ id: "rev-inicial", year: 2026, start_month: 1, description: "Inicial", created_by: "teste" });
     (getBudgetAdjustments as Mock).mockResolvedValue(mockAdjs);
-    (getBudgets as Mock).mockResolvedValue([
-      { category_id: "cat-1", category_name: "Alimentação", category_type: "despesa", amount: 1000, start_month: 1 }
-    ]);
+    (getBudgets as Mock).mockResolvedValue([]);
 
     renderWithMascotProvider(<BudgetPage />);
 
-    // 1. Deve carregar a tabela e focar por padrao no ajuste mais recente (Agosto)
-    expect(await screen.findByText("Alimentação")).toBeInTheDocument();
+    // 1. O seletor deve listar os ajustes existentes
+    const select = await screen.findByLabelText("Ajuste:");
+    expect(select).toBeInTheDocument();
+    expect(screen.getByText("Orçamento Inicial 2026")).toBeInTheDocument();
+    expect(screen.getByText("Ajuste de Agosto")).toBeInTheDocument();
 
-    // 2. Como vigencia de Agosto (mês 8) !== Outubro (mês 10), a tela deve estar em Somente-Leitura
-    expect(screen.queryByRole("button", { name: /Adicionar Previsão/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/1\.000,00/, { selector: "span" })).toHaveClass("cursor-default");
+    // 2. Ao selecionar Agosto (start_month 8 !== openMonth 10), a tela fica Somente-Leitura
+    fireEvent.change(select, { target: { value: "rev-agosto" } });
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /Adicionar Previsão/i })).not.toBeInTheDocument();
+    });
 
     // 3. E o botao "Criar Novo Ajuste" deve estar visivel para permitir ajustar o mes corrente
     const createBtn = screen.getByRole("button", { name: /Criar Novo Ajuste/i });
     expect(createBtn).toBeInTheDocument();
 
-    // 4. Ao clicar em Criar Novo Ajuste
+    // 4. Ao clicar em Criar Novo Ajuste, cria o ajuste do mês corrente (Outubro)
     fireEvent.click(createBtn);
 
-    // 5. Deve abrir o modal de novo ajuste
-    const modal = await screen.findByText(/Novo Ajuste de Orçamento/i);
-    expect(modal).toBeInTheDocument();
-
-    // 6. Preencher dados do novo ajuste
-    fireEvent.change(screen.getByLabelText(/Mês de Início/i), { target: { value: "10" } });
-    fireEvent.change(screen.getByLabelText(/Descrição/i), { target: { value: "Ajuste de Outubro" } });
-
-    // 7. Adicionar item de previsão
-    fireEvent.change(screen.getByLabelText(/Categoria/i), { target: { value: "Transporte" } });
-    fireEvent.change(screen.getByLabelText(/Valor/i), { target: { value: "500" } });
-    fireEvent.click(screen.getByRole("button", { name: /Adicionar Previsão/i }));
-
-    // 8. Verificar que o item foi adicionado
-    expect(await screen.findByText("Transporte")).toBeInTheDocument();
-    expect(await screen.findByText("500,00")).toBeInTheDocument();
-
-    // 9. Salvar o ajuste
-    fireEvent.click(screen.getByRole("button", { name: /Salvar Ajuste/i }));
-
-    // 10. Verificar que o ajuste foi criado
-    expect(createBudgetAdjustment).toHaveBeenCalledWith(
-      expect.anything(),
-      2026,
-      10,
-      "Ajuste de Outubro",
-      expect.arrayContaining([
-        expect.objectContaining({
-          category_name: "Transporte",
-          amount: 500,
-          start_month: 10,
-        })
-      ]),
-      "teste@hestia.com"
-    );
+    // 5. Verificar que o ajuste foi criado para o mês corrente
+    await waitFor(() => {
+      expect(createBudgetAdjustment as Mock).toHaveBeenCalledWith(
+        expect.anything(),
+        2026,
+        10,
+        "teste@hestia.com"
+      );
+    });
   });
 });

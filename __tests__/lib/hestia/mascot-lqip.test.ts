@@ -45,7 +45,7 @@ describe('mascot-lqip - Contract Tests (RED)', () => {
 
     it('generateLQIP throws for unknown mascot key', async () => {
       const { generateLQIP } = await import('@/lib/hestia/mascot-lqip')
-      expect(() => generateLQIP('unknown')).toThrow()
+      expect(() => generateLQIP('unknown' as unknown as Parameters<typeof generateLQIP>[0])).toThrow()
     })
   })
 })

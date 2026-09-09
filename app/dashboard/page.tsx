@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { HestiaLayout } from "@/components/layout/HestiaLayout";
 import { getBudgetAdjustment } from "@/lib/pluto/db/budget";
@@ -11,6 +12,7 @@ import { getBudgetAdjustment } from "@/lib/pluto/db/budget";
 export default function DashboardPage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const db = useMemo(() => createBrowserDatabaseClient(), []);
 
   const [dataState, setDataState] = useState<'loading' | 'empty' | 'error' | 'has-data'>('loading');
 
@@ -24,7 +26,7 @@ export default function DashboardPage() {
           return;
         }
         const year = new Date().getFullYear();
-        const revision = await getBudgetAdjustment(supabase, year);
+        const revision = await getBudgetAdjustment(db, year);
         if (mounted) {
           setDataState(revision ? 'has-data' : 'empty');
         }
@@ -40,7 +42,7 @@ export default function DashboardPage() {
       mounted = false;
       clearTimeout(timer);
     };
-  }, [supabase]);
+  }, [supabase, db]);
 
   async function handleSignOut() {
     try {
@@ -53,7 +55,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <HestiaLayout pageTitle="Painel de Ferramentas" pageSubtitle="Acesse seus utilitários familiares.">
+    <HestiaLayout pageTitle="Painel de Ferramentas" pageSubtitle="Acesse seus utilitários familiares." dataState={dataState}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
         <Link
           href="/pluto/budget"

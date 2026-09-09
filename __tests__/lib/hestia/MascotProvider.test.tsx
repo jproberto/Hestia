@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MascotProvider, useMascot } from '@/lib/hestia/MascotProvider';
 import { usePathname } from 'next/navigation';
@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
 }));
 
-const mockUsePathname = usePathname as vi.Mock;
+const mockUsePathname = usePathname as Mock;
 
 function TestComponent() {
   const { mascot, isFallback } = useMascot();
@@ -18,8 +18,6 @@ function TestComponent() {
       <span data-testid="mascot-key">{mascot.key}</span>
       <span data-testid="mascot-src">{mascot.src}</span>
       <span data-testid="mascot-alt">{mascot.alt}</span>
-      <span data-testid="mascot-width">{mascot.width}</span>
-      <span data-testid="mascot-height">{mascot.height}</span>
       <span data-testid="is-fallback">{String(isFallback)}</span>
     </div>
   );
@@ -32,8 +30,6 @@ function TestComponentWithContext() {
       <span data-testid="mascot-key">{mascot.key}</span>
       <span data-testid="mascot-src">{mascot.src}</span>
       <span data-testid="mascot-alt">{mascot.alt}</span>
-      <span data-testid="mascot-width">{mascot.width}</span>
-      <span data-testid="mascot-height">{mascot.height}</span>
       <span data-testid="is-fallback">{String(isFallback)}</span>
       <span data-testid="previous-mascot-key">{previousMascotKey ?? 'null'}</span>
     </div>
@@ -195,15 +191,11 @@ describe('MascotProvider', () => {
     const mascotKey = screen.getByTestId('mascot-key').textContent;
     const mascotSrc = screen.getByTestId('mascot-src').textContent;
     const mascotAlt = screen.getByTestId('mascot-alt').textContent;
-    const mascotWidth = screen.getByTestId('mascot-width').textContent;
-    const mascotHeight = screen.getByTestId('mascot-height').textContent;
     const isFallback = screen.getByTestId('is-fallback').textContent;
 
     expect(mascotKey).toBeDefined();
     expect(mascotSrc).toBeDefined();
     expect(mascotAlt).toBeDefined();
-    expect(mascotWidth).toBeDefined();
-    expect(mascotHeight).toBeDefined();
     expect(isFallback === 'true' || isFallback === 'false').toBe(true);
   });
 });

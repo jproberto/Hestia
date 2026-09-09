@@ -9,6 +9,7 @@ vi.mock("next/navigation", () => ({
 
 describe("BudgetOverflowModal", () => {
   const defaultOverflowData = {
+    isOverflow: true,
     categoryId: "cat-1",
     categoryName: "Contas",
     categoryType: "despesa" as const,

@@ -157,6 +157,7 @@ describe("Componente ChecklistCard", () => {
       is_active: true,
       created_at: "2026-01-01",
       created_by: "user@test.com",
+      category_name: "Moradia",
     };
 
     render(<ChecklistCard {...defaultProps} isMonthOpen={false} items={[mockItem]} />);

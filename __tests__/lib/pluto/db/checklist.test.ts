@@ -1,114 +1,72 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  getChecklistItemsByMonth,
-  getGlobalChecklistItems,
-  createChecklistItem,
-  toggleChecklistItemCompletion,
-  instantiateGlobalChecklistItemsForMonth,
-  ChecklistItemInput,
-} from "@/lib/pluto/db/checklist";
-import { SupabaseClient } from "@supabase/supabase-js";
-
-const mockSupabase = {
-  from: vi.fn(),
-} as unknown as SupabaseClient;
+import { describe, it, expect, beforeEach } from "vitest";
+import { FakeChecklistRepository } from "@/lib/pluto/repositories/fakes";
+import type { ChecklistItemInput } from "@/lib/pluto/types";
 
 describe("Serviço de Checklist (Checklist DB)", () => {
+  let repo: FakeChecklistRepository;
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    repo = new FakeChecklistRepository();
+    repo.seed({
+      categories: [
+        { id: "cat-1", name: "Moradia", type: "despesa", created_at: "2026-01-01T00:00:00Z", created_by: "test@test.com" },
+        { id: "cat-2", name: "Renda", type: "receita", created_at: "2026-01-01T00:00:00Z", created_by: "test@test.com" },
+      ],
+    });
   });
 
   it("deve buscar itens do checklist para um mês específico ordenados por dia", async () => {
-    const fromMock = mockSupabase.from as unknown as ReturnType<typeof vi.fn>;
-    fromMock.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          order: vi.fn().mockReturnValue({
-            order: vi.fn().mockResolvedValue({
-              data: [
-                {
-                  id: "chk-1",
-                  month_id: "m-1",
-                  day: 10,
-                  description: "Aluguel",
-                  type: "despesa",
-                  category_id: "cat-1",
-                  amount: 2000,
-                  is_completed: false,
-                  is_active: true,
-                  categories: { name: "Moradia" },
-                },
-              ],
-              error: null,
-            }),
-          }),
-        }),
-      }),
+    repo.seed({
+      items: [
+        {
+          id: "chk-1",
+          month_id: "m-1",
+          day: 10,
+          description: "Aluguel",
+          type: "despesa",
+          category_id: "cat-1",
+          amount: 2000,
+          is_completed: false,
+          is_active: true,
+          created_at: "2026-03-01T00:00:00Z",
+          created_by: "user@test.com",
+          category_name: "Moradia",
+        },
+      ],
     });
 
-    const items = await getChecklistItemsByMonth(mockSupabase, "m-1");
+    const items = await repo.getChecklistItemsByMonth("m-1");
     expect(items).toHaveLength(1);
     expect(items[0].description).toBe("Aluguel");
     expect(items[0].category_name).toBe("Moradia");
   });
 
   it("deve buscar apenas modelos globais ativos (month_id IS NULL e is_active = true)", async () => {
-    const fromMock = mockSupabase.from as unknown as ReturnType<typeof vi.fn>;
-    fromMock.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        is: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            order: vi.fn().mockResolvedValue({
-              data: [
-                {
-                  id: "global-1",
-                  month_id: null,
-                  day: 5,
-                  description: "Salário",
-                  type: "receita",
-                  category_id: "cat-2",
-                  amount: 5000,
-                  is_completed: false,
-                  is_active: true,
-                  categories: { name: "Renda" },
-                },
-              ],
-              error: null,
-            }),
-          }),
-        }),
-      }),
+    repo.seed({
+      items: [
+        {
+          id: "global-1",
+          month_id: null,
+          day: 5,
+          description: "Salário",
+          type: "receita",
+          category_id: "cat-2",
+          amount: 5000,
+          is_completed: false,
+          is_active: true,
+          created_at: "2026-01-01T00:00:00Z",
+          created_by: "user@test.com",
+          category_name: "Renda",
+        },
+      ],
     });
 
-    const items = await getGlobalChecklistItems(mockSupabase);
+    const items = await repo.getGlobalChecklistItems();
     expect(items).toHaveLength(1);
     expect(items[0].description).toBe("Salário");
   });
 
   it("deve criar item apenas no mês atual", async () => {
-    const insertMock = vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        single: vi.fn().mockResolvedValue({
-          data: {
-            id: "chk-2",
-            month_id: "m-1",
-            day: 15,
-            description: "Luz",
-            type: "despesa",
-            category_id: "cat-1",
-            amount: 150,
-            is_completed: false,
-            is_active: true,
-          },
-          error: null,
-        }),
-      }),
-    });
-
-    (mockSupabase.from as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      insert: insertMock,
-    });
-
     const input: ChecklistItemInput = {
       day: 15,
       description: "Luz",
@@ -118,68 +76,62 @@ describe("Serviço de Checklist (Checklist DB)", () => {
       created_by: "user@test.com",
     };
 
-    const item = await createChecklistItem(mockSupabase, input, false, "m-1");
-    expect(item.id).toBe("chk-2");
-    expect(insertMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        month_id: "m-1",
-        description: "Luz",
-      })
-    );
+    const item = await repo.createChecklistItem(input, false, "m-1");
+    expect(item.id).toBeDefined();
+    expect(item.month_id).toBe("m-1");
+    expect(item.description).toBe("Luz");
   });
 
   it("deve alternar estado de conclusão do item", async () => {
-    const updateMock = vi.fn().mockReturnValue({
-      eq: vi.fn().mockResolvedValue({ error: null }),
+    repo.seed({
+      items: [
+        {
+          id: "chk-1",
+          month_id: "m-1",
+          day: 10,
+          description: "Aluguel",
+          type: "despesa",
+          category_id: "cat-1",
+          amount: 2000,
+          is_completed: false,
+          is_active: true,
+          created_at: "2026-03-01T00:00:00Z",
+          created_by: "user@test.com",
+          category_name: "Moradia",
+        },
+      ],
     });
 
-    (mockSupabase.from as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      update: updateMock,
-    });
-
-    await toggleChecklistItemCompletion(mockSupabase, "chk-1", true);
-    expect(updateMock).toHaveBeenCalledWith({ is_completed: true });
+    await repo.toggleChecklistItemCompletion("chk-1", true);
+    expect((await repo.getChecklistItemsByMonth("m-1"))[0].is_completed).toBe(true);
   });
 
   it("deve instanciar itens globais ativos para um novo mês aberto", async () => {
-    const selectGlobalsMock = vi.fn().mockReturnValue({
-      is: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({
-          data: [
-            {
-              id: "global-1",
-              day: 10,
-              description: "Aluguel",
-              type: "despesa",
-              category_id: "cat-1",
-              amount: 2000,
-            },
-          ],
-          error: null,
-        }),
-      }),
+    repo.seed({
+      items: [
+        {
+          id: "global-1",
+          month_id: null,
+          day: 10,
+          description: "Aluguel",
+          type: "despesa",
+          category_id: "cat-1",
+          amount: 2000,
+          is_completed: false,
+          is_active: true,
+          created_at: "2026-01-01T00:00:00Z",
+          created_by: "user@test.com",
+          category_name: "Moradia",
+        },
+      ],
     });
 
-    const insertInstancesMock = vi.fn().mockResolvedValue({ error: null });
-
-    (mockSupabase.from as unknown as ReturnType<typeof vi.fn>).mockImplementation((table: string) => {
-      if (table === "checklist_items") {
-        return {
-          select: selectGlobalsMock,
-          insert: insertInstancesMock,
-        };
-      }
-      return {};
-    });
-
-    await instantiateGlobalChecklistItemsForMonth(mockSupabase, "m-new", "user@test.com");
-    expect(insertInstancesMock).toHaveBeenCalledWith([
-      expect.objectContaining({
-        month_id: "m-new",
-        parent_id: "global-1",
-        description: "Aluguel",
-        is_completed: false,
-      }),
-    ]);
+    await repo.instantiateGlobalChecklistItemsForMonth("m-new", "user@test.com");
+    const items = await repo.getChecklistItemsByMonth("m-new");
+    expect(items).toHaveLength(1);
+    expect(items[0].month_id).toBe("m-new");
+    expect(items[0].parent_id).toBe("global-1");
+    expect(items[0].description).toBe("Aluguel");
+    expect(items[0].is_completed).toBe(false);
   });
 });

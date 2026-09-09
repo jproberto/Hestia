@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { FakeTransactionRepository } from "@/lib/pluto/repositories/fakes";
 import type { TransactionInput } from "@/lib/pluto/types";
 
-describe("Serviço de Transações (Transactions)", () => {
+describe("FakeTransactionRepository", () => {
   let repo: FakeTransactionRepository;
 
   beforeEach(() => {
@@ -24,7 +24,8 @@ describe("Serviço de Transações (Transactions)", () => {
     });
   });
 
-  it("deve buscar transações do mês especifico", async () => {
+  it("deve buscar transações do mês específico", async () => {
+    // Seed transactions
     repo.seed({
       transactions: [
         {
@@ -50,7 +51,7 @@ describe("Serviço de Transações (Transactions)", () => {
     expect(txs[0].category_name).toBe("Alimentação");
   });
 
-  it("deve lancar erro se o mês da data da transação nao estiver aberto", async () => {
+  it("deve lançar erro se o mês da data da transação não estiver aberto", async () => {
     const input: TransactionInput = {
       description: "Aluguel",
       amount: 1200,
@@ -88,6 +89,7 @@ describe("Serviço de Transações (Transactions)", () => {
   });
 
   it("deve atualizar transação com sucesso se o mês estiver aberto", async () => {
+    // First create a transaction
     const created = await repo.createTransaction(
       {
         description: "Supermercado",
@@ -116,7 +118,8 @@ describe("Serviço de Transações (Transactions)", () => {
     expect(result.amount).toBe(200);
   });
 
-  it("deve lancar erro ao tentar atualizar transação se o mês não estiver aberto", async () => {
+  it("deve lançar erro ao tentar atualizar transação se o mês não estiver aberto", async () => {
+    // Create transaction in open month
     const created = await repo.createTransaction(
       {
         description: "Supermercado",
@@ -130,6 +133,7 @@ describe("Serviço de Transações (Transactions)", () => {
       "joao@email.com"
     );
 
+    // Try to update with date in closed month
     await expect(
       repo.updateTransaction(created.id, {
         description: "Supermercado Editado",
@@ -163,7 +167,8 @@ describe("Serviço de Transações (Transactions)", () => {
     expect(txs).toHaveLength(0);
   });
 
-  it("deve lancar erro ao tentar excluir transação de mês não aberto", async () => {
+  it("deve lançar erro ao tentar excluir transação de mês não aberto", async () => {
+    // Create transaction in open month
     const created = await repo.createTransaction(
       {
         description: "Supermercado",
@@ -188,5 +193,49 @@ describe("Serviço de Transações (Transactions)", () => {
     await expect(repo.deleteTransaction(created.id)).rejects.toThrow(
       "Não é possível excluir transações no período 3/2026 pois ele não está aberto."
     );
+  });
+
+  it("deve ordenar transações por data e id", async () => {
+    await repo.createTransaction(
+      {
+        description: "B",
+        amount: 100,
+        type: "despesa",
+        is_refund: false,
+        date: "2026-03-15",
+        category_id: "cat-1",
+        account_id: "acc-1",
+      },
+      "joao@email.com"
+    );
+    await repo.createTransaction(
+      {
+        description: "A",
+        amount: 100,
+        type: "despesa",
+        is_refund: false,
+        date: "2026-03-15",
+        category_id: "cat-1",
+        account_id: "acc-1",
+      },
+      "joao@email.com"
+    );
+    await repo.createTransaction(
+      {
+        description: "C",
+        amount: 100,
+        type: "despesa",
+        is_refund: false,
+        date: "2026-03-10",
+        category_id: "cat-1",
+        account_id: "acc-1",
+      },
+      "joao@email.com"
+    );
+
+    const txs = await repo.getTransactionsByMonth(2026, 3);
+    expect(txs[0].date).toBe("2026-03-10");
+    expect(txs[1].description).toBe("B"); // Same date, ordered by ID (B created first)
+    expect(txs[2].description).toBe("A");
   });
 });

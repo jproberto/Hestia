@@ -50,9 +50,9 @@ function BudgetPageContent() {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-['CaesarDressing'] text-[#35472D] tracking-wider">Previsões Cadastradas</h2>
+                <h2 className="text-xl font-display text-[#35472D] tracking-wider">Previsões Cadastradas</h2>
                 {!overview.isMostRecent && (
-                  <span className="rounded bg-[#35472D]/10 px-2 py-0.5 text-xs font-['CaesarDressing'] text-[#35472D] tracking-wider">
+                  <span className="rounded bg-[#35472D]/10 px-2 py-0.5 text-xs font-display text-[#35472D] tracking-wider">
                     Histórico (Substituído)
                   </span>
                 )}

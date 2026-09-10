@@ -56,7 +56,7 @@ export function ModuleLayout({
           alt={`${moduleName} mascote`}
           style={{ flexShrink: 0 }}
         />
-        <h1 className="text-9xl font-['CaesarDressing'] tracking-wider" style={{ color }}>
+        <h1 className="text-9xl font-display tracking-wider" style={{ color }}>
           {moduleName}
         </h1>
       </div>
@@ -68,7 +68,7 @@ export function ModuleLayout({
             <Link
               key={item.href}
               href={item.href}
-              className="pb-2 text-sm font-['CaesarDressing'] tracking-wider hover:text-current"
+              className="pb-2 text-sm font-display tracking-wider hover:text-current"
               style={{ color }}
             >
               {item.label}
@@ -81,7 +81,7 @@ export function ModuleLayout({
       {(pageTitle || pageSubtitle) && (
         <header className="flex flex-col items-start gap-1 border-b pb-4 mb-6">
           {pageTitle && (
-            <h1 className="text-3xl font-['CaesarDressing'] tracking-wider" style={{ color }}>
+            <h1 className="text-3xl font-display tracking-wider" style={{ color }}>
               {pageTitle}
             </h1>
           )}

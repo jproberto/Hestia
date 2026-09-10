@@ -30,7 +30,7 @@ export default function BudgetComparisonSection({
         {/* Tabela de Receitas (Esquerda) */}
         <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
           <div className="bg-success-soft p-3 border-b border-success-border flex items-center justify-between">
-<h3 className="font-bold text-sm text-[#35472D] font-['CaesarDressing'] tracking-wider">
+<h3 className="font-bold text-sm text-[#35472D] font-display tracking-wider">
                 📈 Receitas
               </h3>
             <div className="text-xs text-success font-bold">
@@ -41,7 +41,7 @@ export default function BudgetComparisonSection({
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="border-b bg-muted/40 text-[#35472D] text-xs font-['CaesarDressing'] tracking-wider">
+                <tr className="border-b bg-muted/40 text-[#35472D] text-xs font-display tracking-wider">
                   <th className="p-2.5">Categoria</th>
                   <th className="p-2.5 text-right">Previsto</th>
                   <th className="p-2.5 text-right">Real</th>
@@ -86,7 +86,7 @@ export default function BudgetComparisonSection({
         {/* Tabela de Despesas (Direita) */}
         <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden flex flex-col">
           <div className="bg-danger-soft p-3 border-b border-danger-border flex items-center justify-between">
-<h3 className="font-bold text-sm text-[#35472D] font-['CaesarDressing'] tracking-wider">
+<h3 className="font-bold text-sm text-[#35472D] font-display tracking-wider">
                 📉 Despesas
               </h3>
             <div className="text-xs text-danger font-bold">
@@ -97,7 +97,7 @@ export default function BudgetComparisonSection({
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="border-b bg-muted/40 text-[#35472D] text-xs font-['CaesarDressing'] tracking-wider">
+                <tr className="border-b bg-muted/40 text-[#35472D] text-xs font-display tracking-wider">
                   <th className="p-2.5">Categoria</th>
                   <th className="p-2.5 text-right">Previsto</th>
                   <th className="p-2.5 text-right">Real</th>

@@ -56,7 +56,7 @@ describe("Página de Gestão de Meses /pluto/months", () => {
     const notOpenedBadges = screen.getAllByText("Não Iniciado");
     expect(notOpenedBadges).toHaveLength(12);
 
-    const openButtons = screen.getAllByRole("button", { name: "Abrir Mês" });
+    const openButtons = screen.getAllByRole("button", { name: "Abrir" });
     expect(openButtons).toHaveLength(12);
   });
 
@@ -66,7 +66,7 @@ describe("Página de Gestão de Meses /pluto/months", () => {
 
     renderWithMascotProvider(<MonthsPage />);
 
-    const openBtn = await screen.findAllByRole("button", { name: "Abrir Mês" });
+    const openBtn = await screen.findAllByRole("button", { name: "Abrir" });
     fireEvent.click(openBtn[0]); // Clica no botão de Janeiro
 
     await waitFor(() => {
@@ -74,7 +74,7 @@ describe("Página de Gestão de Meses /pluto/months", () => {
     });
   });
 
-  it("deve exibir status 'Aberto' e botão 'Encerrar Mês' se o período estiver aberto", async () => {
+  it("deve exibir status 'Aberto' e botão 'Encerrar' se o período estiver aberto", async () => {
     (getMonthlyPeriods as Mock).mockResolvedValue([
       { id: "1", year: 2026, month: 1, status: "aberto", created_by: "teste@hestia.com" }
     ]);
@@ -82,6 +82,6 @@ describe("Página de Gestão de Meses /pluto/months", () => {
     renderWithMascotProvider(<MonthsPage />);
 
     expect(await screen.findByText("Aberto")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Encerrar Mês" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Encerrar" })).toBeInTheDocument();
   });
 });

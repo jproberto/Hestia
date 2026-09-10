@@ -78,7 +78,7 @@ export default function ChecklistCard({
     <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 mb-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
-          <h2 className="text-lg font-bold tracking-tight flex items-center gap-2">
+          <h2 className="text-lg font-display tracking-wider flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-primary" />
             Checklist de Contas a Pagar / Receber
           </h2>

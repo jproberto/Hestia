@@ -14,8 +14,10 @@ vi.mock("@/lib/pluto/db/budget", () => ({
   getBudgets: vi.fn().mockResolvedValue([]),
 }));
 
+let mockMonthParam: string | null = null;
+
 vi.mock("next/navigation", () => ({
-  useSearchParams: () => ({ get: () => null }),
+  useSearchParams: () => ({ get: (key: string) => (key === "mockMonth" ? mockMonthParam : null) }),
 }));
 
 const revision = { id: "r1", year: 2026, start_month: 1, description: "Orçamento Inicial 2026" };
@@ -27,36 +29,59 @@ const adjustments = [
 describe("useBudgetOverview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockMonthParam = null;
     vi.mocked(getBudgetAdjustment).mockResolvedValue(revision as never);
     vi.mocked(getBudgetAdjustments).mockResolvedValue(adjustments as never);
     vi.mocked(initBudget).mockResolvedValue("r1");
     vi.mocked(createBudgetAdjustment).mockResolvedValue("a3");
   });
 
-  it("carrega revisão e ajustes do ano; sem seleção o ajuste ativo é nulo", async () => {
+  it("seleciona por padrão o ajuste vigente do mês corrente (maior start_month <= mês)", async () => {
+    mockMonthParam = "9";
     const { result } = renderHook(() => useBudgetOverview());
 
     await waitFor(() => {
       expect(result.current.revision).toEqual(revision);
+    });
+
+    await waitFor(() => {
+      expect(result.current.selectedAdjustmentId).toBe("a2");
     });
 
     expect(result.current.adjustments).toEqual(adjustments);
-    expect(result.current.activeAdjustment).toBeNull();
+    expect(result.current.activeAdjustment).toEqual(adjustments[1]);
     expect(result.current.userEmail).toBe("teste@hestia.com");
-    expect(result.current.isEditable).toBe(false);
   });
 
-  it("ativa o ajuste selecionado", async () => {
+  it("usa o ajuste mais recente quando nenhum iniciou ainda", async () => {
+    mockMonthParam = "1";
+    vi.mocked(getBudgetAdjustments).mockResolvedValue([
+      { id: "a5", year: 2026, start_month: 5, description: "Ajuste Mai" },
+      { id: "a8", year: 2026, start_month: 8, description: "Ajuste Ago" },
+    ] as never);
     const { result } = renderHook(() => useBudgetOverview());
 
     await waitFor(() => {
-      expect(result.current.revision).toEqual(revision);
+      expect(result.current.selectedAdjustmentId).toBe("a8");
     });
 
-    act(() => { result.current.setSelectedAdjustmentId("a2"); });
+    expect(result.current.activeAdjustment).toEqual(
+      expect.objectContaining({ id: "a8" })
+    );
+  });
+
+  it("seleção manual prevalece sobre o padrão", async () => {
+    mockMonthParam = "9";
+    const { result } = renderHook(() => useBudgetOverview());
 
     await waitFor(() => {
-      expect(result.current.activeAdjustment).toEqual(adjustments[1]);
+      expect(result.current.selectedAdjustmentId).toBe("a2");
+    });
+
+    act(() => { result.current.setSelectedAdjustmentId("r1"); });
+
+    await waitFor(() => {
+      expect(result.current.activeAdjustment).toEqual(adjustments[0]);
     });
   });
 
@@ -86,18 +111,21 @@ describe("useBudgetOverview", () => {
     expect(result.current.selectedAdjustmentId).toBe("a3");
   });
 
-  it("trocar o ano limpa a seleção do ajuste", async () => {
+  it("trocar o ano limpa a seleção e aplica o padrão do novo ano", async () => {
+    mockMonthParam = "9";
     const { result } = renderHook(() => useBudgetOverview());
 
     await waitFor(() => {
-      expect(result.current.revision).toEqual(revision);
+      expect(result.current.selectedAdjustmentId).toBe("a2");
     });
 
-    act(() => { result.current.setSelectedAdjustmentId("a2"); });
     act(() => { result.current.handleSelectYear(2027); });
 
     expect(result.current.year).toBe(2027);
-    expect(result.current.selectedAdjustmentId).toBeNull();
+
+    await waitFor(() => {
+      expect(result.current.selectedAdjustmentId).toBe("a2");
+    });
   });
 
   it("sem revisão limpa ajustes e ativo", async () => {

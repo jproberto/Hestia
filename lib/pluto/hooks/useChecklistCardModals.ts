@@ -43,6 +43,8 @@ export function useChecklistCardModals({ onAddItem, onEditItem, onDeleteItem }: 
       setIsAddModalOpen(false);
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Erro ao adicionar item.");
+      // Relança para o form não fechar o modal no erro (o erro fica visível via errorMsg).
+      throw err;
     } finally {
       setSaving(false);
     }
@@ -62,6 +64,7 @@ export function useChecklistCardModals({ onAddItem, onEditItem, onDeleteItem }: 
       setEditingItem(null);
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Erro ao atualizar item.");
+      throw err;
     } finally {
       setSaving(false);
     }
@@ -76,6 +79,7 @@ export function useChecklistCardModals({ onAddItem, onEditItem, onDeleteItem }: 
       setDeletingItem(null);
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Erro ao excluir item.");
+      throw err;
     } finally {
       setSaving(false);
     }

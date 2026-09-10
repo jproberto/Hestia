@@ -240,7 +240,7 @@ describe("Fluxos críticos (interação ponta a ponta)", () => {
       </MascotProvider>
     );
 
-    const openButtons = await screen.findAllByRole("button", { name: "Abrir Mês" });
+    const openButtons = await screen.findAllByRole("button", { name: "Abrir" });
     fireEvent.click(openButtons[0]);
 
     await waitFor(() => {

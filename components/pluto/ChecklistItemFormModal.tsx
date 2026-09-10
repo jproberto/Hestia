@@ -47,16 +47,25 @@ export default function ChecklistItemFormModal({
     initialData?.amount !== null && initialData?.amount !== undefined ? String(initialData.amount) : ""
   );
   const [formScope, setFormScope] = useState<"month" | "global">(initialData?.scope || "month");
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(null);
     if (!formDescription.trim()) {
+      setValidationError("Informe uma descrição para o item.");
+      return;
+    }
+    if (categories.length === 0) {
+      setValidationError("Nenhuma categoria disponível. Cadastre uma categoria antes de incluir itens.");
       return;
     }
     if (!formCategory) {
+      setValidationError("Selecione uma categoria.");
       return;
     }
     if (formDay < 1 || formDay > 31) {
+      setValidationError("Informe um dia entre 1 e 31.");
       return;
     }
 
@@ -74,8 +83,9 @@ export default function ChecklistItemFormModal({
         formScope === "global"
       );
       onClose();
-    } catch (err: unknown) {
-      // Error handling is done by parent via errorMsg prop
+    } catch {
+      // Erro de persistência: o modal permanece aberto e a mensagem
+      // vem do pai via errorMsg (onSubmit relança após registrá-la).
     }
   };
 
@@ -84,11 +94,11 @@ export default function ChecklistItemFormModal({
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-card text-card-foreground rounded-lg shadow-lg max-w-md w-full p-6 border">
-        <h3 className="text-lg font-bold tracking-tight mb-4">{title}</h3>
+        <h3 className="text-lg font-display tracking-wider mb-4">{title}</h3>
 
-        {errorMsg && (
+        {(validationError || errorMsg) && (
           <div className="p-3 mb-4 text-xs bg-rose-50 text-rose-800 dark:bg-rose-950/50 dark:text-rose-200 border border-rose-200 rounded-md">
-            {errorMsg}
+            {validationError || errorMsg}
           </div>
         )}
 

@@ -33,7 +33,7 @@ export default function ChecklistItemDeleteModal({
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-card text-card-foreground rounded-lg shadow-lg max-w-md w-full p-6 border">
-        <h3 className="text-lg font-bold tracking-tight mb-2">Excluir Item do Checklist</h3>
+        <h3 className="text-lg font-display tracking-wider mb-2">Excluir Item do Checklist</h3>
 <p className="text-sm text-muted-foreground mb-4">
            {"Tem certeza que deseja excluir \"" + item.description + "\"?"}
          </p>

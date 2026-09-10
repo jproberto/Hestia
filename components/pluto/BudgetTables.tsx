@@ -134,11 +134,11 @@ export default function BudgetTables({
   return (
     <div className="grid grid-cols-2 gap-8">
       <div className="flex flex-col gap-3">
-        <h3 className="text-lg font-['CaesarDressing'] text-[#35472D] tracking-wider">Receitas</h3>
+        <h3 className="text-lg font-display text-[#35472D] tracking-wider">Receitas</h3>
         {renderTable(revenues, "Nenhuma receita planejada.")}
       </div>
       <div className="flex flex-col gap-3">
-        <h3 className="text-lg font-['CaesarDressing'] text-[#35472D] tracking-wider">Despesas</h3>
+        <h3 className="text-lg font-display text-[#35472D] tracking-wider">Despesas</h3>
         {renderTable(expenses, "Nenhuma despesa planejada.")}
       </div>
     </div>

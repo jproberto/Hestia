@@ -36,22 +36,22 @@ describe("MonthsGrid", () => {
     expect(screen.getByText("Não Iniciados")).toBeInTheDocument();
     expect(screen.getByText("Aberto")).toBeInTheDocument();
     expect(screen.getByText("Encerrado")).toBeInTheDocument();
-    expect(screen.getByText("Encerrar Mês")).toBeInTheDocument();
-    expect(screen.getByText("Reabrir Mês")).toBeInTheDocument();
-    expect(screen.getAllByText("Abrir Mês").length).toBeGreaterThan(0);
+    expect(screen.getByText("Encerrar")).toBeInTheDocument();
+    expect(screen.getByText("Reabrir")).toBeInTheDocument();
+    expect(screen.getAllByText("Abrir").length).toBeGreaterThan(0);
   });
 
   it("abre mês não iniciado ao clicar", () => {
     const { onOpenMonth } = renderGrid();
 
-    fireEvent.click(screen.getAllByText("Abrir Mês")[0]);
+    fireEvent.click(screen.getAllByText("Abrir")[0]);
     expect(onOpenMonth).toHaveBeenCalled();
   });
 
   it("encerra mês aberto ao clicar", () => {
     const { onCloseMonth } = renderGrid();
 
-    fireEvent.click(screen.getByText("Encerrar Mês"));
+    fireEvent.click(screen.getByText("Encerrar"));
     expect(onCloseMonth).toHaveBeenCalledWith(1);
   });
 

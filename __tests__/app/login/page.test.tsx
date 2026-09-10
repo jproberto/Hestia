@@ -54,7 +54,7 @@ describe('Login Page', () => {
       const title = screen.getByText('Hestia')
       expect(title).toBeInTheDocument()
       expect(title).toHaveClass('text-9xl')
-      expect(title).toHaveClass("font-['CaesarDressing']")
+      expect(title).toHaveClass("font-display")
     })
   })
 

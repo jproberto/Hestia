@@ -28,7 +28,7 @@ export default function DeleteConfirmModal({
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="w-full max-w-sm rounded-lg border bg-card p-6 text-card-foreground shadow-lg flex flex-col gap-4">
-        <h2 className="text-lg font-bold tracking-tight text-rose-700 dark:text-rose-300">
+        <h2 className="text-lg font-display tracking-wider text-rose-700 dark:text-rose-300">
           Excluir lançamento
         </h2>
         <p className="text-sm text-muted-foreground">

@@ -19,7 +19,7 @@ export default function DashboardPage() {
             filter: 'sepia(1) saturate(5) hue-rotate(-20deg)',
           }} />
           <div className="relative z-10 flex flex-col gap-2">
-            <h2 className="text-3xl font-['CaesarDressing'] text-[#EC5223] tracking-wider group-hover:text-[#FF8C42] transition-colors">
+            <h2 className="text-3xl font-display text-[#EC5223] tracking-wider group-hover:text-[#FF8C42] transition-colors">
               Pluto
             </h2>
             <p className="text-sm text-muted-foreground">

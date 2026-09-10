@@ -33,10 +33,13 @@ describe("useChecklistCardModals", () => {
     onAddItem.mockRejectedValueOnce(new Error("DB fora"));
 
     act(() => { result.current.handleOpenAddModal(); });
-    await act(async () => { await result.current.handleSaveAdd(input, false); });
+    await act(async () => {
+      await expect(result.current.handleSaveAdd(input, false)).rejects.toThrow("DB fora");
+    });
 
     expect(result.current.errorMsg).toBe("DB fora");
     expect(result.current.isAddModalOpen).toBe(true);
+    expect(result.current.saving).toBe(false);
   });
 
   it("edita item aberto e limpa edição ao salvar", async () => {

@@ -33,15 +33,15 @@ export default function MonthsGrid({
       {/* Resumo Anual */}
       <div className="grid grid-cols-3 gap-4 rounded-lg border p-4 bg-muted/20">
         <div className="text-center">
-          <p className="text-xs font-['CaesarDressing'] text-[#35472D] uppercase tracking-wider">Abertos</p>
+          <p className="text-xs font-display text-[#35472D] uppercase tracking-wider">Abertos</p>
           <p className="text-2xl font-bold text-emerald-600">{totalOpen}</p>
         </div>
         <div className="text-center border-x">
-          <p className="text-xs font-['CaesarDressing'] text-[#35472D] uppercase tracking-wider">Encerrados</p>
+          <p className="text-xs font-display text-[#35472D] uppercase tracking-wider">Encerrados</p>
           <p className="text-2xl font-bold text-rose-600">{totalClosed}</p>
         </div>
         <div className="text-center">
-          <p className="text-xs font-['CaesarDressing'] text-[#35472D] uppercase tracking-wider">Não Iniciados</p>
+          <p className="text-xs font-display text-[#35472D] uppercase tracking-wider">Não Iniciados</p>
           <p className="text-2xl font-bold text-zinc-500">{totalNotStarted}</p>
         </div>
       </div>
@@ -65,7 +65,7 @@ export default function MonthsGrid({
               disabled={isActLoading}
               onClick={() => onOpenMonth(monthNum)}
             >
-              {isActLoading ? "Processando..." : "Abrir Mês"}
+              {isActLoading ? "Processando..." : "Abrir"}
             </button>
           );
 
@@ -78,11 +78,11 @@ export default function MonthsGrid({
             actionButton = (
               <button
                 type="button"
-                className="w-full mt-2 border-rose-200 text-rose-700 hover:bg-rose-50"
+                className="w-full mt-2 rounded border border-rose-200 bg-background px-3 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-50 transition-colors"
                 disabled={isActLoading}
                 onClick={() => onCloseMonth(monthNum)}
               >
-                {isActLoading ? "Processando..." : "Encerrar Mês"}
+                {isActLoading ? "Processando..." : "Encerrar"}
               </button>
             );
           } else if (period?.status === "encerrado") {
@@ -94,11 +94,11 @@ export default function MonthsGrid({
             actionButton = (
               <button
                 type="button"
-                className="w-full mt-2"
+                className="w-full mt-2 rounded border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
                 disabled={isActLoading}
                 onClick={() => onOpenMonth(monthNum)}
               >
-                {isActLoading ? "Processando..." : "Reabrir Mês"}
+                {isActLoading ? "Processando..." : "Reabrir"}
               </button>
             );
           }
@@ -107,7 +107,7 @@ export default function MonthsGrid({
             <div key={name} className="flex flex-col justify-between rounded-lg border p-4 hover:shadow-md transition-shadow bg-card">
               <div>
                 <div className="flex items-center justify-between gap-2 border-b pb-2 mb-2">
-                  <h3 className="text-sm font-['CaesarDressing'] text-[#35472D] tracking-wider">{name}</h3>
+                  <h3 className="text-sm font-display text-[#35472D] tracking-wider">{name}</h3>
                   {statusBadge}
                 </div>
                 <p className="text-xs text-muted-foreground">

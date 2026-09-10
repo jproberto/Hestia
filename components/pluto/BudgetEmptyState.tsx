@@ -12,7 +12,7 @@ export interface BudgetEmptyStateProps {
 export default function BudgetEmptyState({ year, onStart }: BudgetEmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed p-12 text-center">
-      <h3 className="text-xl font-['CaesarDressing'] text-[#35472D] tracking-wider">Nenhum orçamento cadastrado para o ano {year}.</h3>
+      <h3 className="text-xl font-display text-[#35472D] tracking-wider">Nenhum orçamento cadastrado para o ano {year}.</h3>
       <p className="text-sm text-muted-foreground max-w-sm">
         Crie um orçamento inicial para começar a cadastrar suas receitas e despesas previstas.
       </p>

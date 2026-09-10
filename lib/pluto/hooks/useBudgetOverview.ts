@@ -36,6 +36,22 @@ export interface BudgetOverview {
 }
 
 /**
+ * Seleciona o ajuste vigente para o mês de referência: o de maior
+ * `start_month` dentre os que já iniciaram (`start_month <= mês`).
+ * Mesma regra aplicada em `getBudgets` (ajuste mais recente por categoria).
+ * Fallback: o ajuste mais recente quando nenhum iniciou ainda.
+ */
+export function pickDefaultAdjustment(
+  adjs: BudgetAdjustment[],
+  month: number
+): BudgetAdjustment | null {
+  if (adjs.length === 0) return null;
+  const eligible = adjs.filter((a) => a.start_month <= month);
+  const pool = eligible.length > 0 ? eligible : adjs;
+  return pool.reduce((best, a) => (a.start_month > best.start_month ? a : best));
+}
+
+/**
  * Dados e ciclo de vida da página de orçamento (extraído de BudgetPage sem
  * mudança de comportamento): ano, ajustes/revisão, budgets e categorias via
  * hooks, seleção do ajuste ativo e ações de iniciar/criar ajuste.
@@ -97,6 +113,13 @@ export function useBudgetOverview(): BudgetOverview {
         let currentAdj: BudgetAdjustment | null = null;
         if (selectedAdjustmentId) {
           currentAdj = adjs.find((a) => a.id === selectedAdjustmentId) || null;
+        } else {
+          // Sem seleção (carga inicial ou troca de ano): usa o ajuste
+          // vigente para o mês corrente em vez de deixar vazio.
+          currentAdj = pickDefaultAdjustment(adjs, openMonth);
+          if (currentAdj) {
+            setSelectedAdjustmentId(currentAdj.id);
+          }
         }
 
         setActiveAdjustment(currentAdj);
@@ -107,7 +130,7 @@ export function useBudgetOverview(): BudgetOverview {
     } catch (err) {
       console.error(err);
     }
-  }, [year, selectedAdjustmentId, db]);
+  }, [year, selectedAdjustmentId, openMonth, db]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

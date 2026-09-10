@@ -34,7 +34,7 @@ export function BaseLayout({
             className="h-96 w-96 object-cover"
             style={{ flexShrink: 0 }}
           />
-          <h1 className="text-3xl font-['CaesarDressing'] tracking-wider" style={{ color: config.color }}>
+          <h1 className="text-3xl font-display tracking-wider" style={{ color: config.color }}>
             {config.name}
           </h1>
         </div>
@@ -69,7 +69,7 @@ export function TopHeader({ config }: { config: { name: string; mascot: string; 
         className="h-96 w-96 object-cover"
         style={{ flexShrink: 0 }}
       />
-      <h1 className="text-3xl font-['CaesarDressing'] tracking-wider" style={{ color: config.color }}>
+      <h1 className="text-3xl font-display tracking-wider" style={{ color: config.color }}>
         {config.name}
       </h1>
     </div>
@@ -95,7 +95,7 @@ export function PageHeader({ children }: { children: React.ReactNode }) {
 export function PageTitle({ children, subtitle }: { children: React.ReactNode; subtitle?: React.ReactNode }) {
   return (
     <div>
-      <h1 className="text-3xl font-['CaesarDressing'] tracking-wider" style={{ color: '#35472D' }}>
+      <h1 className="text-3xl font-display tracking-wider" style={{ color: '#35472D' }}>
         {children}
       </h1>
       {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
@@ -107,7 +107,7 @@ export function NavLink({ href, children, active }: { href: string; children: Re
   return (
     <Link
       href={href}
-      className={`pb-2 text-sm font-['CaesarDressing'] tracking-wider transition-colors ${
+      className={`pb-2 text-sm font-display tracking-wider transition-colors ${
         active
           ? 'text-[#35472D] border-b-2 border-[#35472D]'
           : 'text-[#35472D] hover:text-[#35472D]'

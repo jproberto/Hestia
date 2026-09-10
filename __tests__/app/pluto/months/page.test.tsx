@@ -156,8 +156,8 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
       renderMonthsPage()
 
       await waitFor(() => {
-        expect(screen.getAllByText('Abrir Mês').length).toBeGreaterThanOrEqual(1)
-        expect(screen.getAllByText('Encerrar Mês').length).toBeGreaterThanOrEqual(1)
+        expect(screen.getAllByText('Abrir').length).toBeGreaterThanOrEqual(1)
+        expect(screen.getAllByText('Encerrar').length).toBeGreaterThanOrEqual(1)
       })
     })
   })
@@ -211,14 +211,14 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
   })
 
   describe('Interactions', () => {
-    it('calls openMonthlyPeriod when clicking Abrir Mês', async () => {
+    it('calls openMonthlyPeriod when clicking Abrir', async () => {
       vi.mocked(getMonthlyPeriods).mockResolvedValue(mockHasPeriods)
 
       renderMonthsPage()
 
       await waitFor(() => {
-        const openButtons = screen.getAllByText('Abrir Mês')
-        fireEvent.click(openButtons[0]) // Click first "Abrir Mês" button (month 1)
+        const openButtons = screen.getAllByText('Abrir')
+        fireEvent.click(openButtons[0]) // Click first "Abrir" button (month 1)
       })
 
       await waitFor(() => {
@@ -226,14 +226,14 @@ describe('Months Page /pluto/months - Layout & Rendering', () => {
       })
     })
 
-    it('calls closeMonthlyPeriod when clicking Encerrar Mês', async () => {
+    it('calls closeMonthlyPeriod when clicking Encerrar', async () => {
       vi.mocked(getMonthlyPeriods).mockResolvedValue(mockHasPeriods)
 
       renderMonthsPage()
 
       await waitFor(() => {
-        const closeButtons = screen.getAllByText('Encerrar Mês')
-        fireEvent.click(closeButtons[0]) // Click first "Encerrar Mês" button (month 1)
+        const closeButtons = screen.getAllByText('Encerrar')
+        fireEvent.click(closeButtons[0]) // Click first "Encerrar" button (month 1)
       })
 
       await waitFor(() => {

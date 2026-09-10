@@ -35,20 +35,20 @@ export default function AccountCardGrid({
   return (
     <div className="flex flex-col gap-4 pt-4 border-t">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-['CaesarDressing'] text-[#35472D] tracking-wider">Contas e Cartões</h2>
+        <h2 className="text-xl font-display text-[#35472D] tracking-wider">Contas e Cartões</h2>
         <Button onClick={onOpenAccModal} variant="outline" size="sm">
           + Nova Conta / Cartão
         </Button>
       </div>
 
       {loading ? (
-        <div className="p-8 text-center text-sm font-['CaesarDressing'] text-[#35472D] tracking-wider">
+        <div className="p-8 text-center text-sm font-display text-[#35472D] tracking-wider">
           Carregando contas e lançamentos...
         </div>
       ) : cards.length === 0 ? (
-        <div className="rounded-lg border bg-card p-8 text-center text-sm font-['CaesarDressing'] text-[#35472D] tracking-wider shadow-sm flex flex-col items-center gap-2">
+        <div className="rounded-lg border bg-card p-8 text-center text-sm font-display text-[#35472D] tracking-wider shadow-sm flex flex-col items-center gap-2">
           <p>Nenhuma conta ou cartão cadastrado ainda.</p>
-          <Button onClick={onOpenAccModal} size="sm" className="font-['CaesarDressing'] tracking-wider">
+          <Button onClick={onOpenAccModal} size="sm" className="font-display tracking-wider">
             + Cadastrar Primeira Conta ou Cartão
           </Button>
         </div>
@@ -71,8 +71,8 @@ export default function AccountCardGrid({
                 <div className="bg-muted/40 p-3 border-b flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-base">{isCard ? "💳" : "🏦"}</span>
-                    <h3 className="font-['CaesarDressing'] text-[#35472D] text-sm tracking-wider">{account.name}</h3>
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-['CaesarDressing'] uppercase tracking-wider ${
+                    <h3 className="font-display text-[#35472D] text-sm tracking-wider">{account.name}</h3>
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-display uppercase tracking-wider ${
                       isCard
                         ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300"
                         : "bg-[#35472D]/10 text-[#35472D]"
@@ -97,13 +97,13 @@ export default function AccountCardGrid({
                 {/* Tabela de Transações */}
                 <div className="overflow-x-auto flex-1">
                   {txs.length === 0 ? (
-                    <div className="p-6 text-center text-xs font-['CaesarDressing'] text-[#35472D] tracking-wider">
+                    <div className="p-6 text-center text-xs font-display text-[#35472D] tracking-wider">
                       Nenhum lançamento nesta conta no mês de {MONTH_NAMES[selectedMonth - 1]}.
                     </div>
                   ) : (
                     <table className="w-full text-left text-sm border-collapse">
                       <thead>
-                        <tr className="border-b bg-muted/20 text-[#35472D] text-xs font-['CaesarDressing'] tracking-wider">
+                        <tr className="border-b bg-muted/20 text-[#35472D] text-xs font-display tracking-wider">
                           <th className="p-2.5">Data</th>
                           <th className="p-2.5">Descrição</th>
                           <th className="p-2.5">Categoria</th>
@@ -174,7 +174,7 @@ export default function AccountCardGrid({
                     size="sm"
                     variant="secondary"
                     onClick={() => onOpenTxModal(account)}
-                    className="h-8 text-xs font-['CaesarDressing'] w-full sm:w-auto tracking-wider"
+                    className="h-8 text-xs font-display w-full sm:w-auto tracking-wider"
                   >
                     + Nova Transação
                   </Button>

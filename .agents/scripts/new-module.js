@@ -327,15 +327,25 @@ describe("${pascalName}Layout", () => {
   );
 
   // ============================================================
-  // 5. Create .agents/<key>/ structure
+  // 5. Create .agents/modules/<key>/ structure (Olympus layout)
   // ============================================================
-  const agentsModuleDir = path.join(ROOT_DIR, ".agents", key);
+  const agentsModuleDir = path.join(ROOT_DIR, ".agents", "modules", key);
   ensureDir(agentsModuleDir);
   ensureDir(path.join(agentsModuleDir, "specs"));
   ensureDir(path.join(agentsModuleDir, "plans"));
   ensureDir(path.join(agentsModuleDir, "logs"));
 
-  // .agents/<key>/backlog.md
+  // .agents/modules/<key>/regression.md (cenários de regressão do módulo)
+  writeFileIfNotExists(
+    path.join(agentsModuleDir, "regression.md"),
+    `# Regression — Módulo ${name}
+
+Cenários promovidos pelos testes de cada feature (Minos) para execução
+regressiva antes de cada release do módulo.
+`
+  );
+
+  // .agents/modules/<key>/backlog.md
   writeFileIfNotExists(
     path.join(agentsModuleDir, "backlog.md"),
     `# Backlog — Módulo ${name}
@@ -380,18 +390,18 @@ ${name} é um módulo do guarda-chuva Héstia. Descreva aqui o domínio e propó
   }
 
   // ============================================================
-  // 7. Update .agents/backlog.md (Módulos Registrados table)
+  // 7. Update .agents/modules/hestia/backlog.md (Módulos Registrados table)
   // ============================================================
-  const backlogPath = path.join(ROOT_DIR, ".agents", "backlog.md");
+  const backlogPath = path.join(ROOT_DIR, ".agents", "modules", "hestia", "backlog.md");
   let backlogContent = fs.readFileSync(backlogPath, "utf8");
-  
+
   // Check if module already registered
-  if (backlogContent.includes(`.agents/${key}/backlog.md`)) {
-    logWarn(`Module '${key}' already registered in .agents/backlog.md, skipping update`);
+  if (backlogContent.includes(`.agents/modules/${key}/backlog.md`)) {
+    logWarn(`Module '${key}' already registered in .agents/modules/hestia/backlog.md, skipping update`);
   } else {
     // Find the table and add a new row
-    const tableRow = `| ${getNextModuleNumber(backlogContent)} | **${name}** | [Descreva o domínio do módulo] | \`${key}\` | [.agents/${key}/backlog.md](file:///p:/workspace/IA/hestia/.agents/${key}/backlog.md) |`;
-    
+    const tableRow = `| ${getNextModuleNumber(backlogContent)} | **${name}** | [Descreva o domínio do módulo] | \`${key}\` | [.agents/modules/${key}/backlog.md](file:///p:/workspace/IA/hestia/.agents/modules/${key}/backlog.md) |`;
+
     // Insert after the Pluto row (before the --- separator)
     // Use a more specific pattern matching the Pluto row
     backlogContent = backlogContent.replace(
@@ -480,7 +490,15 @@ ${name} é um módulo do guarda-chuva Héstia. Descreva aqui o domínio e propó
 }
 
 function getNextModuleNumber(backlogContent) {
-  const lines = backlogContent.split("\n");
+  // Conta apenas a tabela "Módulos Registrados" (a tabela estrutural
+  // abaixo usa sequência própria e não deve contaminar a numeração).
+  const start = backlogContent.indexOf("## Módulos Registrados");
+  const end = backlogContent.indexOf("## Backlog", start === -1 ? 0 : start);
+  const section = backlogContent.slice(
+    start === -1 ? 0 : start,
+    end === -1 ? undefined : end
+  );
+  const lines = section.split("\n");
   let maxNum = 0;
   for (const line of lines) {
     const match = line.match(/^\|\s*(\d+)\s*\|/);

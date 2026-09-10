@@ -1,5 +1,7 @@
 # Héstia — Controle Financeiro Familiar
 
+![CI](https://github.com/jproberto/Hestia/actions/workflows/ci.yml/badge.svg)
+
 Héstia é uma ferramenta pessoal para controle de finanças e planejamento orçamentário para uma família.
 
 ## Funcionalidades Principais

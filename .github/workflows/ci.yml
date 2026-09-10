@@ -3,7 +3,7 @@ name: CI & Auto Pull Request
 on:
   push:
     branches:
-      - 'feature/*'
+      - 'feature/**'
       - develop
       - main
 

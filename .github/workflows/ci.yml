@@ -7,6 +7,12 @@ on:
       - develop
       - main
 
+# Push novo na mesma branch cancela o run anterior ainda em curso:
+# só o código mais recente é validado (economiza fila e evita PR fora de ordem).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Sem permissões globais: cada job declara o mínimo (least privilege).
 
 jobs:
@@ -44,6 +50,9 @@ jobs:
 
       - name: Run Tests
         run: npm test
+
+      - name: Build Storybook
+        run: npm run build-storybook
 
       - name: Workflow Summary
         if: always()

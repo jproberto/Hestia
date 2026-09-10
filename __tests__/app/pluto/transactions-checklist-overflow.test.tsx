@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
+import { describe, it, expect, beforeEach, vi, type Mock } from "vitest";
 import TransactionsPage from "@/app/pluto/transactions/page";
 import * as checklistDb from "@/lib/pluto/db/checklist";
 import * as budgetDb from "@/lib/pluto/db/budget";
@@ -23,12 +23,7 @@ vi.mock("@/utils/supabase/client", () => ({
   })
 }));
 
-vi.mock("@/lib/shared/supabaseClient", () => ({
-  createBrowserDatabaseClient: () => ({
-    from: () => { throw new Error("use mocked db barrels in tests"); },
-    getUserEmail: () => Promise.resolve("teste@hestia.com"),
-  }),
-}));
+// Client Supabase mockado globalmente em __tests__/setup.ts (task 49).
 
 vi.mock("@/lib/pluto/db/checklist", async (importOriginal) => {
   const actual = await importOriginal<typeof checklistDb>();

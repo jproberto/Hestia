@@ -46,6 +46,17 @@ export async function getGlobalChecklistItems(
   }));
 }
 
+async function getCategoryName(db: IDatabaseClient, categoryId: string): Promise<string> {
+  const { data, error } = await db
+    .from<{ name: string }>("categories")
+    .select("name")
+    .eq("id", categoryId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.name ?? "Sem categoria";
+}
+
 export async function createChecklistItem(
   db: IDatabaseClient,
   input: ChecklistItemInput,
@@ -71,13 +82,14 @@ export async function createChecklistItem(
       .single();
 
     if (globalErr) throw globalErr;
+    if (!globalData) throw new Error("Falha ao criar item global de checklist: sem retorno do banco.");
 
     if (currentMonthId) {
       const { data: monthData, error: monthErr } = await db
         .from<ChecklistItemRow>("checklist_items")
         .insert({
           month_id: currentMonthId,
-          parent_id: (globalData as ChecklistItem).id,
+          parent_id: globalData.id,
           day: input.day,
           description: input.description,
           type: input.type,
@@ -91,10 +103,11 @@ export async function createChecklistItem(
         .single();
 
       if (monthErr) throw monthErr;
-      return monthData as unknown as ChecklistItem;
+      if (!monthData) throw new Error("Falha ao instanciar item global no mês: sem retorno do banco.");
+      return { ...monthData, category_name: await getCategoryName(db, input.category_id) };
     }
 
-    return globalData as unknown as ChecklistItem;
+    return { ...globalData, category_name: await getCategoryName(db, input.category_id) };
   } else {
     const { data, error } = await db
       .from<ChecklistItemRow>("checklist_items")
@@ -114,7 +127,8 @@ export async function createChecklistItem(
       .single();
 
     if (error) throw error;
-    return data as unknown as ChecklistItem;
+    if (!data) throw new Error("Falha ao criar item de checklist: sem retorno do banco.");
+    return { ...data, category_name: await getCategoryName(db, input.category_id) };
   }
 }
 
@@ -199,7 +213,7 @@ export async function instantiateGlobalChecklistItemsForMonth(
   if (fetchErr) throw fetchErr;
   if (!globals || globals.length === 0) return;
 
-  const instances = (globals as unknown as ChecklistItem[]).map((item) => ({
+  const instances = globals.map((item) => ({
     month_id: monthId,
     parent_id: item.id,
     day: item.day,

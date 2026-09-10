@@ -1,5 +1,5 @@
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import TransactionsPage from '@/app/pluto/transactions/page'
 import { getTransactionsByMonth } from '@/lib/pluto/db/transactions'
 import { getAccounts } from '@/lib/pluto/db/accounts'
@@ -36,12 +36,7 @@ vi.mock('@/utils/supabase/client', () => ({
   })
 }))
 
-vi.mock('@/lib/shared/supabaseClient', () => ({
-  createBrowserDatabaseClient: () => ({
-    from: () => { throw new Error('use mocked db barrels in tests') },
-    getUserEmail: () => Promise.resolve('teste@hestia.com'),
-  }),
-}))
+// Client Supabase mockado globalmente em __tests__/setup.ts (task 49).
 
 vi.mock('@/lib/pluto/db/transactions', () => ({
   getTransactionsByMonth: vi.fn(),
@@ -256,7 +251,11 @@ it('shows message when no months are open', async () => {
       await waitFor(() => {
         expect(screen.getByText('📈 Receitas')).toBeInTheDocument()
         expect(screen.getByText('📉 Despesas')).toBeInTheDocument()
-        expect(screen.getByText('Alimentação')).toBeInTheDocument()
+        // Estado assentado: 'Alimentação' aparece na linha do orçamento (Despesas)
+        // e na linha do lançamento (grid de contas) — antes, o teste passava por
+        // acidente numa janela transitória do duplo fetch (loading do 2º ciclo
+        // desmontava o grid; ver ARC-002/task 45).
+        expect(screen.getAllByText('Alimentação')).toHaveLength(2)
         expect(screen.getByText('Salário')).toBeInTheDocument()
       })
     })

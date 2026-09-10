@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import MonthsPage from "@/app/pluto/months/page";
-import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { getMonthlyPeriods, openMonthlyPeriod } from "@/lib/pluto/db/months";
 import { usePathname, useRouter } from "next/navigation";
 import { MascotProvider } from "@/lib/hestia/MascotProvider";
@@ -16,12 +16,7 @@ vi.mock("@/utils/supabase/client", () => ({
   })
 }));
 
-vi.mock("@/lib/shared/supabaseClient", () => ({
-  createBrowserDatabaseClient: () => ({
-    from: () => { throw new Error("use mocked db barrels in tests"); },
-    getUserEmail: () => Promise.resolve("teste@hestia.com"),
-  }),
-}));
+// Client Supabase mockado globalmente em __tests__/setup.ts (task 49).
 
 vi.mock("@/lib/pluto/db/months", () => ({
   getMonthlyPeriods: vi.fn(),

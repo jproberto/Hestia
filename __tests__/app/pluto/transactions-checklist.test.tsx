@@ -1,6 +1,6 @@
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import TransactionsPage from "@/app/pluto/transactions/page";
-import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { getTransactionsByMonth } from "@/lib/pluto/db/transactions";
 import { getAccounts } from "@/lib/pluto/db/accounts";
 import { getCategories } from "@/lib/pluto/db/categories";

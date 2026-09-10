@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { ChecklistItem, ChecklistItemInput, BudgetItem, Category } from "@/lib/pluto/types";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
-import ChecklistItemFormModal from "./ChecklistItemFormModal";
-import ChecklistItemDeleteModal from "./ChecklistItemDeleteModal";
 import ChecklistItemRow from "./ChecklistItemRow";
 import ChecklistOverflowAlerts from "./ChecklistOverflowAlerts";
+import ChecklistCardModals from "./ChecklistCardModals";
 import { useChecklistItems } from "@/lib/pluto/hooks/useChecklistItems";
+import { useChecklistCardModals } from "@/lib/pluto/hooks/useChecklistCardModals";
 import { getItemUrgency } from "@/lib/shared";
 
 interface ChecklistCardProps {
@@ -46,12 +45,6 @@ export default function ChecklistCard({
   onDeleteItem,
   onTriggerTransactionModal,
 }: ChecklistCardProps) {
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null);
-  const [deletingItem, setDeletingItem] = useState<ChecklistItem | null>(null);
-  const [saving, setSaving] = useState<boolean>(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
   const {
     sortedItems,
     overflowCategories,
@@ -59,66 +52,7 @@ export default function ChecklistCard({
     getRowBg,
   } = useChecklistItems(items, budgetItems);
 
-  const handleOpenAddModal = () => {
-    setErrorMsg(null);
-    setIsAddModalOpen(true);
-  };
-
-  const handleOpenEditModal = (item: ChecklistItem) => {
-    setEditingItem(item);
-    setErrorMsg(null);
-  };
-
-  const handleOpenDeleteModal = (item: ChecklistItem) => {
-    setDeletingItem(item);
-    setErrorMsg(null);
-  };
-
-  const handleSaveAdd = async (input: ChecklistItemInput, isGlobal: boolean) => {
-    setSaving(true);
-    setErrorMsg(null);
-    try {
-      await onAddItem(input, isGlobal);
-      setIsAddModalOpen(false);
-    } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Erro ao adicionar item.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveEdit = async (input: ChecklistItemInput, isGlobal: boolean) => {
-    if (!editingItem) return;
-    setSaving(true);
-    setErrorMsg(null);
-    try {
-      await onEditItem(
-        editingItem.id,
-        input,
-        isGlobal,
-        editingItem.parent_id
-      );
-      setEditingItem(null);
-    } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Erro ao atualizar item.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleConfirmDelete = async (deleteGlobal: boolean) => {
-    if (!deletingItem) return;
-    setSaving(true);
-    setErrorMsg(null);
-    try {
-      await onDeleteItem(deletingItem.id, deleteGlobal, deletingItem.parent_id);
-      setDeletingItem(null);
-    } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Erro ao excluir item.");
-    } finally {
-      setSaving(false);
-    }
-  };
+  const modals = useChecklistCardModals({ onAddItem, onEditItem, onDeleteItem });
 
   const handleCheckboxToggle = (item: ChecklistItem) => {
     if (!isMonthOpen) return;
@@ -154,7 +88,7 @@ export default function ChecklistCard({
         </div>
 
         {isMonthOpen && (
-          <Button onClick={handleOpenAddModal} size="sm" className="flex items-center gap-1.5 self-start sm:self-auto">
+          <Button onClick={modals.handleOpenAddModal} size="sm" className="flex items-center gap-1.5 self-start sm:self-auto">
             <span className="w-4 h-4">+</span>
             Adicionar Item
           </Button>
@@ -177,8 +111,8 @@ export default function ChecklistCard({
                 item={item}
                 urgency={urgency}
                 onToggle={handleCheckboxToggle}
-                onEdit={handleOpenEditModal}
-                onDelete={handleOpenDeleteModal}
+                onEdit={modals.handleOpenEditModal}
+                onDelete={modals.handleOpenDeleteModal}
                 isMonthOpen={isMonthOpen}
                 rowBg={rowBg}
                 renderUrgencyBadge={renderUrgencyBadge}
@@ -190,47 +124,20 @@ export default function ChecklistCard({
 
       <ChecklistOverflowAlerts overflowCategories={overflowCategories} />
 
-      <ChecklistItemFormModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSubmit={handleSaveAdd}
+      <ChecklistCardModals
+        isAddModalOpen={modals.isAddModalOpen}
+        editingItem={modals.editingItem}
+        deletingItem={modals.deletingItem}
+        saving={modals.saving}
+        errorMsg={modals.errorMsg}
         categories={categories}
         userEmail={userEmail}
-        title="Adicionar Item ao Checklist"
-        submitLabel="Adicionar"
-        saving={saving}
-        errorMsg={errorMsg}
-      />
-
-      {editingItem && (
-        <ChecklistItemFormModal
-          isOpen={true}
-          onClose={() => setEditingItem(null)}
-          onSubmit={handleSaveEdit}
-          categories={categories}
-          userEmail={userEmail}
-          initialData={{
-            day: editingItem.day,
-            description: editingItem.description,
-            type: editingItem.type,
-            category_id: editingItem.category_id,
-            amount: editingItem.amount ?? null,
-            scope: "month",
-          }}
-          title="Editar Item do Checklist"
-          submitLabel="Salvar Alterações"
-          saving={saving}
-          errorMsg={errorMsg}
-        />
-      )}
-
-      <ChecklistItemDeleteModal
-        isOpen={!!deletingItem}
-        onClose={() => setDeletingItem(null)}
-        onConfirm={handleConfirmDelete}
-        item={deletingItem}
-        saving={saving}
-        errorMsg={errorMsg}
+        onCloseAdd={() => modals.setIsAddModalOpen(false)}
+        onSaveAdd={modals.handleSaveAdd}
+        onCloseEdit={() => modals.setEditingItem(null)}
+        onSaveEdit={modals.handleSaveEdit}
+        onCloseDelete={() => modals.setDeletingItem(null)}
+        onConfirmDelete={modals.handleConfirmDelete}
       />
     </div>
   );

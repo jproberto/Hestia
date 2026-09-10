@@ -2,14 +2,6 @@ import type { ChecklistItem, BudgetLikeItem, BudgetOverflowResult } from "./type
 
 export type { BudgetOverflowResult } from "./types";
 
-interface ChecklistItemWithAmount {
-  category_id: string;
-  amount?: number | null;
-  month_id?: string | null;
-  is_active?: boolean;
-  id?: string;
-}
-
 function getBudgetAmount(budgetItems: BudgetLikeItem[], categoryId: string): number {
   const budgetItem = budgetItems.find((b) => b.category_id === categoryId);
   return budgetItem?.amount ?? 0;
@@ -20,7 +12,7 @@ function getBudgetName(budgetItems: BudgetLikeItem[], categoryId: string): strin
   return budgetItem?.category_name ?? "";
 }
 
-function sumAmounts(items: ChecklistItemWithAmount[], categoryId: string, excludeId?: string): number {
+function sumAmounts(items: ChecklistItem[], categoryId: string, excludeId?: string): number {
   return items
     .filter((item) => item.category_id === categoryId && item.id !== excludeId)
     .reduce((sum, item) => sum + (item.amount || 0), 0);
@@ -47,6 +39,10 @@ export function checkGlobalBudgetOverflow(
     categoryName: getBudgetName(budgetItems, targetCategoryId),
     totalChecklist,
     budgetAmount,
+    // Derivado dos itens presentes; só é lido quando isOverflow (há itens da
+    // categoria). O fluxo de criação/editar sobrescreve com lookup real em
+    // useChecklistOperations antes de exibir o modal.
+    categoryType: globalItems.find((item) => item.category_id === targetCategoryId)?.type ?? "despesa",
   };
 }
 
@@ -64,5 +60,7 @@ export function checkMonthBudgetOverflow(
     categoryName: getBudgetName(budgetItems, targetCategoryId),
     totalChecklist,
     budgetAmount,
+    // Ver comentário em checkGlobalBudgetOverflow sobre o fallback.
+    categoryType: monthItems.find((item) => item.category_id === targetCategoryId)?.type ?? "despesa",
   };
 }

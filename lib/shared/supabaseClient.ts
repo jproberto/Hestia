@@ -148,12 +148,21 @@ class SupabaseDatabaseClient implements IDatabaseClient {
   }
 }
 
+// Singleton por aba (task 47/ARC-003): o cliente Supabase/GoTrue é custoso
+// para instanciar, então todos os callers do browser compartilham uma única
+// instância por sessão. Callers continuam recebendo `IDatabaseClient`.
+// (Testes mockam este módulo, então o cache é transparente para a suíte.)
+let cachedBrowserClient: IDatabaseClient | null = null;
+
 export function createBrowserDatabaseClient(): IDatabaseClient {
-  const client = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  return new SupabaseDatabaseClient(client as unknown as SupabaseLikeClient);
+  if (!cachedBrowserClient) {
+    const client = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    cachedBrowserClient = new SupabaseDatabaseClient(client as unknown as SupabaseLikeClient);
+  }
+  return cachedBrowserClient;
 }
 
 export async function createServerDatabaseClient(): Promise<IDatabaseClient> {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
 import type { IDatabaseClient } from "@/lib/shared/database";
 import { getTransactionsByMonth } from "@/lib/pluto/db/transactions";
@@ -52,12 +52,18 @@ export interface PlutoData {
  * lançamentos (períodos, transações, orçamento, contas, categorias,
  * checklist) e a seleção de ano/mês. Extraído da TransactionsPage
  * sem mudança de comportamento (Fase 1 da decomposição).
+ *
+ * Single-flight (task 45): a seleção ano/mês é resolvida em memória a
+ * partir de `allOpen` dentro de um único ciclo — o mount faz 1 fetch
+ * mesmo quando a seleção inicial precisa de ajuste. Requisições
+ * superadas (troca rápida de seleção) são descartadas por request id
+ * (last-writer-wins) em vez da flag `cancelled`, que não cancelava a rede.
  */
 export function usePlutoData(): PlutoData {
   const db = useMemo(() => createBrowserDatabaseClient(), []);
   const today = new Date();
-  const [selectedYear, setSelectedYear] = useState<number>(today.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth() + 1);
+  const [selectedYear, setSelectedYearState] = useState<number>(today.getFullYear());
+  const [selectedMonth, setSelectedMonthState] = useState<number>(today.getMonth() + 1);
 
   const [userEmail, setUserEmail] = useState<string>("");
   const [availableYears, setAvailableYears] = useState<number[]>([]);
@@ -71,10 +77,18 @@ export function usePlutoData(): PlutoData {
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const requestIdRef = useRef(0);
+  // Espelho mutável da seleção: permite carga estável (identidade fixa)
+  // com os valores correntes, sem recriar a função a cada render.
+  const selectionRef = useRef({ year: today.getFullYear(), month: today.getMonth() + 1 });
+
+  const loadForSelection = useCallback(async (year: number, month: number) => {
+    const requestId = ++requestIdRef.current;
+    const isCurrentRequest = () => requestIdRef.current === requestId;
     setLoading(true);
     try {
       const email = await db.getUserEmail();
+      if (!isCurrentRequest()) return;
       setErrorMsg(null);
       if (email) {
         setUserEmail(email);
@@ -82,6 +96,7 @@ export function usePlutoData(): PlutoData {
 
       // Buscar todos os períodos abertos no banco
       const allOpen = await getAllOpenMonthlyPeriods(db);
+      if (!isCurrentRequest()) return;
       const years = Array.from(new Set(allOpen.map((p) => p.year))).sort((a, b) => a - b);
       setAvailableYears(years);
 
@@ -93,22 +108,25 @@ export function usePlutoData(): PlutoData {
         return;
       }
 
-      if (years.length > 0 && !years.includes(selectedYear)) {
-        setSelectedYear(years[0]);
+      // Resolução em memória, no mesmo ciclo: ajusta estado + ref sem
+      // disparar nova carga (o effect do mount roda uma única vez).
+      const yearToUse = years.includes(year) ? year : years[0];
+      if (yearToUse !== year) {
+        selectionRef.current.year = yearToUse;
+        setSelectedYearState(yearToUse);
       }
 
-      const yearToUse = years.includes(selectedYear) ? selectedYear : years[0];
       const openMonthsForYear = allOpen.filter((p) => p.year === yearToUse);
       setOpenMonths(openMonthsForYear);
 
-      if (openMonthsForYear.length > 0 && !openMonthsForYear.some((p) => p.month === selectedMonth)) {
-        setSelectedMonth(openMonthsForYear[0].month);
-      }
-
       const monthToFetch =
-        openMonthsForYear.length > 0 && openMonthsForYear.some((p) => p.month === selectedMonth)
-          ? selectedMonth
-          : openMonthsForYear[0]?.month ?? selectedMonth;
+        openMonthsForYear.length > 0 && openMonthsForYear.some((p) => p.month === month)
+          ? month
+          : openMonthsForYear[0]?.month ?? month;
+      if (monthToFetch !== month) {
+        selectionRef.current.month = monthToFetch;
+        setSelectedMonthState(monthToFetch);
+      }
 
       const activeMonthPeriod = openMonthsForYear.find((p) => p.month === monthToFetch);
 
@@ -122,6 +140,7 @@ export function usePlutoData(): PlutoData {
           : Promise.resolve([]),
         getGlobalChecklistItems(db).catch(() => []),
       ]);
+      if (!isCurrentRequest()) return;
 
       setTransactions(txsData || []);
       setAccounts(accsData || []);
@@ -130,25 +149,35 @@ export function usePlutoData(): PlutoData {
       setChecklistItems(chkData || []);
       setGlobalChecklistItems(globalChkData || []);
     } catch (err: unknown) {
+      if (!isCurrentRequest()) return;
       console.error("Erro ao carregar lançamentos:", err);
       setErrorMsg(parseErrorMessage(err));
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) setLoading(false);
     }
-  }, [db, selectedYear, selectedMonth, setSelectedYear, setSelectedMonth]);
+  }, [db, setLoading, setErrorMsg, setUserEmail, setAvailableYears, setOpenMonths, setTransactions, setBudgetItems, setAccounts, setCategories, setChecklistItems, setGlobalChecklistItems, setSelectedYearState, setSelectedMonthState]);
 
+  // Mount em passe único: `loadForSelection` só depende de `db` (estável),
+  // então os setStates da resolução não disparam nova carga.
   useEffect(() => {
-    let isMounted = true;
-    const load = async () => {
-      if (isMounted) {
-        await fetchData();
-      }
-    };
-    void load();
-    return () => {
-      isMounted = false;
-    };
-  }, [fetchData]);
+    void loadForSelection(selectionRef.current.year, selectionRef.current.month);
+  }, [loadForSelection]);
+
+  const setSelectedYear = useCallback((year: number) => {
+    selectionRef.current.year = year;
+    setSelectedYearState(year);
+    void loadForSelection(selectionRef.current.year, selectionRef.current.month);
+  }, [loadForSelection, setSelectedYearState]);
+
+  const setSelectedMonth = useCallback((month: number) => {
+    selectionRef.current.month = month;
+    setSelectedMonthState(month);
+    void loadForSelection(selectionRef.current.year, selectionRef.current.month);
+  }, [loadForSelection, setSelectedMonthState]);
+
+  const fetchData = useCallback(() => {
+    return loadForSelection(selectionRef.current.year, selectionRef.current.month);
+  }, [loadForSelection]);
 
   // Delimitadores do Date Input para travar dentro do Mês e Ano selecionados
   const { startDate: minDateStr, endDate: maxDateStr } = getMonthRange(selectedYear, selectedMonth);

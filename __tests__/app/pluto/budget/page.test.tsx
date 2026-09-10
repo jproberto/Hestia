@@ -1,5 +1,5 @@
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import BudgetPage from '@/app/pluto/budget/page'
 import { getBudgetAdjustment, getBudgets, getBudgetAdjustments, createBudgetAdjustment, adjustBudgetItem, addOrUpdateBudgetItem } from '@/lib/pluto/db/budget'
 import { getCategories } from '@/lib/pluto/db/categories'
@@ -15,12 +15,7 @@ vi.mock('@/utils/supabase/client', () => ({
   })
 }))
 
-vi.mock('@/lib/shared/supabaseClient', () => ({
-  createBrowserDatabaseClient: () => ({
-    from: () => { throw new Error('use mocked db barrels in tests') },
-    getUserEmail: () => Promise.resolve('teste@hestia.com'),
-  }),
-}))
+// Client Supabase mockado globalmente em __tests__/setup.ts (task 49).
 
 vi.mock('@/lib/pluto/db/budget', () => ({
   getBudgetAdjustment: vi.fn(),

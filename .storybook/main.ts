@@ -6,8 +6,7 @@ const config: StorybookConfig = {
   ],
   "addons": [
     "@storybook/addon-a11y",
-    "@storybook/addon-docs",
-    "@storybook/addon-mcp"
+    "@storybook/addon-docs"
   ],
   "framework": "@storybook/nextjs-vite",
   "staticDirs": [

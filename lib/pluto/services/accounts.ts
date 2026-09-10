@@ -1,25 +1,5 @@
-import { IAccountRepository, Account } from "@/lib/pluto/repositories";
-import { getOrCreateAccountParamsSchema } from "@/lib/pluto/schemas";
+import { Account } from "@/lib/pluto/repositories";
 import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
-
-export function createAccountService(accountRepo: IAccountRepository) {
-  return {
-    async getAllAccounts(): Promise<Account[]> {
-      return accountRepo.getAccounts();
-    },
-
-    async getOrCreateAccountByName(
-      name: string,
-      email: string,
-      type: "conta" | "cartao" = "conta"
-    ): Promise<string> {
-      const params = getOrCreateAccountParamsSchema.parse({ name, email, type });
-      return accountRepo.getOrCreateAccount(params.name, params.email, params.type);
-    },
-  };
-}
-
-export type AccountService = ReturnType<typeof createAccountService>;
 
 // Standalone functions for hooks
 export async function getAllAccounts(): Promise<Account[]> {

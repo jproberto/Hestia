@@ -16,6 +16,32 @@ Héstia é uma ferramenta pessoal para controle de finanças e de lista de taref
 ## Padrão de Módulos
 Código específico de um módulo vive em `<camada>/<modulo>/` nas camadas `app`, `components`, `lib` e `__tests__`; o compartilhado permanece na raiz. Documentação de módulo vive em `.agents/modules/<modulo>/<slug>/` (spec/plan/tasks + context/checkpoint) com `backlog.md` e `regression.md` por módulo em `.agents/modules/<modulo>/`; transversal em `.agents/modules/hestia/`. Para registrar módulo: criar `.agents/modules/<modulo>/backlog.md` e linha em `modules/hestia/backlog.md` (tabela “Módulos Registrados”). Estado por feature é isolado em `FEATURE_DIR` e histórico permanece após `COMMITTED`. Não há `state/` global nem `specs/`/`plans/` na raiz.
 
+## Mapa de Camadas (pós-41, fonte: Pluto)
+
+> Decisões registradas: task 41 removeu `use-cases/`, `schemas/` (Zod), `mappers.ts` e factories `createXService` (Opção A, YAGNI) — não recriar sem religar consumidores. Regras de persistência vivem nos repositories; validação runtime vive nos forms (boundary real). Task 47: caminho recomendado UI → `db/*` + `hooks/*`, domínio → `repositories/*` (`services/*` standalones legadas, congeladas); `createBrowserDatabaseClient()` é singleton por aba; barrel `lib/pluto/index.ts` removido (sem importadores). Task 48: `getUserEmail()` aceito em `IDatabaseClient` como porta de sessão do app cliente (4 usos, todos na UI, sempre junto ao fluxo de dados p/ `created_by`; separar em `IAuthSession` seria churn sem ganho — revisitar se surgir 2º consumidor de auth).
+
+```
+app/<modulo>/*/page.tsx ──▶ hooks/* ──▶ db/* ──▶ repositories/* ──▶ IDatabaseClient ──▶ Supabase
+        │                      │            ▲ mock (vi.mock)       ▲ fakes (contratos)
+        ▼                      ▼            │
+components/<modulo>/* ◀── props ── stories ── __tests__/**/espelho
+lib/<modulo>/types.ts ◀── fonte única (todos importam daqui)
+```
+
+| Camada | Responsabilidade | Importa de | Testado com |
+|---|---|---|---|
+| `app/<modulo>/` | Pages enxutas: só composição + modais | `hooks/*`, `db/*`, `components/<modulo>/*` | testes de página: factories de mock **com defaults**, `clickConnectedButton` p/ clique pós-fetch |
+| `components/<modulo>/` | Presentacionais (props), `*.stories.*` p/ novos | `types.ts`, ui compartilhado | `__tests__/components/` + build do Storybook |
+| `lib/<modulo>/hooks/` | Fetch+estado+operações (promise-chain + flag `cancelled`) | `db/*`, `services/*` (standalones legadas), `types.ts` | `__tests__/lib/<modulo>/hooks/` |
+| `lib/<modulo>/db/` | Barrels `export *` sobre `repositories/` — **caminho oficial da UI** | `repositories/*` | `vi.mock` nos testes de página/hooks |
+| `lib/<modulo>/repositories/` | Dados + regras de persistência (ex.: período aberto); `I*Repository`, `fakes/` | `IDatabaseClient` (`lib/shared`), `types.ts` — **nunca `@supabase/*`** | contracts+fakes (`contract-*.test.ts`), `__tests__/lib/<modulo>/db/` |
+| `lib/<modulo>/services/` | Standalones legadas congeladas (wrappers c/ client próprio) — **nada novo aqui** | `repositories/*`, `lib/shared/supabaseClient` | indireto (via hooks) |
+| `lib/<modulo>/types.ts` | Fonte única: Row/Input/Domain/FormData | — | compilação (tsc) |
+| `lib/<modulo>/{checklist-budget,utils}.ts` | Regras puras (overflow, agregações, datas) | `types.ts` | testes unitários diretos |
+| `lib/shared/` | `IDatabaseClient` (+`getUserEmail` como porta de sessão) + adapter Supabase (único lugar que conhece `@supabase/*`) | `@supabase/*` | mocks nos testes |
+
+**Onde ponho X?** repository → `repositories/<entidade>.ts` + fake + contract; hook → `hooks/useX.ts`; tipo → `types.ts` (nunca duplicar); regra pura → `utils.ts` ou `<dominio>-*.ts`; validação de form → no próprio form/modal (não há `schemas/`); teste → `__tests__/` espelhando o path; story → ao lado do componente.
+
 ## Mapeamento Olympus e Ciclo de Vida
 
 Todo agente DEVE consultar seu prompt em `.agents/olimpo/<agente>.md` antes de agir. Orquestração via `Zeus` (guardian nativo valida `checkpoint.json.validTransitions` e `approvals`).
@@ -46,4 +72,4 @@ Todo agente DEVE consultar seu prompt em `.agents/olimpo/<agente>.md` antes de a
 7. **Migrações Auditadas:** DDL em `utils/migrations/<timestamp>_<slug>.sql` + registro `schema_migrations`.
 8. **Investigação sem Gambiarras (debug-first):** Em falha, `BLOCKED` com erro exato + hipóteses + tentativas + caminhos; após 3 hipóteses escala para humano.
 
-<!-- Última atualização: 2026-08-27 (commit Olympus 0.9.0, docs corrigidas) -->
+<!-- Última atualização: 2026-09-10 (ciclo 09-09, task 42: mapa de camadas pós-41) -->

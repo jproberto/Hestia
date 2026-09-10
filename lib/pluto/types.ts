@@ -294,7 +294,7 @@ export interface BudgetOverflowResult {
   categoryName: string;
   totalChecklist: number;
   budgetAmount: number;
-  categoryType?: "receita" | "despesa";
+  categoryType: "receita" | "despesa";
 }
 
 export interface BudgetSummary {

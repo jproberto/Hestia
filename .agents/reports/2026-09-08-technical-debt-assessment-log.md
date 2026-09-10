@@ -307,3 +307,81 @@
 - [x] Test strategy (fakes vs integration vs contract)
 - [ ] Error handling patterns
 - [ ] Modal/Dialog patterns
+
+---
+
+## Ciclo 09-09 — Dívidas restantes (épico 4, loop leve)
+
+> Decisão humana registrada: débitos técnicos em loop leve proporcional, sem as 9 fases/artefatos do Olympus. Uma task por vez, Stop & Wait com aprovação antes de commitar ou avançar. Definição de pronto por task: tsc + lint + vitest verdes + registro aqui.
+
+### Task 41 — ARC-001: destino da camada morta (Opção A — remover) ✅ Executada (commit pendente de aprovação)
+- **Decisão:** Opção A (YAGNI), após análise da intenção original vs. estado real. Evidência verificada: factories `createXService` sem chamadores em produção; `use-cases/` importados só pelas factories; `mappers.ts` sem nenhum importador em código; `schemas/` (Zod) importado só pelas factories — Zod nunca executa no caminho real. Regra "período aberto" duplicada (`repositories/transactions.ts:42-55` viva vs `use-cases/createTransaction.ts:36-40` morta). Standalones dos services (ex.: `getTransactionsForMonth`) são vivas via hooks e bypassam use-cases/Zod — por isso `services/*.ts` foi podado, não deletado.
+- **Removido:** `lib/pluto/use-cases/` (16 arqs), `lib/pluto/schemas/` (7 arqs), `lib/pluto/mappers.ts`, factories `createXService` + tipos `XService` nos 5 services, dep direta `zod` do `package.json` (segue transitivo via eslint-plugin-react-hooks/shadcn; `npm ls` verificado).
+- **Preservado/adaptado:** todas as standalones vivas; `AvailableYearsMonthsOutput` (usado só pela standalone sem consumidores) re-tipado para `AvailablePeriods` (já existia em `types.ts:335`, shape honesto com `MonthlyPeriod[]`).
+- **Validação:** `npx tsc --noEmit` 0 erros; `npm run lint` 0 erros (48 warnings pré-existentes); `npm run test` 51 arquivos / 371 testes verdes.
+- **Sem mudança de comportamento:** só deleção de código sem chamadores + re-tipagem estruturalmente compatível. `git status`: 24 deleções + 5 services + `package.json`/`package-lock.json`.
+
+### Task 44 — PRC-001: backlog central em dia ✅ Executada
+- **Constatação:** o `.agents/backlog.md` legado citado no reassessment (§3.4) já não existe — migração para `modules/` consolidada (só há `modules/hestia/backlog.md` e `modules/pluto/backlog.md`). Tasks 27–40 estruturais são transversais → pertencem ao guarda-chuva hestia, não ao backlog de produto do Pluto (não tocado).
+- **Feito:** item 3 do backlog hestia já estava `Concluído` com links spec/log (27–40 registrados em nível de épico); item 4 atualizado para `Em andamento (41 executada, sem commit; 42–50 pendentes)` com link para este -log como acompanhamento por item — respeitando a convenção do cabeçalho ("detalhamento por item vive nos relatórios, não aqui").
+- **Validação:** `tsc` 0 erros; `lint` 0 erros (48 warnings pré-existentes); `vitest`: 370/371 numa 1ª passada (falha única transitória, nome não capturado) → 371/371 nas duas passadas seguintes. Diff desde o verde da 41 era só `.md` → falha sem relação com a mudança; sintoma compatível com a flakiness estrutural do duplo fetch (ARC-002, task 45).
+- **41+ abertos (pendentes, conforme §5 do reassessment):**
+  - [ ] 42 (Alta, dep 41) — Mapa de Camadas no AGENTS.md + skills
+  - [ ] 43 (Alta, dep 41+42) — Atualizar gerador + module-template
+  - [ ] 45 (Alta, —) — Single-flight do fetch inicial
+  - [ ] 46 (Média, dep 42) — Decompor budget/months pages + ChecklistCard<150
+  - [ ] 47 (Média, dep 42) — Singleton de client + unificar imports
+  - [ ] 48 (Média, dep 42) — Separar/documentar auth na porta de dados
+  - [ ] 49 (Média, —) — Higiene de testes
+  - [ ] 50 (Média, —) — Honestidade de tipos
+
+### Task 42 — DOC-001: Mapa de Camadas ✅ Executada (commit pendente de aprovação)
+- **Adaptação de escopo:** `.agents/skills/` citado no reassessment (§3.2) foi migrado para `.agents/archive/skills/` (legado); o equivalente vivo é `.agents/olimpo/atena.md` (agente de planejamento) — parágrafo de camadas inserido lá. Skills SDD arquivadas não tocadas.
+- **Feito:** seção `Mapa de Camadas` no `AGENTS.md` (diagrama ASCII + tabela camada→responsabilidade→importa-de→testado-com + FAQ "Onde ponho X?"), refletindo o pós-41 (sem `use-cases/`/`schemas/`/`mappers.ts`; validação no form; `services/` congelado até a 47; 47/48 marcadas pendentes). `module-template.md` alinhado factualmente (IDatabaseClient, regras nos repositories, services pós-41, `db/`, fakes/contracts/stories, paths `modules/`, princípios 1–4). Rework estrutural do gerador fica na 43.
+- **Validação:** `tsc` 0 erros; `lint` 0 erros (48 warnings pré-existentes); `vitest` 51 arqs / 371 testes verdes (1ª passada).
+
+### Task 45 — ARC-002: single-flight do fetch inicial ✅ Executada
+- **Feito (`lib/pluto/hooks/usePlutoData.ts`):** seleção ano/mês resolvida em memória a partir de `allOpen` no mesmo ciclo (mount = 1 fetch); `loadForSelection(year, month)` estável; setters embrulhados (`setSelectedYear/Month` atualizam ref+estado e disparam 1 carga); `fetchData` manual preservado; flag `cancelled`/`isMounted` trocada por request id (last-writer-wins — descarta resposta superada). Contrato da page intacto (setters `(n:number)=>void`, `fetchData()=>Promise<void>`).
+- **Bug determinístico revelado pela mudança (debug-first):** `transactions/page.test.tsx > renders budget comparison tables` passou a falhar (`getByText('Alimentação')` → 2 elementos). Isolamento via stash provou causa no hook; contagem de DOM via scratch provou DOM assentado idêntico nas duas versões (2 matches; budget row + linha do lançamento no grid). Causa-raiz: o teste passava por acidente numa janela transitória do churn — no loading do 2º ciclo o grid desmontava (skeleton) e sobrava exatamente 1 match. Fix test-only: `getAllByText('Alimentação')` com `toHaveLength(2)` + comentário. Scratch deletado após.
+- **Teste novo:** `usePlutoData.test.ts > faz um único fetch por mount (single-flight)` — 7 fetchers `toHaveBeenCalledTimes(1)` + seleção resolvida (suite: 371→372 testes).
+- **Lint:** React Compiler exigiu setters estáveis nas deps dos `useCallback` (mesmo precedente do código antigo) — resolvido, 0 erros.
+- **`clickConnectedButton`:** MANTIDO + justificativa — continua verde; remoção seria risco separado sem ganho (a causa do churn sumiu, o helper segue inofensivo).
+- **Validação:** `tsc` 0 erros; `lint` 0 erros; `vitest` 372/372, 371/372 (transiente isolado, nome não capturado), 372/372 — transiente residual pré-existente em page tests persiste (fora do escopo: higiene na 49).
+
+### Task 47 — ARC-003 + ARC-004: singleton de client + caminho único ✅ Executada
+- **Singleton:** `createBrowserDatabaseClient()` memoizado (cache module-level = 1 instância por aba); server client intocado (por request). Zero call sites alterados (~20 passam a compartilhar a instância) e **zero arquivos de teste alterados** — mocks mockam o módulo com shape idêntico por chamada, então o cache é transparente. Teste novo `__tests__/lib/shared/supabaseClient.test.ts` asserta identidade na sessão (módulo real; setup já stubava env p/ localhost; sem rede na construção).
+- **Caminho único:** `useMonthlyPeriods` repointado `repositories/months` → `db/months`; `repositories/months.ts` repointado `@/lib/shared` → `@/lib/shared/supabaseClient`; `ChecklistItemRow.tsx` repointado `repositories/checklist` → `types.ts` (só tipo); barrel morto `lib/pluto/index.ts` (0 importadores) deletado. Verificado: `app/` e `hooks/` sem imports de `repositories/*`; `components/` idem.
+- **Documentado:** Mapa no AGENTS.md atualizado (caminho UI → `db/*`+`hooks/*`, domínio → `repositories/*`, `services/*` congelada; barrel removido).
+- **Validação:** `tsc` 0 erros; `lint` 0 erros; `vitest` 373/373 (372 + singleton).
+
+### Task 50 — TYP-002: honestidade de tipos ✅ Executada
+- **category_name (enriquecer no repositório):** `createChecklistItem` afirmava `ChecklistItem` (com `category_name` obrigatório) sobre linhas sem o campo (3 casts). Agora resolve via lookup em `categories` com fallback `"Sem categoria"` (mesmo padrão das listagens e dos fakes — paridade fake/real verificada) + throws honestos em insert sem retorno; cast `globalData as ChecklistItem` → null-check; cast enganoso em `instantiateGlobal...` removido. Casts restantes: adapter `lib/shared` (fronteira estrutural, aceitável) e listagens que enriquecem com fallback (budget verifica joins nulos antes de montar).
+- **categoryType (alinhar):** base `BudgetOverflowResult.categoryType` opcional → obrigatório; produtores (`checkGlobal/MonthBudgetOverflow`) passam a preencher derivado dos itens, com fallback documentado (só lido quando `isOverflow`; fluxo de modal sobrescreve com lookup real; alerts não leem o campo). Leitores auditados: alerts (não lê), modal (recebe State garantido), operations (lookup real).
+- **Teste novo:** `__tests__/lib/pluto/db/checklist-create.test.ts` (4 testes, stub parcial de `IDatabaseClient`): enriquecimento, fallback, throw em insert nulo, caminho global. Motivação: `db/checklist.test.ts` exercita o FAKE, não o repositório real — o caminho alterado não tinha cobertura.
+- **Validação:** `tsc` 0 erros; `lint` 0 erros; `vitest` 418/418 (após 1 transiente isolado em budget-page sob carga — passa isolado 2/2 e no rerun completo).
+
+### Task 49 — TST-001: higiene de testes ✅ Executada
+- **Mock central:** factory `createBrowserDatabaseClient` copiada em 13 arquivos → `vi.mock` global em `__tests__/setup.ts` (shape com defaults + `vi.fn`, permitindo `mockReturnValueOnce` p/ overrides como o teste de sessão expirada); 13 blocos locais trocados por comentário-pointer; `supabaseClient.test.ts` usa módulo real via `vi.unmock`.
+- **`Mock` como tipo:** 8 arquivos `import { ..., Mock }` → `type Mock` (restante já estava).
+- **Deps órfãs:** `@testing-library/user-event` (0 usos em testes vitest; stories usam `storybook/test`, pacote distinto) e `@storybook/addon-mcp` (sem plano de uso) removidas via `npm uninstall` + `addon-mcp` fora de `.storybook/main.ts`; `build-storybook` verificado OK. `package.json` reordenado pelo npm restaurado à ordem original (diff mínimo).
+- **Items:** `ChecklistItemWithAmount` (parcial) deletada; `sumAmounts` estreitada para `ChecklistItem[]` (callers já passavam completos — 0 quebras).
+- **`hooks/index.ts`:** 6 → 16 hooks (todos, incluindo os 4 novos da 46).
+- **Validação:** `tsc` 0 erros; `lint` 0 erros (warnings 36, estáveis); `vitest` 418/418; `build-storybook` OK.
+
+### Task 43 — DX-001: gerador + module-template ✅ Executada
+- **Gerador (`new-module.js`):** removido scaffold de `services/`, `schemas/`, `specs/plans/logs`; adicionados `repositories/interfaces.ts` (I*Repository) + `repositories/example.ts` (IDatabaseClient + standalones) + `repositories/fakes/` + `db/` barrel + `hooks/useExamples.ts` (padrão cancelled) + `index.ts` explícito + componente presentacional + story + contract de exemplo + testes espelho; next-steps reescritos no pós-41.
+- **Aceite verificado com módulo `zzdummy` (criado, validado e deletado):** `tsc` 0 erros; 5 arqs / 6 testes verdes (contract+fakes+page+layout+example+utils); `lint` 0 erros — após corrigir o template da story (`@storybook/react` → `@storybook/nextjs-vite`, regra `storybook/no-renderer-packages`, achado pelo lint); `build-storybook` OK com a story nova. Limpeza: dirs deletados + `modules.ts`/`mascots.ts`/`backlog.md` revertidos via checkout + stash pop (edição da 44 preservada); grep confirma zero resíduos.
+- **Template:** estrutura sem services/schemas, convenções (services=não scaffoldar, hooks com cancelled), index explícito, checklist (fakes/contracts/stories/db, comandos de validação completos) e princípios (UI→`db/*`, sem `services/` em módulo novo).
+- **Validação final do ciclo:** abaixo, antes do commit único.
+
+### Task 46 — GOD-001: decompor budget/months pages + ChecklistCard ✅ Executada
+- **Budget (512→119):** `useBudgetOverview` (ano/ajustes/revisão/budgets/derivados/start/create) + `useBudgetItemEditor` (form+sugestões+inline) + 5 presentacionais (`BudgetSelectors/EmptyState/SummaryCards/ForecastForm/Tables`) + página só composição. JSX verbatim; `budgetsLoading/categoriesLoading` não usados foram embora.
+- **Months (242→66):** `useMonthsData(year)` (carga/abrir/encerrar/erro de tabela ausente com strings exatas preservadas) + `MonthsGrid` (resumo + 12 cards) + página (select ano + erro + grid). `Button`/`Link` não usados removidos.
+- **ChecklistCard (237→144 <150):** `useChecklistCardModals` (3 modais + saving/erro) + `ChecklistCardModals` + card (header/lista/alertas). Props intactas.
+- **Testes novos (11 arqs, +41 testes):** hooks (overview/editor/months/modals) + componentes (grid/modals/tables/form/selectors/sections). Dois achados debug-first, ambos test-only: (1) `getByText('Alimentação')` já documentado na 45; (2) `fireEvent.click` em submit não dispara submit no jsdom — precedente do repo é `fireEvent.submit(form)` (critical-flows:93); (3) `formatCurrency` usa NBSP do pt-BR — matcher funcional em vez de string exata.
+- **Validação:** `tsc` 0 erros; `lint` 0 erros (warnings 48→36, imports mortos removidos); `vitest` 62 arqs / 414 testes verdes em 2 passadas seguidas.
+
+### Task 48 — TYP-001: auth na porta de dados ✅ Executada (só docs)
+- **Decisão:** ACEITAR documentado (opção mais barata do relatório). Evidência: 4 usos produtivos de `getUserEmail()`, todos na UI (`months/page` ×2, `budget/page`, `usePlutoData`), sempre junto ao fluxo de dados (auditoria `created_by`); zero uso nos repositories. Separar `IAuthSession` tocaria interface + adapter + 4 call sites + 11 mocks de teste com ganho zero num app single-user-por-aba. Gatilho de revisão: 2º consumidor de auth ou uso server-side.
+- **Registro:** Mapa no AGENTS.md (blockquote + linha `lib/shared/`).
+- **Validação:** docs-only — `tsc`/`lint`/`vitest` revalidados abaixo na 46 (sem código alterado aqui).

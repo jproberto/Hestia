@@ -8,12 +8,7 @@ import { getCategories } from "@/lib/pluto/db/categories";
 import { getBudgets } from "@/lib/pluto/db/budget";
 import { getChecklistItemsByMonth, getGlobalChecklistItems } from "@/lib/pluto/db/checklist";
 
-vi.mock("@/lib/shared/supabaseClient", () => ({
-  createBrowserDatabaseClient: () => ({
-    from: () => { throw new Error("use mocked db barrels in tests"); },
-    getUserEmail: () => Promise.resolve("teste@hestia.com"),
-  }),
-}));
+// Client Supabase mockado globalmente em __tests__/setup.ts (task 49).
 
 vi.mock("@/lib/pluto/db/months", () => ({
   getMonthlyPeriods: vi.fn(),
@@ -114,5 +109,24 @@ describe("usePlutoData", () => {
     expect(vi.mocked(getAllOpenMonthlyPeriods).mock.calls.length).toBeGreaterThanOrEqual(1);
     await result.current.fetchData();
     expect(vi.mocked(getAllOpenMonthlyPeriods).mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("faz um único fetch por mount mesmo quando a seleção inicial precisa de ajuste (single-flight)", async () => {
+    const { result } = renderHook(() => usePlutoData());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Seleção resolvida em memória no mesmo ciclo: exatamente 1 passe de rede.
+    expect(vi.mocked(getAllOpenMonthlyPeriods)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(getTransactionsByMonth)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(getAccounts)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(getCategories)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(getBudgets)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(getChecklistItemsByMonth)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(getGlobalChecklistItems)).toHaveBeenCalledTimes(1);
+    expect(result.current.selectedYear).toBe(2026);
+    expect(result.current.selectedMonth).toBe(3);
   });
 });

@@ -165,28 +165,76 @@ export function ${pascalName}Layout({ pageTitle, pageSubtitle, children }: ${pas
 `
   );
 
+  // components/<key>/<Key>Example.tsx (presentacional + story de exemplo)
+  writeFileIfNotExists(
+    path.join(componentsDir, `${pascalName}Example.tsx`),
+    `"use client";
+
+export interface ${pascalName}ExampleProps {
+  name: string;
+}
+
+export function ${pascalName}Example({ name }: ${pascalName}ExampleProps) {
+  return (
+    <div className="rounded-lg border bg-card text-card-foreground p-4">
+      <p className="text-sm font-medium">{name}</p>
+    </div>
+  );
+}
+`
+  );
+
+  // components/<key>/<Key>Example.stories.tsx
+  writeFileIfNotExists(
+    path.join(componentsDir, `${pascalName}Example.stories.tsx`),
+    `import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { ${pascalName}Example } from "./${pascalName}Example";
+
+const meta: Meta<typeof ${pascalName}Example> = {
+  title: "${name}/Example",
+  component: ${pascalName}Example,
+};
+
+export default meta;
+type Story = StoryObj<typeof ${pascalName}Example>;
+
+export const Default: Story = {
+  args: { name: "Exemplo ${name}" },
+};
+`
+  );
+
   // ============================================================
-  // 3. Create lib/<key>/ structure
+  // 3. Create lib/<key>/ structure (pós-41/47: sem services/, schemas/,
+  // use-cases/ — ver Mapa de Camadas no AGENTS.md)
   // ============================================================
   const libDir = path.join(ROOT_DIR, "lib", key);
   ensureDir(libDir);
   ensureDir(path.join(libDir, "repositories"));
-  ensureDir(path.join(libDir, "services"));
-  ensureDir(path.join(libDir, "schemas"));
+  ensureDir(path.join(libDir, "repositories", "fakes"));
   ensureDir(path.join(libDir, "hooks"));
   ensureDir(path.join(libDir, "db"));
 
   // lib/<key>/types.ts
   writeFileIfNotExists(
     path.join(libDir, "types.ts"),
-    `// Types consolidados do módulo ${name}
-// Exportados publicamente via lib/${key}/index.ts
+    `// Types consolidados do módulo ${name} — FONTE ÚNICA (nunca duplicar tipos).
+// Ver Mapa de Camadas no AGENTS.md: Row (banco) / Input (repositório) / domínio.
 
-// TODO: Defina os tipos do seu módulo aqui
-export interface ${pascalName}ExampleType {
+export interface ${pascalName}ItemRow {
   id: string;
   name: string;
-  createdAt: string;
+  created_at: string;
+}
+
+export interface ${pascalName}Item {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface Create${pascalName}Input {
+  name: string;
 }
 `
   );
@@ -194,7 +242,8 @@ export interface ${pascalName}ExampleType {
   // lib/<key>/utils.ts
   writeFileIfNotExists(
     path.join(libDir, "utils.ts"),
-    `// Utilities para o módulo ${name}
+    `// Regras puras do módulo ${name} (sem I/O, testadas direto).
+// Ver Mapa de Camadas no AGENTS.md.
 
 export function exampleUtil(): string {
   return "${name} utility function";
@@ -202,87 +251,255 @@ export function exampleUtil(): string {
 `
   );
 
-  // lib/<key>/index.ts
+  // lib/<key>/repositories/interfaces.ts
   writeFileIfNotExists(
-    path.join(libDir, "index.ts"),
-    `// ${name} Module - Public API
-// Este é o único ponto de entrada externo para o módulo ${name}
+    path.join(libDir, "repositories", "interfaces.ts"),
+    `// Contratos de repositório do módulo ${name} (DIP: consumidos via interfaces).
+import type { ${pascalName}Item, Create${pascalName}Input } from "../types";
 
-// Types
-export * from "./types";
+export interface I${pascalName}Repository {
+  list(): Promise<${pascalName}Item[]>;
+  create(input: Create${pascalName}Input): Promise<${pascalName}Item>;
+}
+`
+  );
 
-// Repositories (Data Access Layer)
-// export * from "./repositories/example";
+  // lib/<key>/repositories/example.ts
+  writeFileIfNotExists(
+    path.join(libDir, "repositories", "example.ts"),
+    `// Acesso a dados do módulo ${name} via IDatabaseClient (nunca @supabase/*).
+// Regras de persistência vivem aqui. UI consome via lib/${key}/db/*.
+import type { IDatabaseClient } from "@/lib/shared/database";
+import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
+import type { ${pascalName}Item, ${pascalName}ItemRow, Create${pascalName}Input } from "../types";
 
-// Services (Business Logic Layer)
-// export * from "./services/example";
+export async function listExamples(db: IDatabaseClient): Promise<${pascalName}Item[]> {
+  const { data, error } = await db
+    .from<${pascalName}ItemRow>("${key}_items")
+    .select("*")
+    .order("created_at", { ascending: true });
 
-// Hooks (React Data Fetching Layer)
-// export * from "./hooks/useExample";
+  if (error) throw error;
+  return (data || []).map((row) => ({ id: row.id, name: row.name, created_at: row.created_at }));
+}
 
-// Utils
-export * from "./utils";
+export async function createExample(db: IDatabaseClient, input: Create${pascalName}Input): Promise<${pascalName}Item> {
+  const { data, error } = await db
+    .from<${pascalName}ItemRow>("${key}_items")
+    .insert({ name: input.name.trim() })
+    .select()
+    .single();
 
-// DB utilities
-// export * from "./db/example";
+  if (error) throw error;
+  if (!data) throw new Error("Falha ao criar item: sem retorno do banco.");
+  return { id: data.id, name: data.name, created_at: data.created_at };
+}
+
+// Standalones p/ hooks (criam o próprio client, singleton por aba).
+export async function listExamplesStandalone(): Promise<${pascalName}Item[]> {
+  return listExamples(createBrowserDatabaseClient());
+}
+
+export async function createExampleStandalone(input: Create${pascalName}Input): Promise<${pascalName}Item> {
+  return createExample(createBrowserDatabaseClient(), input);
+}
+`
+  );
+
+  // lib/<key>/repositories/fakes/example.ts
+  writeFileIfNotExists(
+    path.join(libDir, "repositories", "fakes", "example.ts"),
+    `// Fake em memória de I${pascalName}Repository p/ testes e contracts.
+import type { I${pascalName}Repository } from "../interfaces";
+import type { ${pascalName}Item, Create${pascalName}Input } from "../../types";
+
+export class Fake${pascalName}Repository implements I${pascalName}Repository {
+  private items: ${pascalName}Item[] = [];
+  private seq = 0;
+
+  seed(items: ${pascalName}Item[]): void {
+    this.items = [...items];
+  }
+
+  async list(): Promise<${pascalName}Item[]> {
+    return [...this.items];
+  }
+
+  async create(input: Create${pascalName}Input): Promise<${pascalName}Item> {
+    const item: ${pascalName}Item = {
+      id: \`fake-\${++this.seq}\`,
+      name: input.name.trim(),
+      created_at: new Date().toISOString(),
+    };
+    this.items.push(item);
+    return item;
+  }
+}
+
+export function createFake${pascalName}Repository(seed: ${pascalName}Item[] = []): Fake${pascalName}Repository {
+  const repo = new Fake${pascalName}Repository();
+  repo.seed(seed);
+  return repo;
+}
 `
   );
 
   // lib/<key>/repositories/index.ts
   writeFileIfNotExists(
     path.join(libDir, "repositories", "index.ts"),
-    `// Repository interfaces and implementations for ${name} module
-// Export repository interfaces here
+    `// Barrel de repositories do módulo ${name}
+export * from "./interfaces";
+export * from "./example";
 `
   );
 
-  // lib/<key>/services/index.ts
+  // lib/<key>/db/example.ts (caminho oficial da UI — mockável nos testes)
   writeFileIfNotExists(
-    path.join(libDir, "services", "index.ts"),
-    `// Services for ${name} module
-// Export services here
+    path.join(libDir, "db", "example.ts"),
+    `export * from "@/lib/${key}/repositories/example";
+`
+  );
+
+  // lib/<key>/hooks/useExamples.ts
+  writeFileIfNotExists(
+    path.join(libDir, "hooks", "useExamples.ts"),
+    `"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { listExamplesStandalone } from "@/lib/${key}/db/example";
+import type { ${pascalName}Item } from "@/lib/${key}/types";
+
+export interface UseExamplesReturn {
+  data: ${pascalName}Item[];
+  loading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+}
+
+// Fetch+estado no padrão do projeto (promise-chain + flag cancelled).
+export function useExamples(): UseExamplesReturn {
+  const [data, setData] = useState<${pascalName}Item[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchExamples = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setData(await listExamplesStandalone());
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erro ao carregar itens");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    listExamplesStandalone().then(
+      (items) => {
+        if (cancelled) return;
+        setData(items);
+        setLoading(false);
+      },
+      (err: unknown) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Erro ao carregar itens");
+        setLoading(false);
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { data, loading, error, refetch: fetchExamples };
+}
 `
   );
 
   // lib/<key>/hooks/index.ts
   writeFileIfNotExists(
     path.join(libDir, "hooks", "index.ts"),
-    `// React hooks for ${name} module
-// Export hooks here
+    `// React hooks do módulo ${name}
+export { useExamples } from "./useExamples";
 `
   );
 
-  // lib/<key>/db/index.ts
+  // lib/<key>/index.ts (NÃO recriar: sem services/, schemas/, use-cases/)
   writeFileIfNotExists(
-    path.join(libDir, "db", "index.ts"),
-    `// Database utilities for ${name} module
-// Export DB functions here
-`
-  );
+    path.join(libDir, "index.ts"),
+    `// ${name} Module - Public API
 
-  // lib/<key>/schemas/index.ts (for Zod schemas)
-  writeFileIfNotExists(
-    path.join(libDir, "schemas", "index.ts"),
-    `// Zod schemas for ${name} module
-// Export schemas here
+// Types (fonte única)
+export * from "./types";
+
+// Repositories (Data Access Layer)
+export * from "./repositories/example";
+
+// DB barrels (caminho oficial da UI)
+export * from "./db/example";
+
+// Hooks (React Data Fetching Layer)
+export * from "./hooks/useExamples";
+
+// Utils (regras puras)
+export * from "./utils";
 `
   );
 
   // ============================================================
   // 4. Create __tests__/ structure
   // ============================================================
-  ensureDir(path.join(ROOT_DIR, "__tests__", "lib", key));
+  ensureDir(path.join(ROOT_DIR, "__tests__", "lib", key, "repositories"));
   ensureDir(path.join(ROOT_DIR, "__tests__", "app", key));
   ensureDir(path.join(ROOT_DIR, "__tests__", "components", key));
 
-  // __tests__/lib/<key>/example.test.ts
+  // __tests__/lib/<key>/repositories/contract-example.test.ts
+  // Suite de contrato compartilhada: roda contra o fake hoje e contra a
+  // impl Supabase quando existir (seam: build() retorna I*Repository).
   writeFileIfNotExists(
-    path.join(ROOT_DIR, "__tests__", "lib", key, "example.test.ts"),
-    `import { describe, it, expect } from "vitest";
+    path.join(ROOT_DIR, "__tests__", "lib", key, "repositories", "contract-example.test.ts"),
+    `import { describe, it, expect, beforeEach } from "vitest";
+import type { I${pascalName}Repository } from "@/lib/${key}/repositories/interfaces";
+import { createFake${pascalName}Repository } from "@/lib/${key}/repositories/fakes/example";
 
-describe("${pascalName} module - lib", () => {
-  it("should have placeholder test", () => {
-    expect(true).toBe(true);
+function define${pascalName}RepositoryContract(label: string, build: () => I${pascalName}Repository) {
+  describe(\`I${pascalName}Repository contract: \${label}\`, () => {
+    let repo: I${pascalName}Repository;
+
+    beforeEach(() => {
+      repo = build();
+    });
+
+    it("lista vazio no início e cria itens", async () => {
+      expect(await repo.list()).toEqual([]);
+      const created = await repo.create({ name: "Primeiro" });
+      expect(created.id).toBeDefined();
+      expect(created.name).toBe("Primeiro");
+      expect(await repo.list()).toHaveLength(1);
+    });
+
+    it("trim no nome ao criar", async () => {
+      const created = await repo.create({ name: "  Espaços  " });
+      expect(created.name).toBe("Espaços");
+    });
+  });
+}
+
+define${pascalName}RepositoryContract("fake em memória", () => createFake${pascalName}Repository());
+`
+  );
+
+  // __tests__/lib/<key>/utils.test.ts
+  writeFileIfNotExists(
+    path.join(ROOT_DIR, "__tests__", "lib", key, "utils.test.ts"),
+    `import { describe, it, expect } from "vitest";
+import { exampleUtil } from "@/lib/${key}/utils";
+
+describe("${pascalName} module - utils", () => {
+  it("exampleUtil responde", () => {
+    expect(exampleUtil()).toContain("${name}");
   });
 });
 `
@@ -326,14 +543,28 @@ describe("${pascalName}Layout", () => {
 `
   );
 
+  // __tests__/components/<key>/<Key>Example.test.tsx
+  writeFileIfNotExists(
+    path.join(ROOT_DIR, "__tests__", "components", key, `${pascalName}Example.test.tsx`),
+    `import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { ${pascalName}Example } from "@/components/${key}/${pascalName}Example";
+
+describe("${pascalName}Example", () => {
+  it("renderiza o nome", () => {
+    render(<${pascalName}Example name="Meu item" />);
+    expect(screen.getByText("Meu item")).toBeInTheDocument();
+  });
+});
+`
+  );
+
   // ============================================================
-  // 5. Create .agents/modules/<key>/ structure (Olympus layout)
+  // 5. Create .agents/modules/<key>/ structure (layout Olympus: backlog +
+  // regression por módulo; features vivem em <modulo>/<slug>/ — sem specs/)
   // ============================================================
   const agentsModuleDir = path.join(ROOT_DIR, ".agents", "modules", key);
   ensureDir(agentsModuleDir);
-  ensureDir(path.join(agentsModuleDir, "specs"));
-  ensureDir(path.join(agentsModuleDir, "plans"));
-  ensureDir(path.join(agentsModuleDir, "logs"));
 
   // .agents/modules/<key>/regression.md (cenários de regressão do módulo)
   writeFileIfNotExists(
@@ -483,10 +714,11 @@ ${name} é um módulo do guarda-chuva Héstia. Descreva aqui o domínio e propó
   logInfo(`\n✅ Module '${name}' (key: ${key}) created successfully!`);
   logInfo(`\nNext steps:`);
   logInfo(`  1. Add mascot image to public${mascotPath}`);
-  logInfo(`  2. Define your types in lib/${key}/types.ts`);
-  logInfo(`  3. Implement repositories, services, and hooks`);
-  logInfo(`  4. Add navigation items in components/${key}/${pascalName}Layout.tsx`);
-  logInfo(`  5. Run 'npm run dev' to verify the module loads correctly`);
+  logInfo(`  2. Define your types in lib/${key}/types.ts (fonte única)`);
+  logInfo(`  3. Implement repositories + fakes + contracts (ver Mapa de Camadas no AGENTS.md)`);
+  logInfo(`  4. UI consome via lib/${key}/db/* + hooks/* (sem services/, schemas/, use-cases/)`);
+  logInfo(`  5. Add navigation items in components/${key}/${pascalName}Layout.tsx`);
+  logInfo(`  6. Run 'npm run dev' to verify the module loads correctly`);
 }
 
 function getNextModuleNumber(backlogContent) {

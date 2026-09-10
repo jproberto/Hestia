@@ -75,7 +75,7 @@ export async function closeMonthlyPeriod(
 }
 
 // Standalone functions for hooks
-import { createBrowserDatabaseClient } from "@/lib/shared";
+import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
 
 export async function getMonthlyPeriodsStandalone(year: number): Promise<MonthlyPeriod[]> {
   const db = createBrowserDatabaseClient();

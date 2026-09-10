@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { MonthlyPeriod } from "@/lib/pluto/types";
-import { getMonthlyPeriodsStandalone as getMonthlyPeriods, getAllOpenMonthlyPeriodsStandalone as getAllOpenMonthlyPeriods } from "@/lib/pluto/repositories/months";
+import { getMonthlyPeriodsStandalone as getMonthlyPeriods, getAllOpenMonthlyPeriodsStandalone as getAllOpenMonthlyPeriods } from "@/lib/pluto/db/months";
 
 interface UseMonthlyPeriodsOptions {
   year?: number;

@@ -33,3 +33,15 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
   useSearchParams: () => ({ get: vi.fn() }),
 }));
+
+// Mock central do client de banco do browser (task 49/TST-001): todos os
+// testes de página/hooks usam este shape com defaults — sem copiar factory.
+// Testes que precisam de outro comportamento sobrescrevem via
+// vi.mocked(createBrowserDatabaseClient).mockReturnValue/mockReturnValueOnce.
+// (__tests__/lib/shared/supabaseClient.test.ts usa o módulo real + vi.unmock.)
+vi.mock("@/lib/shared/supabaseClient", () => ({
+  createBrowserDatabaseClient: vi.fn(() => ({
+    from: () => { throw new Error("use mocked db barrels in tests"); },
+    getUserEmail: () => Promise.resolve("teste@hestia.com"),
+  })),
+}));

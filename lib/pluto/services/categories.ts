@@ -1,17 +1,5 @@
-import { ICategoryRepository, Category } from "@/lib/pluto/repositories";
-import { getCategoriesParamsSchema } from "@/lib/pluto/schemas";
+import { Category } from "@/lib/pluto/repositories";
 import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
-
-export function createCategoryService(categoryRepo: ICategoryRepository) {
-  return {
-    async getAllCategories(type?: "receita" | "despesa"): Promise<Category[]> {
-      const params = getCategoriesParamsSchema.parse({ type });
-      return categoryRepo.getCategories(params.type);
-    },
-  };
-}
-
-export type CategoryService = ReturnType<typeof createCategoryService>;
 
 // Standalone functions for hooks
 export async function getAllCategories(type?: "receita" | "despesa"): Promise<Category[]> {

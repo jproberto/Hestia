@@ -1,6 +1,6 @@
 "use client";
 
-import { ChecklistItem } from "@/lib/pluto/repositories/checklist";
+import { ChecklistItem } from "@/lib/pluto/types";
 import { ItemUrgency } from "@/lib/shared";
 import { formatCurrency } from "@/lib/shared";
 

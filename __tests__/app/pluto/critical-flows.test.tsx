@@ -24,12 +24,7 @@ vi.mock("@/utils/supabase/client", () => ({
   }),
 }));
 
-vi.mock("@/lib/shared/supabaseClient", () => ({
-  createBrowserDatabaseClient: () => ({
-    from: () => { throw new Error("use mocked db barrels in tests"); },
-    getUserEmail: () => Promise.resolve("teste@hestia.com"),
-  }),
-}));
+// Client Supabase mockado globalmente em __tests__/setup.ts (task 49).
 
 vi.mock("@/lib/pluto/db/transactions", () => ({
   getTransactionsByMonth: vi.fn(() => Promise.resolve([])),

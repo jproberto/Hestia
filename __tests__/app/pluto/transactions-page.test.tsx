@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, cleanup, waitFor, within } from "@testing-library/react";
 import TransactionsPage from "@/app/pluto/transactions/page";
-import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { getTransactionsByMonth, deleteTransaction } from "@/lib/pluto/db/transactions";
 import { getAccounts } from "@/lib/pluto/db/accounts";
 import { getCategories } from "@/lib/pluto/db/categories";
@@ -20,12 +20,7 @@ vi.mock("@/utils/supabase/client", () => ({
   }),
 }));
 
-vi.mock("@/lib/shared/supabaseClient", () => ({
-  createBrowserDatabaseClient: () => ({
-    from: () => { throw new Error("use mocked db barrels in tests"); },
-    getUserEmail: () => Promise.resolve("teste@hestia.com"),
-  }),
-}));
+// Client Supabase mockado globalmente em __tests__/setup.ts (task 49).
 
 vi.mock("@/lib/pluto/db/transactions", () => ({
   getTransactionsByMonth: vi.fn(),

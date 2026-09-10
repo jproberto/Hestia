@@ -24,12 +24,7 @@ vi.mock('@/lib/pluto/db/budget', () => ({
   getBudgetAdjustment: vi.fn(),
 }))
 
-vi.mock('@/lib/shared/supabaseClient', () => ({
-  createBrowserDatabaseClient: () => ({
-    from: () => { throw new Error('use mocked db barrels in tests') },
-    getUserEmail: () => Promise.resolve('teste@hestia.com'),
-  }),
-}))
+// Client Supabase mockado globalmente em __tests__/setup.ts (task 49).
 
 const mockUsePathname = usePathname as Mock
 const mockGetBudgetAdjustment = vi.mocked(await import('@/lib/pluto/db/budget')).getBudgetAdjustment

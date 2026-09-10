@@ -65,6 +65,8 @@ Antes de quebrar em tasks, trave decomposição:
 
 Regras: fronteiras claras, interfaces bem definidas, arquivos pequenos e focados, siga padrões locais, não reestruture por gosto.
 
+- Camadas (Mapa de Camadas do AGENTS.md): para cada `Create`/`Modify`, declare a camada, o caminho de import permitido e a estratégia de teste da camada. Proibido criar `use-cases/`, `schemas/`, `mappers.ts` ou factories `createXService` (removidos na task 41) e proibido importar `@supabase/*` fora de `lib/shared/`.
+
 ### 3) Dimensionar Tasks (menor unidade com valor verificável)
 Cada task:
 - tem ciclo de teste próprio

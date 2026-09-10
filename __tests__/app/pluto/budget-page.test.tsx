@@ -82,10 +82,10 @@ describe("Pagina de Orcamento Anual /pluto/budget (Revisada por Ajustes)", () =>
 
     renderWithMascotProvider(<BudgetPage />);
 
-    // 1. O seletor deve listar os ajustes existentes
+    // 1. O seletor deve listar os ajustes existentes (aguarda assentar o fetch)
     const select = await screen.findByLabelText("Ajuste:");
     expect(select).toBeInTheDocument();
-    expect(screen.getByText("Orçamento Inicial 2026")).toBeInTheDocument();
+    expect(await screen.findByText("Orçamento Inicial 2026")).toBeInTheDocument();
     expect(screen.getByText("Ajuste de Agosto")).toBeInTheDocument();
 
     // 2. Ao selecionar Agosto (start_month 8 !== openMonth 10), a tela fica Somente-Leitura

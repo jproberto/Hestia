@@ -7,12 +7,17 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ## [Não lançado]
 
+## [1.0.0] - 2026-09-10
+
+Primeira versão de produção: módulo Pluto completo (orçamento anual com ajustes, meses operacionais, lançamentos com estorno, checklist com validação de overflow, saldo do mês) + framework multi-agentes Olympus + gerador de módulos.
+
 ### Adicionado
 - **Token `font-display` (CaesarDressing) em `app/globals.css`:** títulos de conteúdo (`h1/h2/h3` em cards/seções/modais) usam o token central; `ModuleLayout` (nome do módulo + `pageTitle`) e gerador de módulos (exemplo) já saem no padrão; convenção registrada em `AGENTS.md` ("Onde ponho X?") e `.agents/module-template.md`.
+- **Fonte auto-hospedada via `next/font/local`:** `@font-face` manual e preload manual removidos de `app/layout.tsx`/`globals.css` — o Next emite `@font-face` + preload da `CaesarDressing-Regular.ttf` (solução definitiva após fallback silencioso do `@font-face` manual).
 - **Default do ajuste vigente no budget (`pickDefaultAdjustment` em `useBudgetOverview.ts`):** sem seleção, ativa o ajuste de maior `start_month <= mês corrente` (mesma regra de `getBudgets`), fallback para o mais recente; seleção manual prevalece; troca de ano reaplica o padrão.
 - **Olympus conectado ao gerador:** Zeus classifica `módulo novo` e Atena planeja a primeira task via `node .agents/scripts/new-module.js` seguindo `.agents/module-template.md` (inclui convenção `font-display`); proibição de `services/` explicitada em Atena.
 - **Mapa de Camadas no `AGENTS.md`:** diagrama + tabela camada→responsabilidade→importa-de→testado-com + FAQ "Onde ponho X?" (fonte normativa; Atena exige declarar camadas no plano).
-- **Testes novos:** single-flight do fetch, identidade do singleton de client, enriquecimento de `category_name`, contratos por unidade extraída (budget/months/checklist/modais) — suíte em 63 arquivos / 418 testes.
+- **Testes novos:** single-flight do fetch, identidade do singleton de client, enriquecimento de `category_name`, contratos por unidade extraída (budget/months/checklist/modais) — suíte em 63 arquivos / 378 testes.
 - **Gerador `new-module.js` pós-arquitetura:** scaffolda `types` + `repositories`/`interfaces`/`fakes` + `db/` + `hooks` + contract + story + testes espelho (verificado de ponta a ponta com módulo dummy).
 
 ### Alterado
@@ -37,8 +42,6 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 - **Docs normativos sincronizados:** `AGENTS.md` registra `new-module.js`, path correto do backlog central, remoção de `services/` da tabela de camadas, convenção `font-display`, contrato de erro dos modais e padrão `migration-<slug>.sql` (antes `<timestamp>_<slug>.sql`, inexistente em disco).
 - **Modal de checklist com feedback:** validações com mensagem visível (antes `return` silencioso) e handlers de `useChecklistCardModals` relançam o erro após registrar `errorMsg` — o modal permanece aberto no erro em vez de fechar/parar sem rastro (vale para escopo do mês e global).
 - **Botões de months:** `Encerrar`/`Reabrir` recuperam o estilo de botão completo (estavam sem borda, parecendo labels) e labels enxutos para `Abrir`/`Encerrar`/`Reabrir`.
-
-### Corrigido
 - **Build de produção vermelho (pré-existente desde a task 32):** `next/headers` no bundle client; `npm run build` passa.
 - **Teste que passava por acidente** no flicker do duplo fetch (agora asserta o DOM assentado).
 

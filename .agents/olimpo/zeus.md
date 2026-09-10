@@ -159,7 +159,7 @@ Retornos: TESTING → CODING (falhas/gaps de Minos)
 ## Execution Flow
 
 ### Phase 1: Analysis
-1. Classifique request: `feature nova` → ciclo completo; `patch` → spec `02a-` na mesma branch
+1. Classifique request: `feature nova` → ciclo completo; `patch` → spec `02a-` na mesma branch; `módulo novo` → ciclo completo cuja primeira task (Atena) executa o gerador `node .agents/scripts/new-module.js <key> "<Nome>" "/mascots/<key>.png" "#cor"` (ver `.agents/module-template.md`; registra `.agents/modules/<key>/backlog.md` + tabela “Módulos Registrados” em `.agents/modules/hestia/backlog.md`)
 2. Identifique requisitos: módulo (`.agents/modules/<modulo>` vs transversal), dependências, artefatos existentes
 3. **Zeus cria `FEATURE_DIR` + estado inicial** — `write` `context.json` + `checkpoint.json` + `.agents/current` → delega `caronte` para Step 0 (valida git, cria branch)
 4. Delegue `hera` imediatamente — **scope check e decomposição são responsabilidade de Hera**, não de Zeus. Se Hera sinalizar escopo grande, Zeus apenas apresenta a decomposição proposta ao humano e aguarda escolha

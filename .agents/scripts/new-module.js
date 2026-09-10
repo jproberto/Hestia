@@ -177,7 +177,7 @@ export interface ${pascalName}ExampleProps {
 export function ${pascalName}Example({ name }: ${pascalName}ExampleProps) {
   return (
     <div className="rounded-lg border bg-card text-card-foreground p-4">
-      <p className="text-sm font-medium">{name}</p>
+      <h3 className="text-lg font-display tracking-wider">{name}</h3>
     </div>
   );
 }
@@ -631,7 +631,7 @@ ${name} é um módulo do guarda-chuva Héstia. Descreva aqui o domínio e propó
     logWarn(`Module '${key}' already registered in .agents/modules/hestia/backlog.md, skipping update`);
   } else {
     // Find the table and add a new row
-    const tableRow = `| ${getNextModuleNumber(backlogContent)} | **${name}** | [Descreva o domínio do módulo] | \`${key}\` | [.agents/modules/${key}/backlog.md](file:///p:/workspace/IA/hestia/.agents/modules/${key}/backlog.md) |`;
+    const tableRow = `| ${getNextModuleNumber(backlogContent)} | **${name}** | [Descreva o domínio do módulo] | \`${key}\` | [.agents/modules/${key}/backlog.md](.agents/modules/${key}/backlog.md) |`;
 
     // Insert after the Pluto row (before the --- separator)
     // Use a more specific pattern matching the Pluto row

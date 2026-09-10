@@ -117,6 +117,11 @@ export * from "./hooks/useExamples";
 export * from "./utils";
 ```
 
+### Visual — títulos (`font-display`)
+- Títulos de módulo/página vêm automáticos via `ModuleLayout` (`moduleName`, `pageTitle` já usam `font-display`)
+- Títulos de conteúdo (cards, seções, modais `h1/h2/h3`) usam o token central `font-display` (CaesarDressing, definido em `app/globals.css`) — nunca hardcode `font-[...]` nem `font-bold tracking-tight` em título
+- Exemplo: `<h3 className="text-lg font-display tracking-wider">`
+
 ---
 
 ## Checklist para Novo Módulo

@@ -456,8 +456,8 @@ export * from "./utils";
   ensureDir(path.join(ROOT_DIR, "__tests__", "components", key));
 
   // __tests__/lib/<key>/repositories/contract-example.test.ts
-  // Suite de contrato compartilhada: roda contra o fake hoje e contra a
-  // impl Supabase quando existir (seam: build() retorna I*Repository).
+  // Suite de contrato compartilhada vs fakes (decisão 57: fakes-only —
+  // sem promessa de impl Supabase; ver seam build() se um dia precisar).
   writeFileIfNotExists(
     path.join(ROOT_DIR, "__tests__", "lib", key, "repositories", "contract-example.test.ts"),
     `import { describe, it, expect, beforeEach } from "vitest";

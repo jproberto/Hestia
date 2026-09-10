@@ -11,7 +11,7 @@ vi.mock("@/lib/pluto/db/budget", () => ({
   getBudgetAdjustment: vi.fn(),
   getBudgetAdjustments: vi.fn(),
   adjustBudgetItem: vi.fn(),
-  getBudgets: vi.fn(),
+  getBudgets: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("next/navigation", () => ({

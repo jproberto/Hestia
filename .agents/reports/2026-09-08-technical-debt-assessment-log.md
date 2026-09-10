@@ -374,6 +374,51 @@
 - **Template:** estrutura sem services/schemas, convenções (services=não scaffoldar, hooks com cancelled), index explícito, checklist (fakes/contracts/stories/db, comandos de validação completos) e princípios (UI→`db/*`, sem `services/` em módulo novo).
 - **Validação final do ciclo:** abaixo, antes do commit único.
 
+### Task 51 — Build de produção vermelho (achado da avaliação pós-ciclo) ✅ Executada
+- **Causa-raiz (pré-existente, desde a task 32):** `lib/shared/supabaseClient.ts` misturava factory browser + factory server (`next/headers`) no mesmo módulo; todo componente client no grafo de import envenenava o bundle → `next build` (Turbopack) falhava. `createServerDatabaseClient` tinha ZERO chamadores e `utils/supabase/server.ts` já cobre server-side — duplicação morta E quebrada (YAGNI reincidente).
+- **Fix:** deletada a factory server + imports `next/headers` removidos + re-export podado. Nenhum consumidor a ajustar (prova por grep).
+- **Validação:** `tsc` 0 erros; `lint` 0 erros; `vitest` 418/418; `next build` VERDE (exit 0, com env placeholder como o CI).
+
+---
+
+## Ciclo 09-10 — Backlog 52–61 (report `2026-09-10-project-health-assessment.md`)
+
+### Task 52 — DEAD-002: remover 2ª camada morta ✅ Executada
+- **Migração primeiro:** `useBudgets`/`useCategories` (únicos consumidores vivos de `services/*`) migrados para barrels `db/budget.getBudgets` + `db/categories.getCategories` com client memoizado (mesmo padrão dos demais hooks); mock `getBudgets` com defaults no teste do overview (regra de factories com defaults).
+- **Removido:** `lib/pluto/services/` por inteiro + hooks sem chamadores (`useTransactions`, `useAccounts`, `useChecklist`, `useMonthlyPeriods`); barrel `hooks/index` podado (13 exports). Grep confirma: zero imports de `services/*` no repo.
+- **Docs:** Mapa (linha `services/` removida) + template (camada inexistente, proibida) atualizados; Atena já proibia recriar.
+- **Validação:** `tsc` 0 erros; `lint` 0 erros; `vitest` 418/418 (após 1 transiente isolado sob carga — verde no rerun imediato e na confirmação).
+
+### Task 61 — VIS-001: background indevido em dashboard/login ✅ Executada
+- **Causa confirmada:** `HestiaLayoutContent` embrulhava tudo em `<MascotBackground>`; `PlutoLayout` nunca teve o wrapper (sobra do pivô da feature 03-visual-identity-mascots, registrado no próprio `context.json`).
+- **Removido:** wrapper + `MascotBackground.tsx` + `useMascotBackground.ts` + `mascot-lqip.ts` (+ 3 testes dedicados) + tipo `MascotBgMode` + re-export + CSS morto (vars `:root`, media reduced-motion, regras `.mascot-background`). `MascotProvider` mantido (contexto ambiente usado por `pluto/layout` + testes).
+- **Achado na execução:** dashboard tinha fetch + logout próprios MORTOS (`handleSignOut` sem chamada — warning pré-existente; `dataState` só alimentava o background) → removidos junto; página ficou estática. Card Pluto com `backgroundImage` inline é arte decorativa intencional — preservado.
+- **Testes:** `dashboard/page.test` e `login/page.test` reescritos (página + axe preservados; asserts de background viraram asserts de AUSÊNCIA — o aceite); `MascotProvider.test` intacto.
+- **Validação:** `tsc` 0 erros; `lint` 0 erros (warnings 36→31); `vitest` 60 arqs / 364 testes verdes em 3 de 4 passadas (1 transiente isolado sob carga, nome não capturado, verde antes/depois).
+
+### Task 53 — GOD-002: decompor useTransactionModals (400) ✅ Executada
+- **Fatiado em:** `useTransactionForm` (modal transação: estados + abrir/editar/prefill/salvar/salvar-e-adicionar) + `useAccountForm` (modal conta) + `useDeleteTransaction` (exclusão); `useTransactionModals` virou compositor com **interface idêntica** (consumidores e teste existente intocados).
+- **Testes novos (3 arqs, +13):** fluxos de cada unidade (validações, guards, edição via update, salvar-e-adicionar, prefill com nome de categoria, no-ops).
+- **Validação:** `tsc` 0 erros; `lint` 0 erros; `vitest` 63 arqs / 377 testes verdes em 2 passadas seguidas.
+
+### Task 54+55 — Higiene Olympus + .gitignore ✅ Executadas
+- **Corrigido:** `zeus.md:100` (olympus.js fantasma → guardian via read/write), `caronte.md:152` (approve-plan → approve-spec/approve-review), `hera.md:50` + `mnemosine.md:86` (paths `modules/`). Grep confirma: só resta a menção que documenta a ausência.
+- **`.agents/current` obsoleto (aponta p/ COMMITTED): mantido de propósito** — Zeus sobrescreve no Step 0; esvaziar poderia quebrar a leitura (`.trim()` de arquivo ausente). Auto-descritivo via `checkpoint.json` (COMMITTED).
+- **`.gitignore`:** `.idea/` adicionado (`.idea/.name` sumiu do `git status`).
+
+### Task 57 — TST-002: contracts fakes-only ✅ Executada (decisão + docs)
+- **Investigado:** zero infra Supabase local ou no CI (env placeholder, sem services, sem CLI) — integração (horn A) exigiria decisão + segredos do humano; fora do loop leve.
+- **Decidido (horn B):** fakes-only documentado — template, gerador e Mapa atualizados (promessas de "impl Supabase quando existir" removidas). Gatilho de revisão: precisar testar SQL real (joins, RLS). Sem mudança de código; sem validação nova necessária.
+
+### Task 56 — Mnemósine proporcional (CHANGELOG/README) ✅ Executada
+- **CHANGELOG:** seção `[Não lançado]` (Keep a Changelog) com Adicionado/Alterado/Removido/Corrigido dos ciclos 09-09/09-10; sem bump de versão (decisão de release, não desta task).
+- **README:** subseção "Camadas e padrão de código" (pointer ao Mapa + comando do gerador). Restante já estava atual.
+
+### Task 58+59+60 — Flakiness, RLS, warnings ✅ Executadas (registro + verificação)
+- **58 (baseline):** ~1 transiente a cada 3–5 runs completos no período (sempre verde no rerun imediato, sempre page test com warnings `act(...)`, nomes variados — sem fixação). Monitorar; intervir se fixar ou a taxa subir.
+- **59 (RLS CONCLUÍDO POR ACEITE — sem auditoria executada):** dono corrigiu o modelo (admin/admin, sem isolamento por usuário — `created_by` é auditoria; verificado zero filtros por dono nas leituras). Risco residual aceito explicitamente: estado das policies desconhecido; gatilhos de reabertura: exposição maior ou indício de acesso anônimo.
+- **60 (oportunista):** 31 warnings (eram 36; remoções do ciclo levaram 5 junto); nenhum adicionado pelos arquivos tocados.
+
 ### Task 46 — GOD-001: decompor budget/months pages + ChecklistCard ✅ Executada
 - **Budget (512→119):** `useBudgetOverview` (ano/ajustes/revisão/budgets/derivados/start/create) + `useBudgetItemEditor` (form+sugestões+inline) + 5 presentacionais (`BudgetSelectors/EmptyState/SummaryCards/ForecastForm/Tables`) + página só composição. JSX verbatim; `budgetsLoading/categoriesLoading` não usados foram embora.
 - **Months (242→66):** `useMonthsData(year)` (carga/abrir/encerrar/erro de tabela ausente com strings exatas preservadas) + `MonthsGrid` (resumo + 12 cards) + página (select ano + erro + grid). `Button`/`Link` não usados removidos.

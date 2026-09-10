@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
-import { MascotConfig, resolveMascotKey, MASCOT_REGISTRY, ROUTE_TO_MASCOT, type MascotKey, type MascotBgMode } from './mascots'
+import { MascotConfig, resolveMascotKey, MASCOT_REGISTRY, ROUTE_TO_MASCOT, type MascotKey } from './mascots'
 
 interface MascotContextValue {
   mascot: MascotConfig
@@ -72,5 +72,3 @@ export function useMascot(): MascotContextValue {
   }
   return context
 }
-
-export { useMascotBackground } from './useMascotBackground'

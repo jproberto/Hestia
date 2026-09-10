@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
 import { Category } from "@/lib/pluto/types";
-import { getAllCategories } from "@/lib/pluto/services/categories";
+import { getCategories } from "@/lib/pluto/db/categories";
 
 interface UseCategoriesOptions {
   type?: "receita" | "despesa";
@@ -17,6 +18,7 @@ interface UseCategoriesReturn {
 }
 
 export function useCategories({ type, enabled = true }: UseCategoriesOptions): UseCategoriesReturn {
+  const db = useMemo(() => createBrowserDatabaseClient(), []);
   const [data, setData] = useState<Category[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +28,7 @@ export function useCategories({ type, enabled = true }: UseCategoriesOptions): U
     setLoading(true);
     setError(null);
     try {
-      const categories = await getAllCategories(type);
+      const categories = await getCategories(db, type);
       setData(categories);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erro ao carregar categorias";
@@ -35,12 +37,12 @@ export function useCategories({ type, enabled = true }: UseCategoriesOptions): U
     } finally {
       setLoading(false);
     }
-  }, [type, enabled]);
+  }, [db, type, enabled]);
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    getAllCategories(type).then(
+    getCategories(db, type).then(
       (categories) => {
         if (cancelled) return;
         setData(categories);
@@ -56,7 +58,7 @@ export function useCategories({ type, enabled = true }: UseCategoriesOptions): U
     return () => {
       cancelled = true;
     };
-  }, [type, enabled]);
+  }, [db, type, enabled]);
 
   return { data, loading, error, refetch: fetchCategories };
 }

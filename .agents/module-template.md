@@ -31,7 +31,7 @@ app/<modulo>/
 
 __tests__/lib/<modulo>/
   *.test.ts         # Testes unitários (contracts via fakes, hooks, utils)
-  repositories/contract-*.test.ts  # Contratos compartilhados (fakes; prontos p/ impl Supabase)
+  repositories/contract-*.test.ts  # Contratos compartilhados vs fakes (decisão 57: fakes-only, sem impl Supabase prometida)
 
 __tests__/components/<modulo>/
   *.test.tsx        # Testes de componentes
@@ -63,7 +63,7 @@ export async function getTransactionsByMonth(
 ```
 
 ### Services (`lib/<modulo>/services/`)
-- **NÃO scaffoldar em módulos novos** (legado só do Pluto, congelado): standalones antigas que criam o próprio client. Módulo novo acessa dados via `db/*` direto dos hooks.
+- **NÃO EXISTE (removido na 52; proibido recriar)**: a camada de standalones do Pluto foi migrada para `db/*` e deletada. Módulo novo acessa dados via `db/*` direto dos hooks.
 - Validação de input vive nos forms/modais (boundary real), não em camada intermediária
 
 ### Hooks (`lib/<modulo>/hooks/`)
@@ -136,7 +136,7 @@ export * from "./utils";
 
 ## Princípios não-negociáveis
 
-1. **UI (pages/hooks) acessa dados via `db/*`** (barrels sobre repositories) → nunca SQL/Supabase na UI (no Pluto há standalones legadas em `services/*`, congeladas — módulo novo não cria `services/`)
+1. **UI (pages/hooks) acessa dados via `db/*`** (barrels sobre repositories) → nunca SQL/Supabase na UI (não existe `services/` — removido na 52)
 2. **Repositories** são a única camada que toca dados, sempre via `IDatabaseClient` → nunca `@supabase/*` fora de `lib/shared/`
 3. **Regras de persistência** vivem nos repositories; **regras puras** em `utils.ts`/`<dominio>-*.ts`; **validação de input** nos forms/modais (não há `schemas/`)
 4. Caminhos completos e proibições: ver **Mapa de Camadas no AGENTS.md** (fonte normativa; este template o resume)

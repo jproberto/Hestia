@@ -97,7 +97,7 @@ Retornos: TESTING → CODING (falhas/gaps de Minos)
 - `spec.md`, `plan.md`, `tasks.json`, `test-report.json`, `review-report.json`, `diff.patch`, `test-scenarios.md`
 - Regressão global: `.agents/modules/<modulo>/regression.md` e `.agents/modules/hestia/regression.md`
 
-**Resolução do FEATURE_DIR:** `olympus.js` cria `FEATURE_DIR` e grava `.agents/current` (ponteiro). Zeus sempre resolve `FEATURE_DIR` lendo `.agents/current` antes de qualquer operação.
+**Resolução do FEATURE_DIR:** Zeus cria `FEATURE_DIR` e grava `.agents/current` (ponteiro, via read/write — não existe script `olympus.js`). Zeus sempre resolve `FEATURE_DIR` lendo `.agents/current` antes de qualquer operação.
 
 **Checkpoints humanos obrigatórios (2 únicos):**
 - `SPEC_APPROVED`: humano lê e aprova `spec.md` (Hera). Zeus bloqueia se `approvals.spec !== "approved"`

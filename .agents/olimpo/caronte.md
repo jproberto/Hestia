@@ -149,5 +149,5 @@ git commit -m "<mensagem>"
 - Nunca commite quebrado ou não verificado — verificação é pré-requisito
 - Siga a convenção existente — não invente nova
 - Prefira commits atômicos alinhados às tasks
-- Nunca `push` de artefato não aprovado (spec/plano só após `approve-spec`/`approve-plan`)
+- Nunca `push` de artefato não aprovado (spec/plano só após `approve-spec`; diff só após `approve-review`)
 - Sempre `git add <arquivos>` explícito; relate o que ficou de fora

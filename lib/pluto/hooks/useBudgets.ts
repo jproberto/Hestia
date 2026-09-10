@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
 import { BudgetItem } from "@/lib/pluto/types";
-import { getBudgetItemsWithCategories } from "@/lib/pluto/services/budget";
+import { getBudgets } from "@/lib/pluto/db/budget";
 
 interface UseBudgetsOptions {
   year: number;
@@ -18,6 +19,7 @@ interface UseBudgetsReturn {
 }
 
 export function useBudgets({ year, month, enabled = true }: UseBudgetsOptions): UseBudgetsReturn {
+  const db = useMemo(() => createBrowserDatabaseClient(), []);
   const [data, setData] = useState<BudgetItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,7 @@ export function useBudgets({ year, month, enabled = true }: UseBudgetsOptions): 
     setLoading(true);
     setError(null);
     try {
-      const budgets = await getBudgetItemsWithCategories(year, month);
+      const budgets = await getBudgets(db, year, month);
       setData(budgets);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erro ao carregar orçamentos";
@@ -36,12 +38,12 @@ export function useBudgets({ year, month, enabled = true }: UseBudgetsOptions): 
     } finally {
       setLoading(false);
     }
-  }, [year, month, enabled]);
+  }, [db, year, month, enabled]);
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    getBudgetItemsWithCategories(year, month).then(
+    getBudgets(db, year, month).then(
       (budgets) => {
         if (cancelled) return;
         setData(budgets);
@@ -57,7 +59,7 @@ export function useBudgets({ year, month, enabled = true }: UseBudgetsOptions): 
     return () => {
       cancelled = true;
     };
-  }, [year, month, enabled]);
+  }, [db, year, month, enabled]);
 
   return { data, loading, error, refetch: fetchBudgets };
 }

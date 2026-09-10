@@ -15,8 +15,6 @@
 
 export type MascotKey = 'hestia' | 'pluto' | string
 
-export type MascotBgMode = 'prominent' | 'watermark'
-
 export interface MascotConfig {
   key: MascotKey
   src: string

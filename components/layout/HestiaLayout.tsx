@@ -2,8 +2,7 @@
 
 import { ReactNode } from "react";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
-import { MascotProvider, useMascotBackground } from "@/lib/hestia/MascotProvider";
-import { MascotBackground } from "@/components/ui/MascotBackground";
+import { MascotProvider } from "@/lib/hestia/MascotProvider";
 
 export interface HestiaLayoutProps {
   pageTitle?: string;
@@ -11,11 +10,9 @@ export interface HestiaLayoutProps {
   children: ReactNode;
 }
 
-function HestiaLayoutContent({ pageTitle, pageSubtitle, children, dataState }: HestiaLayoutProps & { dataState: 'loading' | 'empty' | 'error' | 'has-data' }) {
-  const { mode, mascotKey, transitionClass, lqipStyle } = useMascotBackground(dataState);
-
+export function HestiaLayout({ pageTitle, pageSubtitle, children }: HestiaLayoutProps) {
   return (
-    <MascotBackground mode={mode} mascotKey={mascotKey === "pluto" ? "pluto" : "hestia"} className={transitionClass} style={lqipStyle}>
+    <MascotProvider mascotKey="hestia">
       <ModuleLayout
         mascot="/mascots/hestia.png"
         moduleName="Hestia"
@@ -26,16 +23,6 @@ function HestiaLayoutContent({ pageTitle, pageSubtitle, children, dataState }: H
       >
         {children}
       </ModuleLayout>
-    </MascotBackground>
-  );
-}
-
-export function HestiaLayout({ pageTitle, pageSubtitle, children, dataState = 'loading' }: HestiaLayoutProps & { dataState?: 'loading' | 'empty' | 'error' | 'has-data' }) {
-  return (
-    <MascotProvider mascotKey="hestia">
-      <HestiaLayoutContent pageTitle={pageTitle} pageSubtitle={pageSubtitle} dataState={dataState}>
-        {children}
-      </HestiaLayoutContent>
     </MascotProvider>
   );
 }

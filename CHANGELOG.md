@@ -5,6 +5,33 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.0.html).
 
+## [Não lançado]
+
+### Adicionado
+- **Mapa de Camadas no `AGENTS.md`:** diagrama + tabela camada→responsabilidade→importa-de→testado-com + FAQ "Onde ponho X?" (fonte normativa; Atena exige declarar camadas no plano).
+- **Testes novos:** single-flight do fetch, identidade do singleton de client, enriquecimento de `category_name`, contratos por unidade extraída (budget/months/checklist/modais) — suíte em 63 arquivos / 418 testes.
+- **Gerador `new-module.js` pós-arquitetura:** scaffolda `types` + `repositories`/`interfaces`/`fakes` + `db/` + `hooks` + contract + story + testes espelho (verificado de ponta a ponta com módulo dummy).
+
+### Alterado
+- **Single-flight do fetch inicial (`usePlutoData`):** 1 fetch por mount, seleção resolvida em memória, request id last-writer-wins no lugar da flag `cancelled`.
+- **`createBrowserDatabaseClient()` singleton por aba;** caminho único de imports (UI via `db/*`); `getUserEmail()` documentado como porta de sessão.
+- **Decomposições (sem mudança visual):** budget 512→119, months 242→66, `ChecklistCard` 237→144, `useTransactionModals` 400→3 hooks + compositor.
+- **Tipos honestos:** `category_name` enriquecido no repositório; `categoryType` obrigatório nos resultados de overflow.
+- **Higiene de testes:** mock central no setup, `Mock` como tipo, `hooks/index` completo, `ChecklistItemWithAmount` removida.
+- **Hestia sem background:** wrapper `MascotBackground` removido de dashboard/login (referência: Pluto); página do dashboard ficou estática (fetch/logout mortos removidos).
+- **Docs Olympus:** refs defasadas corrigidas (4 arquivos); contracts declarados `fakes-only`; backlog com épicos 4–5 concluídos/em andamento.
+
+### Removido
+- **Camada morta (41):** `use-cases/`, `schemas/` (Zod), `mappers.ts`, factories `createXService`, dep `zod`.
+- **2ª camada morta (52):** `services/` por inteiro, hooks sem chamadores (`useTransactions`, `useAccounts`, `useChecklist`, `useMonthlyPeriods`).
+- **Identidade visual revertida (61):** `MascotBackground`, `useMascotBackground`, `mascot-lqip`, tipo `MascotBgMode`, CSS associado.
+- **Build:** factory server (`createServerDatabaseClient`) fora do bundle client — `next build` verde.
+- **Deps órfãs:** `@testing-library/user-event`, `@storybook/addon-mcp`.
+
+### Corrigido
+- **Build de produção vermelho (pré-existente desde a task 32):** `next/headers` no bundle client; `npm run build` passa.
+- **Teste que passava por acidente** no flicker do duplo fetch (agora asserta o DOM assentado).
+
 ## [0.9.0] - 2026-08-27
 
 ### Adicionado

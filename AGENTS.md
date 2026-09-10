@@ -18,7 +18,7 @@ Código específico de um módulo vive em `<camada>/<modulo>/` nas camadas `app`
 
 ## Mapa de Camadas (pós-41, fonte: Pluto)
 
-> Decisões registradas: task 41 removeu `use-cases/`, `schemas/` (Zod), `mappers.ts` e factories `createXService` (Opção A, YAGNI) — não recriar sem religar consumidores. Regras de persistência vivem nos repositories; validação runtime vive nos forms (boundary real). Task 47: caminho recomendado UI → `db/*` + `hooks/*`, domínio → `repositories/*` (`services/*` standalones legadas, congeladas); `createBrowserDatabaseClient()` é singleton por aba; barrel `lib/pluto/index.ts` removido (sem importadores). Task 48: `getUserEmail()` aceito em `IDatabaseClient` como porta de sessão do app cliente (4 usos, todos na UI, sempre junto ao fluxo de dados p/ `created_by`; separar em `IAuthSession` seria churn sem ganho — revisitar se surgir 2º consumidor de auth).
+> Decisões registradas: task 41 removeu `use-cases/`, `schemas/` (Zod), `mappers.ts` e factories `createXService` (Opção A, YAGNI) — não recriar sem religar consumidores. Regras de persistência vivem nos repositories; validação runtime vive nos forms (boundary real). Task 47: caminho recomendado UI → `db/*` + `hooks/*`, domínio → `repositories/*`; `createBrowserDatabaseClient()` é singleton por aba; barrel `lib/pluto/index.ts` removido (sem importadores). Task 52: `services/` removido por inteiro (2 standalones vivas migradas para `db/*`; 4 hooks legados deletados) — proibido recriar (ver Atena). Task 48: `getUserEmail()` aceito em `IDatabaseClient` como porta de sessão do app cliente (4 usos, todos na UI, sempre junto ao fluxo de dados p/ `created_by`; separar em `IAuthSession` seria churn sem ganho — revisitar se surgir 2º consumidor de auth).
 
 ```
 app/<modulo>/*/page.tsx ──▶ hooks/* ──▶ db/* ──▶ repositories/* ──▶ IDatabaseClient ──▶ Supabase
@@ -34,8 +34,7 @@ lib/<modulo>/types.ts ◀── fonte única (todos importam daqui)
 | `components/<modulo>/` | Presentacionais (props), `*.stories.*` p/ novos | `types.ts`, ui compartilhado | `__tests__/components/` + build do Storybook |
 | `lib/<modulo>/hooks/` | Fetch+estado+operações (promise-chain + flag `cancelled`) | `db/*`, `services/*` (standalones legadas), `types.ts` | `__tests__/lib/<modulo>/hooks/` |
 | `lib/<modulo>/db/` | Barrels `export *` sobre `repositories/` — **caminho oficial da UI** | `repositories/*` | `vi.mock` nos testes de página/hooks |
-| `lib/<modulo>/repositories/` | Dados + regras de persistência (ex.: período aberto); `I*Repository`, `fakes/` | `IDatabaseClient` (`lib/shared`), `types.ts` — **nunca `@supabase/*`** | contracts+fakes (`contract-*.test.ts`), `__tests__/lib/<modulo>/db/` |
-| `lib/<modulo>/services/` | Standalones legadas congeladas (wrappers c/ client próprio) — **nada novo aqui** | `repositories/*`, `lib/shared/supabaseClient` | indireto (via hooks) |
+| `lib/<modulo>/repositories/` | Dados + regras de persistência (ex.: período aberto); `I*Repository`, `fakes/` | `IDatabaseClient` (`lib/shared`), `types.ts` — **nunca `@supabase/*`** | contracts+fakes (`contract-*.test.ts`, fakes-only — decisão 57), `__tests__/lib/<modulo>/db/` |
 | `lib/<modulo>/types.ts` | Fonte única: Row/Input/Domain/FormData | — | compilação (tsc) |
 | `lib/<modulo>/{checklist-budget,utils}.ts` | Regras puras (overflow, agregações, datas) | `types.ts` | testes unitários diretos |
 | `lib/shared/` | `IDatabaseClient` (+`getUserEmail` como porta de sessão) + adapter Supabase (único lugar que conhece `@supabase/*`) | `@supabase/*` | mocks nos testes |

@@ -26,6 +26,10 @@ O Héstia é um **guarda-chuva de sub-sistemas** organizado pelo padrão *módul
 
 O **Pluto** é o módulo financeiro do Héstia e o primeiro a seguir esse padrão; novos módulos são registrados na tabela "Módulos Registrados" do backlog central (`.agents/modules/hestia/backlog.md`) com documentação por feature em `.agents/modules/<modulo>/<slug>/` (`spec.md`, `plan.md`, `tasks.json`, `context.json`, `checkpoint.json`).
 
+### Camadas e padrão de código
+
+Mapa normativo em `AGENTS.md` ("Mapa de Camadas"): UI (`app/`, `components/`) consome via `hooks/*` + barrels `lib/<modulo>/db/*`; dados e regras de persistência em `lib/<modulo>/repositories/` via `IDatabaseClient`; tipos só em `lib/<modulo>/types.ts`; validação de input nos forms. Novo módulo via `node .agents/scripts/new-module.js <key> "<Nome>" "/mascots/<key>.png" "#cor"` — gera árvore que compila, testa (contracts+fakes) e documenta (story).
+
 ### Arquitetura de Agentes (Olympus)
 
 Orquestração multi-agentes via `.agents/olimpo/` (8 agentes com frontmatter `mode/color/temperature/permission` + anti-hallucination):

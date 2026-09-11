@@ -98,9 +98,14 @@ jobs:
           supabase status
           echo "--- variáveis disponíveis (valores mascarados) ---"
           supabase status -o env | sed -E 's/=.*$/=<masked>/'
-          # -o env pode prefixar com "export " (formato eval);
-          # $GITHUB_ENV só aceita KEY=value — normaliza antes de exportar.
-          supabase status -o env | sed -e 's/^export //' >> "$GITHUB_ENV"
+          # Nomes reais da CLI moderna (DB_URL/API_URL/SERVICE_ROLE_KEY);
+          # eval cobre com ou sem prefixo "export ". Aliases no padrão do job.
+          eval "$(supabase status -o env)"
+          {
+            echo "POSTGRES_URL=$DB_URL"
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
 
       - name: Apply Migrations From Scratch
         env:

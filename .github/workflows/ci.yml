@@ -83,17 +83,22 @@ jobs:
         run: npm ci
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        # setup-cli entregava v2.20.3 (sem -o env utilizável); fixa a versão
+        # moderna via npm para init/start/status consistentes.
+        run: npm install -g supabase@2.117.0
 
       - name: Start Supabase Local
         run: |
+          supabase --version
           supabase init
           supabase start
 
       - name: Export Local Supabase Env
         run: |
           supabase status
-          # status -o env pode prefixar com "export " (formato eval);
+          echo "--- variáveis disponíveis (valores mascarados) ---"
+          supabase status -o env | sed -E 's/=.*$/=<masked>/'
+          # -o env pode prefixar com "export " (formato eval);
           # $GITHUB_ENV só aceita KEY=value — normaliza antes de exportar.
           supabase status -o env | sed -e 's/^export //' >> "$GITHUB_ENV"
 

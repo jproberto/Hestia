@@ -49,7 +49,7 @@ export function useMonthsData(year: number): MonthsData {
       console.error("Erro ao carregar períodos:", err);
       const msg = parseErrorMessage(err);
       if (isMissingTableMessage(msg)) {
-        setErrorMessage("A tabela 'monthly_periods' não existe no Supabase. Execute o script utils/migrations/migration-feature-4.sql no console SQL do Supabase.");
+        setErrorMessage("A tabela 'monthly_periods' não existe no Supabase. Execute o script utils/migrations/migration-feature-3.sql no console SQL do Supabase.");
       } else {
         setErrorMessage("Erro ao carregar períodos: " + msg);
       }
@@ -93,7 +93,7 @@ export function useMonthsData(year: number): MonthsData {
       console.error("Erro ao abrir mês:", err);
       const msg = parseErrorMessage(err);
       if (isMissingTableMessage(msg)) {
-        setErrorMessage("A tabela 'monthly_periods' não existe no banco de dados. Execute o script SQL utils/migrations/migration-feature-4.sql no Supabase.");
+        setErrorMessage("A tabela 'monthly_periods' não existe no banco de dados. Execute o script SQL utils/migrations/migration-feature-3.sql no Supabase.");
       } else {
         setErrorMessage(`Erro ao abrir o mês: ${msg}`);
       }
@@ -118,7 +118,7 @@ export function useMonthsData(year: number): MonthsData {
       console.error("Erro ao encerrar mês:", err);
       const msg = parseErrorMessage(err);
       if (isMissingTableMessage(msg)) {
-        setErrorMessage("A tabela 'monthly_periods' não existe no banco de dados. Execute o script SQL utils/migrations/migration-feature-4.sql no Supabase.");
+        setErrorMessage("A tabela 'monthly_periods' não existe no banco de dados. Execute o script SQL utils/migrations/migration-feature-3.sql no Supabase.");
       } else {
         setErrorMessage(`Erro ao encerrar o mês: ${msg}`);
       }

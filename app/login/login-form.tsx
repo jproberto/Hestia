@@ -36,7 +36,7 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4" aria-label="Login">
       <div className="flex flex-col gap-2">
         <Label htmlFor="email">Email</Label>
         <Input

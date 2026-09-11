@@ -1,0 +1,320 @@
+---
+name: sdd-02-plan
+description: Use quando houver uma spec, requisitos ou design aprovado para uma tarefa de múltiplas etapas, antes de tocar em código. Escreve um plano de implementação completo e executável, com escopo, estrutura de arquivos, tarefas pequenas, passos TDD, código necessário, comandos exatos, saídas esperadas, commits frequentes, auto-revisão e handoff para execução. Não usar para implementar código diretamente, nem sem uma spec/design aprovado — nesse caso, use sdd-01-brainstorm primeiro.
+---
+
+# Escrevendo Planos
+
+## Visão Geral
+
+Escreva planos de implementação completos assumindo que o executor é um desenvolvedor habilidoso, mas tem quase zero contexto do codebase, do domínio do problema e das convenções locais.
+
+Documente tudo que ele precisa saber:
+
+- QUAIS arquivos tocar em cada tarefa (criar, modificar, testar).
+- QUAL o objetivo técnico e contrato de cada tarefa.
+- QUAIS testes criar e quais critérios de aceite validar.
+- QUAIS comandos executar (suíte de teste, linter, sdd CLI).
+- COMO saber que a tarefa passou.
+- QUANDO commitar.
+
+⚠️ **Regra Fundamental do Plano (Planejamento sem Código de Implementação)**: O plano serve para planejar a estratégia de desenvolvimento, quebrando a spec em tarefas (tasks) pequenas, ordenadas, independentes e testáveis. O plano NÃO deve conter blocos de código de implementação nem soluções de código prontas. Quem decide a implementação e escreve o código final é o executor/implementador na skill apropriada (`sdd-03-implement`).
+
+O plano deve quebrar a implementação em tarefas pequenas, rastreáveis e revisáveis.
+
+Princípios: DRY, YAGNI, TDD e commits frequentes.
+
+**Anuncie no início:** "Estou usando a skill sdd-02-plan para criar o plano de implementação."
+
+**Onde salvar o plano:** `.agents/plans/<ID>-<slug>-plan.md` para features transversais/núcleo Héstia, ou `.agents/<modulo>/plans/<ID>-<slug>-plan.md` para features de um módulo registrado (consulte a tabela "Módulos Registrados" do backlog central) *(Onde <ID> é o ID da funcionalidade no backlog e <slug> é o nome curto em inglês. Exemplo: `01-contas-plan.md`)*, salvo se o usuário ou o projeto já tiver outra convenção — nesse caso, use a convenção existente.
+
+## O Processo
+
+### Passo 1: Verificar Conformidade do Processo (Novo)
+
+Antes de qualquer outra ação, invoque a `sdd-tool-guardian` para garantir que esta skill está sendo chamada no momento correto do fluxo.
+
+### Passo 2: Levantar as Entradas
+
+Use esta skill depois de uma spec aprovada, normalmente criada por `sdd-01-brainstorm`.
+
+Fontes úteis:
+
+- `.agents/specs/YYYY-MM-DD-<topico>-design.md`
+- Spec indicada pelo usuário.
+- Requisitos na conversa.
+- Código existente.
+- Testes existentes.
+- Docs do projeto.
+- `AGENTS.md` na raiz, se existir — convenções, comandos de build/teste e estrutura documentados ali têm precedência sobre suposições.
+
+Preferências explícitas do usuário ou do projeto sobrescrevem os caminhos padrão. Se nenhuma spec, requisito claro ou design aprovado existir, não invente escopo (ver "Quando Parar e Pedir Ajuda").
+
+### Passo 3: Scope Check
+
+Verifique se a spec cobre múltiplos subsistemas independentes.
+
+Se a spec deveria ter sido quebrada durante o brainstorming e não foi, diga isso e sugira decompor em planos separados, um por subsistema.
+
+Cada plano deve produzir software funcionando e testável por conta própria.
+
+Exemplos de sinais de plano grande demais:
+
+- Uma mesma spec inclui autenticação, billing, analytics e chat.
+- O plano exigiria várias frentes independentes com pouca interação.
+- Uma task precisaria mexer em muitos módulos sem entregar comportamento testável.
+- A implementação só ficaria verificável no final de tudo.
+
+Quando isso acontecer, não force um plano gigante. Proponha divisão e peça aprovação antes de continuar.
+
+### Passo 4: Mapear a Estrutura de Arquivos
+
+Antes de definir tarefas, mapeie quais arquivos serão criados ou modificados e qual será a responsabilidade de cada um.
+
+Essa é a etapa em que as decisões de decomposição ficam travadas.
+
+Inclua:
+
+- `Create`: arquivos novos, com responsabilidade clara.
+- `Modify`: arquivos existentes, com motivo da mudança.
+- `Test`: arquivos de teste.
+- `Docs`: documentação quando necessário.
+
+Regras:
+
+- Desenhe unidades com fronteiras claras e interfaces bem definidas.
+- Cada arquivo deve ter uma responsabilidade principal.
+- Prefira arquivos menores e focados a arquivos grandes que fazem coisas demais.
+- Arquivos que mudam juntos devem ficar próximos.
+- Divida por responsabilidade, não por camada técnica de forma automática.
+- Em codebases existentes, siga padrões locais.
+- Se o projeto usa arquivos grandes, não reestruture unilateralmente.
+- Se um arquivo que será modificado já está grande demais ou com responsabilidades confusas, incluir uma divisão local no plano é razoável.
+
+A estrutura de arquivos deve informar a decomposição das tarefas. Cada tarefa deve produzir uma mudança autocontida que faça sentido de forma independente.
+
+### Passo 5: Dimensionar as Tarefas
+
+Uma tarefa é a menor unidade que:
+
+- Tem seu próprio ciclo de teste.
+- Produz um entregável independente.
+- Merece o gate de um reviewer fresco.
+- Pode ser rejeitada enquanto uma tarefa vizinha é aprovada.
+
+Ao definir fronteiras:
+
+- Incorpore setup, configuração, scaffolding e documentação à tarefa cujo entregável precisa deles.
+- Não crie tasks soltas de "setup" se o setup não entrega valor verificável sozinho.
+- Divida apenas quando um reviewer conseguir avaliar uma tarefa separadamente da outra.
+- Cada tarefa deve terminar com algo testável.
+- **Versão do Projeto (SemVer):** O bump de versão no `package.json` NÃO deve ser incluído nos planos de tarefas de implementação. A atualização de versão (SemVer) ocorre exclusivamente no final do ciclo de homologação/revisão, imediatamente antes da execução do `git push`.
+
+Dentro de cada tarefa, cada passo deve ser uma ação única, de 2-5 minutos.
+
+Bons passos:
+
+- "Escrever o teste que falha."
+- "Rodar o teste e confirmar que falha pelo motivo esperado."
+- "Implementar o mínimo para fazer o teste passar."
+- "Rodar o teste e confirmar que passa."
+- "Rodar testes relacionados."
+- "Commitar."
+
+Passos ruins:
+
+- "Implementar autenticação."
+- "Adicionar validação."
+- "Criar testes."
+- "Ajustar frontend e backend."
+- "Finalizar feature."
+
+### Passo 6: Escrever o Cabeçalho do Plano
+
+Todo plano deve começar com este cabeçalho:
+
+```markdown
+# [Nome da Feature] Implementation Plan
+
+> **Para agentes:** REQUIRED SUB-SKILL: use `sdd-03-implement` para implementar este plano tarefa por tarefa.
+
+**Objetivo:** [Uma frase descrevendo o que será construído]
+
+**Arquitetura:** [2-3 frases sobre a abordagem]
+
+**Tech Stack:** [Tecnologias e bibliotecas principais]
+
+## Restrições Globais
+
+[Requisitos globais da spec: versões mínimas, limites de dependência, regras de naming/copy, plataformas, performance, privacidade e compatibilidade. Copie valores exatos da spec. Toda task herda esta seção implicitamente.]
+
+---
+```
+
+Não use o cabeçalho como formalidade vazia. Ele precisa conter informação suficiente para orientar o executor.
+
+### Passo 7: Escrever Cada Tarefa
+
+Use este formato para cada tarefa:
+
+```markdown
+### Tarefa N: [Nome do componente ou comportamento]
+
+**Arquivos:**
+- Criar: `exact/path/to/file.py`
+- Modificar: `exact/path/to/existing.py`
+- Testar: `tests/exact/path/to/test_file.py`
+
+**Interfaces:**
+- Consome: [o que esta tarefa usa de tarefas anteriores: assinaturas exatas, tipos, eventos, contracts]
+- Produz: [o que tarefas futuras dependem: nomes de função, parâmetros, retorno, tipos, schema]
+
+**Passo 1: Executar o início da tarefa no CLI do SDD**
+
+Run: `node .agents/scripts/sdd.js task-start N`
+
+**Passo 2: Escreva o teste que falha**
+
+```python
+def test_specific_behavior():
+    result = function(input)
+    assert result == expected
+```
+
+**Passo 3: Execute o teste para garantir que ele falha**
+
+Run: `pytest tests/path/test_file.py::test_specific_behavior -v`
+Expected: FAIL with "function not defined"
+
+**Passo 4: Escreva implementação mínima**
+
+```python
+def function(input):
+    return expected
+```
+
+**Passo 5: Execute o teste para garantir que ele passa**
+
+Run: `pytest tests/path/test_file.py::test_specific_behavior -v`
+Expected: PASS
+
+**Passo 6: Marcar a tarefa como concluída no CLI do SDD**
+
+Run: `node .agents/scripts/sdd.js task-complete N`
+
+**Passo 7: Commit**
+
+```bash
+git add tests/path/test_file.py src/path/file.py
+node .agents/scripts/sdd.js commit "feat: add specific behavior"
+```
+
+Adapte linguagem, framework e comandos ao projeto. Preserve a estrutura.
+
+**Interfaces entre tarefas:** o executor de uma tarefa pode ver apenas aquela tarefa. O bloco `Interfaces` é como ele descobre nomes, tipos e contratos usados por tarefas vizinhas. Se uma tarefa posterior usa algo criado antes, escreva exatamente: nome da função/classe/componente, parâmetros, tipo de retorno, eventos emitidos, schema de dados, path de import, config ou env vars. Não use nomes aproximados — inconsistência entre tarefas é bug de plano.
+
+**TDD:** planeje TDD como padrão para qualquer mudança de comportamento — escrever teste que falha, rodar e confirmar falha pelo motivo certo, implementar o mínimo, rodar e confirmar sucesso, refatorar somente com teste verde, rodar testes relacionados, commitar. Se TDD não fizer sentido para uma parte específica, explique no plano e forneça uma verificação alternativa objetiva.
+
+**Commits frequentes:** inclua passos de commit em cada tarefa ou em pontos naturais pequenos. Commits devem vir depois de verificações verdes, incluir arquivos exatos no `git add`, ter mensagem específica, e não misturar tarefas independentes. Se o projeto não for um repositório git, omita passos de commit e registre essa condição no plano.
+
+**Sem placeholders:** cada passo deve conter o conteúdo real de que o executor precisa. São falhas de plano: `TBD`, `TODO`, "implementar depois", "preencher detalhes", "adicionar error handling apropriado", "adicionar validação", "tratar edge cases", "escrever testes para o código acima", "similar à Task N", passos que dizem o que fazer sem mostrar como, ou referências a tipos/funções/métodos não definidos em nenhuma tarefa. Quando um passo altera código, inclua o código ou um patch suficientemente específico. Quando um passo executa comando, inclua comando exato, diretório quando relevante, resultado esperado, e falha esperada quando for etapa red do TDD. Repita detalhes necessários mesmo que pareça redundante — o executor pode ler tasks fora de ordem ou com contexto reduzido.
+
+**Cenários de Teste Manuais de Aceitação**: Se o plano envolver alterações em elementos visuais de UI ou interações complexas do usuário (cliques, foco, atalhos de teclado), você **DEVE incluir, ao final do plano de implementação, uma seção dedicada intitulada '## Cenários de Teste Manuais de Aceitação'**. Nessa seção, descreva em formato de Critérios de Aceitação (Dado-Quando-Então) os caminhos felizes e restritivos que o parceiro humano precisará validar fisicamente localmente na UI. Isso garante que o comportamento esperado esteja bem definido antes da fase de homologação.
+
+### Passo 8: Self-Review
+
+Depois de escrever o plano completo, revise a spec com olhar fresco e confira o plano contra ela.
+
+Esta é uma checklist que você executa diretamente. Não despache subagente para isso.
+
+---
+
+## Commit do Plano (Passo 9 complementar)
+
+Após a aprovação do plano pelo usuário (regra de Stop & Wait do Turno), o próximo passo é executar o commit do artefato:
+
+**Comando:** `node .agents/scripts/sdd.js commit "planning: <descrição do plano>"`
+
+**Artefato commitado:** `.agents/plans/<ID>-<slug>-plan.md` ou `.agents/<modulo>/plans/<ID>-<slug>-plan.md`
+
+**Momento:** Apenas após o usuário responder explicitamente "aprovado" à apresentação do plano. Nunca commite o plano na mesma resposta em que ele é apresentado.
+
+**Por que isso importa:** Assim como a spec precisa de commit separado após aprovação, o plano também precisa ser registrado no git. Isso garante que:
+- O histórico do projeto tenha o plano documentado
+- O link entre backlog → spec → plano fique completo e rastreável
+- O próximo agente que pegar o fluxo saiba que o plano já foi aprovado e registrado
+
+**Observação:** O commit do plano é distinto dos commits das tasks de implementação (que acontecem em `sdd-03-implement`). Esse é o commit do próprio artefato de plano.
+
+1. **Cobertura da spec.** Percorra cada seção e requisito da spec. Para cada um, responda: qual task implementa isso, qual teste ou verificação prova isso, alguma restrição global foi esquecida. Liste lacunas e corrija o plano. Se um requisito da spec não tem task, adicione uma task.
+2. **Busca por placeholders.** Procure os padrões proibidos do Passo 7 (`TBD`, `TODO`, "similar", "apropriado", "edge cases", "validar", "implementar depois"). Corrija inline — não deixe observações vagas para o executor resolver.
+3. **Consistência.** Verifique se tipos, assinaturas, nomes de métodos, props, eventos, paths e schemas usados em tasks posteriores batem com o que foi definido em tasks anteriores (ex: Task 3 cria `clearLayers()`, Task 7 chama `clearFullLayers()` — bug de plano). Corrija o plano diretamente.
+4. **Ordem de execução.** Confira se nenhuma task depende de código, tipo, config ou arquivo ainda não criado. Se a ordem estiver errada, reordene as tasks ou mova a criação da interface para a task anterior.
+5. **Qualidade de verificação.** Confira se cada task termina com verificação objetiva: teste específico, comando exato, resultado esperado, falha esperada na etapa red, comando final de regressão quando necessário. Se a verificação é "olhar manualmente", explique exatamente o que observar.
+
+### Passo 9: Entregar o Plano (Parada Obrigatória de Turno)
+
+Depois de salvar o plano localmente, informe o caminho do arquivo e solicite a aprovação do parceiro humano:
+
+```text
+Plano completo e salvo em `<path>`.
+
+Revise o plano acima. Se aprovar, me confirme para que eu possa commitar o plano e iniciar a execução task por task.
+```
+
+⚠️ **Parada Obrigatória de Turno (Stop & Wait):** É EXPRESSAMENTE PROIBIDO executar o comando `node .agents/scripts/sdd.js commit` na mesma iteração/resposta em que o plano é gerado. O agente deve apresentar o caminho do plano, encerrar a sua resposta (turn) e AGUARDAR a confirmação explícita do parceiro humano no chat. O commit via CLI deve ser executado exclusivamente em um turno posterior à aprovação.
+
+---
+
+## Commit do Plano
+
+Após a aprovação do plano pelo usuário (regra de Stop & Wait do Turno), o próximo passo é executar o commit do artefato:
+
+**Comando:** `node .agents/scripts/sdd.js commit "planning: <descrição do plano>"`
+
+**Artefato commitado:** `.agents/plans/<ID>-<slug>-plan.md` ou `.agents/<modulo>/plans/<ID>-<slug>-plan.md`
+
+**Momento:** Apenas após o usuário responder explicitamente "aprovado" à apresentação do plano. Nunca commite o plano na mesma resposta em que ele é apresentado.
+
+**Por que isso importa:** Assim como a spec precisa de commit separado após aprovação, o plano também precisa ser registrado no git. Isso garante que:
+- O histórico do projeto tenha o plano documentado
+- O link entre backlog → spec → plano fique completo e rastreável
+- O próximo agente que pegar o fluxo saiba que o plano já foi aprovado e registrado
+
+**Observação:** O commit do plano é distinto dos commits das tasks de implementação (que acontecem em `sdd-03-implement`). Esse é o commit do próprio artefato de plano.
+
+**Atualização do Backlog:**
+Ao finalizar e salvar o plano após a aprovação, atualize o status da funcionalidade correspondente no arquivo `.agents/backlog.md` para `Em Desenvolvimento` e adicione o link para o plano gerado na tabela.
+Ao finalizar e salvar o plano após a aprovação, atualize o status da funcionalidade correspondente no arquivo `.agents/backlog.md` para `Em Desenvolvimento` e adicione o link para o plano gerado na tabela.
+
+- Use `sdd-03-implement`.
+- Execute task por task nesta sessão.
+- Use checkpoints para revisão.
+
+Não comece a implementação dentro desta skill. O estado final de `sdd-02-plan` é o plano salvo, commitado (após aprovação em turno separado) e a escolha de execução.
+
+## Quando Parar e Pedir Ajuda
+
+- Não há spec, requisitos ou design aprovado — peça para rodar `sdd-01-brainstorm` ou fornecer os requisitos, em vez de inventar escopo.
+- A spec cobre múltiplos subsistemas independentes demais para um único plano (Passo 3) — proponha a divisão e espere aprovação antes de escrever qualquer plano.
+- Um requisito da spec é ambíguo o suficiente para que decompor em tasks exigiria adivinhar uma decisão de produto ou arquitetura — pergunte em vez de assumir.
+- O projeto não tem convenção de testes, build ou commit discernível (nem em `AGENTS.md`, nem no código, nem no histórico) e a lacuna afeta a task — pergunte a convenção em vez de inventar uma.
+- O Self-Review (Passo 8) encontra uma lacuna que só pode ser fechada inventando comportamento não especificado na spec — volte à spec com o parceiro humano em vez de preencher com suposição.
+
+Nesses casos, pare e pergunte. Um plano que preenche lacunas com suposição transfere o problema para quem for executar, quando o ponto desta skill é justamente eliminar essa ambiguidade antes da implementação.
+
+## Lembre-se
+
+- **O commit do arquivo de plano via `node .agents/scripts/sdd.js commit` deve ser realizado EXCLUSIVAMENTE após a aprovação explícita e prévia do parceiro humano.** Salve o arquivo localmente, apresente ao usuário e só commite após a aprovação.
+- **Planeje defensivamente:** Antecipe falhas em comandos de CLI. Tenha planos de recuperação e não assuma o "caminho feliz".
+- Paths exatos sempre.
+- Sem código de implementação no plano (apenas arquivos afetados, objetivos técnicos, comandos e testes).
+- Comandos exatos com output esperado.
+- Se o agente executor não tiver permissão para rodar um comando, ele deve preparar o comando exato, anunciar o bloqueio e pedir ao parceiro humano para executá-lo.
+- DRY.
+- YAGNI.
+- TDD.
+- Commits frequentes.
+- Nada fora da spec aprovada.
+- Nenhum placeholder, nem "similar à Task N", nem "adicionar validação apropriada".
+- Interfaces entre tarefas com nomes exatos, nunca aproximados.eparar o comando exato, anunciar o bloqueio e pedir ao parceiro humano para executá-lo.

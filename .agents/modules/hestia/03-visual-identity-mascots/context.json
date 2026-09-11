@@ -1,0 +1,81 @@
+{
+  "sessionId": "visual-identity-mascots-2026-08-29",
+  "objective": "Rethink layout to display mascots prominently as BACKGROUND images (not small icons), preserving original PNGs in public/mascots/ - must NOT be modified/optimized/resized. IMPLEMENTATION: Changed to header inline images (400x400) per user request.",
+  "currentPhase": "COMMITTED",
+  "history": [
+    {
+      "phase": "SPEC_DRAFT",
+      "action": "Feature initialized by Zeus. Delegating to Hera for new spec addressing mascot backgrounds.",
+      "timestamp": "2026-08-29T00:00:00.000Z"
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "action": "Human approved spec (approve-spec). Transitioning to PLAN_READY.",
+      "timestamp": "2026-08-29T02:00:00.000Z"
+    },
+    {
+      "phase": "PLAN_READY",
+      "action": "Atena produced plan.md + tasks.json (7 tasks, DAG valid). Architecture: CSS vars + Context + CSS transitions + LQIP. Tasks cover: CSS foundation, Provider/hook, Login, Dashboard, Pluto pages, cleanup, a11y verification.",
+      "timestamp": "2026-08-29T03:00:00.000Z"
+    },
+    {
+      "phase": "TASKS_READY",
+      "action": "Zeus validated tasks.json DAG (7 tasks, acyclic, criteria testable). Ready for Minos (contract tests) → Hefesto (impl) loop starting with task-1-css-foundation.",
+      "timestamp": "2026-08-29T03:30:00.000Z"
+    },
+    {
+      "phase": "CODING",
+      "action": "task-1-css-foundation: Minos wrote 21 contract tests (RED). Hefesto implemented lib/hestia/mascot-lqip.ts, components/ui/MascotBackground.tsx, app/globals.css. All 21 tests GREEN. lint + build pass.",
+      "timestamp": "2026-08-29T13:30:00.000Z"
+    },
+    {
+      "phase": "CODING",
+      "action": "task-2-provider-hook: Minos wrote 31 contract tests (RED). Hefesto implemented lib/hestia/useMascotBackground.ts, extended MascotProvider.tsx, added MascotBgMode type. All 31 tests GREEN.",
+      "timestamp": "2026-08-29T16:00:00.000Z"
+    },
+    {
+      "phase": "CODING",
+      "action": "task-3-login-page: Minos wrote 12 contract tests (RED). Hefesto wrapped page with MascotBackground mode='prominent', mascotKey='hestia', removed inline Mascot icon. All 12 tests GREEN.",
+      "timestamp": "2026-08-29T16:30:00.000Z"
+    },
+    {
+      "phase": "CODING",
+      "action": "task-4-dashboard-page: Minos wrote 15 contract tests (RED). Hefesto implemented dynamic mode switching with useMascotBackground hook. All 15 tests GREEN.",
+      "timestamp": "2026-08-29T17:30:00.000Z"
+    },
+    {
+      "phase": "CODING",
+      "action": "task-5-pluto-pages: Minos wrote 34 contract tests (RED). Hefesto implemented MascotBackground in budget, months, transactions pages. All 34 tests GREEN.",
+      "timestamp": "2026-08-29T18:00:00.000Z"
+    },
+    {
+      "phase": "REIMPLEMENTATION",
+      "action": "User requested change: mascotes como imagens de cabeçalho (400x400) em vez de background CSS. Modificou dashboard, budget, months, transactions pages para usar <img> tags no header. PNGs preservados em public/mascots/. Build passa. 92 testes lib/hestia passam; 7 testes dashboard esperam implementação antiga.",
+      "timestamp": "2026-08-29T19:30:00.000Z"
+    },
+    {
+      "phase": "COMMITTED",
+      "action": "Commit final: mascotes como headers inline em todas as páginas. Build passa. PNGs em public/mascots/hestia.png e pluto.png preservados.",
+      "timestamp": "2026-08-29T19:45:00.000Z"
+    }
+  ],
+  "approvals": {
+    "spec": "approved",
+    "review": "pending"
+  },
+  "decisions": [
+    "Background por estado (C): vazio/carregando/erro=proeminente, com dados=watermark 10-15%",
+    "CSS Variables + Context + CSS Transitions + content-visibility + LQIP (B)",
+    "Cross-fade 300ms entre módulos, respects prefers-reduced-motion",
+    "PNGs originais 2.2MB/2.3MB intocados — servidos estaticamente de /public/mascots/",
+    "YAGNI: milon, otimização, temas, animações complexas, SW, lazy-load avançado, interatividade",
+    "Alternativa A selecionada: CSS vars (--mascot-bg) + MascotProvider existente + CSS transitions nativas",
+    "LQIP = 1x1px base64 (não blur-hash) — simpler, 20B inline",
+    "Watermark: opacity 0.12, bottom-right, content-visibility: auto",
+    "Overlay: ::before pseudo-element, 70% dark, white text — WCAG AA",
+    "previousMascotKey em MascotProvider para cross-fade",
+    "MascotBgMode type exportado em mascots.ts",
+    "useMascotBackground hook exportado de MascotProvider.tsx",
+    "NOVA DECISAO: Mascotes como imagens inline nos headers (400x400) por solicitação de usuario - Hestia à esquerda do título em /dashboard, Pluto em /pluto/*"
+  ]
+}

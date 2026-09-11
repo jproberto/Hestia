@@ -17,7 +17,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isLoginPage = pathname === "/login";
 
-  if (user && isLoginPage) {
+  if (user && (isLoginPage || pathname === "/")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return redirectWithCookies(url, supabaseResponse);

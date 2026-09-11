@@ -75,9 +75,10 @@ export async function seedAccounts(ids: AliasIds, rows: Account[]): Promise<void
       id: ids.to(a.id),
       name: a.name,
       type: a.type,
-      // O contract semeia created_at nulo (tipo permite); o DDL real exige NOT NULL.
+      // O contract semeia created_at/created_by nulos (tipo permite);
+      // o DDL real exige NOT NULL — defaults só no seed.
       created_at: a.created_at ?? new Date().toISOString(),
-      created_by: a.created_by,
+      created_by: a.created_by ?? "contrato@hestia.com",
     });
   }
 }

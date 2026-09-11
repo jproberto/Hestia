@@ -91,12 +91,20 @@ jobs:
           supabase start
 
       - name: Export Local Supabase Env
-        run: supabase status -o env >> $GITHUB_ENV
+        run: |
+          supabase status
+          # status -o env pode prefixar com "export " (formato eval);
+          # $GITHUB_ENV só aceita KEY=value — normaliza antes de exportar.
+          supabase status -o env | sed -e 's/^export //' >> "$GITHUB_ENV"
 
       - name: Apply Migrations From Scratch
         env:
           POSTGRES_URL: ${{ env.POSTGRES_URL }}
         run: |
+          if [ -z "$POSTGRES_URL" ]; then
+            echo "::error::POSTGRES_URL vazia após supabase status -o env; abortando antes do psql."
+            exit 1
+          fi
           for f in $(ls utils/migrations/migration-*.sql | sort); do
             echo "Aplicando $f..."
             psql "$POSTGRES_URL" -v ON_ERROR_STOP=1 -f "$f"

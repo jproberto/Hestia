@@ -75,7 +75,8 @@ export async function seedAccounts(ids: AliasIds, rows: Account[]): Promise<void
       id: ids.to(a.id),
       name: a.name,
       type: a.type,
-      created_at: a.created_at,
+      // O contract semeia created_at nulo (tipo permite); o DDL real exige NOT NULL.
+      created_at: a.created_at ?? new Date().toISOString(),
       created_by: a.created_by,
     });
   }
@@ -91,6 +92,31 @@ export async function seedPeriods(ids: AliasIds, rows: MonthlyPeriod[]): Promise
       created_at: p.created_at,
       created_by: p.created_by,
     });
+  }
+}
+
+/**
+ * Garante a linha do período antes de escritas com `month_id`: o contract
+ * de checklist só semeia categorias (o fake não impõe FK), mas no banco
+ * real o mês precisa existir — em produção ele sempre existe (mês aberto).
+ * Idempotente via `onConflict: "id"`.
+ */
+export async function ensurePeriod(ids: AliasIds, monthAlias: string, email: string): Promise<void> {
+  const { error } = await getRawClient()
+    .from("monthly_periods")
+    .upsert(
+      {
+        id: ids.to(monthAlias),
+        year: 2026,
+        month: 3,
+        status: "aberto",
+        created_at: new Date().toISOString(),
+        created_by: email,
+      },
+      { onConflict: "id" }
+    );
+  if (error) {
+    throw new Error(`ensurePeriod falhou: ${error.message}`);
   }
 }
 
@@ -261,6 +287,9 @@ export class SupabaseChecklistRepository implements IChecklistRepository {
 
   async createChecklistItem(input: ChecklistItemInput, isGlobal: boolean, currentMonthId?: string) {
     await this.gate();
+    if (currentMonthId) {
+      await ensurePeriod(this.ids, currentMonthId, input.created_by);
+    }
     const created = await checklist.createChecklistItem(
       this.db,
       this.mapInput(input),
@@ -294,6 +323,7 @@ export class SupabaseChecklistRepository implements IChecklistRepository {
 
   async instantiateGlobalChecklistItemsForMonth(monthId: string, email: string) {
     await this.gate();
+    await ensurePeriod(this.ids, monthId, email);
     return checklist.instantiateGlobalChecklistItemsForMonth(this.db, this.ids.to(monthId), email);
   }
 

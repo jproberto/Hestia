@@ -10,6 +10,10 @@ export default defineConfig({
     include: ["__tests__/integration/**/*.test.ts"],
     testTimeout: 30000,
     hookTimeout: 30000,
+    // Arquivos em sequência: todos falam com o MESMO banco (reset por teste).
+    poolOptions: {
+      forks: { singleFork: true },
+    },
   },
   resolve: {
     alias: {

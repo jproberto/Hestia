@@ -17,6 +17,10 @@ export async function getBudgetAdjustment(db: IDatabaseClient, year: number): Pr
 }
 
 export async function initBudget(db: IDatabaseClient, year: number, email: string): Promise<string> {
+  // Idempotente como o contrato exige: revisão de janeiro existente é reutilizada.
+  const existing = await getBudgetAdjustment(db, year);
+  if (existing) return existing.id;
+
   const { data, error } = await db
     .from<BudgetAdjustmentRow>("budget_adjustments")
     .insert({

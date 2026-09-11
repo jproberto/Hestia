@@ -7,6 +7,12 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ## [Não lançado]
 
+### Adicionado
+- **Testes de integração contra Supabase real (item 8):** `__tests__/integration/` reutiliza os 6 contracts via binding Supabase (`test:integration`, config própria sem mocks globais); job `integration` no CI sobe Supabase efêmero, aplica as migrations do zero e executa.
+
+### Corrigido
+- **`initBudget` agora idempotente:** implementação real fazia insert cego e reprovaria no próprio contrato (que exige mesmo id em chamadas repetidas) — virou get-or-create, alinhada ao fake.
+
 ## [1.0.0] - 2026-09-10
 
 Primeira versão de produção: módulo Pluto completo (orçamento anual com ajustes, meses operacionais, lançamentos com estorno, checklist com validação de overflow, saldo do mês) + framework multi-agentes Olympus + gerador de módulos.

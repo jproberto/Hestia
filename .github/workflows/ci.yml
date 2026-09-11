@@ -61,6 +61,72 @@ jobs:
           echo "- Branch: \`${{ github.ref_name }}\` @ \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Lint + typecheck + build + testes executados no job \`validate\` (somente leitura)." >> $GITHUB_STEP_SUMMARY
 
+  # Item 8: contracts contra Supabase real efêmero (Postgres local no
+  # runner + migrações aplicadas do zero + suite de integração).
+  integration:
+    runs-on: ubuntu-latest
+    needs: [validate]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        # supabase-js exige WebSocket nativo (só Node 22+); validate segue no 20.
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Setup Supabase CLI
+        # setup-cli entregava v2.20.3 (sem -o env utilizável); fixa a versão
+        # moderna via npm para init/start/status consistentes.
+        run: npm install -g supabase@2.117.0
+
+      - name: Start Supabase Local
+        run: |
+          supabase --version
+          supabase init
+          supabase start
+
+      - name: Export Local Supabase Env
+        run: |
+          supabase status
+          echo "--- variáveis disponíveis (valores mascarados) ---"
+          supabase status -o env | sed -E 's/=.*$/=<masked>/'
+          # Nomes reais da CLI moderna (DB_URL/API_URL/SERVICE_ROLE_KEY);
+          # eval cobre com ou sem prefixo "export ". Aliases no padrão do job.
+          eval "$(supabase status -o env)"
+          {
+            echo "POSTGRES_URL=$DB_URL"
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+
+      - name: Apply Migrations From Scratch
+        env:
+          POSTGRES_URL: ${{ env.POSTGRES_URL }}
+        run: |
+          if [ -z "$POSTGRES_URL" ]; then
+            echo "::error::POSTGRES_URL vazia após supabase status -o env; abortando antes do psql."
+            exit 1
+          fi
+          for f in $(ls utils/migrations/migration-*.sql | sort); do
+            echo "Aplicando $f..."
+            psql "$POSTGRES_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Run Integration Contracts
+        env:
+          SUPABASE_INTEGRATION_URL: ${{ env.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ env.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run test:integration
+
   flow:
     runs-on: ubuntu-latest
     needs: [validate]

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },

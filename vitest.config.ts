@@ -8,6 +8,8 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: "./__tests__/setup.ts",
+    // Integração real (item 8) tem config própria — fora da suite unitária.
+    exclude: ["**/node_modules/**", "**/dist/**", "__tests__/integration/**"],
   },
   resolve: {
     alias: {

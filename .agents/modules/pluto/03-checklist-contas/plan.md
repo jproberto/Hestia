@@ -9,7 +9,7 @@
 **Tech Stack:** Next.js (App Router), React, Supabase (PostgreSQL + RLS), TypeScript, Tailwind CSS, Lucide React, Jest / React Testing Library.
 
 ## Restrições Globais
-- Banco de Dados Supabase: Script de migração salvo obrigatoriamente em `utils/migrations/migration-feature-3-checklist.sql` com auditoria na tabela `schema_migrations` pelo executor `joaopsroberto@gmail.com`.
+- Banco de Dados Supabase: Script de migração salvo obrigatoriamente em `utils/migrations/migration-feature-4-checklist.sql` com auditoria na tabela `schema_migrations` pelo executor `joaopsroberto@gmail.com`.
 - Row Level Security (RLS) habilitado para a nova tabela.
 - NomenclaturaUbíqua: Usar nomes de campos equivalentes a `transactions` (`description`, `type`, `amount`, `category_id`, `created_at`, `created_by`).
 - SemVer: A alteração da versão do projeto no `package.json` NÃO deve ocorrer nas tarefas do plano, ocorrendo apenas na revisão final.
@@ -20,7 +20,7 @@
 ### Tarefa 1: Criar o Script de Migração do Banco de Dados (`checklist_items`)
 
 **Arquivos:**
-- Criar: `utils/migrations/migration-feature-3-checklist.sql`
+- Criar: `utils/migrations/migration-feature-4-checklist.sql`
 
 **Interfaces:**
 - Consome: Tabela `public.monthly_periods` (Feature 04) e `public.categories` (Feature 01).
@@ -30,7 +30,7 @@
 Run: `node .agents/scripts/sdd.js task-start 1`
 
 **Passo 2: Escrever o script SQL de migração**
-Crie o arquivo `utils/migrations/migration-feature-3-checklist.sql` contendo os comandos DDL para criação da tabela `public.checklist_items`, ativação do RLS, política de acesso total para autenticados e o comando `INSERT INTO public.schema_migrations` registrando a migração da spec `03`.
+Crie o arquivo `utils/migrations/migration-feature-4-checklist.sql` contendo os comandos DDL para criação da tabela `public.checklist_items`, ativação do RLS, política de acesso total para autenticados e o comando `INSERT INTO public.schema_migrations` registrando a migração da spec `03`.
 
 **Passo 3: Verificar a sintaxe e integridade do arquivo SQL**
 Verifique se a instrução `CREATE TABLE IF NOT EXISTS public.checklist_items` contém todas as restrições `CHECK` (tipo 'receita'/'despesa', dia entre 1 e 31), chaves estrangeiras com `ON DELETE CASCADE` / `SET NULL` apropriados e o registro de auditoria em `schema_migrations`.
@@ -39,7 +39,7 @@ Verifique se a instrução `CREATE TABLE IF NOT EXISTS public.checklist_items` c
 Run: `node .agents/scripts/sdd.js task-complete 1`
 
 **Passo 5: Commit**
-Run: `git add utils/migrations/migration-feature-3-checklist.sql`
+Run: `git add utils/migrations/migration-feature-4-checklist.sql`
 Run: `node .agents/scripts/sdd.js commit "feat(db): adiciona migracao da tabela checklist_items"`
 
 ---

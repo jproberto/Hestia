@@ -61,6 +61,53 @@ jobs:
           echo "- Branch: \`${{ github.ref_name }}\` @ \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Lint + typecheck + build + testes executados no job \`validate\` (somente leitura)." >> $GITHUB_STEP_SUMMARY
 
+  # Item 8: contracts contra Supabase real efêmero (Postgres local no
+  # runner + migrações aplicadas do zero + suite de integração).
+  integration:
+    runs-on: ubuntu-latest
+    needs: [validate]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+
+      - name: Start Supabase Local
+        run: |
+          supabase init
+          supabase start
+
+      - name: Export Local Supabase Env
+        run: supabase status -o env >> $GITHUB_ENV
+
+      - name: Apply Migrations From Scratch
+        env:
+          POSTGRES_URL: ${{ env.POSTGRES_URL }}
+        run: |
+          for f in $(ls utils/migrations/migration-*.sql | sort); do
+            echo "Aplicando $f..."
+            psql "$POSTGRES_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Run Integration Contracts
+        env:
+          SUPABASE_INTEGRATION_URL: ${{ env.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ env.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run test:integration
+
   flow:
     runs-on: ubuntu-latest
     needs: [validate]

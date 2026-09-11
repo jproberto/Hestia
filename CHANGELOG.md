@@ -5,6 +5,46 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.0.html).
 
+## [Não lançado]
+
+## [1.0.0] - 2026-09-10
+
+Primeira versão de produção: módulo Pluto completo (orçamento anual com ajustes, meses operacionais, lançamentos com estorno, checklist com validação de overflow, saldo do mês) + framework multi-agentes Olympus + gerador de módulos.
+
+### Adicionado
+- **Token `font-display` (CaesarDressing) em `app/globals.css`:** títulos de conteúdo (`h1/h2/h3` em cards/seções/modais) usam o token central; `ModuleLayout` (nome do módulo + `pageTitle`) e gerador de módulos (exemplo) já saem no padrão; convenção registrada em `AGENTS.md` ("Onde ponho X?") e `.agents/module-template.md`.
+- **Fonte auto-hospedada via `next/font/local`:** `@font-face` manual e preload manual removidos de `app/layout.tsx`/`globals.css` — o Next emite `@font-face` + preload da `CaesarDressing-Regular.ttf` (solução definitiva após fallback silencioso do `@font-face` manual).
+- **Default do ajuste vigente no budget (`pickDefaultAdjustment` em `useBudgetOverview.ts`):** sem seleção, ativa o ajuste de maior `start_month <= mês corrente` (mesma regra de `getBudgets`), fallback para o mais recente; seleção manual prevalece; troca de ano reaplica o padrão.
+- **Olympus conectado ao gerador:** Zeus classifica `módulo novo` e Atena planeja a primeira task via `node .agents/scripts/new-module.js` seguindo `.agents/module-template.md` (inclui convenção `font-display`); proibição de `services/` explicitada em Atena.
+- **Mapa de Camadas no `AGENTS.md`:** diagrama + tabela camada→responsabilidade→importa-de→testado-com + FAQ "Onde ponho X?" (fonte normativa; Atena exige declarar camadas no plano).
+- **Testes novos:** single-flight do fetch, identidade do singleton de client, enriquecimento de `category_name`, contratos por unidade extraída (budget/months/checklist/modais) — suíte em 63 arquivos / 378 testes.
+- **Gerador `new-module.js` pós-arquitetura:** scaffolda `types` + `repositories`/`interfaces`/`fakes` + `db/` + `hooks` + contract + story + testes espelho (verificado de ponta a ponta com módulo dummy).
+
+### Alterado
+- **Single-flight do fetch inicial (`usePlutoData`):** 1 fetch por mount, seleção resolvida em memória, request id last-writer-wins no lugar da flag `cancelled`.
+- **`createBrowserDatabaseClient()` singleton por aba;** caminho único de imports (UI via `db/*`); `getUserEmail()` documentado como porta de sessão.
+- **Decomposições (sem mudança visual):** budget 512→119, months 242→66, `ChecklistCard` 237→144, `useTransactionModals` 400→3 hooks + compositor.
+- **Tipos honestos:** `category_name` enriquecido no repositório; `categoryType` obrigatório nos resultados de overflow.
+- **Higiene de testes:** mock central no setup, `Mock` como tipo, `hooks/index` completo, `ChecklistItemWithAmount` removida.
+- **Hestia sem background:** wrapper `MascotBackground` removido de dashboard/login (referência: Pluto); página do dashboard ficou estática (fetch/logout mortos removidos).
+- **Docs Olympus:** refs defasadas corrigidas (4 arquivos); contracts declarados `fakes-only`; backlog com épicos 4–5 concluídos/em andamento.
+
+### Removido
+- **Camada morta (41):** `use-cases/`, `schemas/` (Zod), `mappers.ts`, factories `createXService`, dep `zod`.
+- **2ª camada morta (52):** `services/` por inteiro, hooks sem chamadores (`useTransactions`, `useAccounts`, `useChecklist`, `useMonthlyPeriods`).
+- **Identidade visual revertida (61):** `MascotBackground`, `useMascotBackground`, `mascot-lqip`, tipo `MascotBgMode`, CSS associado.
+- **Build:** factory server (`createServerDatabaseClient`) fora do bundle client — `next build` verde.
+- **Deps órfãs:** `@testing-library/user-event`, `@storybook/addon-mcp`.
+
+### Corrigido
+- **Backlogs com links relativos e válidos:** `.agents/modules/pluto/backlog.md` apontava para `.agents/pluto/specs|plans` + URLs `file:///p:/...` (inexistentes fora da máquina de origem) — repointados para `.agents/modules/pluto/<slug>/{spec,plan}.md` (13 slugs verificados); mesmo tratamento em `.agents/modules/hestia/backlog.md` (+ "fluxo SDD" → "fluxo Olympus").
+- **Headers `regression.md` com mojibake:** reescritos em UTF-8 com instrução de promoção via Minos.
+- **Docs normativos sincronizados:** `AGENTS.md` registra `new-module.js`, path correto do backlog central, remoção de `services/` da tabela de camadas, convenção `font-display`, contrato de erro dos modais e padrão `migration-<slug>.sql` (antes `<timestamp>_<slug>.sql`, inexistente em disco).
+- **Modal de checklist com feedback:** validações com mensagem visível (antes `return` silencioso) e handlers de `useChecklistCardModals` relançam o erro após registrar `errorMsg` — o modal permanece aberto no erro em vez de fechar/parar sem rastro (vale para escopo do mês e global).
+- **Botões de months:** `Encerrar`/`Reabrir` recuperam o estilo de botão completo (estavam sem borda, parecendo labels) e labels enxutos para `Abrir`/`Encerrar`/`Reabrir`.
+- **Build de produção vermelho (pré-existente desde a task 32):** `next/headers` no bundle client; `npm run build` passa.
+- **Teste que passava por acidente** no flicker do duplo fetch (agora asserta o DOM assentado).
+
 ## [0.9.0] - 2026-08-27
 
 ### Adicionado

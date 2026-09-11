@@ -65,6 +65,9 @@ Antes de quebrar em tasks, trave decomposição:
 
 Regras: fronteiras claras, interfaces bem definidas, arquivos pequenos e focados, siga padrões locais, não reestruture por gosto.
 
+- Camadas (Mapa de Camadas do AGENTS.md): para cada `Create`/`Modify`, declare a camada, o caminho de import permitido e a estratégia de teste da camada. Proibido criar `use-cases/`, `schemas/`, `mappers.ts`, `services/` ou factories `createXService` (removidos nas tasks 41/52) e proibido importar `@supabase/*` fora de `lib/shared/`.
+- Módulo novo: a primeira task executa o gerador `node .agents/scripts/new-module.js <key> "<Nome>" "/mascots/<key>.png" "#cor"` (scaffolda tipos, repositories+interfaces+fakes, db, hooks, utils, index, contract, story, testes espelho + registra o módulo nos backlogs) e segue `.agents/module-template.md` — inclui a convenção visual `font-display` para títulos (`h1/h2/h3` de conteúdo; `ModuleLayout` já aplica em nome do módulo e `pageTitle`).
+
 ### 3) Dimensionar Tasks (menor unidade com valor verificável)
 Cada task:
 - tem ciclo de teste próprio
@@ -123,7 +126,7 @@ Dentro da task, passos de 2-5 min com comando exato e `Expected: FAIL/PASS`.
 - Sem placeholders: proibido `TBD`, `TODO`, `similar à Task N`, `validação apropriada`, `tratar edge cases`
 - Cada task termina com verificação objetiva (ex: teste falha `Expected: FAIL` → implementação mínima → teste passa `Expected: PASS`); se verificação não for teste (config, style), explique alternativa objetiva
 - Não defina cenários de homologação no plano
-- **Migrations:** se task toca banco, inclua `Create: utils/migrations/<timestamp>_<slug>.sql` (incremental, nunca editar migração já aplicada) + `Modify: utils/migrations/schema_migrations` (registro) + `files` aponta para `lib/<modulo>/db/` afetado. Descreva schema em texto no plano, sem SQL de implementação
+- **Migrations:** se task toca banco, inclua `Create: utils/migrations/migration-<slug>.sql` (incremental, nunca editar migração já aplicada) + registro em `schema_migrations` + `files` aponta para `lib/<modulo>/db/` afetado. Descreva schema em texto no plano, sem SQL de implementação
 
 ---
 

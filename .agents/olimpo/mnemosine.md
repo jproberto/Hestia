@@ -83,7 +83,7 @@ Aplique de forma limpa, tom objetivo, sem prolixidade.
 
 ### 4) Autorrevisão e Proposta de Melhoria
 - Verifique links internos, data da release, `npm run test` verde
-- **Retrospectiva:** execução revelou fraqueza no Olympus? Plano otimista demais? Spec ambígua? Review pegou o que deveria ter sido evitado? Proponha melhoria concreta na skill/agente correspondente e registre em `.agents/backlog.md` ou sugira via `context.json.decisions` para Zeus
+- **Retrospectiva:** execução revelou fraqueza no Olympus? Plano otimista demais? Spec ambígua? Review pegou o que deveria ter sido evitado? Proponha melhoria concreta na skill/agente correspondente e registre em `.agents/modules/hestia/backlog.md` ou sugira via `context.json.decisions` para Zeus
 
 ---
 

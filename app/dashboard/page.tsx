@@ -1,51 +1,33 @@
-"use client";
+﻿"use client";
 
-import { useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
-import { Button } from "@/components/ui/button";
-
-export const dynamic = "force-dynamic";
+import { HestiaLayout } from "@/components/layout/HestiaLayout";
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
-
-  async function handleSignOut() {
-    try {
-      await supabase.auth.signOut();
-      router.push("/login");
-      router.refresh();
-    } catch (err) {
-      console.error("Erro ao sair:", err);
-    }
-  }
-
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between border-b pb-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Painel de Ferramentas</h1>
-          <p className="text-sm text-muted-foreground">Acesse seus utilitários familiares.</p>
-        </div>
-        <Button variant="outline" onClick={handleSignOut}>
-          Sair 🚪
-        </Button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <HestiaLayout pageTitle="Painel de Ferramentas" pageSubtitle="Acesse seus utilitários familiares.">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
         <Link
           href="/pluto/budget"
-          className="group flex flex-col gap-2 rounded-lg border p-6 hover:bg-muted/40 transition-colors"
+          className="group relative overflow-hidden flex flex-col gap-2 rounded-lg border p-6 hover:bg-muted/40 transition-colors"
         >
-          <h2 className="text-lg font-bold group-hover:text-primary transition-colors">
-            Pluto 💰
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Acesse o controle de orçamento anual, categorias de receitas e despesas previstas.
-          </p>
+          <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity pointer-events-none" style={{
+            backgroundImage: 'url("/mascots/pluto.png")',
+            backgroundPosition: 'center right',
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: 'auto 120%',
+            filter: 'sepia(1) saturate(5) hue-rotate(-20deg)',
+          }} />
+          <div className="relative z-10 flex flex-col gap-2">
+            <h2 className="text-3xl font-display text-[#EC5223] tracking-wider group-hover:text-[#FF8C42] transition-colors">
+              Pluto
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Acesse o controle de orçamento anual, categorias de receitas e despesas previstas.
+            </p>
+          </div>
         </Link>
       </div>
-    </div>
+    </HestiaLayout>
   );
 }

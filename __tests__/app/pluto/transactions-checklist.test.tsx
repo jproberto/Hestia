@@ -1,19 +1,29 @@
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import TransactionsPage from "@/app/pluto/transactions/page";
-import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { getTransactionsByMonth } from "@/lib/pluto/db/transactions";
 import { getAccounts } from "@/lib/pluto/db/accounts";
 import { getCategories } from "@/lib/pluto/db/categories";
 import { getMonthlyPeriods, getAllOpenMonthlyPeriods } from "@/lib/pluto/db/months";
 import { getBudgets } from "@/lib/pluto/db/budget";
 import { getChecklistItemsByMonth } from "@/lib/pluto/db/checklist";
+import { usePathname, useRouter } from "next/navigation";
+import { MascotProvider } from "@/lib/hestia/MascotProvider";
+
+const mockUsePathname = vi.hoisted(() => vi.fn(() => '/pluto/transactions'));
+const mockUseRouter = vi.hoisted(() => vi.fn(() => ({ push: vi.fn(), refresh: vi.fn(), back: vi.fn(), prefetch: vi.fn() })));
+
+vi.mock("next/navigation", () => ({
+  usePathname: mockUsePathname,
+  useRouter: mockUseRouter,
+}));
 
 vi.mock("@/utils/supabase/client", () => ({
   createClient: () => ({
     auth: {
       getUser: () => Promise.resolve({ data: { user: { email: "teste@hestia.com" } } }),
     },
-  }),
+  })
 }));
 
 vi.mock("@/lib/pluto/db/transactions", () => ({
@@ -51,10 +61,20 @@ vi.mock("@/lib/pluto/db/checklist", () => ({
   toggleChecklistItemCompletion: vi.fn(),
 }));
 
+function renderWithMascotProvider(ui: React.ReactElement) {
+  return render(
+    <MascotProvider>
+      {ui}
+    </MascotProvider>
+  );
+}
+
 describe("Integração do Checklist na Página de Transações", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
+    mockUsePathname.mockReturnValue('/pluto/transactions');
+    mockUseRouter.mockReturnValue({ push: vi.fn(), refresh: vi.fn(), back: vi.fn(), prefetch: vi.fn() });
   });
 
   it("deve carregar e renderizar o card de checklist de contas a pagar na pagina de transacoes", async () => {
@@ -89,7 +109,7 @@ describe("Integração do Checklist na Página de Transações", () => {
       },
     ]);
 
-    render(<TransactionsPage />);
+    renderWithMascotProvider(<TransactionsPage />);
 
     await waitFor(() => {
       expect(screen.getByText("Checklist de Contas a Pagar / Receber")).toBeInTheDocument();

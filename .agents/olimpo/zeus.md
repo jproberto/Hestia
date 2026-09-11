@@ -97,7 +97,7 @@ Retornos: TESTING → CODING (falhas/gaps de Minos)
 - `spec.md`, `plan.md`, `tasks.json`, `test-report.json`, `review-report.json`, `diff.patch`, `test-scenarios.md`
 - Regressão global: `.agents/modules/<modulo>/regression.md` e `.agents/modules/hestia/regression.md`
 
-**Resolução do FEATURE_DIR:** `olympus.js` cria `FEATURE_DIR` e grava `.agents/current` (ponteiro). Zeus sempre resolve `FEATURE_DIR` lendo `.agents/current` antes de qualquer operação.
+**Resolução do FEATURE_DIR:** Zeus cria `FEATURE_DIR` e grava `.agents/current` (ponteiro, via read/write — não existe script `olympus.js`). Zeus sempre resolve `FEATURE_DIR` lendo `.agents/current` antes de qualquer operação.
 
 **Checkpoints humanos obrigatórios (2 únicos):**
 - `SPEC_APPROVED`: humano lê e aprova `spec.md` (Hera). Zeus bloqueia se `approvals.spec !== "approved"`
@@ -159,7 +159,7 @@ Retornos: TESTING → CODING (falhas/gaps de Minos)
 ## Execution Flow
 
 ### Phase 1: Analysis
-1. Classifique request: `feature nova` → ciclo completo; `patch` → spec `02a-` na mesma branch
+1. Classifique request: `feature nova` → ciclo completo; `patch` → spec `02a-` na mesma branch; `módulo novo` → ciclo completo cuja primeira task (Atena) executa o gerador `node .agents/scripts/new-module.js <key> "<Nome>" "/mascots/<key>.png" "#cor"` (ver `.agents/module-template.md`; registra `.agents/modules/<key>/backlog.md` + tabela “Módulos Registrados” em `.agents/modules/hestia/backlog.md`)
 2. Identifique requisitos: módulo (`.agents/modules/<modulo>` vs transversal), dependências, artefatos existentes
 3. **Zeus cria `FEATURE_DIR` + estado inicial** — `write` `context.json` + `checkpoint.json` + `.agents/current` → delega `caronte` para Step 0 (valida git, cria branch)
 4. Delegue `hera` imediatamente — **scope check e decomposição são responsabilidade de Hera**, não de Zeus. Se Hera sinalizar escopo grande, Zeus apenas apresenta a decomposição proposta ao humano e aguarda escolha

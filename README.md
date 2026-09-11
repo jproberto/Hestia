@@ -1,5 +1,7 @@
 # Héstia — Controle Financeiro Familiar
 
+![CI](https://github.com/jproberto/Hestia/actions/workflows/ci.yml/badge.svg)
+
 Héstia é uma ferramenta pessoal para controle de finanças e planejamento orçamentário para uma família.
 
 ## Funcionalidades Principais
@@ -25,6 +27,10 @@ O Héstia é um **guarda-chuva de sub-sistemas** organizado pelo padrão *módul
 * **Comum/transversal:** `app/layout.tsx`, `app/page.tsx`, `app/globals.css`, `app/login/`, `app/dashboard/`, `components/ui/`, `lib/utils.ts`, `utils/supabase/` e `utils/migrations/`.
 
 O **Pluto** é o módulo financeiro do Héstia e o primeiro a seguir esse padrão; novos módulos são registrados na tabela "Módulos Registrados" do backlog central (`.agents/modules/hestia/backlog.md`) com documentação por feature em `.agents/modules/<modulo>/<slug>/` (`spec.md`, `plan.md`, `tasks.json`, `context.json`, `checkpoint.json`).
+
+### Camadas e padrão de código
+
+Mapa normativo em `AGENTS.md` ("Mapa de Camadas"): UI (`app/`, `components/`) consome via `hooks/*` + barrels `lib/<modulo>/db/*`; dados e regras de persistência em `lib/<modulo>/repositories/` via `IDatabaseClient`; tipos só em `lib/<modulo>/types.ts`; validação de input nos forms. Novo módulo via `node .agents/scripts/new-module.js <key> "<Nome>" "/mascots/<key>.png" "#cor"` — gera árvore que compila, testa (contracts+fakes) e documenta (story).
 
 ### Arquitetura de Agentes (Olympus)
 

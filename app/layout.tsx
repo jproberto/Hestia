@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -10,6 +11,14 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// CaesarDressing auto-hospedada via next/font (emite @font-face + preload;
+// não usar @font-face manual nem preload manual para ela).
+const caesarDressing = localFont({
+  src: "../public/fonts/CaesarDressing-Regular.ttf",
+  variable: "--font-caesar",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -25,7 +34,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${caesarDressing.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

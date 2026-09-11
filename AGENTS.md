@@ -8,13 +8,38 @@ Héstia é uma ferramenta pessoal para controle de finanças e de lista de taref
     - `modules/`: Módulos registrados — cada feature tem `modules/<modulo>/<slug>/` com `spec.md`, `plan.md`, `tasks.json`, `context.json`, `checkpoint.json`, `diff.patch`, `test-report.json`, `review-report.json`, `test-scenarios.md` + `backlog.md` e `regression.md` por módulo. Transversal em `modules/hestia/`.
     - `current`: Ponteiro texto com `FEATURE_DIR` relativo da feature ativa (resolvido por `Zeus` via `read`/`write`).
     - `olimpo/`: System prompts dos 8 agentes (`zeus.md` primary + 7 subagents) com frontmatter `mode/color/temperature/permission` e seção anti-hallucination.
-    - `scripts/`: `migrate-skills.js` (one-shot, legado).
+    - `scripts/`: `new-module.js` (gerador de módulos — `node .agents/scripts/new-module.js <key> "<Nome>" "/mascots/<key>.png" "#cor"`) + `migrate-skills.js` (one-shot, legado).
     - `archive/`: `skills/` + `scripts/sdd.js` legados (referência histórica, não coexistem).
 - Código comum/transversal (na raiz das camadas): `app/layout.tsx`, `app/page.tsx`, `app/globals.css`, `app/login/`, `app/dashboard/`, `components/ui/`, `lib/utils.ts`, `utils/supabase/`, `utils/migrations/`.
 - Módulo Pluto (financeiro): `app/pluto/`, `components/pluto/`, `lib/pluto/` (com `db/`) e testes espelhados em `__tests__/app/pluto/`, `__tests__/components/pluto/`, `__tests__/lib/pluto/`.
 
 ## Padrão de Módulos
-Código específico de um módulo vive em `<camada>/<modulo>/` nas camadas `app`, `components`, `lib` e `__tests__`; o compartilhado permanece na raiz. Documentação de módulo vive em `.agents/modules/<modulo>/<slug>/` (spec/plan/tasks + context/checkpoint) com `backlog.md` e `regression.md` por módulo em `.agents/modules/<modulo>/`; transversal em `.agents/modules/hestia/`. Para registrar módulo: criar `.agents/modules/<modulo>/backlog.md` e linha em `modules/hestia/backlog.md` (tabela “Módulos Registrados”). Estado por feature é isolado em `FEATURE_DIR` e histórico permanece após `COMMITTED`. Não há `state/` global nem `specs/`/`plans/` na raiz.
+Código específico de um módulo vive em `<camada>/<modulo>/` nas camadas `app`, `components`, `lib` e `__tests__`; o compartilhado permanece na raiz. Documentação de módulo vive em `.agents/modules/<modulo>/<slug>/` (spec/plan/tasks + context/checkpoint) com `backlog.md` e `regression.md` por módulo em `.agents/modules/<modulo>/`; transversal em `.agents/modules/hestia/`. Para registrar módulo: criar `.agents/modules/<modulo>/backlog.md` e linha em `.agents/modules/hestia/backlog.md` (tabela “Módulos Registrados”). Estado por feature é isolado em `FEATURE_DIR` e histórico permanece após `COMMITTED`. Não há `state/` global nem `specs/`/`plans/` na raiz.
+
+## Mapa de Camadas (pós-41, fonte: Pluto)
+
+> Decisões registradas: task 41 removeu `use-cases/`, `schemas/` (Zod), `mappers.ts` e factories `createXService` (Opção A, YAGNI) — não recriar sem religar consumidores. Regras de persistência vivem nos repositories; validação runtime vive nos forms (boundary real). Task 47: caminho recomendado UI → `db/*` + `hooks/*`, domínio → `repositories/*`; `createBrowserDatabaseClient()` é singleton por aba; barrel `lib/pluto/index.ts` removido (sem importadores). Task 52: `services/` removido por inteiro (2 standalones vivas migradas para `db/*`; 4 hooks legados deletados) — proibido recriar (ver Atena). Task 48: `getUserEmail()` aceito em `IDatabaseClient` como porta de sessão do app cliente (4 usos, todos na UI, sempre junto ao fluxo de dados p/ `created_by`; separar em `IAuthSession` seria churn sem ganho — revisitar se surgir 2º consumidor de auth). Correções homologadas (2026-09-10): budget seleciona por padrão o ajuste vigente (`pickDefaultAdjustment` em `useBudgetOverview.ts`: maior `start_month <= mês`, fallback mais recente); modais de checklist nunca fecham no erro — handlers de `useChecklistCardModals` relançam após registrar `errorMsg` e o form valida com mensagem visível (sem `return` silencioso); botões de months são `Abrir`/`Encerrar`/`Reabrir` com estilo de botão completo.
+
+```
+app/<modulo>/*/page.tsx ──▶ hooks/* ──▶ db/* ──▶ repositories/* ──▶ IDatabaseClient ──▶ Supabase
+        │                      │            ▲ mock (vi.mock)       ▲ fakes (contratos)
+        ▼                      ▼            │
+components/<modulo>/* ◀── props ── stories ── __tests__/**/espelho
+lib/<modulo>/types.ts ◀── fonte única (todos importam daqui)
+```
+
+| Camada | Responsabilidade | Importa de | Testado com |
+|---|---|---|---|
+| `app/<modulo>/` | Pages enxutas: só composição + modais | `hooks/*`, `db/*`, `components/<modulo>/*` | testes de página: factories de mock **com defaults**, `clickConnectedButton` p/ clique pós-fetch |
+| `components/<modulo>/` | Presentacionais (props), `*.stories.*` p/ novos | `types.ts`, ui compartilhado | `__tests__/components/` + build do Storybook |
+| `lib/<modulo>/hooks/` | Fetch+estado+operações (promise-chain + flag `cancelled`) | `db/*`, `types.ts` | `__tests__/lib/<modulo>/hooks/` |
+| `lib/<modulo>/db/` | Barrels `export *` sobre `repositories/` — **caminho oficial da UI** | `repositories/*` | `vi.mock` nos testes de página/hooks |
+| `lib/<modulo>/repositories/` | Dados + regras de persistência (ex.: período aberto); `I*Repository`, `fakes/` | `IDatabaseClient` (`lib/shared`), `types.ts` — **nunca `@supabase/*`** | contracts+fakes (`contract-*.test.ts`, fakes-only — decisão 57), `__tests__/lib/<modulo>/db/` |
+| `lib/<modulo>/types.ts` | Fonte única: Row/Input/Domain/FormData | — | compilação (tsc) |
+| `lib/<modulo>/{checklist-budget,utils}.ts` | Regras puras (overflow, agregações, datas) | `types.ts` | testes unitários diretos |
+| `lib/shared/` | `IDatabaseClient` (+`getUserEmail` como porta de sessão) + adapter Supabase (único lugar que conhece `@supabase/*`) | `@supabase/*` | mocks nos testes |
+
+**Onde ponho X?** repository → `repositories/<entidade>.ts` + fake + contract; hook → `hooks/useX.ts`; tipo → `types.ts` (nunca duplicar); regra pura → `utils.ts` ou `<dominio>-*.ts`; validação de form → no próprio form/modal (não há `schemas/`); teste → `__tests__/` espelhando o path; story → ao lado do componente; título de conteúdo (`h1/h2/h3` em cards/seções/modais) → token central `font-display` (CaesarDressing em `app/globals.css`; `ModuleLayout` já aplica em nome do módulo e `pageTitle`).
 
 ## Mapeamento Olympus e Ciclo de Vida
 
@@ -43,7 +68,7 @@ Todo agente DEVE consultar seu prompt em `.agents/olimpo/<agente>.md` antes de a
 4. **Proibição de Código Sem Spec/Plano Aprovados:** Nenhum código antes de `approvals.spec === "approved"` (checkpoint 1).
 5. **Parada Obrigatória (Stop & Wait):** Após gerar/alterar artefato (spec/plan/código) aguardar aprovação humana explícita antes de commitar ou avançar; 2 checkpoints humanos obrigatórios: `SPEC_APPROVED` (`approve-spec`) e `APPROVED` (`approve-review`).
 6. **Commits Apenas por Caronte sob Autorização:** Nenhum commit sem `approve-spec`/`approve-review`; `git add <arquivos>` explícito, nunca `.env` real.
-7. **Migrações Auditadas:** DDL em `utils/migrations/<timestamp>_<slug>.sql` + registro `schema_migrations`.
+7. **Migrações Auditadas:** DDL em `utils/migrations/migration-<slug>.sql` (incremental, nunca editar migração aplicada) + registro `schema_migrations`.
 8. **Investigação sem Gambiarras (debug-first):** Em falha, `BLOCKED` com erro exato + hipóteses + tentativas + caminhos; após 3 hipóteses escala para humano.
 
-<!-- Última atualização: 2026-08-27 (commit Olympus 0.9.0, docs corrigidas) -->
+<!-- Última atualização: 2026-09-10 (pós-09-10 + correções homologadas: font-display, budget default, months labels, modal error contract; backlogs com links relativos; gerador conectado ao Olympus) -->

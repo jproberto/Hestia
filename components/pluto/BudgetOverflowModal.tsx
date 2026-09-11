@@ -5,27 +5,12 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const MONTH_NAMES = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
-
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-};
+import { BudgetOverflowResult, MONTH_NAMES, formatCurrency } from "@/lib/pluto/types";
 
 export interface BudgetOverflowModalProps {
   isOpen: boolean;
-  overflowData: {
-    categoryId: string;
-    categoryName: string;
+  overflowData: BudgetOverflowResult & {
     categoryType: "receita" | "despesa";
-    totalChecklist: number;
-    budgetAmount: number;
     operationLabel: string;
   };
   month: number;
@@ -68,7 +53,7 @@ export default function BudgetOverflowModal({
         
         {step === 1 && (
           <>
-            <h2 className="text-lg font-bold tracking-tight text-rose-700 dark:text-rose-300">
+            <h2 className="text-lg font-display tracking-wider text-rose-700 dark:text-rose-300">
               Estouro de Orçamento Detectado
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -92,7 +77,7 @@ export default function BudgetOverflowModal({
 
         {step === 3 && (
           <>
-            <h2 className="text-lg font-bold tracking-tight">
+            <h2 className="text-lg font-display tracking-wider">
               Ajustar Orçamento
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -127,7 +112,7 @@ export default function BudgetOverflowModal({
 
         {step === 4 && (
           <>
-            <h2 className="text-lg font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+            <h2 className="text-lg font-display tracking-wider text-emerald-600 dark:text-emerald-400">
               Sucesso!
             </h2>
             <p className="text-sm text-muted-foreground">

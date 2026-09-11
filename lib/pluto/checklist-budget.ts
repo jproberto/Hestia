@@ -1,89 +1,66 @@
-export interface ChecklistItem {
-  id: string;
-  category_id: string;
-  amount?: number | null;
-  month_id?: string | null;
-  is_active?: boolean;
+import type { ChecklistItem, BudgetLikeItem, BudgetOverflowResult } from "./types";
+
+export type { BudgetOverflowResult } from "./types";
+
+function getBudgetAmount(budgetItems: BudgetLikeItem[], categoryId: string): number {
+  const budgetItem = budgetItems.find((b) => b.category_id === categoryId);
+  return budgetItem?.amount ?? 0;
 }
 
-export interface BudgetItem {
-  category_id: string;
-  category_name?: string;
-  amount: number;
+function getBudgetName(budgetItems: BudgetLikeItem[], categoryId: string): string {
+  const budgetItem = budgetItems.find((b) => b.category_id === categoryId);
+  return budgetItem?.category_name ?? "";
 }
 
-export interface BudgetOverflowResult {
-  isOverflow: boolean;
-  categoryId: string;
-  categoryName: string;
-  totalChecklist: number;
-  budgetAmount: number;
+function sumAmounts(items: ChecklistItem[], categoryId: string, excludeId?: string): number {
+  return items
+    .filter((item) => item.category_id === categoryId && item.id !== excludeId)
+    .reduce((sum, item) => sum + (item.amount || 0), 0);
 }
 
 export function checkGlobalBudgetOverflow(
   globalItems: ChecklistItem[],
-  budgetItems: BudgetItem[],
+  budgetItems: BudgetLikeItem[],
   targetCategoryId: string,
   targetAmount: number | null | undefined,
   excludeItemId?: string
 ): BudgetOverflowResult {
   const activeGlobals = globalItems.filter(
-    (item) => item.category_id === targetCategoryId && item.month_id === null && item.is_active === true
+    (item) => item.month_id === null && item.is_active === true
   );
 
-  const filteredGlobals = excludeItemId
-    ? activeGlobals.filter((item) => item.id !== excludeItemId)
-    : activeGlobals;
-
-  const currentTotal = filteredGlobals.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const currentTotal = sumAmounts(activeGlobals, targetCategoryId, excludeItemId);
   const totalChecklist = currentTotal + (targetAmount || 0);
-
-  const budgetItem = budgetItems.find((b) => b.category_id === targetCategoryId);
-
-  if (!budgetItem) {
-    return {
-      isOverflow: false,
-      categoryId: targetCategoryId,
-      categoryName: '',
-      totalChecklist,
-      budgetAmount: 0,
-    };
-  }
+  const budgetAmount = getBudgetAmount(budgetItems, targetCategoryId);
 
   return {
-    isOverflow: totalChecklist > budgetItem.amount,
+    isOverflow: budgetAmount > 0 && totalChecklist > budgetAmount,
     categoryId: targetCategoryId,
-    categoryName: budgetItem.category_name || '',
+    categoryName: getBudgetName(budgetItems, targetCategoryId),
     totalChecklist,
-    budgetAmount: budgetItem.amount,
+    budgetAmount,
+    // Derivado dos itens presentes; só é lido quando isOverflow (há itens da
+    // categoria). O fluxo de criação/editar sobrescreve com lookup real em
+    // useChecklistOperations antes de exibir o modal.
+    categoryType: globalItems.find((item) => item.category_id === targetCategoryId)?.type ?? "despesa",
   };
 }
 
 export function checkMonthBudgetOverflow(
   monthItems: ChecklistItem[],
-  budgetItems: BudgetItem[],
+  budgetItems: BudgetLikeItem[],
   targetCategoryId: string
 ): BudgetOverflowResult {
-  const catItems = monthItems.filter((item) => item.category_id === targetCategoryId);
-  const totalChecklist = catItems.reduce((sum, item) => sum + (item.amount || 0), 0);
-  
-  const budgetItem = budgetItems.find((b) => b.category_id === targetCategoryId);
-
-  if (!budgetItem) {
-    return {
-      isOverflow: false,
-      categoryId: targetCategoryId,
-      categoryName: '',
-      totalChecklist,
-      budgetAmount: 0,
-    };
-  }
+  const totalChecklist = sumAmounts(monthItems, targetCategoryId);
+  const budgetAmount = getBudgetAmount(budgetItems, targetCategoryId);
 
   return {
-    isOverflow: totalChecklist > budgetItem.amount,
+    isOverflow: budgetAmount > 0 && totalChecklist > budgetAmount,
     categoryId: targetCategoryId,
-    categoryName: budgetItem.category_name || '',
+    categoryName: getBudgetName(budgetItems, targetCategoryId),
     totalChecklist,
-    budgetAmount: budgetItem.amount,
+    budgetAmount,
+    // Ver comentário em checkGlobalBudgetOverflow sobre o fallback.
+    categoryType: monthItems.find((item) => item.category_id === targetCategoryId)?.type ?? "despesa",
   };
 }

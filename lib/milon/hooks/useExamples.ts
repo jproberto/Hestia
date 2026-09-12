@@ -1,14 +1,29 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { listExamplesStandalone } from "@/lib/milon/db/example";
-import type { MilonItem } from "@/lib/milon/types";
+import type { IDatabaseClient } from "@/lib/shared/database";
+import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
+import type { MilonItem, MilonItemRow } from "@/lib/milon/types";
 
 export interface UseExamplesReturn {
   data: MilonItem[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+}
+
+// Autocontido na TASK-004: `lib/milon/db/example.ts` foi removido e este era
+// seu único consumidor. A função abaixo preserva o comportamento exato até a
+// TASK-005 deletar este hook junto ao scaffold restante.
+async function listExamplesStandalone(): Promise<MilonItem[]> {
+  const db: IDatabaseClient = createBrowserDatabaseClient();
+  const { data, error } = await db
+    .from<MilonItemRow>("milon_items")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return (data || []).map((row) => ({ id: row.id, name: row.name, created_at: row.created_at }));
 }
 
 // Fetch+estado no padrão do projeto (promise-chain + flag cancelled).

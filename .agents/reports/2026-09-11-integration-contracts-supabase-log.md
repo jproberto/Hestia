@@ -25,4 +25,21 @@ Relatório-mãe: `2026-09-11-integration-contracts-supabase.md` · Branch: `feat
 - [x] Suite unitária intacta: 63/378 (integração excluída corretamente).
 - [x] `eslint` limpo nos arquivos novos.
 - [x] `test:integration` sem env falha rápido com mensagem clara nos 6 arquivos (wiring provado; execução real só no CI).
-- [ ] **Pendente: primeira execução real no CI** (risco declarado no relatório §5) — ver run do push.
+## Etapa 4 — Primeiro feedback do CI (2026-09-11)
+- Falha em `Apply Migrations From Scratch`: `psql` tentou socket local → `POSTGRES_URL` vazia. Hipótese inicial (prefixo `export `) refinada pelo log real.
+- Causa confirmada pelo log: CLI instalada era **v2.20.3** (via `setup-cli@v1`) — sem `-o env` utilizável; stack subia, mas nada era exportado. Fail-fast abortou com mensagem clara (comportamento projetado, não gambiarra).
+## Etapa 5 — Nomes reais das vars (2026-09-11)
+- O run com CLI moderna revelou o formato verdadeiro do `-o env` (v2.117.0): `DB_URL`/`API_URL`/`SERVICE_ROLE_KEY`, sem prefixo e sem `POSTGRES_URL` — as duas hipóteses anteriores estavam erradas, o fail-fast capturou.
+- Correção (`a3826da`): `eval` da saída + aliases explícitos para o padrão do job. Sem hipótese restante: nomes lidos do log real.
+## Etapa 6 — WebSocket nativo (2026-09-11)
+- Novo ponto de falha (progresso real: env ✓, migrations ✓): `createClient` do supabase-js recente exige WebSocket nativo, ausente no Node 20 do runner.
+- Correção (`dcbc10c`): só o job `integration` sobe para Node 22; `validate` permanece no 20 (pipeline verde existente intocado). Critério da rodada atendido: falha em ponto novo, não repetição.
+
+## Etapa 7 — Contracts executando: 60/76 (2026-09-11)
+- 4 suites 100% verdes no Postgres real (categories, accounts, budget, months) — harness provado de ponta a ponta.
+- 16 falhas em 2 causas-raiz no harness (não na produção): `created_at` nulo no seed de accounts (DDL exige NOT NULL, tipo permite null) e FK `month_id` sem linha de período (contract só semeia categorias).
+- Correção (`7699248`): default de `created_at` no seed + `ensurePeriod` idempotente nas escritas com `month_id` + arquivos em sequência (`singleFork`, mesmo banco com reset por teste). Unitária intacta 63/378.
+
+## Etapa 8 — 68/76, falta só `created_by` (2026-09-11)
+- Checklist zerado pelo `ensurePeriod`. Restam 8 falhas numa única causa: `created_by` nulo no seed de accounts (mesma família do `created_at`).
+- Correção (`114c7a6`): default para o email do contrato no seed. Expectativa: 76/76.

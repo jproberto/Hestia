@@ -1,2 +1,3 @@
 // React hooks do módulo Mílon
-export { useExamples } from "./useExamples";
+export { useExercises } from "./useExercises";
+export type { UseExercisesReturn, SaveExerciseInput } from "./useExercises";

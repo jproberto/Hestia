@@ -10,7 +10,7 @@ export * from "./repositories/exercises";
 // `@/lib/milon/db/exercises` — nunca re-exportado aqui.
 
 // Hooks (React Data Fetching Layer)
-export * from "./hooks/useExamples";
+export * from "./hooks/useExercises";
 
 // Utils (regras puras)
 export * from "./utils";

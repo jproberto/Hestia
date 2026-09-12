@@ -4,7 +4,7 @@
 export * from "./types";
 
 // Repositories (Data Access Layer)
-export * from "./repositories/example";
+export * from "./repositories/exercises";
 
 // DB barrels (caminho oficial da UI)
 export * from "./db/example";

@@ -42,6 +42,12 @@ export const MASCOT_REGISTRY: Record<MascotKey, MascotConfig> = {
     src: '/mascots/pluto.png',
     alt: 'Pluto, mascote do módulo financeiro',
   },
+
+  milon: {
+    key: 'milon',
+    src: '/mascots/milon.png',
+    alt: 'Mílon, mascote do módulo Mílon',
+  },
 }
 
 export const ROUTE_TO_MASCOT: Record<string, MascotKey> = {
@@ -49,6 +55,8 @@ export const ROUTE_TO_MASCOT: Record<string, MascotKey> = {
   '/register': 'hestia',
   '/dashboard': 'hestia',
   '/pluto': 'pluto',
+
+  '/milon': 'milon',
 }
 
 function isExactMatch(pathname: string, route: string): boolean {

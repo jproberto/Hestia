@@ -11,6 +11,7 @@ A organização segue o padrão **módulo por camada**: dentro de cada namespace
 | # | Módulo | Domínio | Pasta | Backlog do Módulo |
 |---|---|---|---|---|
 | 1 | **Pluto** | Finanças familiares: orçamento anual, meses operacionais, lançamentos, checklist de contas e saldo. | `pluto` | [.agents/modules/pluto/backlog.md](.agents/modules/pluto/backlog.md) |
+| 2 | **Mílon** | Academia: programas/treinos, treino do dia com timer+PWA, histórico, evolução e medidas corporais. | `milon` | [.agents/modules/milon/backlog.md](.agents/modules/milon/backlog.md) |
 
 ---
 

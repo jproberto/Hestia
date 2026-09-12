@@ -11,6 +11,13 @@ export const MODULES = {
     mascot: '/mascots/pluto.png',
     color: '#35472D',
   },
+  milon: {
+    key: 'milon',
+    name: 'Mílon',
+    mascot: '/mascots/milon.png',
+    color: '#B7602B',
+  },
+
 } as const;
 
 export type ModuleKey = keyof typeof MODULES;

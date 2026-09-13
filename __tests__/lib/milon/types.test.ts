@@ -59,6 +59,29 @@ describe("Milon TASK-001 — migração da biblioteca de exercícios", () => {
     expect(sql).toMatch(/INSERT INTO\s+public\.schema_migrations/i);
     expect(sql).toMatch(/ON CONFLICT\s*\(\s*script_name\s*\)\s*DO NOTHING/i);
   });
+
+  it("garante schema_migrations com self-bootstrap idempotente antes da auditoria", () => {
+    const sql = loadMigrationSql();
+    // Bloco bootstrap: CREATE TABLE IF NOT EXISTS com definição idêntica à 2a
+    expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS\s+public\.schema_migrations/i);
+    expect(sql).toMatch(/id\s+SERIAL\s+PRIMARY KEY/i);
+    expect(sql).toMatch(/spec_id\s+VARCHAR\(50\)\s+NOT NULL/i);
+    expect(sql).toMatch(/spec_name\s+TEXT\s+NOT NULL/i);
+    expect(sql).toMatch(/script_name\s+TEXT\s+NOT NULL\s+UNIQUE/i);
+    expect(sql).toMatch(/executed_at\s+TIMESTAMP\s+WITH\s+TIME\s+ZONE\s+DEFAULT\s+now\(\)\s+NOT NULL/i);
+    expect(sql).toMatch(/executed_by\s+TEXT/i);
+    // RLS + política espelhando a 2a
+    expect(sql).toMatch(/ALTER TABLE\s+public\.schema_migrations\s+ENABLE ROW LEVEL SECURITY/i);
+    expect(sql).toMatch(
+      /DROP POLICY IF EXISTS\s+"Permitir tudo para autenticados"\s+ON\s+public\.schema_migrations/i,
+    );
+    expect(sql).toMatch(/CREATE POLICY\s+"Permitir tudo para autenticados"\s+ON\s+public\.schema_migrations/i);
+    // Bootstrap deve vir ANTES do INSERT de auditoria
+    const bootstrapIdx = sql.search(/CREATE TABLE IF NOT EXISTS\s+public\.schema_migrations/i);
+    const auditIdx = sql.search(/INSERT INTO\s+public\.schema_migrations/i);
+    expect(bootstrapIdx).toBeGreaterThanOrEqual(0);
+    expect(auditIdx).toBeGreaterThan(bootstrapIdx);
+  });
 });
 
 describe("Milon TASK-001 — types da biblioteca de exercícios", () => {

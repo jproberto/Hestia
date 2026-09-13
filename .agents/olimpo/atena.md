@@ -126,7 +126,7 @@ Dentro da task, passos de 2-5 min com comando exato e `Expected: FAIL/PASS`.
 - Sem placeholders: proibido `TBD`, `TODO`, `similar à Task N`, `validação apropriada`, `tratar edge cases`
 - Cada task termina com verificação objetiva (ex: teste falha `Expected: FAIL` → implementação mínima → teste passa `Expected: PASS`); se verificação não for teste (config, style), explique alternativa objetiva
 - Não defina cenários de homologação no plano
-- **Migrations:** se task toca banco, inclua `Create: utils/migrations/migration-<slug>.sql` (incremental, nunca editar migração já aplicada) + registro em `schema_migrations` + `files` aponta para `lib/<modulo>/db/` afetado. Descreva schema em texto no plano, sem SQL de implementação
+- **Migrations:** se task toca banco, inclua `Create: utils/migrations/migration-NNNN-<modulo>-<slug>.sql` (incremental, nunca editar migração já aplicada) + registro em `schema_migrations` + `files` aponta para `lib/<modulo>/db/` afetado. Descreva schema em texto no plano, sem SQL de implementação
 
 ---
 

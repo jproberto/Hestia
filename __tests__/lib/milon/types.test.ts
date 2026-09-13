@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 // @ts-expect-error — arquivo de produção criado por Hefesto nesta task (RED até existir)
-import migrationSql from "@/utils/migrations/migration-milon-01-exercises.sql?raw";
+import migrationSql from "@/utils/migrations/migration-0007-milon-exercises.sql?raw";
 import type {
   ExerciseRow,
   Exercise,

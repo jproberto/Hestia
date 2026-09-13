@@ -71,7 +71,7 @@ Sem entrada essencial → `BLOCKED`, não revise com informação incompleta.
 
 ### 4. Contratos & Dados
 - Erro de tipo, API, schema, evento
-- Migração de banco auditada em `utils/migrations/` + `schema_migrations`
+- Migração de banco auditada em `utils/migrations/migration-NNNN-<modulo>-<slug>.sql` + `schema_migrations`
 
 ### 5. Testes & SemVer
 - Teste fraco/ausente ou testa mock em vez de comportamento

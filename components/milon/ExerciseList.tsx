@@ -43,7 +43,7 @@ export default function ExerciseList({
 }: ExerciseListProps) {
   return (
     <section className="flex flex-col gap-4" aria-label="Biblioteca de exercícios">
-      <h2 className="text-xl font-display text-[#35472D] tracking-wider">Exercícios</h2>
+      <h2 className="text-xl font-display text-[#B7602B] tracking-wider">Exercícios</h2>
 
       <div className="flex flex-col sm:flex-row gap-2">
         <label className="flex flex-1 flex-col gap-1 text-sm">
@@ -76,7 +76,7 @@ export default function ExerciseList({
       </div>
 
       {loading ? (
-        <p className="p-8 text-center text-sm font-display text-[#35472D] tracking-wider">
+        <p className="p-8 text-center text-sm font-display text-[#B7602B] tracking-wider">
           Carregando exercícios...
         </p>
       ) : error ? (
@@ -88,7 +88,7 @@ export default function ExerciseList({
         </div>
       ) : isEmpty ? (
         <div className="rounded-lg border bg-card p-8 text-center text-sm shadow-sm flex flex-col items-center gap-2">
-          <p className="font-display text-[#35472D] tracking-wider">
+          <p className="font-display text-[#B7602B] tracking-wider">
             Nenhum exercício cadastrado ainda.
           </p>
           <p className="text-muted-foreground">
@@ -97,7 +97,7 @@ export default function ExerciseList({
         </div>
       ) : visibleItems.length === 0 ? (
         <div className="rounded-lg border bg-card p-8 text-center text-sm shadow-sm flex flex-col items-center gap-2">
-          <p className="font-display text-[#35472D] tracking-wider">
+          <p className="font-display text-[#B7602B] tracking-wider">
             Nada encontrado para essa combinação.
           </p>
           <p className="text-muted-foreground">
@@ -113,7 +113,7 @@ export default function ExerciseList({
                 className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 flex items-center justify-between gap-3"
               >
                 <div className="flex flex-col gap-1 min-w-0">
-                  <h3 className="font-display text-[#35472D] tracking-wider truncate">
+                  <h3 className="font-display text-[#B7602B] tracking-wider truncate">
                     {exercise.name}
                   </h3>
                   <span className="text-xs text-muted-foreground">{exercise.muscle}</span>

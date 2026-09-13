@@ -144,7 +144,7 @@ npm run lint      # deve passar
 npm run test      # deve passar 100%
 npm run build     # deve passar
 ```
-Falha aqui = `blocked` automático com evidência.
+Falha aqui = `blocked` automático com evidência. Se `test-report.json` existir com `failed > 0` ou `coverage < 80`, `blocked` mesmo com suite local verde no momento (divergência = evidência).
 
 ---
 

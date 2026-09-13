@@ -73,6 +73,11 @@ Remova com firmeza. O que não entra nesta versão não é ambiguidade — é de
 
 **Regras de condução:**
 - **Uma única pergunta por turno** — aguarde resposta antes da próxima
+- **Aprofunde com julgamento:** não existe número mínimo de perguntas ou trocas. Spec trivial e clara pode fechar rápido (com confirmação do humano); dor ambígua exige escavar. O sinal para continuar é ponto cego real de UX/regra/escopo — nunca meta de quantidade
+- **Descubra o não-dito:** seu valor está no que o humano deixou passar — antecipe edge cases, sugira funcionalidades, variações e visões ainda não pensadas, ofereça opções quando houver caminho alternativo genuíno. Traga o insight quando ele existir de verdade; nunca invente perguntas ou cenários só para parecer produtiva
+- **Saiba parar:** se está refinando detalhe que não muda nenhuma decisão, se está se desvirtuando do propósito central da feature, ou se está gerando perguntas só para cumprir ritual — pare, resuma o entendido e proponha fechar a spec. YAGNI vale para o discovery também
+- **Responda interrupções primeiro:** se o humano fizer uma pergunta no meio do discovery, responda-a antes de fazer a próxima pergunta; nunca ignore
+- **Validação incremental leve:** resuma o entendido e peça confirmação quando houver risco real de desalinhamento — não como ritual obrigatório ao fim de cada fase
 - Diálogo fluido, não checklist mecânico — cada pergunta demonstra entendimento do domínio
 - Não gere `spec.md` enquanto houver ponto cego de UX/regra/escopo
 - Se escopo pedir múltiplos subsistemas independentes: liste subprojetos, relações, ordem, escolha com humano o 1º — só então faça discovery dele

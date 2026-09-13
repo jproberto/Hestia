@@ -38,7 +38,7 @@ export default function DashboardPage() {
             backgroundSize: 'auto 120%',
           }} />
           <div className="relative z-10 flex flex-col gap-2">
-            <h2 className="text-3xl font-display text-[#B7602B] tracking-wider group-hover:text-[#B7602B] transition-colors">
+            <h2 className="text-3xl font-display text-[#EC5223] tracking-wider group-hover:text-[#FF8C42] transition-colors">
               Mílon
             </h2>
             <p className="text-sm text-muted-foreground">

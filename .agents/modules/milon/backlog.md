@@ -22,7 +22,7 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 | # | Feature | Descrição | Status | Specs | Planos |
 |---|---|---|---|---|---|
-| 1 | **Biblioteca de exercícios** | Cadastro rápido inline ao montar o treino: seleciona existente ou cria na hora com nome + músculo + link de vídeo. Vira biblioteca reutilizável nos próximos treinos. Sem tela pesada de cadastro separado no MVP. | | | |
+| 1 | **Biblioteca de exercícios** | Cadastro rápido inline ao montar o treino: seleciona existente ou cria na hora com nome + músculo + link de vídeo. Vira biblioteca reutilizável nos próximos treinos. Sem tela pesada de cadastro separado no MVP. | Concluído | [.agents/modules/milon/01-biblioteca-exercicios/spec.md](.agents/modules/milon/01-biblioteca-exercicios/spec.md) | [.agents/modules/milon/01-biblioteca-exercicios/plan.md](.agents/modules/milon/01-biblioteca-exercicios/plan.md) |
 | 2 | **Programas (conjunto A/B/C por dono)** | Agrupa os treinos vigentes de cada usuário (ex: A, B, C). Cada Programa tem um dono mas é visível para os dois. Arquivar preserva histórico; criar novo Programa não apaga o antigo. É o que permite trocar de ficha sem perder o passado. | | | |
 | 3 | **Treinos + séries planejadas** | Dentro de um Programa, cada treino tem N exercícios em ordem; cada exercício tem N séries com reps alvo, carga alvo e descanso (segundos). Edição do planejado permitida antes e durante a execução. | | | |
 

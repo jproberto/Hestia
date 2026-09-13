@@ -11,6 +11,7 @@ Héstia é uma ferramenta pessoal para controle de finanças e planejamento orç
 * **Meses e Períodos Operacionais:** Controle explícito de abertura e encerramento de meses para lançamentos (`/pluto/months`).
 * **Cadastro de Transações:** Lançamento de receitas e despesas com criação inline de contas e categorias, estornos/reembolsos, saldo do mês em destaque e restrição de mês aberto (`/pluto/transactions`).
 * **Checklist de Contas a Pagar/Receber:** Lista recorrente de compromissos financeiros com indicação visual de urgência e validação de orçamento por categoria (`/pluto/transactions`, cards de checklist).
+* **Biblioteca de Exercícios (Mílon):** Cadastro compartilhado do casal (nome + músculo + link de vídeo opcional) com filtro por músculo, busca por texto, lotes com mostrar mais e modal único criar/editar (`/milon`).
 
 ### Funcionalidades Recentes (0.7.0)
 
@@ -24,6 +25,7 @@ Héstia é uma ferramenta pessoal para controle de finanças e planejamento orç
 O Héstia é um **guarda-chuva de sub-sistemas** organizado pelo padrão *módulo por camada*: código exclusivo de um módulo vive em `<camada>/<modulo>/`; o compartilhado permanece na raiz da camada.
 
 * **Módulo Pluto (financeiro):** `app/pluto/`, `components/pluto/`, `lib/pluto/` (com acesso a dados em `lib/pluto/db/`) e testes espelhados em `__tests__/app/pluto/`, `__tests__/components/pluto/` e `__tests__/lib/pluto/`.
+* **Módulo Mílon (academia):** `app/milon/`, `components/milon/`, `lib/milon/` (com acesso a dados em `lib/milon/db/`) e testes espelhados em `__tests__/app/milon/`, `__tests__/components/milon/` e `__tests__/lib/milon/`.
 * **Comum/transversal:** `app/layout.tsx`, `app/page.tsx`, `app/globals.css`, `app/login/`, `app/dashboard/`, `components/ui/`, `lib/utils.ts`, `utils/supabase/` e `utils/migrations/`.
 
 O **Pluto** é o módulo financeiro do Héstia e o primeiro a seguir esse padrão; novos módulos são registrados na tabela "Módulos Registrados" do backlog central (`.agents/modules/hestia/backlog.md`) com documentação por feature em `.agents/modules/<modulo>/<slug>/` (`spec.md`, `plan.md`, `tasks.json`, `context.json`, `checkpoint.json`).

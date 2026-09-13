@@ -8,6 +8,7 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 ## [Não lançado]
 
 ### Adicionado
+- **Mílon #1 — Biblioteca de exercícios (`/milon`):** tabela `public.exercises` via `utils/migrations/migration-0007-milon-exercises.sql`; tela com lista, filtro por músculo, busca por texto (a partir do 3º caractere), lotes de 20 com mostrar mais e controle "Ordenar por" (Músculo|Nome); modal único criar/editar com Salvar e Salvar e incluir outro; anti-duplicata nome+músculo com normalização; exclusão com confirmação; card Mílon no dashboard; adendo UX (lista compacta mobile, link "ver vídeo", ordenação). Suíte em 495 testes, review aprovado.
 - **Testes de integração contra Supabase real (item 8):** `__tests__/integration/` reutiliza os 6 contracts via binding Supabase (`test:integration`, config própria sem mocks globais); job `integration` no CI sobe Supabase efêmero, aplica as migrations do zero e executa.
 
 ### Corrigido

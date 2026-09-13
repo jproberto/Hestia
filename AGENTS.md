@@ -49,16 +49,16 @@ Todo agente DEVE consultar seu prompt em `.agents/olimpo/<agente>.md` antes de a
 | Fase | Agente | Papel |
 |---|---|---|
 | 1. Discovery & Spec | **Hera** (`hera.md`) | Brainstorming 1 pergunta/turno (intenção→jornada→regras→YAGNI), 2-3 alternativas, escreve `spec.md` em `FEATURE_DIR`. |
-| 2. Planejamento | **Atena** (`atena.md`) | Lê `spec.md`+codebase → `plan.md` + `tasks.json` (`{tasks:[]}`, DAG, criteria testáveis) em `FEATURE_DIR`. |
+| 2. Planejamento | **Atena** (`atena.md`) | Lê `spec.md`+codebase → `plan.md` + `tasks.json` (`{tasks:[]}`, DAG, criteria testáveis) em `FEATURE_DIR`; task de substituição exige critério "busca por `<placeholder>` retorna 0 em código vivo" (remove ou justifica). |
 | 3. Implementação | **Hefesto** (`hefesto.md`) | Recebe teste RED de Minos → implementa mínimo para GREEN → refatora. Não escreve testes. |
-| 4. Testes | **Minos** (`minos.md`) | Antes: testes de contrato RED; Depois: suite completa, coverage ≥80%, `test-report.json` + `test-scenarios.md` + promoção `regression.md`. |
+| 4. Testes | **Minos** (`minos.md`) | Antes: testes de contrato RED; Depois: suite completa, coverage ≥80%, `test-report.json` + `test-scenarios.md` + promoção `regression.md`; re-executa suite + coverage e atualiza `test-report.json` antes de cada review do Argos. |
 | 5. Revisão | **Argos** (`argos.md`) | Avalia `diff.patch` (develop...HEAD) vs spec/plan em 5 eixos, `review-report.json` (approved/blocked + category). |
 | 6. Homologação | Humano + `test-scenarios.md` | Executa cenários Dado/Quando/Então, aprova diff → `approve-review`. |
 | 7. Documentação | **Mnemósine** (`mnemosine.md`) | Atualiza `AGENTS.md`, `CHANGELOG.md`, `README.md`, propõe melhorias. |
 | 8. Commit | **Caronte** (`caronte.md`) | Agente transversal — único que commita: valida branch `feature/<modulo>/<slug>` (ou `feature/hestia/<slug>` se transversal), pre-commit, `git add <arquivos>` explícito, Conventional Commits PT-BR, push (Actions abre PR). |
 
 ### Agentes / Skills
-- **Zeus** (`zeus.md`, primary): orquestrador, state machine 9 fases (`SPEC_DRAFT`→`COMMITTED`), guardian, delega via Task tool, resolve `FEATURE_DIR` via `.agents/current`, valida DAG `tasks.json`, gera `diff.patch`, persiste estado via `read`/`write`.
+- **Zeus** (`zeus.md`, primary): orquestrador, state machine 9 fases (`SPEC_DRAFT`→`COMMITTED`), guardian, delega via Task tool, resolve `FEATURE_DIR` via `.agents/current`, valida DAG `tasks.json`, gera `diff.patch`, persiste estado via `read`/`write`, vira cada task para `completed` em `tasks.json` no commit do Caronte daquela task (não em lote nos docs).
 - **Hefesto** nunca escreve testes; **Minos** nunca corrige produção; **Argos** nunca corrige; **Mnemósine** nunca altera produção; **Caronte** único que commita.
 
 ## Regras Fundamentais de Execução (Garantia do Processo)
@@ -72,4 +72,4 @@ Todo agente DEVE consultar seu prompt em `.agents/olimpo/<agente>.md` antes de a
 7. **Migrações Auditadas:** DDL incremental em `utils/migrations/migration-NNNN-<modulo>-<slug>.sql`, onde `NNNN` é sequência global com 4 dígitos e zeros à esquerda, `<modulo>` é a chave do módulo (`pluto`, `milon`, ou `hestia` para transversal) e `<slug>` é descrição curta em kebab-case sem sufixos de versão tipo `2a`/`5c` (cada arquivo consome um inteiro; o vínculo com a feature-mãe vai em `spec_id`/`spec_name`). Atena reserva o número no `plan.md`; Hefesto cria o arquivo; quem integra por segundo renomeia o arquivo ainda-não-aplicado. Nunca editar nem renomear migração já aplicada em qualquer ambiente; correção exige arquivo novo. Os 6 scripts `migration-feature-*` anteriores a 2026-09-13 ficam congelados com seus nomes originais e equivalem aos inteiros `0001`–`0006`; o script da Mílon #1 é renomeado uma única vez para `migration-0007-milon-exercises.sql` antes da primeira aplicação. Todo script registra sua execução em `public.schema_migrations` com o nome do arquivo idêntico ao valor auditado e conflito ignorado pelo nome do script. Divergência conhecida e congelada: o arquivo `migration-feature-3.sql` audita o nome `migration-feature-4.sql`.
 8. **Investigação sem Gambiarras (debug-first):** Em falha, `BLOCKED` com erro exato + hipóteses + tentativas + caminhos; após 3 hipóteses escala para humano.
 
-<!-- Última atualização: 2026-09-13 (Mílon #1 biblioteca concluída: linha Mílon na Estrutura; Mapa de Camadas e regra 7 inalterados) -->
+<!-- Última atualização: 2026-09-13 (Mílon #1: 3 melhorias de processo — flip de task por commit, test-report regenerado, critério anti-placeholder) -->

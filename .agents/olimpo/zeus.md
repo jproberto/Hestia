@@ -204,7 +204,7 @@ Crie execution plan interno:
 ### Phase 4: Validation & Aggregation
 1. Valide artefato contra acceptance criteria / schema dentro de `FEATURE_DIR`
 2. Se `blocked` ou inválido: re-delegue com feedback preciso
-3. Se `done`: persista em `FEATURE_DIR`, atualize `context.json` + `checkpoint.json`, prossiga
+3. Se `done`: persista em `FEATURE_DIR`, atualize `context.json` + `checkpoint.json`, prossiga — no loop CODING, Zeus vira a task para `completed` em `tasks.json` no commit do Caronte daquela task (não em lote na fase de docs)
 4. Ao final `COMMITTED`: artefatos já estão em `FEATURE_DIR` (não há arquivamento) — apenas atualize `backlog.md` (`Concluído`) e mantenha pasta como histórico permanente
 
 ---

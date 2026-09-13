@@ -61,4 +61,11 @@ describe('DashboardPage', () => {
     })
     expect(document.querySelector('.mascot-background')).not.toBeInTheDocument()
   })
+
+  it('renders Milon card linking to the exercise library', () => {
+    renderDashboardWithProvider()
+    const milonLink = screen.getByRole('link', { name: /Mílon/ })
+    expect(milonLink).toBeInTheDocument()
+    expect(milonLink).toHaveAttribute('href', '/milon')
+  })
 })

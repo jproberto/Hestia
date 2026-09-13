@@ -47,7 +47,12 @@ Você é Caronte, barqueiro do Estige. Único responsável por transições defi
 | **Após Atena** | `TASKS_READY` | Commita `spec.md` + `plan.md` + `tasks.json` | `feat: spec + plan registradas para feature <nome>` |
 | **Após cada task** | `CODING` (loop) | Commita incremento atomico da task (código + testes da task) | `feat: <descrição da task>` |
 | **Após Mnemósine** | `APPROVED` | Commita `AGENTS.md` + `CHANGELOG.md` + `README.md` + `package.json` (bump) | `docs: atualizar documentação da feature <nome>` |
-| **Final** | `COMMITTED` | Commita residuais + `push -u origin feature/<modulo>/<slug>` (ou `feature/hestia/<slug>` se transversal); GitHub Actions abre PR para `develop` | `feat: feature <nome> concluída — Olympus` |
+| **Publicar** | `COMMITTED` | Commita residuais + `push -u origin feature/<modulo>/<slug>` (ou `feature/hestia/<slug>` se transversal); garante PR aberto para `develop` + `gh pr merge --auto --merge` | `feat: feature <nome> concluída — Olympus` |
+| **Aguardar merge** | `MERGED` | Acompanha PR até `MERGED` (`gh pr view`); CI do PR vermelho → `BLOCKED: PR CI red <link>` (Zeus devolve para fase exata, republica) | — (sem commit; só monitoramento) |
+| **Aguardar CI** | `VERIFIED` | Acompanha CI pós-merge na `develop` até `success` (`gh run list --branch develop`); vermelho → `BLOCKED: develop CI red <sha>` (corrige antes de liberar) | — (sem commit; só monitoramento) |
+| **Liberar ambiente** | `RELEASED` | `git checkout develop` + `git pull origin develop`; confirma working tree limpo + SHA igual ao remoto; reporta a Zeus (feature 100%, ambiente livre) | — (sem commit; só sincronização) |
+
+**Regra de erro:** nenhuma transição para frente com CI vermelho; conflito no `pull` → `BLOCKED: develop pull conflict` (resolve com humano, nunca `--force`).|
 
 > Fases `TESTING` e `REVIEW` não commitam isoladas; correções voltam para `CODING` e são commitadas como `feat: <task>` / `fix: <achado>`.
 

@@ -147,4 +147,69 @@ describe("ExerciseList", () => {
     fireEvent.click(screen.getByRole("button", { name: /excluir supino reto/i }));
     expect(onDelete).toHaveBeenCalledWith(item);
   });
+
+  describe("adendo UX v2 — lista compacta, link marrom claro, Ordenar por", () => {
+    it("apresentação compacta/densa: item sem excesso de espaço, com toque confortável nas ações", () => {
+      const item = makeExercise();
+      const { container } = render(
+        <ExerciseList {...defaultProps({ visibleItems: [item] })} />,
+      );
+
+      const listItem = container.querySelector("li");
+      expect(listItem).not.toBeNull();
+      // Compacto: sem o padding espaçado anterior (p-4) — denso mobile-first.
+      expect(listItem!.className).not.toMatch(/(?:^|\s)p-4(?:\s|$)/);
+      expect(listItem!.className).toMatch(/py-2/);
+
+      // Toque confortável: cada ação com alvo mínimo de 40px.
+      const editButton = screen.getByRole("button", { name: /editar supino reto/i });
+      expect(editButton.className).toMatch(/min-h-10/);
+      expect(editButton.className).toMatch(/min-w-10/);
+      const deleteButton = screen.getByRole("button", { name: /excluir supino reto/i });
+      expect(deleteButton.className).toMatch(/min-h-10/);
+      expect(deleteButton.className).toMatch(/min-w-10/);
+    });
+
+    it("link 'ver vídeo' em marrom visivelmente mais claro que os títulos #B7602B", () => {
+      // Tom escolhido por Hefesto: #C2703D — derivação clara do terracota
+      // (luminância maior que #B7602B, contraste 3.7:1 sobre fundo claro + sublinhado).
+      const item = makeExercise();
+      render(<ExerciseList {...defaultProps({ visibleItems: [item] })} />);
+
+      const link = screen.getByRole("link", { name: /ver vídeo/i });
+      expect(link.className).toMatch(/text-\[#C2703D\]/);
+      expect(link.className).not.toMatch(/text-sky-700/);
+    });
+
+    it("controle 'Ordenar por' com opções Nome e Músculo, padrão Músculo", () => {
+      const onSortChange = vi.fn();
+      render(
+        <ExerciseList
+          {...defaultProps({ sortOrder: "muscle", onSortChange })}
+        />,
+      );
+
+      const control = screen.getByLabelText(/ordenar por/i);
+      expect(control).toBeInTheDocument();
+      const options = Array.from(control.querySelectorAll("option")).map(
+        (option) => option.textContent,
+      );
+      expect(options).toEqual(expect.arrayContaining(["Nome", "Músculo"]));
+      expect(control).toHaveValue("muscle");
+    });
+
+    it("trocar a ordenação no controle dispara onSortChange", () => {
+      const onSortChange = vi.fn();
+      render(
+        <ExerciseList
+          {...defaultProps({ sortOrder: "muscle", onSortChange })}
+        />,
+      );
+
+      fireEvent.change(screen.getByLabelText(/ordenar por/i), {
+        target: { value: "name" },
+      });
+      expect(onSortChange).toHaveBeenCalledWith("name");
+    });
+  });
 });

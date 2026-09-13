@@ -5,6 +5,10 @@ export const EXERCISE_PAGE_SIZE = 20;
 
 export const EXERCISE_SEARCH_MIN_LENGTH = 3;
 
+// Ordem de exibição da consulta (adendo UX v2, spec §3/§5):
+// "muscle" mantém o comportamento atual (músculo→nome); "name" ordena só por nome.
+export type ExerciseSortOrder = "muscle" | "name";
+
 interface ExerciseNameLike {
   name: string;
 }
@@ -66,3 +70,14 @@ export function compareExercisesByMuscleThenName(
 
 // Alias pedido no delegate (mesmo contrato do comparador músculo→nome).
 export const compareExercises = compareExercisesByMuscleThenName;
+
+export function compareExercisesByName(
+  a: ExerciseIdentityLike,
+  b: ExerciseIdentityLike,
+): number {
+  const nameA = normalizeExerciseText(a.name);
+  const nameB = normalizeExerciseText(b.name);
+  if (nameA < nameB) return -1;
+  if (nameA > nameB) return 1;
+  return 0;
+}

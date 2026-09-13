@@ -328,7 +328,7 @@ describe("useExercises (TASK-005)", () => {
     expect(result.current.successNotice).not.toBeNull();
   });
 
-  it("falha ao salvar registra erro e relança (modal nunca fecha silencioso)", async () => {
+  it("falha ao salvar relança sem contaminar o erro da lista (modal exibe via throw)", async () => {
     mockList([]);
     vi.mocked(createExerciseStandalone).mockRejectedValueOnce(new Error("duplicado"));
     const { result } = renderHook(() => useExercises());
@@ -339,10 +339,146 @@ describe("useExercises (TASK-005)", () => {
         result.current.save({ name: "X", muscle: "peito", videoLink: null }),
       ).rejects.toThrow("duplicado");
     });
-    expect(result.current.error).toBe("duplicado");
+    expect(result.current.error).toBeNull();
+  });
+
+  it("save com falha (duplicata) preserva lista/filtros e não contamina o erro da lista", async () => {
+    const items = [
+      makeExercise({ id: "ex-1", name: "Supino reto", muscle: "peito" }),
+      makeExercise({ id: "ex-2", name: "Agachamento", muscle: "perna" }),
+    ];
+    mockList(items);
+    vi.mocked(createExerciseStandalone).mockRejectedValueOnce(
+      new Error("Exercício já existe naquele músculo"),
+    );
+    const { result } = renderHook(() => useExercises());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.setMuscleFilter("peito");
+    });
+    expect(result.current.visibleExercises.map((e) => e.id)).toEqual(["ex-1"]);
+
+    await act(async () => {
+      await expect(
+        result.current.save({ name: "Supino reto", muscle: "peito", videoLink: null }),
+      ).rejects.toThrow("Exercício já existe naquele músculo");
+    });
+
+    // Regressão cenário 11: falha de save vai só para o modal (via throw);
+    // o erro de nível da lista permanece nulo e itens/filtros são preservados.
+    expect(result.current.error).toBeNull();
+    expect(result.current.exercises).toHaveLength(2);
+    expect(result.current.muscleFilter).toBe("peito");
+    expect(result.current.visibleExercises.map((e) => e.id)).toEqual(["ex-1"]);
   });
 
   it("hooks/index exporta useExercises como caminho oficial", () => {
     expect(typeof hooksIndex.useExercises).toBe("function");
+  });
+
+  describe("Ordenar por (adendo UX v2)", () => {
+    it("padrão inicial é Músculo: lista ordenada por músculo e depois por nome", async () => {
+      mockList([
+        makeExercise({ id: "ex-1", name: "Supino reto", muscle: "peito" }),
+        makeExercise({ id: "ex-2", name: "Agachamento", muscle: "perna" }),
+        makeExercise({ id: "ex-3", name: "Crucifixo", muscle: "peito" }),
+      ]);
+      const { result } = renderHook(() => useExercises());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.sortOrder).toBe("muscle");
+      expect(result.current.exercises.map((e) => e.id)).toEqual(["ex-3", "ex-1", "ex-2"]);
+    });
+
+    it("troca para Nome ordena só por nome; voltar para Músculo restaura músculo→nome", async () => {
+      mockList([
+        makeExercise({ id: "ex-1", name: "Supino reto", muscle: "peito" }),
+        makeExercise({ id: "ex-2", name: "Agachamento", muscle: "perna" }),
+        makeExercise({ id: "ex-3", name: "Crucifixo", muscle: "peito" }),
+      ]);
+      const { result } = renderHook(() => useExercises());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      act(() => {
+        result.current.setSortOrder("name");
+      });
+      expect(result.current.sortOrder).toBe("name");
+      expect(result.current.visibleExercises.map((e) => e.id)).toEqual([
+        "ex-2",
+        "ex-3",
+        "ex-1",
+      ]);
+
+      act(() => {
+        result.current.setSortOrder("muscle");
+      });
+      expect(result.current.sortOrder).toBe("muscle");
+      expect(result.current.visibleExercises.map((e) => e.id)).toEqual([
+        "ex-3",
+        "ex-1",
+        "ex-2",
+      ]);
+    });
+
+    it("troca de ordenação reinicia no primeiro lote, como filtro e busca", async () => {
+      const items = Array.from({ length: 25 }, (_, i) =>
+        makeExercise({
+          id: `ex-${i + 1}`,
+          name: `Exercicio ${String(i + 1).padStart(2, "0")}`,
+          muscle: "peito",
+        }),
+      );
+      mockList(items);
+      const { result } = renderHook(() => useExercises());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      act(() => {
+        result.current.showMore();
+      });
+      expect(result.current.visibleExercises).toHaveLength(25);
+
+      act(() => {
+        result.current.setSortOrder("name");
+      });
+      expect(result.current.sortOrder).toBe("name");
+      expect(result.current.visibleCount).toBe(20);
+      expect(result.current.visibleExercises).toHaveLength(20);
+    });
+
+    it("ordenação por Nome vale em lista filtrada, buscada e combinada", async () => {
+      mockList([
+        makeExercise({ id: "ex-1", name: "Supino reto", muscle: "peito" }),
+        makeExercise({ id: "ex-2", name: "Agachamento", muscle: "perna" }),
+        makeExercise({ id: "ex-3", name: "Supino inclinado", muscle: "perna" }),
+      ]);
+      const { result } = renderHook(() => useExercises());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      act(() => {
+        result.current.setSortOrder("name");
+      });
+
+      // Filtrada por músculo permanece ordenada por nome.
+      act(() => {
+        result.current.setMuscleFilter("perna");
+      });
+      expect(result.current.visibleExercises.map((e) => e.id)).toEqual(["ex-2", "ex-3"]);
+
+      // Buscada por texto permanece ordenada por nome.
+      act(() => {
+        result.current.clearFilters();
+      });
+      act(() => {
+        result.current.setSearchText("supino");
+      });
+      expect(result.current.visibleExercises.map((e) => e.id)).toEqual(["ex-3", "ex-1"]);
+
+      // Combinada (músculo + texto) permanece ordenada por nome.
+      act(() => {
+        result.current.setMuscleFilter("perna");
+      });
+      expect(result.current.visibleExercises.map((e) => e.id)).toEqual(["ex-3"]);
+    });
   });
 });

@@ -41,6 +41,7 @@ const items: Exercise[] = [
 const handlers = {
   onFilterChange: fn(),
   onSearchChange: fn(),
+  onSortChange: fn(),
   onShowMore: fn(),
   onRetry: fn(),
   onEdit: fn(),
@@ -51,6 +52,7 @@ const base = {
   muscleOptions: ["Braço", "Peito", "Perna"],
   muscleFilter: "",
   searchText: "",
+  sortOrder: "muscle" as const,
   loading: false,
   error: null,
   isEmpty: false,
@@ -59,6 +61,15 @@ const base = {
 
 export const Cheia: Story = {
   args: { ...base, visibleItems: items, remainingCount: 4 },
+};
+
+export const OrdenadaPorNome: Story = {
+  args: {
+    ...base,
+    visibleItems: [...items].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
+    remainingCount: 0,
+    sortOrder: "name" as const,
+  },
 };
 
 export const Vazia: Story = {

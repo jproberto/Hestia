@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
 import type { Exercise } from "@/lib/milon/types";
+import type { ExerciseSortOrder } from "@/lib/milon/utils";
 
 export interface ExerciseListProps {
   visibleItems: Exercise[];
@@ -10,11 +11,13 @@ export interface ExerciseListProps {
   muscleOptions: string[];
   muscleFilter: string;
   searchText: string;
+  sortOrder?: ExerciseSortOrder;
   loading: boolean;
   error: string | null;
   isEmpty: boolean;
   onFilterChange: (muscle: string) => void;
   onSearchChange: (text: string) => void;
+  onSortChange?: (order: ExerciseSortOrder) => void;
   onShowMore: () => void;
   onRetry: () => void;
   onEdit: (exercise: Exercise) => void;
@@ -31,18 +34,20 @@ export default function ExerciseList({
   muscleOptions,
   muscleFilter,
   searchText,
+  sortOrder = "muscle",
   loading,
   error,
   isEmpty,
   onFilterChange,
   onSearchChange,
+  onSortChange,
   onShowMore,
   onRetry,
   onEdit,
   onDelete,
 }: ExerciseListProps) {
   return (
-    <section className="flex flex-col gap-4" aria-label="Biblioteca de exercícios">
+    <section className="flex flex-col gap-3" aria-label="Biblioteca de exercícios">
       <h2 className="text-xl font-display text-[#B7602B] tracking-wider">Exercícios</h2>
 
       <div className="flex flex-col sm:flex-row gap-2">
@@ -72,6 +77,18 @@ export default function ExerciseList({
             placeholder="Digite ao menos 3 letras"
             className="rounded-md border bg-background px-3 py-2 text-sm"
           />
+        </label>
+        <label className="flex flex-1 flex-col gap-1 text-sm">
+          <span className="font-display tracking-wider">Ordenar por</span>
+          <select
+            aria-label="Ordenar por"
+            value={sortOrder}
+            onChange={(event) => onSortChange?.(event.target.value as ExerciseSortOrder)}
+            className="rounded-md border bg-background px-3 py-2 text-sm"
+          >
+            <option value="muscle">Músculo</option>
+            <option value="name">Nome</option>
+          </select>
         </label>
       </div>
 
@@ -106,14 +123,14 @@ export default function ExerciseList({
         </div>
       ) : (
         <>
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-1.5">
             {visibleItems.map((exercise) => (
               <li
                 key={exercise.id}
-                className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 flex items-center justify-between gap-3"
+                className="rounded-lg border bg-card text-card-foreground shadow-sm px-3 py-2 flex items-center justify-between gap-2"
               >
-                <div className="flex flex-col gap-1 min-w-0">
-                  <h3 className="font-display text-[#B7602B] tracking-wider truncate">
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <h3 className="font-display text-sm leading-snug text-[#B7602B] tracking-wider truncate">
                     {exercise.name}
                   </h3>
                   <span className="text-xs text-muted-foreground">{exercise.muscle}</span>
@@ -123,7 +140,7 @@ export default function ExerciseList({
                       target="_blank"
                       rel="noreferrer"
                       aria-label={`Ver vídeo de ${exercise.name}`}
-                      className="text-xs text-sky-700 underline dark:text-sky-300"
+                      className="text-xs text-[#C2703D] underline underline-offset-2"
                     >
                       Ver vídeo
                     </a>
@@ -135,7 +152,7 @@ export default function ExerciseList({
                     onClick={() => onEdit(exercise)}
                     aria-label={`Editar ${exercise.name}`}
                     title="Editar exercício"
-                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    className="p-2 min-h-10 min-w-10 inline-flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
@@ -144,7 +161,7 @@ export default function ExerciseList({
                     onClick={() => onDelete(exercise)}
                     aria-label={`Excluir ${exercise.name}`}
                     title="Excluir exercício"
-                    className="p-1 rounded hover:bg-rose-100 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 transition-colors"
+                    className="p-2 min-h-10 min-w-10 inline-flex items-center justify-center rounded hover:bg-rose-100 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 transition-colors"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

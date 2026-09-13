@@ -29,11 +29,13 @@ export default function MilonPage() {
     muscleOptions,
     muscleFilter,
     searchText,
+    sortOrder,
     loading,
     error,
     successNotice,
     setMuscleFilter,
     setSearchText,
+    setSortOrder,
     showMore,
     retry,
     save,
@@ -137,11 +139,13 @@ export default function MilonPage() {
           muscleOptions={muscleOptions}
           muscleFilter={muscleFilter}
           searchText={searchText}
+          sortOrder={sortOrder}
           loading={loading}
           error={error}
           isEmpty={isEmpty}
           onFilterChange={setMuscleFilter}
           onSearchChange={setSearchText}
+          onSortChange={setSortOrder}
           onShowMore={showMore}
           onRetry={retry}
           onEdit={handleEdit}

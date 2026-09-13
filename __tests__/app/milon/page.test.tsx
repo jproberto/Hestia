@@ -293,6 +293,39 @@ describe("MilonPage /milon - Biblioteca de exercícios (TASK-009)", () => {
     });
   });
 
+  it("falha de save (duplicata) exibe erro só no modal e preserva a lista filtrada", async () => {
+    const item = makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" });
+    const state = setupHook({
+      exercises: [item],
+      filteredExercises: [item],
+      visibleExercises: [item],
+      muscleOptions: ["Peito"],
+      error: null,
+      save: vi.fn(async () => {
+        throw new Error("Exercício já existe naquele músculo");
+      }),
+    });
+
+    render(<MilonPage />);
+
+    await clickConnectedButton(/novo exercício/i);
+    fillModalForm("Supino reto", "Peito");
+    await clickConnectedButton(/^salvar$/i);
+
+    await waitFor(() => {
+      expect(state.save).toHaveBeenCalled();
+    });
+
+    // Erro visível dentro do modal…
+    await waitFor(() => {
+      expect(screen.getByText(/já existe naquele músculo/i)).toBeInTheDocument();
+    });
+    // …modal permanece aberto e a lista atrás preserva o item (sem retry de fetch).
+    expect(screen.getByRole("heading", { name: /novo exercício/i })).toBeInTheDocument();
+    expect(screen.getByText("Supino reto")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /tentar novamente/i })).not.toBeInTheDocument();
+  });
+
   it("cancelar a confirmação de exclusão preserva a lista", async () => {
     const item = makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" });
     const state = setupHook({
@@ -309,5 +342,29 @@ describe("MilonPage /milon - Biblioteca de exercícios (TASK-009)", () => {
 
     expect(state.remove).not.toHaveBeenCalled();
     expect(screen.getByText("Supino reto")).toBeInTheDocument();
+  });
+
+  it("controle 'Ordenar por' ligado ao hook: exibe ordem atual e troca dispara setSortOrder", async () => {
+    const items = [
+      makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" }),
+      makeExercise({ id: "ex-2", name: "Agachamento", muscle: "Perna" }),
+    ];
+    const setSortOrder = vi.fn();
+    setupHook({
+      exercises: items,
+      filteredExercises: items,
+      visibleExercises: items,
+      muscleOptions: ["Peito", "Perna"],
+      sortOrder: "muscle",
+      setSortOrder,
+    });
+
+    render(<MilonPage />);
+
+    const control = await screen.findByLabelText(/ordenar por/i);
+    expect(control).toHaveValue("muscle");
+
+    fireEvent.change(control, { target: { value: "name" } });
+    expect(setSortOrder).toHaveBeenCalledWith("name");
   });
 });

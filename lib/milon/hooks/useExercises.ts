@@ -11,8 +11,10 @@ import {
 import {
   EXERCISE_PAGE_SIZE,
   compareExercisesByMuscleThenName,
+  compareExercisesByName,
   matchesExerciseQuery,
   normalizeExerciseText,
+  type ExerciseSortOrder,
 } from "@/lib/milon/utils";
 import type { CreateExerciseInput, Exercise } from "@/lib/milon/types";
 
@@ -30,12 +32,14 @@ export interface UseExercisesReturn {
   muscleOptions: string[];
   muscleFilter: string;
   searchText: string;
+  sortOrder: ExerciseSortOrder;
   visibleCount: number;
   loading: boolean;
   error: string | null;
   successNotice: string | null;
   setMuscleFilter: (value: string) => void;
   setSearchText: (value: string) => void;
+  setSortOrder: (order: ExerciseSortOrder) => void;
   showMore: () => void;
   clearFilters: () => void;
   reload: () => Promise<void>;
@@ -54,8 +58,10 @@ function toErrorMessage(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
 }
 
-function sortExercises(items: Exercise[]): Exercise[] {
-  return [...items].sort(compareExercisesByMuscleThenName);
+function sortExercises(items: Exercise[], order: ExerciseSortOrder): Exercise[] {
+  return [...items].sort(
+    order === "name" ? compareExercisesByName : compareExercisesByMuscleThenName,
+  );
 }
 
 function deriveMuscleOptions(items: Exercise[]): string[] {
@@ -76,6 +82,10 @@ export function useExercises(): UseExercisesReturn {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [muscleFilter, setMuscleFilterState] = useState<string>("");
   const [searchText, setSearchTextState] = useState<string>("");
+  const [sortOrder, setSortOrderState] = useState<ExerciseSortOrder>("muscle");
+  // Espelho mutável da ordem para os callbacks estáveis (applyList/fetchList
+  // e efeito de mount): a troca de ordem reordena via setSortOrder abaixo.
+  const sortOrderRef = useRef<ExerciseSortOrder>("muscle");
   const [visibleCount, setVisibleCount] = useState<number>(EXERCISE_PAGE_SIZE);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +107,7 @@ export function useExercises(): UseExercisesReturn {
   }, []);
 
   const applyList = useCallback((items: Exercise[]) => {
-    setExercises(sortExercises(items));
+    setExercises(sortExercises(items, sortOrderRef.current));
     setError(null);
   }, []);
 
@@ -119,7 +129,7 @@ export function useExercises(): UseExercisesReturn {
     listExercisesStandalone().then(
       (items) => {
         if (cancelled) return;
-        setExercises(sortExercises(items ?? []));
+        setExercises(sortExercises(items ?? [], sortOrderRef.current));
         setError(null);
         setLoading(false);
       },
@@ -141,6 +151,13 @@ export function useExercises(): UseExercisesReturn {
 
   const setSearchText = useCallback((value: string) => {
     setSearchTextState(value);
+    setVisibleCount(EXERCISE_PAGE_SIZE);
+  }, []);
+
+  const setSortOrder = useCallback((order: ExerciseSortOrder) => {
+    sortOrderRef.current = order;
+    setSortOrderState(order);
+    setExercises((prev) => sortExercises(prev, order));
     setVisibleCount(EXERCISE_PAGE_SIZE);
   }, []);
 
@@ -183,7 +200,10 @@ export function useExercises(): UseExercisesReturn {
 
   const save = useCallback(
     async (input: SaveExerciseInput, id?: string | null): Promise<Exercise> => {
-      setError(null);
+      // Erro de save NÃO alimenta o `error` da lista: ele é relançado para
+      // o modal exibir via `modalError` (page.tsx). A lista preserva
+      // itens/filtros; só fetch (fetchList) toca no `error` da lista.
+      // Sucesso limpa via applyList; falha deixa o `error` intacto.
       try {
         const payload: CreateExerciseInput = {
           name: input.name,
@@ -206,7 +226,6 @@ export function useExercises(): UseExercisesReturn {
         return saved;
       } catch (err: unknown) {
         const message = toErrorMessage(err, "Erro ao salvar exercício");
-        setError(message);
         throw err instanceof Error ? err : new Error(message);
       }
     },
@@ -247,12 +266,14 @@ export function useExercises(): UseExercisesReturn {
     muscleOptions,
     muscleFilter,
     searchText,
+    sortOrder,
     visibleCount,
     loading,
     error,
     successNotice,
     setMuscleFilter,
     setSearchText,
+    setSortOrder,
     showMore,
     clearFilters,
     reload,

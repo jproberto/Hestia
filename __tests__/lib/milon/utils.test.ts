@@ -137,4 +137,33 @@ describe("Milon utils — normalização e regras puras (TASK-002)", () => {
       expect(sorted[0].name).toBe("Crucifixo");
     });
   });
+
+  describe("compareExercisesByName (adendo UX v2 — Ordenar por Nome)", () => {
+    it("ordena alfabeticamente só por nome, ignorando o agrupamento por músculo", async () => {
+      const utils = await import("@/lib/milon/utils");
+      expect(typeof utils.compareExercisesByName).toBe("function");
+      const items = [
+        { name: "Supino Reto", muscle: "Peito" },
+        { name: "Agachamento", muscle: "Perna" },
+        { name: "Crucifixo", muscle: "Peito" },
+      ];
+      const sorted = [...items].sort(utils.compareExercisesByName);
+      expect(sorted.map((e) => e.name)).toEqual([
+        "Agachamento",
+        "Crucifixo",
+        "Supino Reto",
+      ]);
+    });
+
+    it("ordenação por nome ignora caixa e acentos", async () => {
+      const utils = await import("@/lib/milon/utils");
+      expect(typeof utils.compareExercisesByName).toBe("function");
+      const items = [
+        { name: "supino rêto", muscle: "Peito" },
+        { name: "Agachamento", muscle: "Perna" },
+      ];
+      const sorted = [...items].sort(utils.compareExercisesByName);
+      expect(sorted[0].name).toBe("Agachamento");
+    });
+  });
 });

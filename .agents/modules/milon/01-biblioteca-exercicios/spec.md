@@ -35,6 +35,8 @@ O uso dentro da montagem do treino (escolher um exercício existente na hora de 
 
 - Existe uma tela própria da biblioteca, acessível pelo módulo de academia, com lista simples de exercícios, filtro por músculo, campo de busca por texto e carregamento em lotes.
 - A lista mostra cada exercício com seu nome, seu músculo e um acesso ao vídeo quando houver link cadastrado. Exercícios sem link aparecem normalmente, só sem o acesso ao vídeo.
+- A lista usa apresentação compacta e densa, pensada primeiro para o celular: cada item ocupa apenas o espaço necessário para nome, músculo e ações, de modo que mais exercícios caibam por tela sem rolagem excessiva, mantendo áreas de toque confortáveis e leitura sem aperto.
+- O acesso ao vídeo aparece como link de texto "ver vídeo" em tom de marrom visivelmente mais claro que a cor dos títulos do módulo, mantendo contraste legível sobre o fundo e distinção clara entre título do exercício e link.
 - Biblioteca vazia não é erro: mostra mensagem amigável de que ainda não há exercícios e orienta a criar o primeiro.
 - Carregamento mostra indicador simples de que a lista está sendo buscada. Falha de busca mostra mensagem simples de erro com possibilidade de tentar de novo.
 
@@ -45,9 +47,9 @@ O uso dentro da montagem do treino (escolher um exercício existente na hora de 
 - A comparação da busca por texto usa a mesma equivalência da regra anti-duplicata: minúsculas, sem acentos (onde a equivale a á, à e ã, e assim por diante para as demais letras), sem caracteres especiais e sem diferença de espaços extras no início, no fim ou duplicados no meio.
 - Filtro por músculo e busca por texto combinam por E lógico: quando ambos estão ativos, a lista mostra somente os exercícios que atendem aos dois ao mesmo tempo.
 - A consulta usa lotes progressivos com ação de mostrar mais, sem páginas numeradas e sem botões de avançar ou voltar nesta versão. O lote inicial exibe até vinte itens. Quando houver mais itens além do lote exibido, aparece uma ação de mostrar mais indicando quantos restam; cada acionamento acrescenta o próximo lote de até vinte itens mantendo os já exibidos. Quando não houver mais itens, a ação desaparece.
-- Qualquer alteração no filtro por músculo ou na busca por texto reinicia a exibição para o primeiro lote: itens extras previamente revelados recolhem e a contagem de restantes é recalculada sobre o novo resultado.
+- Qualquer alteração no filtro por músculo, na busca por texto ou na ordenação reinicia a exibição para o primeiro lote: itens extras previamente revelados recolhem e a contagem de restantes é recalculada sobre o novo resultado.
 - Resultado filtrado sem ocorrências não é erro: mostra mensagem amigável de que nada foi encontrado para aquela combinação, distinta da mensagem de biblioteca totalmente vazia, e orienta a ajustar os filtros ou criar o exercício.
-- A ordenação alfabética por músculo e depois por nome vale para todos os estados da consulta: lista cheia, filtrada por músculo, buscada por texto, combinada e em todos os lotes.
+- A consulta oferece um controle "Ordenar por" com duas opções: Nome e Músculo. A opção inicial padrão é Músculo, que mantém o comportamento atual (ordem alfabética por músculo e depois por nome). A opção Nome ordena alfabeticamente só por nome, ignorando o agrupamento por músculo. A ordenação escolhida vale para todos os estados da consulta: lista cheia, filtrada por músculo, buscada por texto, combinada e em todos os lotes.
 
 ### Modal único de criar e editar, sem seleção de existente
 
@@ -83,7 +85,7 @@ O uso dentro da montagem do treino (escolher um exercício existente na hora de 
 ### Compartilhamento e ordenação
 
 - Toda a lista é visível para os dois usuários, sem filtro por dono e sem área privada.
-- A lista é apresentada em ordem alfabética por músculo e depois por nome, para facilitar a localização, em todos os estados de filtro, busca e lotes.
+- A lista respeita a ordenação escolhida no controle "Ordenar por": o padrão inicial apresenta ordem alfabética por músculo e depois por nome, para facilitar a localização, em todos os estados de filtro, busca e lotes; ao trocar para Nome, a lista passa a seguir ordem alfabética só por nome.
 
 ### Contrato de dados para a feature número 3
 
@@ -96,7 +98,7 @@ O uso dentro da montagem do treino (escolher um exercício existente na hora de 
 - Qualquer seleção, sugestão ou preenchimento automático de exercício existente dentro do modal da biblioteca.
 - Páginas numeradas e navegação de avançar ou voltar na consulta; vale somente o lote inicial com mostrar mais.
 - Busca por texto com um ou dois caracteres; abaixo de três caracteres o campo é ignorado por decisão.
-- Filtros avançados além de músculo mais texto (por exemplo, por letra inicial, por presença de vídeo ou múltiplos músculos).
+- Filtros avançados além de músculo mais texto (por exemplo, por letra inicial, por presença de vídeo ou múltiplos músculos) e ordenações além de Nome e Músculo.
 - Link de vídeo obrigatório em qualquer situação.
 - Tela pesada de gestão (importação de fichas, edição em massa, categorias avançadas, estatísticas da biblioteca).
 - Carga, repetições, séries, descanso, RPE, RIR, séries de aquecimento ou séries extras.
@@ -127,6 +129,12 @@ O uso dentro da montagem do treino (escolher um exercício existente na hora de 
 - Dado que um cônjuge cadastrou um exercício, quando o outro abre a biblioteca com seu próprio login, então vê o mesmo exercício, podendo editar ou excluir.
 - Durante o carregamento da lista, a pessoa vê indicador de carregamento; simulada a falha de busca, vê mensagem simples de erro com opção de tentar de novo.
 - Dado um exercício sem link, quando a pessoa abre a lista, então o exercício aparece normalmente, sem acesso a vídeo e sem erro.
+- Dada a lista de exercícios, quando a pessoa abre a tela no celular, então cada item aparece em apresentação compacta mostrando nome, músculo e ações sem excesso de espaço, com mais itens visíveis por tela do que em apresentação espaçada, mantendo toque confortável em cada ação.
+- Dado um exercício com link cadastrado, quando a pessoa vê o item na lista, então o link "ver vídeo" aparece em tom de marrom visivelmente mais claro que a cor dos títulos do módulo, legível sobre o fundo e claramente distinguível do título.
+- Dada a biblioteca com exercícios de músculos distintos, quando a pessoa abre a tela sem tocar na ordenação, então a lista vem ordenada por músculo e depois por nome, igual ao comportamento anterior.
+- Dado o controle "Ordenar por", quando a pessoa troca para Nome, então a lista passa a seguir ordem alfabética só por nome, sem agrupar por músculo; ao voltar para Músculo, retorna à ordem por músculo e depois por nome.
+- Dado que a pessoa revelou lotes extras com mostrar mais, quando troca a ordenação, então a exibição reinicia no primeiro lote do novo resultado, como já acontece ao alterar filtro ou busca.
+- Dada a ordenação por Nome ativa, quando a pessoa aplica filtro por músculo, busca por texto ou combina os dois, então o resultado permanece ordenado por nome em todos os lotes.
 
 ## 6. Riscos e Dependências
 
@@ -147,3 +155,4 @@ O uso dentro da montagem do treino (escolher um exercício existente na hora de 
 - Alternativa de modal F1 — modal com sugestão, seleção e preenchimento de link (versão anterior desta especificação): ajudaria a reaproveitar o link, mas misturava criar com selecionar, contradizia o backlog (que coloca a seleção na montagem do treino) e criava um modal com dois papéis que a feature número 3 herdaria. Rejeitada pelo feedback humano v1 em favor do modal só de criar e editar com nome livre e bloqueio anti-duplicata.
 - Alternativa de modal F2 — modal só de criar e editar mais seletor próprio da feature número 3 (escolhida): modal desta feature sem lista nem seleção; seleção de existente pertence à tela de treino, que chamará os dados e a regra daqui. Benefício é escopo único, sem contradição, e contrato claro entre as features; custo é construir o seletor na feature número 3, já previsto no backlog.
 - Alternativa transversal G1 — padronizar agora estilos e rótulos do salvamento em lote nesta feature: uniformizaria de imediato, mas travaria esta entrega a uma decisão transversal sem as telas futuras mapeadas. Rejeitada como entrega; mantida como proposta de entrada no backlog de Héstia com texto e justificativa na seção de riscos e dependências.
+- Adendo pós-homologação v2 (2026-09-13, sem reabrir discovery): três melhorias pontuais pedidas pelo humano sobre a lista já homologada. (a) Lista compacta mobile-first: alternativa de manter cards grandes foi descartada porque desperdiça espaço no uso principal no celular; escolhida apresentação densa sem fixar medidas, com comportamento observável de mais itens por tela e toque confortável. (b) Link "ver vídeo" em marrom mais claro que os títulos: alternativa de repetir a cor dos títulos foi descartada por confundir título com ação; escolhido tom visivelmente mais claro com contraste legível. (c) "Ordenar por" Nome ou Músculo: alternativa de manter só a ordem fixa músculo→nome foi descartada por dificultar achar pelo nome; escolhidas duas opções com padrão Músculo preservando o comportamento atual, troca reiniciando lotes como os filtros e valendo em todos os estados da consulta.

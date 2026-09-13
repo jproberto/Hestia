@@ -27,6 +27,25 @@ export default function DashboardPage() {
             </p>
           </div>
         </Link>
+        <Link
+          href="/milon"
+          className="group relative overflow-hidden flex flex-col gap-2 rounded-lg border p-6 hover:bg-muted/40 transition-colors"
+        >
+          <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity pointer-events-none" style={{
+            backgroundImage: 'url("/mascots/milon.png")',
+            backgroundPosition: 'center right',
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: 'auto 120%',
+          }} />
+          <div className="relative z-10 flex flex-col gap-2">
+            <h2 className="text-3xl font-display text-[#EC5223] tracking-wider group-hover:text-[#FF8C42] transition-colors">
+              Mílon
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Acesse a biblioteca de exercícios da academia.
+            </p>
+          </div>
+        </Link>
       </div>
     </HestiaLayout>
   );

@@ -80,6 +80,7 @@ Para cada `TASK-XXX` em ordem de dependência:
    - Não polua o acervo com fluxos pontuais/alternativos da feature (esses vivem e morrem na pasta da feature) — apenas o caminho feliz essencial para garantir que a feature não quebrou o sistema como um todo, mesmo com testes de código verdes
    - Remova entradas obsoletas quando comportamento mudar
 6. Se falhas/gaps: retorne `status: blocked` com reporte — Zeus devolve para Hefesto (loop `CODING`)
+7. Antes de cada review do Argos (inclusive após deltas pós-suite), re-execute a suite + coverage e atualize `test-report.json`
 
 ---
 

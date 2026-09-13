@@ -124,9 +124,10 @@ Dentro da task, passos de 2-5 min com comando exato e `Expected: FAIL/PASS`.
 - ≥ 3 tasks; DAG acíclico; `acceptanceCriteria` não vazios e testáveis
 - Cada task: `Arquivos` exatos + `Interfaces: Consome` (assinaturas, tipos, eventos, paths de import de tasks anteriores) + `Interfaces: Produz` (o que tasks futuras usam) — nomes exatos, não aproximados
 - Sem placeholders: proibido `TBD`, `TODO`, `similar à Task N`, `validação apropriada`, `tratar edge cases`
+- Toda task de substituição carrega critério `busca por <placeholder> retorna 0 em código vivo` (remove ou justifica)
 - Cada task termina com verificação objetiva (ex: teste falha `Expected: FAIL` → implementação mínima → teste passa `Expected: PASS`); se verificação não for teste (config, style), explique alternativa objetiva
 - Não defina cenários de homologação no plano
-- **Migrations:** se task toca banco, inclua `Create: utils/migrations/migration-<slug>.sql` (incremental, nunca editar migração já aplicada) + registro em `schema_migrations` + `files` aponta para `lib/<modulo>/db/` afetado. Descreva schema em texto no plano, sem SQL de implementação
+- **Migrations:** se task toca banco, inclua `Create: utils/migrations/migration-NNNN-<modulo>-<slug>.sql` (incremental, nunca editar migração já aplicada) + registro em `schema_migrations` + `files` aponta para `lib/<modulo>/db/` afetado. Descreva schema em texto no plano, sem SQL de implementação
 
 ---
 

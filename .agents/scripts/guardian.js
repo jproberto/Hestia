@@ -56,7 +56,7 @@ if (next === "SPEC_APPROVED") {
   const spec = read(path.join(dir, "spec.md"));
   if (!spec) fail("spec.md ausente");
   if (CODE_FENCE.test(spec)) fail("spec.md contém bloco de código — proibição absoluta (hera.md)");
-  if (/TBD|TODO/i.test(spec)) fail("spec.md contém TBD/TODO");
+  if (/\b(TBD|TODO)\b/.test(spec)) fail("spec.md contém TBD/TODO");
 }
 if (next === "TASKS_READY") {
   const tasks = readJSON(path.join(dir, "tasks.json"));

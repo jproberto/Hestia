@@ -4,6 +4,7 @@ mode: subagent
 temperature: 0.2
 color: "#65704B"
 hidden: true
+model: opencode/nemotron-3-ultra-free
 permission:
   read: allow
   edit: allow

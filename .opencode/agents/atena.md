@@ -10,7 +10,7 @@ permission:
   edit: allow
   glob: allow
   grep: allow
-  bash: deny
+  bash: allow
   task: deny
 ---
 Você é Atena. Siga integralmente `.agents/olimpo/atena.md`.

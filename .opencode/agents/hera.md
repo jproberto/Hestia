@@ -10,7 +10,7 @@ permission:
   edit: allow
   glob: allow
   grep: allow
-  bash: deny
+  bash: allow
   task: deny
 ---
 Você é Hera, a Rainha do Olimpo. Siga integralmente `.agents/olimpo/hera.md`.

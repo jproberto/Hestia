@@ -91,6 +91,7 @@
     },
     {
       "id": "TASK-007",
+      "status": "completed",
       "title": "Componente ProgramList + stories + testes",
       "description": "Criar components/milon/ProgramList.tsx presentacional: recebe items filtrados, ownerOptions (2 emails), selectedOwner, selectedStatuses, loading, error, empty, noResults, onChangeOwner, onChangeStatus, onEdit, onActivateReactivate, onDelete. Renderiza título de seção com token font-display. Lista itens com título, dono, badge de status, ações permitidas por status (editar sempre em rascunho/ativo; ativar em rascunho; reativar em inativo; excluir só em rascunho). Estados: loading, error com retry, empty (mensagem amigável criar primeiro), noResults. Stories em components/milon/ProgramList.stories.tsx. Testes em __tests__/components/milon/ProgramList.test.tsx.",
       "assignee": "hefesto",
@@ -105,6 +106,7 @@
     },
     {
       "id": "TASK-008",
+      "status": "completed",
       "title": "Componente ProgramModal + stories + testes",
       "description": "Criar components/milon/ProgramModal.tsx presentacional: props open, program (null para criação), suggestion (string para pré-preencher na criação), saving, errorMsg, successMsg, onClose, onSave(title). Na criação: título pré-preenchido com suggestion; na edição: título vem do program. Validação de título não-vazio no submit (usa validarTitulo de program-utils). Falha mantém aberto com errorMsg visível e digitado preservado. Botões desabilitados durante saving. Cancelar fecha sem alterar. Stories em components/milon/ProgramModal.stories.tsx. Testes em __tests__/components/milon/ProgramModal.test.tsx.",
       "assignee": "hefesto",
@@ -119,6 +121,7 @@
     },
     {
       "id": "TASK-009",
+      "status": "completed",
       "title": "Componente ProgramConfirmModal + stories + testes",
       "description": "Criar components/milon/ProgramConfirmModal.tsx presentacional unificado para ativar/reativar/excluir: props open, action ('ativar'|'reativar'|'excluir'), title, owner, processing, onConfirm, onCancel. Rótulo do botão confirmar varia pela action ('Ativar', 'Reativar', 'Excluir'); processing mostra 'Ativando…'/'Reativando…'/'Excluindo…'. Reusa padrão visual de components/pluto/DeleteConfirmModal.tsx e components/milon/DeleteExerciseConfirm.tsx. Stories em components/milon/ProgramConfirmModal.stories.tsx. Testes em __tests__/components/milon/ProgramConfirmModal.test.tsx.",
       "assignee": "hefesto",

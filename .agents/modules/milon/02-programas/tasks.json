@@ -17,6 +17,7 @@
     },
     {
       "id": "TASK-002",
+      "status": "completed",
       "title": "Utilidades puras em lib/milon/program-utils.ts + testes",
       "description": "Criar lib/milon/program-utils.ts com: constantes TEMPLATES_SUGESTAO (array de strings com slots {adj}, {substantivo}, {complemento}) e POOLS_SUGESTAO (objeto com arrays adjetivos, substantivos, complementos — tom humor maromba); normalizarTitulo (trim + colapso espaços); validarTitulo (retorna string de erro ou null); sortearSugestao (escolhe template aleatório + preenche slots com palavra aleatória do pool correspondente); transicoesPermitidas(status) retorna array de ações possíveis; guardaAtivacao(hasWorkoutWithExercise) retorna erro se false; aplicarEfeitoColateralAtivacao(programs, novoAtivoOwner) retorna lista com anterior ativo do dono virado inativo. Testes em __tests__/lib/milon/program-utils.test.ts cobrindo normalização, validação vazio/não-vazio, sorteio usa templates/pools, transições por status, guarda bloqueia/libera, efeito colateral desativa anterior.",
       "assignee": "hefesto",
@@ -24,7 +25,7 @@
       "acceptanceCriteria": [
         "lib/milon/program-utils.ts exporta TEMPLATES_SUGESTAO, POOLS_SUGESTAO, normalizarTitulo, validarTitulo, sortearSugestao, transicoesPermitidas, guardaAtivacao, aplicarEfeitoColateralAtivacao",
         "TEMPLATES_SUGESTAO e POOLS_SUGESTAO são arrays/objetos não vazios com estrutura de slots {adj}/{substantivo}/{complemento}",
-        "__tests__/lib/milon/program-utils.test.ts existe e testa: normalização (acentos, espaços, maiúsculas), validação (vazio → erro, não-vazio → null), sorteio retorna string preenchida a partir dos templates/pools, transicoesPermitidas('rascunho') inclui 'ativar', transicoesPermitidas('ativo') inclui 'reativar' (não 'ativar'), transicoesPermitidas('inativo') inclui 'reativar', guardaAtivacao(false) retorna erro, guardaAtivacao(true) retorna null, aplicarEfeitoColateralAtivacao desativa apenas o ativo do mesmo dono",
+        "__tests__/lib/milon/program-utils.test.ts existe e testa: normalização (acentos, espaços, maiúsculas), validação (vazio → erro, não-vazio → null), sorteio retorna string preenchida a partir dos templates/pools, transicoesPermitidas('rascunho') inclui 'ativar' (e não 'inativar' nem 'reativar'); transicoesPermitidas('ativo') inclui 'inativar' e não inclui 'ativar' nem 'reativar'; transicoesPermitidas('inativo') inclui 'reativar', guardaAtivacao(false) retorna erro, guardaAtivacao(true) retorna null, aplicarEfeitoColateralAtivacao desativa apenas o ativo do mesmo dono",
         "npm test -- __tests__/lib/milon/program-utils.test.ts passa"
       ]
     },

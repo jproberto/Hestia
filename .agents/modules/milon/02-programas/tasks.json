@@ -58,6 +58,7 @@
     },
     {
       "id": "TASK-005",
+      "status": "completed",
       "title": "Barrel lib/milon/db/programs.ts + testes",
       "description": "Criar lib/milon/db/programs.ts com export * from '../repositories/programs'. Atualizar lib/milon/repositories/index.ts e lib/milon/hooks/index.ts adicionando re-exports de programs. Testes em __tests__/lib/milon/db/programs.test.ts verificando que o barrel re-exporta as funções do repository (listAll, create, update, delete, findActiveByOwner).",
       "assignee": "hefesto",

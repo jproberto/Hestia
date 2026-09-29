@@ -43,9 +43,12 @@ import { usePrograms } from "@/lib/milon/hooks/usePrograms";
 import * as hooksIndex from "@/lib/milon/hooks";
 import {
   listProgramsStandalone,
+  createProgramStandalone,
   updateProgramStandalone,
   deleteProgramStandalone,
 } from "@/lib/milon/db/programs";
+import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
+import type { IDatabaseClient } from "@/lib/shared/database";
 import { aplicarEfeitoColateralAtivacao } from "@/lib/milon/program-utils";
 import type { Program } from "@/lib/milon/types";
 
@@ -146,6 +149,7 @@ describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
     // Zera queues/implementações SÓ dos mocks deste teste (o client global de
     // setup.ts é preservado — getUserEmail continua respondendo).
     vi.mocked(listProgramsStandalone).mockReset();
+    vi.mocked(createProgramStandalone).mockReset();
     vi.mocked(updateProgramStandalone).mockReset();
     vi.mocked(deleteProgramStandalone).mockReset();
   });
@@ -626,6 +630,312 @@ describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
       expect(statusesDaLista(result)).toEqual(["p-r:rascunho", "p-a:ativo"]);
       expect(listProgramsStandalone).toHaveBeenCalledTimes(1);
     });
+  });
+
+  // -------------------------------------------------------------------------
+  // 8. save — criação/edição (spec §3: título não-vazio; dono = filtro/sessão)
+  // -------------------------------------------------------------------------
+  describe("8. save (criação e edição)", () => {
+    it("cria com o dono do filtro ativo, normaliza o título e recarrega a lista", async () => {
+      const existente = programa({ id: "p-1", createdAt: "2026-09-20T00:00:00.000Z" });
+      const salvo = programa({
+        id: "p-novo",
+        title: "Ficha Monstro",
+        createdAt: "2026-09-25T00:00:00.000Z",
+      });
+      mockList([existente], [salvo, existente]);
+      vi.mocked(createProgramStandalone).mockResolvedValue(salvo);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      await waitFor(() => expect(result.current.ownerFilter).toBe(EMAIL));
+
+      let retornado: Program | undefined;
+      await act(async () => {
+        retornado = await result.current.save("   Ficha Monstro  ");
+      });
+
+      expect(createProgramStandalone).toHaveBeenCalledWith({
+        title: "Ficha Monstro",
+        owner: EMAIL,
+        status: "rascunho",
+      });
+      expect(retornado?.id).toBe("p-novo");
+      await waitFor(() =>
+        expect(result.current.programs.map((p) => p.id)).toEqual(["p-novo", "p-1"]),
+      );
+      expect(result.current.errorMsg).toBeNull();
+      expect(updateProgramStandalone).not.toHaveBeenCalled();
+    });
+
+    it("dono vazio no filtro usa o e-mail da sessão como dono do novo programa", async () => {
+      const existente = programa({ id: "p-1" });
+      const salvo = programa({ id: "p-novo", title: "Ficha da sessão" });
+      mockList([existente], [salvo, existente]);
+      vi.mocked(createProgramStandalone).mockResolvedValue(salvo);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      act(() => {
+        result.current.setOwnerFilter("");
+      });
+
+      await act(async () => {
+        await result.current.save("Ficha da sessão");
+      });
+
+      expect(createProgramStandalone).toHaveBeenCalledWith({
+        title: "Ficha da sessão",
+        owner: EMAIL,
+        status: "rascunho",
+      });
+    });
+
+    it("sem e-mail de sessão cria com dono '' e o filtro de dono permanece vazio (sem erro)", async () => {
+      vi.mocked(createBrowserDatabaseClient).mockReturnValueOnce({
+        from: () => {
+          throw new Error("não usado: os barrels são mockados neste teste");
+        },
+        getUserEmail: () => Promise.resolve(null),
+      } as unknown as IDatabaseClient);
+
+      const salvo = programa({ id: "p-novo", title: "Sem sessão" });
+      mockList([], [salvo]);
+      vi.mocked(createProgramStandalone).mockResolvedValue(salvo);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.ownerFilter).toBe("");
+      expect(result.current.errorMsg).toBeNull();
+
+      await act(async () => {
+        await result.current.save("Sem sessão");
+      });
+
+      expect(createProgramStandalone).toHaveBeenCalledWith({
+        title: "Sem sessão",
+        owner: "",
+        status: "rascunho",
+      });
+      expect(result.current.errorMsg).toBeNull();
+    });
+
+    it("sessão cujo getUserEmail rejeita não vira erro de carregamento", async () => {
+      vi.mocked(createBrowserDatabaseClient).mockReturnValueOnce({
+        from: () => {
+          throw new Error("não usado: os barrels são mockados neste teste");
+        },
+        getUserEmail: () => Promise.reject(new Error("sessão indisponível")),
+      } as unknown as IDatabaseClient);
+
+      mockList([]);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.ownerFilter).toBe("");
+      expect(result.current.errorMsg).toBeNull();
+    });
+
+    it("edita pelo id: normaliza o título, manda só o id+título e recarrega", async () => {
+      const atual = programa({ id: "p-1", title: "Antigo" });
+      const editado = programa({ id: "p-1", title: "Editado" });
+      mockList([atual], [editado]);
+      vi.mocked(updateProgramStandalone).mockResolvedValue(editado);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      let retornado: Program | undefined;
+      await act(async () => {
+        retornado = await result.current.save("  Editado ", "p-1");
+      });
+
+      expect(updateProgramStandalone).toHaveBeenCalledWith("p-1", { title: "Editado" });
+      expect(createProgramStandalone).not.toHaveBeenCalled();
+      expect(retornado?.id).toBe("p-1");
+      await waitFor(() =>
+        expect(result.current.programs.map((p) => p.title)).toEqual(["Editado"]),
+      );
+      expect(result.current.errorMsg).toBeNull();
+    });
+
+    it("título vazio é bloqueado antes de qualquer chamada ao repository", async () => {
+      mockList([programa({ id: "p-1" })]);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      let thrown: unknown;
+      await act(async () => {
+        try {
+          await result.current.save("   ");
+        } catch (err: unknown) {
+          thrown = err;
+        }
+      });
+
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toContain("Título não pode estar vazio");
+      expect(createProgramStandalone).not.toHaveBeenCalled();
+      expect(updateProgramStandalone).not.toHaveBeenCalled();
+      expect(result.current.errorMsg).toBeNull();
+      expect(result.current.programs).toHaveLength(1);
+    });
+
+    it("recarga pós-criação falha: o programa novo entra em memória sem perder o save", async () => {
+      const existente = programa({ id: "p-1", createdAt: "2026-09-20T00:00:00.000Z" });
+      const salvo = programa({ id: "p-novo", title: "Sobrevive", createdAt: "2026-09-25T00:00:00.000Z" });
+      vi.mocked(listProgramsStandalone)
+        .mockResolvedValueOnce([existente])
+        .mockRejectedValueOnce(new Error("reload caiu"));
+      vi.mocked(createProgramStandalone).mockResolvedValue(salvo);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      let retornado: Program | undefined;
+      await act(async () => {
+        retornado = await result.current.save("Sobrevive");
+      });
+
+      expect(retornado?.id).toBe("p-novo");
+      expect(result.current.programs.map((p) => p.id)).toEqual(["p-novo", "p-1"]);
+      expect(result.current.errorMsg).toBeNull();
+    });
+
+    it("recarga pós-edição falha: o item é substituído em memória", async () => {
+      const atual = programa({ id: "p-1", title: "Antigo" });
+      const editado = programa({ id: "p-1", title: "Editado" });
+      vi.mocked(listProgramsStandalone)
+        .mockResolvedValueOnce([atual])
+        .mockRejectedValueOnce(new Error("reload caiu"));
+      vi.mocked(updateProgramStandalone).mockResolvedValue(editado);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await act(async () => {
+        await result.current.save("Editado", "p-1");
+      });
+
+      expect(result.current.programs.map((p) => p.title)).toEqual(["Editado"]);
+      expect(result.current.errorMsg).toBeNull();
+    });
+
+    it("erro do repository é relançado ao modal sem alimentar o errorMsg da lista", async () => {
+      mockList([programa({ id: "p-1" })]);
+      vi.mocked(createProgramStandalone).mockRejectedValue(
+        new Error("título já usado em outro programa"),
+      );
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      let thrown: unknown;
+      await act(async () => {
+        try {
+          await result.current.save("Duplicado");
+        } catch (err: unknown) {
+          thrown = err;
+        }
+      });
+
+      expect((thrown as Error).message).toBe("título já usado em outro programa");
+      expect(result.current.errorMsg).toBeNull();
+      expect(result.current.programs.map((p) => p.id)).toEqual(["p-1"]);
+      expect(listProgramsStandalone).toHaveBeenCalledTimes(1);
+    });
+
+    it("erro sem formato de Error vira mensagem padrão na relançagem", async () => {
+      mockList([programa({ id: "p-1" })]);
+      vi.mocked(updateProgramStandalone).mockRejectedValue("falha crua do driver");
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      let thrown: unknown;
+      await act(async () => {
+        try {
+          await result.current.save("Qualquer", "p-1");
+        } catch (err: unknown) {
+          thrown = err;
+        }
+      });
+
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toBe("Erro ao salvar programa");
+      expect(result.current.errorMsg).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 9. Fallbacks quando a recarga posterior falha
+  // -------------------------------------------------------------------------
+  describe("9. Recargas com falha preservam o resultado local", () => {
+    it("reload com falha expõe a mensagem e uma nova tentativa recupera", async () => {
+      mockList([programa({ id: "p-1" })]);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      vi.mocked(listProgramsStandalone).mockRejectedValueOnce(
+        new Error("rede caiu no reload"),
+      );
+      await executar(() => result.current.reload());
+
+      expect(result.current.errorMsg).toContain("rede caiu no reload");
+      expect(result.current.programs.map((p) => p.id)).toEqual(["p-1"]);
+
+      vi.mocked(listProgramsStandalone).mockResolvedValue([
+        programa({ id: "p-1" }),
+        programa({ id: "p-2", createdAt: "2026-09-25T00:00:00.000Z" }),
+      ]);
+      await executar(() => result.current.reload());
+
+      expect(result.current.errorMsg).toBeNull();
+      expect(result.current.programs.map((p) => p.id)).toEqual(["p-1", "p-2"]);
+    });
+
+    it("recarga pós-exclusão falha: o item sai da lista em memória", async () => {
+      const rascunho = programa({ id: "p-r", status: "rascunho" });
+      vi.mocked(listProgramsStandalone)
+        .mockResolvedValueOnce([rascunho])
+        .mockRejectedValueOnce(new Error("reload caiu"));
+      vi.mocked(deleteProgramStandalone).mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() => result.current.remove(rascunho));
+
+      expect(deleteProgramStandalone).toHaveBeenCalledWith("p-r");
+      expect(result.current.programs).toEqual([]);
+      expect(result.current.errorMsg).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 10. confirm com reativação (ramo "reativar" da confirmação)
+  // -------------------------------------------------------------------------
+  it("confirm executa a reativação pendente quando a guarda libera", async () => {
+    const inativo = programa({ id: "p-i", status: "inativo" });
+    mockList([inativo], [{ ...inativo, status: "ativo" }]);
+    vi.mocked(updateProgramStandalone).mockResolvedValue({ ...inativo, status: "ativo" });
+
+    const { result } = renderHook(() => usePrograms({ hasWorkoutWithExercise: true }));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.requestConfirm("reativar", inativo);
+    });
+    await executar(() => result.current.confirm());
+
+    expect(updateProgramStandalone).toHaveBeenCalledWith("p-i", { status: "ativo" });
+    expect(result.current.confirmAction).toBeNull();
+    expect(result.current.errorMsg).toBeNull();
+    await waitFor(() => expect(statusesDaLista(result)).toEqual(["p-i:ativo"]));
   });
 
   it("hooks/index exporta usePrograms como caminho oficial", () => {

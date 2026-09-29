@@ -152,6 +152,7 @@
     },
     {
       "id": "TASK-011",
+      "status": "completed",
       "title": "Suite final Minos + build-storybook",
       "description": "Minos executa suite completa: todos os testes de contrato, unitários, componentes, página. Coverage ≥80%. Gera test-report.json e test-scenarios.md na FEATURE_DIR. Promove cenários de regressão para .agents/modules/milon/regression.md. Executa npm run build-storybook sem erros. Atualiza test-report.json final.",
       "assignee": "minos",

@@ -1,0 +1,90 @@
+{
+  "summary": { "total": 647, "passed": 647, "failed": 0, "coverage": 85.61 },
+  "fullSuite": { "files": 82, "passed": 647, "failed": 0, "pending": 0, "baseline": "603 testes / 81 arquivos antes da TASK-011 (+44 testes, +1 arquivo)" },
+  "coverage": {
+    "lines": 85.61,
+    "statements": 85.61,
+    "functions": 87.61,
+    "branches": 88.65,
+    "totals": { "lines": "1935/2260", "functions": "92/105", "branches": "469/529" },
+    "scope": "app/milon/** + components/milon/** + lib/milon/** (31 arquivos de produção, *.stories.tsx INCLuíDOS no denominador — nenhum arquivo excluído para inflar o número)",
+    "tool": "@vitest/coverage-v8 (v8 provider do vitest 2.1.9, já presente em node_modules)",
+    "command": "npx vitest run --coverage --coverage.include='app/milon/**' --coverage.include='components/milon/**' --coverage.include='lib/milon/**'",
+    "featurePaths": {
+      "app/milon/programs/page.tsx": "98.87% stmts (176/178), 90.9% branch, 100% funcs — descoberto: 154/172 ramos de fallback quando cancelConfirm lança",
+      "components/milon/ProgramList.tsx": "100% (138/138, branch 100%, funcs 100%)",
+      "components/milon/ProgramModal.tsx": "100% (74/74, branch 100%, funcs 100%)",
+      "components/milon/ProgramConfirmModal.tsx": "100% (63/63, branch 100%, funcs 100%)",
+      "lib/milon/program-utils.ts": "100% (161/161, branch 100%, funcs 100%)",
+      "lib/milon/repositories/programs.ts": "100% stmts (148/148), 92.98% branch, 100% funcs — descoberto: 34/82/102/129 ramos defensivos de mensagem/details e de desativação",
+      "lib/milon/repositories/fakes/fakeProgramRepository.ts": "93.1% stmts (81/87), 93.33% branch — descoberto: 47-52 ramo de seed",
+      "lib/milon/hooks/usePrograms.ts": "100% stmts (234/234), 85.86% branch, 100% funcs — descoberto: ramos defensivos de cancelConfirm/confirm lançando",
+      "lib/milon/db/programs.ts": "100% (1/1)"
+    },
+    "perFile": {
+      "app/milon/layout.tsx": "0% (4 linhas — wrapper transversal MascotProvider, débito reportado já na feature #1)",
+      "app/milon/page.tsx": "100% stmts, 84% branch",
+      "components/milon/*.stories.tsx (6 arquivos, 276 linhas)": "0% — stories são DX do Storybook e não têm teste unitário; build-storybook validou o build (TASK-007/008/009). Mantidos no denominador.",
+      "lib/milon/index.ts": "0% (5 linhas, barrel legado sem importadores ativos)",
+      "lib/milon/repositories/index.ts": "0% (4 linhas, barrel de re-exports)",
+      "lib/milon/repositories/exercises.ts": "82.85% stmts / 57.14% branch (wrappers standalone 112-132, débito da feature #1)"
+    }
+  },
+  "files": [
+    { "file": "__tests__/lib/milon/repositories/programs-client.test.ts", "status": "NOVO (TASK-011)", "tests": 24, "passed": 24, "failed": 0, "covers": "repository real de programas via IDatabaseClient em memória + 6 standalones + mapeamento de erro de unicidade" },
+    { "file": "__tests__/lib/milon/hooks/usePrograms.test.ts", "status": "ESTENDIDO (TASK-011)", "tests": 32, "passed": 32, "failed": 0, "covers": "save (criação/edição/validação/recarga-falha), sessão sem e-mail, reload com falha, fallback de remove, confirm de reativação" },
+    { "file": "__tests__/app/milon/programs/page.test.tsx", "status": "ESTENDIDO (TASK-011)", "tests": 18, "passed": 18, "failed": 0, "covers": "cancelar modal, erro de save (Error e não-Error), falha de requestConfirm, confirmação/cancel vindos só do hook" },
+    { "file": "__tests__/app/milon/page.test.tsx", "status": "feature #1", "tests": 14, "passed": 14, "failed": 0 },
+    { "file": "__tests__/components/milon/ProgramList.test.tsx", "status": "feature #2 (TASK-007)", "tests": 14, "passed": 14, "failed": 0 },
+    { "file": "__tests__/components/milon/ProgramConfirmModal.test.tsx", "status": "feature #2 (TASK-009)", "tests": 16, "passed": 16, "failed": 0 },
+    { "file": "__tests__/components/milon/ProgramModal.test.tsx", "status": "feature #2 (TASK-008)", "tests": 10, "passed": 10, "failed": 0 },
+    { "file": "__tests__/lib/milon/program-utils.test.ts", "status": "feature #2 (TASK-002)", "tests": 21, "passed": 21, "failed": 0 },
+    { "file": "__tests__/lib/milon/repositories/contract-programs.test.ts", "status": "feature #2 (TASK-004)", "tests": 10, "passed": 10, "failed": 0 },
+    { "file": "__tests__/lib/milon/db/programs.test.ts", "status": "feature #2 (TASK-005)", "tests": 6, "passed": 6, "failed": 0 },
+    { "file": "__tests__/lib/milon/db/exercises.test.ts", "status": "feature #1", "tests": 6, "passed": 6, "failed": 0 },
+    { "file": "__tests__/lib/milon/hooks/useExercises.test.ts", "status": "feature #1", "tests": 22, "passed": 22, "failed": 0 },
+    { "file": "__tests__/lib/milon/repositories/contract-exercises.test.ts", "status": "feature #1", "tests": 16, "passed": 16, "failed": 0 },
+    { "file": "__tests__/components/milon/DeleteExerciseConfirm.test.tsx", "status": "feature #1", "tests": 6, "passed": 6, "failed": 0 },
+    { "file": "__tests__/components/milon/ExerciseList.test.tsx", "status": "feature #1", "tests": 13, "passed": 13, "failed": 0 },
+    { "file": "__tests__/components/milon/ExerciseModal.test.tsx", "status": "feature #1", "tests": 12, "passed": 12, "failed": 0 },
+    { "file": "__tests__/components/milon/MilonLayout.test.tsx", "status": "feature #1", "tests": 1, "passed": 1, "failed": 0 },
+    { "file": "__tests__/lib/milon/types.test.ts", "status": "feature #1", "tests": 10, "passed": 10, "failed": 0 },
+    { "file": "__tests__/lib/milon/utils.test.ts", "status": "feature #1", "tests": 17, "passed": 17, "failed": 0 }
+  ],
+  "byTask": {
+    "TASK-001": "passed (tsc --noEmit ok; sem teste direto de migração — DDL validado em plano/spec)",
+    "TASK-002": "passed",
+    "TASK-003": "passed (validação humana registrada em tasks.json — não automatizável)",
+    "TASK-004": "passed (contract fakes-only + repository real)",
+    "TASK-005": "passed",
+    "TASK-006": "passed",
+    "TASK-007": "passed",
+    "TASK-008": "passed",
+    "TASK-009": "passed",
+    "TASK-010": "passed",
+    "TASK-011": "passed"
+  },
+  "checks": {
+    "npm test": "82 arquivos / 647 testes / 0 falhas",
+    "coverage >= 80": "lines 85.61 / statements 85.61 / functions 87.61 / branches 88.65",
+    "npm run lint": "0 erros (47 warnings pré-existentes do repositório)",
+    "npx tsc --noEmit": "exit 0",
+    "npm run build-storybook": "pass — 'Storybook build completed successfully' (primeira validação das stories TASK-007/008/009)"
+  },
+  "gaps": [
+    "6 arquivos de stories em components/milon/*.stories.tsx (276 linhas) a 0% — DX do Storybook; build validado por npm run build-storybook, comportamento coberto pelos testes dos componentes",
+    "app/milon/layout.tsx (4 linhas) e lib/milon/index.ts / lib/milon/repositories/index.ts (barrels) a 0% — sem comportamento próprio testável",
+    "Ramos defensivos de 'nunca acontece' em usePrograms (cancelConfirm/confirm lançando) e programs.ts (linhas 34/82/102/129) — branch 85.86% e 92.98% respectivamente, acima de 80",
+    "Wrappers standalone de lib/milon/repositories/exercises.ts (112-132) — débito herdado da feature #1, não desta feature",
+    "Cobertura real de 'guarda de ativação com conteúdo >=1 treino' depende da feature 3 (flag fixa em false nesta feature — comportamento observável é o bloqueio, coberto)"
+  ],
+  "artifacts": [
+    ".agents/modules/milon/02-programas/test-report.json",
+    ".agents/modules/milon/02-programas/test-scenarios.md",
+    ".agents/modules/milon/regression.md",
+    "__tests__/lib/milon/repositories/programs-client.test.ts",
+    "__tests__/lib/milon/hooks/usePrograms.test.ts",
+    "__tests__/app/milon/programs/page.test.tsx"
+  ],
+  "timestamp": "2026-09-29T16:19:59-03:00"
+}

@@ -2,6 +2,7 @@
   "tasks": [
     {
       "id": "TASK-001",
+      "status": "completed",
       "title": "Migração 0008 + tipos de Programa em lib/milon/types.ts",
       "description": "Criar utils/migrations/migration-0008-milon-programs.sql com DDL da tabela public.programs (id UUID, título obrigatório, dono obrigatório, status com check constraint rascunho/ativo/inativo default rascunho, created_at, created_by); RLS com política total para autenticados; índice em (owner, created_at desc); índice parcial único em owner WHERE status='ativo'; registro em schema_migrations com spec_id='milon-02', spec_name='Programas', script_name='migration-0008-milon-programs.sql'. Adicionar em lib/milon/types.ts: tipo de linha do banco, tipo de domínio camelCase, input de criação (título, dono, status default rascunho), input de atualização (título, status). npx tsc --noEmit passa.",
       "assignee": "hefesto",

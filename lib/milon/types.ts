@@ -31,6 +31,37 @@ export interface UpdateExerciseInput {
   videoLink: string | null;
 }
 
+export type ProgramStatus = 'rascunho' | 'ativo' | 'inativo';
+
+export interface ProgramRow {
+  id: string;
+  title: string;
+  owner: string;
+  status: ProgramStatus;
+  created_at: string;
+  created_by: string;
+}
+
+export interface Program {
+  id: string;
+  title: string;
+  owner: string;
+  status: ProgramStatus;
+  createdAt: string;
+  created_by: string;
+}
+
+export interface CreateProgramInput {
+  title: string;
+  owner: string;
+  status?: ProgramStatus;
+}
+
+export interface UpdateProgramInput {
+  title?: string;
+  status?: ProgramStatus;
+}
+
 // ----------------------------------------------------------------------------
 // Legado do scaffold (removido na TASK-003/004/005 junto aos arquivos example).
 // Mantido nesta task para não quebrar `tsc` enquanto o scaffold ainda consome.

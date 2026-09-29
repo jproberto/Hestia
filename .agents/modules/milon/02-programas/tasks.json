@@ -42,6 +42,7 @@
     },
     {
       "id": "TASK-004",
+      "status": "completed",
       "title": "Repository de Programas + interface + fake + testes de contrato",
       "description": "Criar lib/milon/repositories/interfaces.ts adicionando IProgramRepository com: listAll(), findById(id), create(input), update(id, input), delete(id), findActiveByOwner(owner). Criar lib/milon/repositories/programs.ts implementando a interface via IDatabaseClient: listAll ordena por created_at desc no banco; create e update de status para 'ativo' usam transação que desativa anterior do mesmo dono (UPDATE ... SET status='inativo' WHERE owner=? AND status='ativo') e depois insere/atualiza o novo; violação de índice parcial único relança erro amigável; findActiveByOwner busca onde status='ativo'. Criar lib/milon/repositories/fakes/fakeProgramRepository.ts implementando a mesma interface em memória com seed, ids sequenciais, mesma regra de unicidade do ativo por dono. Testes de contrato fakes-only em __tests__/lib/milon/repositories/contract-programs.test.ts usando o fake.",
       "assignee": "hefesto",

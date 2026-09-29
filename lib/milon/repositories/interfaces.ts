@@ -5,6 +5,9 @@ import type {
   UpdateExerciseInput,
   MilonItem,
   CreateMilonInput,
+  Program,
+  CreateProgramInput,
+  UpdateProgramInput,
 } from "../types";
 
 export interface IExerciseRepository {
@@ -19,4 +22,13 @@ export interface IExerciseRepository {
 export interface IMilonRepository {
   list(): Promise<MilonItem[]>;
   create(input: CreateMilonInput): Promise<MilonItem>;
+}
+
+export interface IProgramRepository {
+  listAll(): Promise<Program[]>;
+  findById(id: string): Promise<Program | null>;
+  create(input: CreateProgramInput): Promise<Program>;
+  update(id: string, input: UpdateProgramInput): Promise<Program>;
+  delete(id: string): Promise<void>;
+  findActiveByOwner(owner: string): Promise<Program | null>;
 }

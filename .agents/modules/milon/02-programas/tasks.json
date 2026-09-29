@@ -136,6 +136,7 @@
     },
     {
       "id": "TASK-010",
+      "status": "completed",
       "title": "Página app/milon/programs/page.tsx + testes",
       "description": "Criar app/milon/programs/page.tsx dentro de MilonLayout: título da tela com font-display, usa usePrograms, renderiza ProgramList, ProgramModal, ProgramConfirmModal. Edição abre ProgramModal preenchido com item. Criação abre ProgramModal com suggestion sorteada via sortearSugestao() do hook. Ativar/reativar/excluir abrem ProgramConfirmModal com action/title/owner do item. Wiring completo dos callbacks. Testes em __tests__/app/milon/programs/page.test.tsx com factories de mock com defaults + helper clickConnectedButton para cliques pós-fetch.",
       "assignee": "hefesto",

@@ -31,6 +31,7 @@
     },
     {
       "id": "TASK-003",
+      "status": "completed",
       "title": "Validação humana do material de sugestões (templates + pools)",
       "description": "Humano revisa TEMPLATES_SUGESTAO e POOLS_SUGESTAO em lib/milon/program-utils.ts. Critério: tom humor maromba adequado, variedade suficiente para sorteios diversos, sem termos ofensivos ou inadequados. Aprovação = material validado e pronto para uso em runtime. Se reprovado, devolve para ajuste em TASK-002.",
       "assignee": "humano",

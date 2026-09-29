@@ -73,6 +73,7 @@
     },
     {
       "id": "TASK-006",
+      "status": "completed",
       "title": "Hook usePrograms em lib/milon/hooks/usePrograms.ts + testes",
       "description": "Criar lib/milon/hooks/usePrograms.ts com: estado lista completa ordenada, filtroDono (select), filtrosStatus (checks), loading, error, successMsg; operações save (create/update título), activate, reactivate, remove (só rascunho), reload. Filtragem em memória: select dono por igualdade, checks status por inclusão; padrão ao montar: dono = getUserEmail() do client, status = todos marcados. Guarda de ativação/reativação: verifica hasWorkoutWithExercise (flag — na feature 2 sempre false) antes de chamar repository; se false, seta errorMsg e não executa. Transições permitidas via transicoesPermitidas de program-utils. Confirmação antes de activate/reactivate/remove via estado confirmAction no hook. Testes em __tests__/lib/milon/hooks/usePrograms.test.ts com mock do barrel db/programs.",
       "assignee": "hefesto",

@@ -1,0 +1,159 @@
+{
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "Migração 0008 + tipos de Programa em lib/milon/types.ts",
+      "description": "Criar utils/migrations/migration-0008-milon-programs.sql com DDL da tabela public.programs (id UUID, título obrigatório, dono obrigatório, status com check constraint rascunho/ativo/inativo default rascunho, created_at, created_by); RLS com política total para autenticados; índice em (owner, created_at desc); índice parcial único em owner WHERE status='ativo'; registro em schema_migrations com spec_id='milon-02', spec_name='Programas', script_name='migration-0008-milon-programs.sql'. Adicionar em lib/milon/types.ts: tipo de linha do banco, tipo de domínio camelCase, input de criação (título, dono, status default rascunho), input de atualização (título, status). npx tsc --noEmit passa.",
+      "assignee": "hefesto",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Arquivo utils/migrations/migration-0008-milon-programs.sql existe e cria apenas a tabela public.programs sem tocar em outras tabelas",
+        "Índice parcial único em owner WHERE status='ativo' existe no SQL",
+        "Registro em schema_migrations com spec_id='milon-02', spec_name='Programas', script_name='migration-0008-milon-programs.sql' e ON CONFLICT (script_name) DO NOTHING",
+        "lib/milon/types.ts exporta ProgramRow, Program, CreateProgramInput, UpdateProgramInput e npx tsc --noEmit passa sem erros",
+        "Busca por 'migration-0008' retorna exatamente este arquivo"
+      ]
+    },
+    {
+      "id": "TASK-002",
+      "title": "Utilidades puras em lib/milon/program-utils.ts + testes",
+      "description": "Criar lib/milon/program-utils.ts com: constantes TEMPLATES_SUGESTAO (array de strings com slots {adj}, {substantivo}, {complemento}) e POOLS_SUGESTAO (objeto com arrays adjetivos, substantivos, complementos — tom humor maromba); normalizarTitulo (trim + colapso espaços); validarTitulo (retorna string de erro ou null); sortearSugestao (escolhe template aleatório + preenche slots com palavra aleatória do pool correspondente); transicoesPermitidas(status) retorna array de ações possíveis; guardaAtivacao(hasWorkoutWithExercise) retorna erro se false; aplicarEfeitoColateralAtivacao(programs, novoAtivoOwner) retorna lista com anterior ativo do dono virado inativo. Testes em __tests__/lib/milon/program-utils.test.ts cobrindo normalização, validação vazio/não-vazio, sorteio usa templates/pools, transições por status, guarda bloqueia/libera, efeito colateral desativa anterior.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-001"],
+      "acceptanceCriteria": [
+        "lib/milon/program-utils.ts exporta TEMPLATES_SUGESTAO, POOLS_SUGESTAO, normalizarTitulo, validarTitulo, sortearSugestao, transicoesPermitidas, guardaAtivacao, aplicarEfeitoColateralAtivacao",
+        "TEMPLATES_SUGESTAO e POOLS_SUGESTAO são arrays/objetos não vazios com estrutura de slots {adj}/{substantivo}/{complemento}",
+        "__tests__/lib/milon/program-utils.test.ts existe e testa: normalização (acentos, espaços, maiúsculas), validação (vazio → erro, não-vazio → null), sorteio retorna string preenchida a partir dos templates/pools, transicoesPermitidas('rascunho') inclui 'ativar', transicoesPermitidas('ativo') inclui 'reativar' (não 'ativar'), transicoesPermitidas('inativo') inclui 'reativar', guardaAtivacao(false) retorna erro, guardaAtivacao(true) retorna null, aplicarEfeitoColateralAtivacao desativa apenas o ativo do mesmo dono",
+        "npm test -- __tests__/lib/milon/program-utils.test.ts passa"
+      ]
+    },
+    {
+      "id": "TASK-003",
+      "title": "Validação humana do material de sugestões (templates + pools)",
+      "description": "Humano revisa TEMPLATES_SUGESTAO e POOLS_SUGESTAO em lib/milon/program-utils.ts. Critério: tom humor maromba adequado, variedade suficiente para sorteios diversos, sem termos ofensivos ou inadequados. Aprovação = material validado e pronto para uso em runtime. Se reprovado, devolve para ajuste em TASK-002.",
+      "assignee": "humano",
+      "dependencies": ["TASK-002"],
+      "acceptanceCriteria": [
+        "Humano confirma por escrito (comentário na task ou aprovação no fluxo) que o material em TEMPLATES_SUGESTAO e POOLS_SUGESTAO está aprovado para entrar no produto",
+        "Material validado não é alterado após esta task sem nova validação humana"
+      ]
+    },
+    {
+      "id": "TASK-004",
+      "title": "Repository de Programas + interface + fake + testes de contrato",
+      "description": "Criar lib/milon/repositories/interfaces.ts adicionando IProgramRepository com: listAll(), findById(id), create(input), update(id, input), delete(id), findActiveByOwner(owner). Criar lib/milon/repositories/programs.ts implementando a interface via IDatabaseClient: listAll ordena por created_at desc no banco; create e update de status para 'ativo' usam transação que desativa anterior do mesmo dono (UPDATE ... SET status='inativo' WHERE owner=? AND status='ativo') e depois insere/atualiza o novo; violação de índice parcial único relança erro amigável; findActiveByOwner busca onde status='ativo'. Criar lib/milon/repositories/fakes/fakeProgramRepository.ts implementando a mesma interface em memória com seed, ids sequenciais, mesma regra de unicidade do ativo por dono. Testes de contrato fakes-only em __tests__/lib/milon/repositories/contract-programs.test.ts usando o fake.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-001", "TASK-002"],
+      "acceptanceCriteria": [
+        "lib/milon/repositories/interfaces.ts exporta IProgramRepository com os 6 métodos",
+        "lib/milon/repositories/programs.ts implementa IProgramRepository usando IDatabaseClient, transação em create/update status='ativo' que desativa anterior do mesmo dono, tratamento de erro de índice único com mensagem amigável",
+        "lib/milon/repositories/fakes/fakeProgramRepository.ts implementa IProgramRepository em memória com seed, mesma regra de unicidade do ativo por dono",
+        "__tests__/lib/milon/repositories/contract-programs.test.ts existe, usa fakeProgramRepository, testa: listAll ordena created_at desc, create insere com status default rascunho, update título funciona, update status para 'ativo' desativa anterior do mesmo dono, delete remove por id, findActiveByOwner retorna ativo ou null, violação de unicidade lança erro amigável",
+        "npm test -- __tests__/lib/milon/repositories/contract-programs.test.ts passa",
+        "Busca por 'example' em lib/milon/repositories/ retorna 0 (sem placeholders)"
+      ]
+    },
+    {
+      "id": "TASK-005",
+      "title": "Barrel lib/milon/db/programs.ts + testes",
+      "description": "Criar lib/milon/db/programs.ts com export * from '../repositories/programs'. Atualizar lib/milon/repositories/index.ts e lib/milon/hooks/index.ts adicionando re-exports de programs. Testes em __tests__/lib/milon/db/programs.test.ts verificando que o barrel re-exporta as funções do repository (listAll, create, update, delete, findActiveByOwner).",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-004"],
+      "acceptanceCriteria": [
+        "lib/milon/db/programs.ts existe e faz export * from '../repositories/programs'",
+        "lib/milon/repositories/index.ts e lib/milon/hooks/index.ts re-exportam programs",
+        "__tests__/lib/milon/db/programs.test.ts existe e verifica que listAll, create, update, delete, findActiveByOwner são funções exportadas pelo barrel",
+        "npm test -- __tests__/lib/milon/db/programs.test.ts passa"
+      ]
+    },
+    {
+      "id": "TASK-006",
+      "title": "Hook usePrograms em lib/milon/hooks/usePrograms.ts + testes",
+      "description": "Criar lib/milon/hooks/usePrograms.ts com: estado lista completa ordenada, filtroDono (select), filtrosStatus (checks), loading, error, successMsg; operações save (create/update título), activate, reactivate, remove (só rascunho), reload. Filtragem em memória: select dono por igualdade, checks status por inclusão; padrão ao montar: dono = getUserEmail() do client, status = todos marcados. Guarda de ativação/reativação: verifica hasWorkoutWithExercise (flag — na feature 2 sempre false) antes de chamar repository; se false, seta errorMsg e não executa. Transições permitidas via transicoesPermitidas de program-utils. Confirmação antes de activate/reactivate/remove via estado confirmAction no hook. Testes em __tests__/lib/milon/hooks/usePrograms.test.ts com mock do barrel db/programs.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-002", "TASK-003", "TASK-005"],
+      "acceptanceCriteria": [
+        "lib/milon/hooks/usePrograms.ts exporta usePrograms com estado e operações descritas",
+        "Filtro padrão: dono = getUserEmail(), status = ['rascunho','ativo','inativo']",
+        "Guarda de ativação: activate/reactivate checam hasWorkoutWithExercise (false na feature 2) e bloqueiam com errorMsg 'Adicione pelo menos um treino com exercícios para ativar' sem chamar repository",
+        "activate/reactivate chamam repository e aplicam efeito colateral (desativa anterior do mesmo dono) via aplicarEfeitoColateralAtivacao",
+        "remove só permite se status === 'rascunho'",
+        "confirmAction gerencia estado de confirmação para activate/reactivate/remove",
+        "__tests__/lib/milon/hooks/usePrograms.test.ts existe com mock do barrel db/programs, testa: carregamento inicial, filtros dono/status, guarda bloqueia ativação sem conteúdo, activate/reactivate chamam repository e atualizam lista, remove só em rascunho, confirmação necessária, erro de repository seta errorMsg e preserva estado",
+        "npm test -- __tests__/lib/milon/hooks/usePrograms.test.ts passa"
+      ]
+    },
+    {
+      "id": "TASK-007",
+      "title": "Componente ProgramList + stories + testes",
+      "description": "Criar components/milon/ProgramList.tsx presentacional: recebe items filtrados, ownerOptions (2 emails), selectedOwner, selectedStatuses, loading, error, empty, noResults, onChangeOwner, onChangeStatus, onEdit, onActivateReactivate, onDelete. Renderiza título de seção com token font-display. Lista itens com título, dono, badge de status, ações permitidas por status (editar sempre em rascunho/ativo; ativar em rascunho; reativar em inativo; excluir só em rascunho). Estados: loading, error com retry, empty (mensagem amigável criar primeiro), noResults. Stories em components/milon/ProgramList.stories.tsx. Testes em __tests__/components/milon/ProgramList.test.tsx.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-006"],
+      "acceptanceCriteria": [
+        "components/milon/ProgramList.tsx existe, usa font-display no título da seção, renderiza select de dono e checks de status, lista itens com título/dono/badge status, mostra apenas ações permitidas pelo status",
+        "components/milon/ProgramList.stories.tsx existe com stories para: carregando, erro, vazio, sem resultado, lista com itens mistos",
+        "__tests__/components/milon/ProgramList.test.tsx existe e testa: renderização de itens, select/checks disparam callbacks, ações corretas por status (excluir só em rascunho), estados loading/error/empty/noResults",
+        "npm test -- __tests__/components/milon/ProgramList.test.tsx passa",
+        "npm run build-storybook passa (sem erros de build do componente)"
+      ]
+    },
+    {
+      "id": "TASK-008",
+      "title": "Componente ProgramModal + stories + testes",
+      "description": "Criar components/milon/ProgramModal.tsx presentacional: props open, program (null para criação), suggestion (string para pré-preencher na criação), saving, errorMsg, successMsg, onClose, onSave(title). Na criação: título pré-preenchido com suggestion; na edição: título vem do program. Validação de título não-vazio no submit (usa validarTitulo de program-utils). Falha mantém aberto com errorMsg visível e digitado preservado. Botões desabilitados durante saving. Cancelar fecha sem alterar. Stories em components/milon/ProgramModal.stories.tsx. Testes em __tests__/components/milon/ProgramModal.test.tsx.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-002", "TASK-006"],
+      "acceptanceCriteria": [
+        "components/milon/ProgramModal.tsx existe, pré-preenche título com suggestion na criação, usa valor do program na edição, valida título não-vazio no submit (chama validarTitulo), falha mantém aberto com erro visível e digitado preservado, botões desabilitados durante saving, cancelar fecha",
+        "components/milon/ProgramModal.stories.tsx existe com stories: criação com sugestão, edição, erro de validação, salvando",
+        "__tests__/components/milon/ProgramModal.test.tsx existe e testa: pré-preenchimento na criação, valor na edição, validação vazio bloqueia submit com erro, erro preserva digitado, saving desabilita botões, cancelar fecha",
+        "npm test -- __tests__/components/milon/ProgramModal.test.tsx passa",
+        "npm run build-storybook passa"
+      ]
+    },
+    {
+      "id": "TASK-009",
+      "title": "Componente ProgramConfirmModal + stories + testes",
+      "description": "Criar components/milon/ProgramConfirmModal.tsx presentacional unificado para ativar/reativar/excluir: props open, action ('ativar'|'reativar'|'excluir'), title, owner, processing, onConfirm, onCancel. Rótulo do botão confirmar varia pela action ('Ativar', 'Reativar', 'Excluir'); processing mostra 'Ativando…'/'Reativando…'/'Excluindo…'. Reusa padrão visual de components/pluto/DeleteConfirmModal.tsx e components/milon/DeleteExerciseConfirm.tsx. Stories em components/milon/ProgramConfirmModal.stories.tsx. Testes em __tests__/components/milon/ProgramConfirmModal.test.tsx.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-006"],
+      "acceptanceCriteria": [
+        "components/milon/ProgramConfirmModal.tsx existe, action prop define rótulo do botão e texto de processing, mostra título e dono do programa alvo, onConfirm/onCancel callbacks",
+        "components/milon/ProgramConfirmModal.stories.tsx existe com stories para cada action (ativar, reativar, excluir) e estado processing",
+        "__tests__/components/milon/ProgramConfirmModal.test.tsx existe e testa: rótulos corretos por action, processing mostra texto correto, confirm/cancel disparam callbacks, título/dono renderizados",
+        "npm test -- __tests__/components/milon/ProgramConfirmModal.test.tsx passa",
+        "npm run build-storybook passa"
+      ]
+    },
+    {
+      "id": "TASK-010",
+      "title": "Página app/milon/programs/page.tsx + testes",
+      "description": "Criar app/milon/programs/page.tsx dentro de MilonLayout: título da tela com font-display, usa usePrograms, renderiza ProgramList, ProgramModal, ProgramConfirmModal. Edição abre ProgramModal preenchido com item. Criação abre ProgramModal com suggestion sorteada via sortearSugestao() do hook. Ativar/reativar/excluir abrem ProgramConfirmModal com action/title/owner do item. Wiring completo dos callbacks. Testes em __tests__/app/milon/programs/page.test.tsx com factories de mock com defaults + helper clickConnectedButton para cliques pós-fetch.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-006", "TASK-007", "TASK-008", "TASK-009"],
+      "acceptanceCriteria": [
+        "app/milon/programs/page.tsx existe, compõe MilonLayout com título font-display, ProgramList, ProgramModal, ProgramConfirmModal ligados ao hook",
+        "Criação: abre ProgramModal com suggestion de sortearSugestao()",
+        "Edição: abre ProgramModal com dados do item",
+        "Ativar/reativar/excluir: abrem ProgramConfirmModal com action/title/owner corretos",
+        "__tests__/app/milon/programs/page.test.tsx existe com factories de mock com defaults, clickConnectedButton, testa: renderização inicial, criação/edição abrem modal correto, transições abrem confirmação correta, filtros funcionam, erro de carregamento mostra retry",
+        "npm test -- __tests__/app/milon/programs/page.test.tsx passa"
+      ]
+    },
+    {
+      "id": "TASK-011",
+      "title": "Suite final Minos + build-storybook",
+      "description": "Minos executa suite completa: todos os testes de contrato, unitários, componentes, página. Coverage ≥80%. Gera test-report.json e test-scenarios.md na FEATURE_DIR. Promove cenários de regressão para .agents/modules/milon/regression.md. Executa npm run build-storybook sem erros. Atualiza test-report.json final.",
+      "assignee": "minos",
+      "dependencies": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006", "TASK-007", "TASK-008", "TASK-009", "TASK-010"],
+      "acceptanceCriteria": [
+        "npm test passa com coverage ≥80% (relatório mostra lines/functions/branches/statements ≥80)",
+        "test-report.json gerado em .agents/modules/milon/02-programas/ com failed=0",
+        "test-scenarios.md gerado em .agents/modules/milon/02-programas/ com cenários Dado/Quando/Então cobrindo todos os critérios de aceite da spec",
+        "Cenários de regressão promovidos para .agents/modules/milon/regression.md",
+        "npm run build-storybook passa sem erros",
+        "test-report.json final atualizado com coverage final"
+      ]
+    }
+  ]
+}

@@ -33,6 +33,10 @@ export interface UpdateExerciseInput {
 
 export type ProgramStatus = 'rascunho' | 'ativo' | 'inativo';
 
+// Origem da mensagem da lista (Patch v4, D15): decide o retry no banner.
+// Fonte única — hook grava, ProgramList consome.
+export type ProgramErrorOrigin = 'carga' | 'operacao' | 'bloqueio';
+
 export interface ProgramRow {
   id: string;
   title: string;

@@ -32,6 +32,7 @@ export default function ProgramsPage() {
     statusFilters,
     loading,
     errorMsg,
+    errorOrigin,
     confirmAction,
     setOwnerFilter,
     toggleStatusFilter,
@@ -189,6 +190,7 @@ export default function ProgramsPage() {
           selectedStatuses={statusFilters}
           loading={loading}
           error={errorMsg}
+          errorOrigin={errorOrigin ?? "carga"}
           empty={empty}
           noResults={noResults}
           onChangeOwner={setOwnerFilter}

@@ -151,6 +151,13 @@ export function sortearSugestao(): string {
 
 export type AcaoPrograma = "ativar" | "inativar" | "reativar";
 
+// Fonte única dos rótulos de status (Patch v4): lista e detalhe consomem daqui.
+export const STATUS_LABEL: Record<ProgramStatus, string> = {
+  rascunho: "Rascunho",
+  ativo: "Ativo",
+  inativo: "Inativo",
+};
+
 export function transicoesPermitidas(status: ProgramStatus): AcaoPrograma[] {
   if (status === "rascunho") return ["ativar"];
   if (status === "ativo") return ["inativar"];

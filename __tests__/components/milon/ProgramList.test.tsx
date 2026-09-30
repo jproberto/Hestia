@@ -19,9 +19,21 @@ import type { Program, ProgramStatus } from "@/lib/milon/types";
  *   (ajustar os filtros) — spec §3 "Lista vazia ... criar o primeiro Programa ou
  *   ajustar os filtros".
  *
+ * PATCH v4 (TASK-022 RED) — origem da mensagem (plan.md "Aditivo Patch v4" §3
+ * "ProgramList (props)" + spec D15/R13–R17/CA-P3-15): a prop OBRIGATÓRIA
+ * `errorOrigin: ProgramErrorOrigin | null` entra no contrato e o botão
+ * "Tentar novamente" só aparece quando há erro E a origem é `carga`.
+ * `ProgramErrorOrigin` ("carga" | "operacao" | "bloqueio") será exportado por
+ * `lib/milon/types.ts` na TASK-023; aqui o tipo é espelhado localmente para o
+ * tsc --noEmit seguir verde até a implementação. Os defaults do helper passam a
+ * incluir `errorOrigin: "carga"` (risco §6 do plan: os cenários homologados de
+ * carga continuam exibindo retry).
+ *
  * Tipo de props declarado localmente: o contrato do plano não exige export de
  * tipo do componente — o teste só depende do default export.
  */
+type ProgramErrorOrigin = "carga" | "operacao" | "bloqueio";
+
 interface ProgramListProps {
   items: Program[];
   ownerOptions: string[];
@@ -29,6 +41,7 @@ interface ProgramListProps {
   selectedStatuses: ProgramStatus[];
   loading: boolean;
   error: string | null;
+  errorOrigin: ProgramErrorOrigin | null;
   empty: boolean;
   noResults: boolean;
   onChangeOwner: (owner: string) => void;
@@ -62,6 +75,7 @@ function defaultProps(overrides: Partial<ProgramListProps> = {}): ProgramListPro
     selectedStatuses: [...TODOS_STATUS],
     loading: false,
     error: null,
+    errorOrigin: "carga",
     empty: false,
     noResults: false,
     onChangeOwner: vi.fn(),
@@ -311,6 +325,95 @@ describe("ProgramList", () => {
       expect(screen.getByText(/ajust/i)).toBeInTheDocument();
       expect(screen.queryByText(/primeiro programa/i)).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /tentar novamente/i })).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Patch v4 (TASK-022 RED) — origem da mensagem: D15 / R13–R17 / CA-P3-15.
+  // plan.md "Aditivo Patch v4" §3 "ProgramList (props)": a prop obrigatória
+  // `errorOrigin` decide o retry — "Tentar novamente" SOMENTE com erro E origem
+  // `carga`; `bloqueio` e `operacao` mostram só a mensagem, no mesmo banner.
+  // Hoje o componente não lê origem alguma e mostra retry para TODA mensagem,
+  // então os casos sem retry falham (RED da TASK-023) — motivo esperado:
+  // comportamento do retry ainda indistinguível por origem.
+  // -------------------------------------------------------------------------
+  describe("origem da mensagem: retry exclusivo da carga (Patch v4, TASK-022 RED)", () => {
+    it("error + errorOrigin 'carga' renderiza a mensagem e 'Tentar novamente', que dispara onRetry (CA-P3-15)", () => {
+      const onRetry = vi.fn();
+      render(
+        <ProgramList
+          {...defaultProps({
+            error: "Erro ao carregar programas",
+            errorOrigin: "carga",
+            items: [],
+            onRetry,
+          })}
+        />,
+      );
+
+      // A mensagem continua visível (R14 mantém o comportamento homologado).
+      expect(screen.getByText(/erro ao carregar programas/i)).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /tentar novamente/i }));
+      expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+
+    it("error + errorOrigin 'bloqueio' renderiza a mensagem SEM o botão 'Tentar novamente'", () => {
+      const onRetry = vi.fn();
+      render(
+        <ProgramList
+          {...defaultProps({
+            error: "Adicione pelo menos um treino com exercícios para ativar",
+            errorOrigin: "bloqueio",
+            items: [],
+            onRetry,
+          })}
+        />,
+      );
+
+      // R15/CA-P3-13: banner legível sem retry; a ação se repete pela via da lista.
+      expect(
+        screen.getByText(/adicione pelo menos um treino com exercícios para ativar/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /tentar novamente/i }),
+      ).not.toBeInTheDocument();
+      expect(onRetry).not.toHaveBeenCalled();
+    });
+
+    it("error + errorOrigin 'operacao' renderiza a mensagem SEM o botão 'Tentar novamente'", () => {
+      const onRetry = vi.fn();
+      render(
+        <ProgramList
+          {...defaultProps({
+            error: "Erro ao atualizar programa",
+            errorOrigin: "operacao",
+            items: [],
+            onRetry,
+          })}
+        />,
+      );
+
+      // R16/CA-P3-14: falha de operação segue o mesmo tratamento do bloqueio.
+      expect(screen.getByText(/erro ao atualizar programa/i)).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /tentar novamente/i }),
+      ).not.toBeInTheDocument();
+      expect(onRetry).not.toHaveBeenCalled();
+    });
+
+    it("sem error não há banner nem retry, seja qual for a origem", () => {
+      render(
+        <ProgramList
+          {...defaultProps({ error: null, errorOrigin: "carga", items: [makeProgram()] })}
+        />,
+      );
+
+      expect(screen.queryByText(/erro ao carregar programas/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /tentar novamente/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText("Ficha Verão 2026")).toBeInTheDocument();
     });
   });
 });

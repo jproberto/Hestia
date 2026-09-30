@@ -1,7 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import type { Program, ProgramStatus } from "@/lib/milon/types";
+import { STATUS_LABEL } from "@/lib/milon/program-utils";
+import type { Program, ProgramErrorOrigin, ProgramStatus } from "@/lib/milon/types";
 
 export interface ProgramListProps {
   items: Program[];
@@ -10,6 +11,7 @@ export interface ProgramListProps {
   selectedStatuses: ProgramStatus[];
   loading: boolean;
   error: string | null;
+  errorOrigin: ProgramErrorOrigin | null;
   empty: boolean;
   noResults: boolean;
   onChangeOwner: (owner: string) => void;
@@ -19,12 +21,6 @@ export interface ProgramListProps {
   onDelete: (program: Program) => void;
   onRetry: () => void;
 }
-
-const STATUS_LABEL: Record<ProgramStatus, string> = {
-  rascunho: "Rascunho",
-  ativo: "Ativo",
-  inativo: "Inativo",
-};
 
 const ALL_STATUSES: ProgramStatus[] = ["rascunho", "ativo", "inativo"];
 
@@ -39,6 +35,7 @@ export default function ProgramList({
   selectedStatuses,
   loading,
   error,
+  errorOrigin,
   empty,
   noResults,
   onChangeOwner,
@@ -93,9 +90,11 @@ export default function ProgramList({
       ) : error ? (
         <div className="rounded-lg border bg-card p-8 text-center shadow-sm flex flex-col items-center gap-2">
           <p className="text-sm text-rose-700 dark:text-rose-300">{error}</p>
-          <Button onClick={onRetry} size="sm" variant="outline">
-            Tentar novamente
-          </Button>
+          {errorOrigin === "carga" ? (
+            <Button onClick={onRetry} size="sm" variant="outline">
+              Tentar novamente
+            </Button>
+          ) : null}
         </div>
       ) : empty ? (
         <div className="rounded-lg border bg-card p-8 text-center text-sm shadow-sm flex flex-col items-center gap-2">

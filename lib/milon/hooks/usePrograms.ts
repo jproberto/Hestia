@@ -14,7 +14,7 @@ import {
   normalizarTitulo,
   validarTitulo,
 } from "@/lib/milon/program-utils";
-import type { Program, ProgramStatus } from "@/lib/milon/types";
+import type { Program, ProgramErrorOrigin, ProgramStatus } from "@/lib/milon/types";
 
 export type ProgramConfirmAction = "ativar" | "reativar" | "excluir";
 
@@ -38,6 +38,7 @@ export interface UseProgramsReturn {
   statusFilters: ProgramStatus[];
   loading: boolean;
   errorMsg: string | null;
+  errorOrigin: ProgramErrorOrigin | null;
   confirmAction: ProgramConfirmState | null;
   setOwnerFilter: (value: string) => void;
   toggleStatusFilter: (status: ProgramStatus) => void;
@@ -71,6 +72,7 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
   ]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorOrigin, setErrorOrigin] = useState<ProgramErrorOrigin | null>(null);
   const [confirmAction, setConfirmAction] = useState<ProgramConfirmState | null>(null);
   const confirmRef = useRef<ProgramConfirmState | null>(null);
 
@@ -85,11 +87,13 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
         if (cancelled) return;
         setPrograms(items ?? []);
         setErrorMsg(null);
+        setErrorOrigin(null);
         setLoading(false);
       },
       (err: unknown) => {
         if (cancelled) return;
         setErrorMsg(toErrorMessage(err, "Erro ao carregar programas"));
+        setErrorOrigin("carga");
         setLoading(false);
       },
     );
@@ -137,12 +141,15 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
   const fetchList = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
+    setErrorOrigin(null);
     try {
       const items = await listProgramsStandalone();
       setPrograms(items ?? []);
       setErrorMsg(null);
+      setErrorOrigin(null);
     } catch (err: unknown) {
       setErrorMsg(toErrorMessage(err, "Erro ao carregar programas"));
+      setErrorOrigin("carga");
     } finally {
       setLoading(false);
     }
@@ -158,9 +165,10 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
 
   const save = useCallback(
     async (input: SaveProgramInput | string, id?: string | null): Promise<Program> => {
-      // Erro de save NÃO alimenta o `errorMsg` da lista: ele é relançado para
-      // o modal exibir (padrão useExercises). A lista preserva itens/filtros;
-      // só fetch (fetchList) toca no `errorMsg` da lista.
+      // Erro de save NÃO alimenta o `errorMsg`/`errorOrigin` da lista: ele é
+      // relançado para o modal exibir (padrão useExercises). save() não grava
+      // em nenhum dos dois campos — nem em falha, nem em sucesso.
+      // A lista preserva itens/filtros; só fetch (fetchList) toca no canal.
       const rawTitle = typeof input === "string" ? input : input.title;
       const normalized = normalizarTitulo(rawTitle);
       const validationError = validarTitulo(normalized);
@@ -190,7 +198,6 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
             return [saved, ...prev];
           });
         }
-        setErrorMsg(null);
         return saved;
       } catch (err: unknown) {
         const message = toErrorMessage(err, "Erro ao salvar programa");
@@ -205,9 +212,11 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
       const bloqueio = guardaAtivacao(hasWorkoutWithExercise);
       if (bloqueio) {
         setErrorMsg(bloqueio);
+        setErrorOrigin("bloqueio");
         throw new Error(bloqueio);
       }
       setErrorMsg(null);
+      setErrorOrigin(null);
       try {
         await updateProgramStandalone(program.id, { status: "ativo" });
         // Efeito colateral via program-utils (não depende de refetch):
@@ -219,9 +228,11 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
           );
         });
         setErrorMsg(null);
+        setErrorOrigin(null);
       } catch (err: unknown) {
         const message = toErrorMessage(err, "Erro ao atualizar programa");
         setErrorMsg(message);
+        setErrorOrigin("operacao");
         throw err instanceof Error ? err : new Error(message);
       }
     },
@@ -242,14 +253,17 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
     if (program.status !== "rascunho") {
       const message = "Somente programas em rascunho podem ser excluídos";
       setErrorMsg(message);
+      setErrorOrigin("bloqueio");
       throw new Error(message);
     }
     setErrorMsg(null);
+    setErrorOrigin(null);
     try {
       await deleteProgramStandalone(program.id);
     } catch (err: unknown) {
       const message = toErrorMessage(err, "Erro ao excluir programa");
       setErrorMsg(message);
+      setErrorOrigin("operacao");
       throw err instanceof Error ? err : new Error(message);
     }
     try {
@@ -259,6 +273,7 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
       setPrograms((prev) => prev.filter((p) => p.id !== program.id));
     }
     setErrorMsg(null);
+    setErrorOrigin(null);
   }, []);
 
   const requestConfirm = useCallback(
@@ -299,6 +314,7 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
     statusFilters,
     loading,
     errorMsg,
+    errorOrigin,
     confirmAction,
     setOwnerFilter,
     toggleStatusFilter,

@@ -942,3 +942,308 @@ describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
     expect(typeof hooksIndex.usePrograms).toBe("function");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Patch v4 (D15, R13–R17) — ORIGEM DA MENSAGEM: carga × operação × bloqueio
+// Contrato RED da TASK-022. Fonte: spec.md "Patch v4" (D15, R13–R17, CA-P3-13…15)
+// + plan.md "Aditivo Patch v4" §3 (contratos: tipo, hook, ProgramList) e §5
+// decisão 1 (canal de origem = SEGUNDO CAMPO `errorOrigin`, não objeto/código/
+// booleano) + tasks.json TASK-022 acceptanceCriteria.
+//
+// CONTRATO CONSUMIDO (plan.md §3, ainda INEXISTENTE na produção):
+//   - `lib/milon/types.ts` exporta `ProgramErrorOrigin` = "carga" | "operacao" |
+//     "bloqueio";
+//   - `UseProgramsReturn` ganha `errorOrigin: ProgramErrorOrigin | null`.
+//
+// STATUS: RED esperado (TASK-023/Hefesto torna verde, sem mexer neste arquivo).
+// Hoje o hook não expõe `errorOrigin`: toda asserção de origem falha com
+// `undefined` — o motivo exato exigido pelo acceptanceCriteria 5 ("falha por
+// campo/prop inexistente"), não erro de sintaxe. O cast fixa os NOMES travados
+// no plan para o tsc --noEmit continuar verde até a TASK-023.
+// ---------------------------------------------------------------------------
+
+interface ContratoUseProgramsComOrigem {
+  errorOrigin: "carga" | "operacao" | "bloqueio" | null;
+}
+
+/** Lê o campo `errorOrigin` do contrato do plan (hoje ausente → `undefined`). */
+function origemDe(result: { current: unknown }): ContratoUseProgramsComOrigem["errorOrigin"] {
+  return (result.current as ContratoUseProgramsComOrigem).errorOrigin;
+}
+
+const MENSAGEM_EXCLUSAO = "Somente programas em rascunho podem ser excluídos";
+
+describe("Mílon #2 — usePrograms: origem da mensagem (Patch v4, TASK-022 RED)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(listProgramsStandalone).mockReset();
+    vi.mocked(createProgramStandalone).mockReset();
+    vi.mocked(updateProgramStandalone).mockReset();
+    vi.mocked(deleteProgramStandalone).mockReset();
+  });
+
+  // -------------------------------------------------------------------------
+  // 1. As 6 gravações de origem (TASK-022 acceptanceCriteria 1)
+  // -------------------------------------------------------------------------
+  describe("1. Gravação da origem nos pontos mapeados", () => {
+    it("fetch de carga falhando na montagem grava errorMsg não nulo com origem 'carga'", async () => {
+      vi.mocked(listProgramsStandalone).mockRejectedValue(new Error("falha de rede"));
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.errorMsg).toContain("falha de rede");
+      expect(origemDe(result)).toBe("carga");
+    });
+
+    it("falha no fetchList (reload) também grava origem 'carga'", async () => {
+      mockList([programa({ id: "p-1" })]);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      vi.mocked(listProgramsStandalone).mockRejectedValueOnce(
+        new Error("rede caiu no reload"),
+      );
+      await executar(() => result.current.reload());
+
+      expect(result.current.errorMsg).toContain("rede caiu no reload");
+      expect(origemDe(result)).toBe("carga");
+    });
+
+    it("guarda de ativação bloqueando grava origem 'bloqueio' sem chamar o repositório", async () => {
+      const rascunho = programa({ id: "p-r", status: "rascunho" });
+      mockList([rascunho]);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() => result.current.activate(rascunho));
+
+      expect(result.current.errorMsg).toBe(GUARDA);
+      expect(origemDe(result)).toBe("bloqueio");
+      expect(updateProgramStandalone).not.toHaveBeenCalled();
+      expect(result.current.programs[0].status).toBe("rascunho");
+    });
+
+    it("guarda de reativação bloqueando grava origem 'bloqueio' sem chamar o repositório", async () => {
+      const inativo = programa({ id: "p-i", status: "inativo" });
+      mockList([inativo]);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() => result.current.reactivate(inativo));
+
+      expect(result.current.errorMsg).toBe(GUARDA);
+      expect(origemDe(result)).toBe("bloqueio");
+      expect(updateProgramStandalone).not.toHaveBeenCalled();
+      expect(result.current.programs[0].status).toBe("inativo");
+    });
+
+    it.each([
+      ["activate", "rascunho"],
+      ["reactivate", "inativo"],
+    ] as const)(
+      "falha de repositório em %s grava origem 'operacao' preservando o status",
+      async (metodo, status) => {
+        const alvo = programa({ id: "p-alvo", status });
+        mockList([alvo]);
+        vi.mocked(updateProgramStandalone).mockRejectedValue(
+          new Error("Erro ao atualizar programa"),
+        );
+
+        const { result } = renderHook(() => usePrograms({ hasWorkoutWithExercise: true }));
+        await waitFor(() => expect(result.current.loading).toBe(false));
+
+        await executar(() => result.current[metodo](alvo));
+
+        expect(result.current.errorMsg).toContain("Erro ao atualizar programa");
+        expect(origemDe(result)).toBe("operacao");
+        expect(result.current.programs[0].status).toBe(status);
+        expect(listProgramsStandalone).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it(`regra de exclusão de não-rascunho grava origem 'bloqueio' com a mensagem exata e sem chamar o repositório`, async () => {
+      const ativo = programa({ id: "p-a", status: "ativo" });
+      mockList([ativo]);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() => result.current.remove(ativo));
+
+      expect(result.current.errorMsg).toBe(MENSAGEM_EXCLUSAO);
+      expect(origemDe(result)).toBe("bloqueio");
+      expect(deleteProgramStandalone).not.toHaveBeenCalled();
+      expect(result.current.programs[0].status).toBe("ativo");
+    });
+
+    it("falha de delete em remove grava origem 'operacao' preservando a lista", async () => {
+      const rascunho = programa({ id: "p-r", status: "rascunho" });
+      mockList([rascunho]);
+      vi.mocked(deleteProgramStandalone).mockRejectedValue(
+        new Error("Erro ao excluir programa"),
+      );
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() => result.current.remove(rascunho));
+
+      expect(result.current.errorMsg).toContain("Erro ao excluir programa");
+      expect(origemDe(result)).toBe("operacao");
+      expect(result.current.programs.map((p) => p.id)).toEqual(["p-r"]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 2. Sucesso zera errorMsg e errorOrigin (TASK-022 acceptanceCriteria 1,
+  //    última parte; plan.md §3 "qualquer sucesso zera os dois campos")
+  // -------------------------------------------------------------------------
+  describe("2. Sucesso zera errorMsg e errorOrigin", () => {
+    it("recuperação após falha de carga zera os dois campos", async () => {
+      vi.mocked(listProgramsStandalone)
+        .mockRejectedValueOnce(new Error("falha de rede"))
+        .mockResolvedValue([programa({ id: "p-1" })]);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(origemDe(result)).toBe("carga");
+
+      await executar(() => result.current.reload());
+
+      expect(result.current.errorMsg).toBeNull();
+      expect(origemDe(result)).toBeNull();
+      expect(result.current.programs.map((p) => p.id)).toEqual(["p-1"]);
+    });
+
+    it("ativação bem-sucedida após falha de operação zera os dois campos", async () => {
+      const rascunho = programa({ id: "p-r", status: "rascunho" });
+      mockList([rascunho]);
+      vi.mocked(updateProgramStandalone)
+        .mockRejectedValueOnce(new Error("Erro ao atualizar programa"))
+        .mockResolvedValue({ ...rascunho, status: "ativo" });
+
+      const { result } = renderHook(() => usePrograms({ hasWorkoutWithExercise: true }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() => result.current.activate(rascunho));
+      expect(origemDe(result)).toBe("operacao");
+
+      await executar(() => result.current.activate(rascunho));
+
+      expect(result.current.errorMsg).toBeNull();
+      expect(origemDe(result)).toBeNull();
+      expect(result.current.programs[0].status).toBe("ativo");
+    });
+
+    it("ativação liberada após bloqueio da guarda zera os dois campos", async () => {
+      const rascunho = programa({ id: "p-r", status: "rascunho" });
+      mockList([rascunho], [{ ...rascunho, status: "ativo" }]);
+      vi.mocked(updateProgramStandalone).mockResolvedValue({ ...rascunho, status: "ativo" });
+
+      const { result, rerender } = renderHook(
+        ({ guarda }: { guarda: boolean }) =>
+          usePrograms({ hasWorkoutWithExercise: guarda }),
+        { initialProps: { guarda: false } },
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() => result.current.activate(rascunho));
+      expect(result.current.errorMsg).toBe(GUARDA);
+      expect(origemDe(result)).toBe("bloqueio");
+
+      rerender({ guarda: true });
+      await executar(() => result.current.activate(rascunho));
+
+      expect(result.current.errorMsg).toBeNull();
+      expect(origemDe(result)).toBeNull();
+      expect(result.current.programs[0].status).toBe("ativo");
+    });
+
+    it("exclusão de rascunho após bloqueio anterior zera os dois campos", async () => {
+      const ativo = programa({ id: "p-a", status: "ativo" });
+      const rascunho = programa({ id: "p-r", status: "rascunho" });
+      mockList([ativo, rascunho], [ativo]);
+      vi.mocked(deleteProgramStandalone).mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() => result.current.remove(ativo));
+      expect(origemDe(result)).toBe("bloqueio");
+
+      await executar(() => result.current.remove(rascunho));
+
+      expect(result.current.errorMsg).toBeNull();
+      expect(origemDe(result)).toBeNull();
+      expect(result.current.programs.map((p) => p.id)).toEqual(["p-a"]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 3. save() fica FORA do canal de origem (TASK-022 acceptanceCriteria 2;
+  //    plan.md §3 "`save()` não grava em nenhum dos dois (relança para o modal)"
+  //    + Restrição Global "erro de save continua não alimentando a lista")
+  // -------------------------------------------------------------------------
+  describe("3. save() não alimenta o canal de origem", () => {
+    it("falha de repositório no save relança ao modal sem tocar em errorMsg nem errorOrigin", async () => {
+      mockList([programa({ id: "p-1" })]);
+      vi.mocked(createProgramStandalone).mockRejectedValue(
+        new Error("título já usado em outro programa"),
+      );
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      let thrown: unknown;
+      await act(async () => {
+        try {
+          await result.current.save("Duplicado");
+        } catch (err: unknown) {
+          thrown = err;
+        }
+      });
+
+      expect((thrown as Error).message).toBe("título já usado em outro programa");
+      expect(result.current.errorMsg).toBeNull();
+      expect(origemDe(result)).toBeNull();
+    });
+
+    it("validação de título vazio também não toca em errorMsg nem errorOrigin", async () => {
+      mockList([programa({ id: "p-1" })]);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await act(async () => {
+        await expect(result.current.save("   ")).rejects.toBeInstanceOf(Error);
+      });
+
+      expect(result.current.errorMsg).toBeNull();
+      expect(origemDe(result)).toBeNull();
+      expect(createProgramStandalone).not.toHaveBeenCalled();
+      expect(updateProgramStandalone).not.toHaveBeenCalled();
+    });
+
+    it("save bem-sucedido deixa errorMsg e errorOrigin nulos", async () => {
+      const existente = programa({ id: "p-1" });
+      const salvo = programa({ id: "p-novo", title: "Ficha Novo" });
+      mockList([existente], [salvo, existente]);
+      vi.mocked(createProgramStandalone).mockResolvedValue(salvo);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await act(async () => {
+        await result.current.save("Ficha Novo");
+      });
+
+      expect(result.current.errorMsg).toBeNull();
+      expect(origemDe(result)).toBeNull();
+      expect(result.current.programs.map((p) => p.id)).toEqual(["p-novo", "p-1"]);
+    });
+  });
+});

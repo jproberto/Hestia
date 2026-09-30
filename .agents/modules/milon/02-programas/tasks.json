@@ -437,185 +437,189 @@
                                 ]
                   },
                   {
-                      "id": "TASK-022",
-                      "status": "pending",
-                      "title": "RED: testes de origem da mensagem (carga x operacao x bloqueio) em usePrograms e ProgramList",
-                      "description": "Minos escreve os testes RED do Item B (D15, R13-R17) a partir dos contratos textuais do plan.md 'Aditivo - Patch v4', sem tocar em producao. Consome: contrato ProgramErrorOrigin (lib/milon/types.ts) e prop errorOrigin (components/milon/ProgramList.tsx), ambos ainda inexistentes. Produz: cobertura que a TASK-023 torna verde. (1) __tests__/lib/milon/hooks/usePrograms.test.ts ganha cenarios: falha do fetch inicial grava errorMsg nao nulo com errorOrigin 'carga'; guarda de ativacao bloqueando grava 'bloqueio' sem chamar o repositorio; falha de update em activate/reactivate grava 'operacao'; regra 'Somente programas em rascunho podem ser excluídos' em remove grava 'bloqueio'; falha de delete em remove grava 'operacao'; caminhos de sucesso zeram errorMsg e errorOrigin; save() nao altera nenhum dos dois. (2) __tests__/components/milon/ProgramList.test.tsx ganha cenarios: error + errorOrigin 'carga' renderiza 'Tentar novamente' e dispara onRetry; error + errorOrigin 'bloqueio' renderiza a mensagem SEM o botao; error + errorOrigin 'operacao' idem; os defaults do helper de props dos cenarios de carga existentes passam a incluir errorOrigin 'carga'. Expected: FAIL hoje (campo e prop inexistentes).",
-                      "assignee": "minos",
-                      "dependencies": [],
-                      "acceptanceCriteria": [
-                          "__tests__/lib/milon/hooks/usePrograms.test.ts cobre as 6 gravacoes de origem: fetch inicial falhando -> 'carga'; guarda de ativacao -> 'bloqueio' sem chamar repositorio; falha de update em activate/reactivate -> 'operacao'; regra de exclusao de nao-rascunho ('Somente programas em rascunho podem ser excluídos') -> 'bloqueio'; falha de delete em remove -> 'operacao'; caminho de sucesso zera errorMsg e errorOrigin",
-                          "Coberto no mesmo arquivo: save() continua nao alimentando errorMsg nem errorOrigin (erro de save fica no modal)",
-                          "__tests__/components/milon/ProgramList.test.tsx cobre: error + errorOrigin 'carga' renderiza 'Tentar novamente' e dispara onRetry; error + errorOrigin 'bloqueio' nao renderiza o botao; error + errorOrigin 'operacao' nao renderiza o botao; a mensagem continua visivel nos tres casos",
-                          "CA-P3-15 (parte do banner): retry presente somente na origem de carga",
-                          "Execucao atual falha (Expected: FAIL) por campo/prop inexistente - condicao de RED da TASK-023"
-                      ],
-                      "files": [
-                          "__tests__/lib/milon/hooks/usePrograms.test.ts",
-                          "__tests__/components/milon/ProgramList.test.tsx"
-                      ]
+                      "id":  "TASK-022",
+                      "status":  "completed",
+                      "title":  "RED: testes de origem da mensagem (carga x operacao x bloqueio) em usePrograms e ProgramList",
+                      "description":  "Minos escreve os testes RED do Item B (D15, R13-R17) a partir dos contratos textuais do plan.md \u0027Aditivo - Patch v4\u0027, sem tocar em producao. Consome: contrato ProgramErrorOrigin (lib/milon/types.ts) e prop errorOrigin (components/milon/ProgramList.tsx), ambos ainda inexistentes. Produz: cobertura que a TASK-023 torna verde. (1) __tests__/lib/milon/hooks/usePrograms.test.ts ganha cenarios: falha do fetch inicial grava errorMsg nao nulo com errorOrigin \u0027carga\u0027; guarda de ativacao bloqueando grava \u0027bloqueio\u0027 sem chamar o repositorio; falha de update em activate/reactivate grava \u0027operacao\u0027; regra \u0027Somente programas em rascunho podem ser excluídos\u0027 em remove grava \u0027bloqueio\u0027; falha de delete em remove grava \u0027operacao\u0027; caminhos de sucesso zeram errorMsg e errorOrigin; save() nao altera nenhum dos dois. (2) __tests__/components/milon/ProgramList.test.tsx ganha cenarios: error + errorOrigin \u0027carga\u0027 renderiza \u0027Tentar novamente\u0027 e dispara onRetry; error + errorOrigin \u0027bloqueio\u0027 renderiza a mensagem SEM o botao; error + errorOrigin \u0027operacao\u0027 idem; os defaults do helper de props dos cenarios de carga existentes passam a incluir errorOrigin \u0027carga\u0027. Expected: FAIL hoje (campo e prop inexistentes).",
+                      "assignee":  "minos",
+                      "dependencies":  [
+
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "__tests__/lib/milon/hooks/usePrograms.test.ts cobre as 6 gravacoes de origem: fetch inicial falhando -\u003e \u0027carga\u0027; guarda de ativacao -\u003e \u0027bloqueio\u0027 sem chamar repositorio; falha de update em activate/reactivate -\u003e \u0027operacao\u0027; regra de exclusao de nao-rascunho (\u0027Somente programas em rascunho podem ser excluídos\u0027) -\u003e \u0027bloqueio\u0027; falha de delete em remove -\u003e \u0027operacao\u0027; caminho de sucesso zera errorMsg e errorOrigin",
+                                                 "Coberto no mesmo arquivo: save() continua nao alimentando errorMsg nem errorOrigin (erro de save fica no modal)",
+                                                 "__tests__/components/milon/ProgramList.test.tsx cobre: error + errorOrigin \u0027carga\u0027 renderiza \u0027Tentar novamente\u0027 e dispara onRetry; error + errorOrigin \u0027bloqueio\u0027 nao renderiza o botao; error + errorOrigin \u0027operacao\u0027 nao renderiza o botao; a mensagem continua visivel nos tres casos",
+                                                 "CA-P3-15 (parte do banner): retry presente somente na origem de carga",
+                                                 "Execucao atual falha (Expected: FAIL) por campo/prop inexistente - condicao de RED da TASK-023"
+                                             ],
+                      "files":  [
+                                    "__tests__/lib/milon/hooks/usePrograms.test.ts",
+                                    "__tests__/components/milon/ProgramList.test.tsx"
+                                ]
                   },
                   {
-                      "id": "TASK-023",
-                      "status": "pending",
-                      "title": "Origem da mensagem: ProgramErrorOrigin em types.ts, errorOrigin no hook e retry so na carga no ProgramList",
-                      "description": "Hefesto implementa o contrato RED da TASK-022 (Item B - D15). Consome: testes da TASK-022; ProgramErrorOrigin (criar); save() inalterado. Produz: ProgramErrorOrigin em lib/milon/types.ts; campo errorOrigin em UseProgramsReturn; prop errorOrigin em components/milon/ProgramList.tsx; STATUS_LABEL exportado por lib/milon/program-utils.ts (consumido na TASK-027); stories de erro por origem. Passos: (1) lib/milon/types.ts ganha a union de tres literais 'carga' | 'operacao' | 'bloqueio'; (2) lib/milon/hooks/usePrograms.ts grava errorOrigin nos quatro pontos ja mapeados (efeito de montagem e fetchList -> 'carga'; guarda de ativacao/reativacao -> 'bloqueio'; regra de exclusao de nao-rascunho ('Somente programas em rascunho podem ser excluídos') -> 'bloqueio'; catch de updateProgram/deleteProgram -> 'operacao') e zera junto com errorMsg em todo sucesso; (3) components/milon/ProgramList.tsx recebe errorOrigin obrigatorio (nullable) e so renderiza o botao 'Tentar novamente' quando houver error e a origem for 'carga'; (4) move a constante local de rotulos de status para lib/milon/program-utils.ts e importa; (5) stories: erro de carga (com retry), erro de operacao e bloqueio (sem retry). Hefesto nao escreve testes.",
-                      "assignee": "hefesto",
-                      "dependencies": [
-                          "TASK-022"
-                      ],
-                      "acceptanceCriteria": [
-                          "lib/milon/types.ts exporta ProgramErrorOrigin com exatamente os valores 'carga', 'operacao' e 'bloqueio' (nenhum quarto valor)",
-                          "lib/milon/hooks/usePrograms.ts expoe errorOrigin em UseProgramsReturn: efeito de montagem e fetchList falhando -> 'carga'; guarda de ativacao/reativacao -> 'bloqueio'; regra 'Somente programas em rascunho podem ser excluídos' -> 'bloqueio'; falha de repositorio em activate/reactivate/remove -> 'operacao'; caminhos de sucesso zeram errorMsg e errorOrigin; save() nao altera errorMsg nem errorOrigin",
-                          "components/milon/ProgramList.tsx tem prop obrigatoria errorOrigin: ProgramErrorOrigin | null e renderiza o botao 'Tentar novamente' somente quando houver error e errorOrigin === 'carga'; com 'operacao' ou 'bloqueio' renderiza so a mensagem",
-                          "Busca por 'const STATUS_LABEL' em components/milon/ProgramList.tsx retorna 0 e lib/milon/program-utils.ts exporta STATUS_LABEL cobrindo os 3 status ('Rascunho', 'Ativo', 'Inativo')",
-                          "components/milon/ProgramList.stories.tsx possui story de erro de carga (com retry) e stories de erro de operacao e de bloqueio (sem retry); npm run build-storybook passa",
-                          "npm test -- __tests__/lib/milon/hooks/usePrograms.test.ts e npm test -- __tests__/components/milon/ProgramList.test.tsx passam (Expected: PASS) e npx tsc --noEmit passa",
-                          "components/milon/ProgramList.tsx nao ganha link, href nem clique de navegacao para /milon/programs/<id> (entrada por clique no detalhe esta fora de escopo - spec Q5); acoes continuam na lista"
-                      ],
-                      "files": [
-                          "lib/milon/types.ts",
-                          "lib/milon/hooks/usePrograms.ts",
-                          "lib/milon/program-utils.ts",
-                          "components/milon/ProgramList.tsx",
-                          "components/milon/ProgramList.stories.tsx"
-                      ]
+                      "id":  "TASK-023",
+                      "status":  "completed",
+                      "title":  "Origem da mensagem: ProgramErrorOrigin em types.ts, errorOrigin no hook e retry so na carga no ProgramList",
+                      "description":  "Hefesto implementa o contrato RED da TASK-022 (Item B - D15). Consome: testes da TASK-022; ProgramErrorOrigin (criar); save() inalterado. Produz: ProgramErrorOrigin em lib/milon/types.ts; campo errorOrigin em UseProgramsReturn; prop errorOrigin em components/milon/ProgramList.tsx; STATUS_LABEL exportado por lib/milon/program-utils.ts (consumido na TASK-027); stories de erro por origem. Passos: (1) lib/milon/types.ts ganha a union de tres literais \u0027carga\u0027 | \u0027operacao\u0027 | \u0027bloqueio\u0027; (2) lib/milon/hooks/usePrograms.ts grava errorOrigin nos quatro pontos ja mapeados (efeito de montagem e fetchList -\u003e \u0027carga\u0027; guarda de ativacao/reativacao -\u003e \u0027bloqueio\u0027; regra de exclusao de nao-rascunho (\u0027Somente programas em rascunho podem ser excluídos\u0027) -\u003e \u0027bloqueio\u0027; catch de updateProgram/deleteProgram -\u003e \u0027operacao\u0027) e zera junto com errorMsg em todo sucesso; (3) components/milon/ProgramList.tsx recebe errorOrigin obrigatorio (nullable) e so renderiza o botao \u0027Tentar novamente\u0027 quando houver error e a origem for \u0027carga\u0027; (4) move a constante local de rotulos de status para lib/milon/program-utils.ts e importa; (5) stories: erro de carga (com retry), erro de operacao e bloqueio (sem retry). Hefesto nao escreve testes.",
+                      "assignee":  "hefesto",
+                      "dependencies":  [
+                                           "TASK-022"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "lib/milon/types.ts exporta ProgramErrorOrigin com exatamente os valores \u0027carga\u0027, \u0027operacao\u0027 e \u0027bloqueio\u0027 (nenhum quarto valor)",
+                                                 "lib/milon/hooks/usePrograms.ts expoe errorOrigin em UseProgramsReturn: efeito de montagem e fetchList falhando -\u003e \u0027carga\u0027; guarda de ativacao/reativacao -\u003e \u0027bloqueio\u0027; regra \u0027Somente programas em rascunho podem ser excluídos\u0027 -\u003e \u0027bloqueio\u0027; falha de repositorio em activate/reactivate/remove -\u003e \u0027operacao\u0027; caminhos de sucesso zeram errorMsg e errorOrigin; save() nao altera errorMsg nem errorOrigin",
+                                                 "components/milon/ProgramList.tsx tem prop obrigatoria errorOrigin: ProgramErrorOrigin | null e renderiza o botao \u0027Tentar novamente\u0027 somente quando houver error e errorOrigin === \u0027carga\u0027; com \u0027operacao\u0027 ou \u0027bloqueio\u0027 renderiza so a mensagem",
+                                                 "Busca por \u0027const STATUS_LABEL\u0027 em components/milon/ProgramList.tsx retorna 0 e lib/milon/program-utils.ts exporta STATUS_LABEL cobrindo os 3 status (\u0027Rascunho\u0027, \u0027Ativo\u0027, \u0027Inativo\u0027)",
+                                                 "components/milon/ProgramList.stories.tsx possui story de erro de carga (com retry) e stories de erro de operacao e de bloqueio (sem retry); npm run build-storybook passa",
+                                                 "npm test -- __tests__/lib/milon/hooks/usePrograms.test.ts e npm test -- __tests__/components/milon/ProgramList.test.tsx passam (Expected: PASS) e npx tsc --noEmit passa",
+                                                 "components/milon/ProgramList.tsx nao ganha link, href nem clique de navegacao para /milon/programs/\u003cid\u003e (entrada por clique no detalhe esta fora de escopo - spec Q5); acoes continuam na lista"
+                                             ],
+                      "files":  [
+                                    "lib/milon/types.ts",
+                                    "lib/milon/hooks/usePrograms.ts",
+                                    "lib/milon/program-utils.ts",
+                                    "components/milon/ProgramList.tsx",
+                                    "components/milon/ProgramList.stories.tsx"
+                                ]
                   },
                   {
-                      "id": "TASK-024",
-                      "status": "pending",
-                      "title": "RED: testes da pagina - modal fecha em bloqueio/falha, banner sem retry e navegacao pos-criacao",
-                      "description": "Minos escreve os testes RED da tela de Programas para CA-P3-13 a CA-P3-19, a partir do plan.md 'Aditivo - Patch v4' (secoes 3 e 4). Consome: contrato errorOrigin (TASK-023) e a pagina atual app/milon/programs/page.tsx, que ainda mantem o modal aberto no erro e nao navega na criacao. Produz: __tests__/app/milon/programs/page.test.tsx com os cenarios que a TASK-025 torna verde. Cenarios: (a) confirmacao de ativacao bloqueada pela guarda -> modal fechado, banner no corpo sem 'Tentar novamente', status do programa intacto; (b) falha de repositorio em ativar/reativar/excluir -> modal fechado, banner sem retry, status anterior mantido; (c) erro de carga da lista -> banner com 'Tentar novamente' que dispara o retry (a pagina repassa errorOrigin do hook ao ProgramList); (d) criacao salva -> router.push chamado com '/milon/programs/<id>' usando o id do Program devolvido por save(); (e) edicao salva -> router.push nao e chamado. Mock de next/navigation no padrao das paginas do projeto (useRouter.push espionado) e mock do hook usePrograms com factories de defaults. Expected: FAIL antes da TASK-025.",
-                      "assignee": "minos",
-                      "dependencies": [
-                          "TASK-023"
-                      ],
-                      "acceptanceCriteria": [
-                          "CA-P3-13: Dado que a pessoa confirma a ativacao de um Programa sem conteudo minimo (guarda vigente nesta feature), quando o bloqueio e apurado, entao o modal de confirmacao fecha, a mensagem do bloqueio aparece em banner no corpo da pagina e esse banner nao tem botao 'Tentar novamente'; o status do Programa nao muda",
-                          "CA-P3-14: Simulada falha de operacao (ex.: rede) na confirmacao de ativar, reativar ou excluir, entao o modal fecha, a mensagem aparece em banner sem 'Tentar novamente' e a lista mantem o status anterior",
-                          "CA-P3-15: Simulada falha do fetch da lista, entao o banner de erro exibe 'Tentar novamente' e o acionamento recarrega a lista - retry presente somente nesta origem de erro",
-                          "CA-P3-16: Apos qualquer confirmacao que termina em bloqueio ou falha de operacao, nao permanece modal de confirmacao aberto sobre a tela e a mensagem esta legivel no corpo da pagina - o cenario 5 da homologacao (mensagem atras do backdrop) fica resolvido",
-                          "CA-P3-18: Dado que a pessoa cria um programa novo e salva, entao ela termina em '/milon/programs/<id>' do programa criado, vendo o cabecalho dele - asserido por router.push chamado com o id devolvido por save()",
-                          "CA-P3-19: Dada a edicao salva de um programa existente, entao a pessoa permanece em '/milon/programs' com a lista atualizada - asserido por router.push nao chamado",
-                          "Expected: FAIL antes da TASK-025; npm test -- __tests__/app/milon/programs/ falha"
-                      ],
-                      "files": [
-                          "__tests__/app/milon/programs/page.test.tsx"
-                      ]
+                      "id":  "TASK-024",
+                      "status":  "pending",
+                      "title":  "RED: testes da pagina - modal fecha em bloqueio/falha, banner sem retry e navegacao pos-criacao",
+                      "description":  "Minos escreve os testes RED da tela de Programas para CA-P3-13 a CA-P3-19, a partir do plan.md \u0027Aditivo - Patch v4\u0027 (secoes 3 e 4). Consome: contrato errorOrigin (TASK-023) e a pagina atual app/milon/programs/page.tsx, que ainda mantem o modal aberto no erro e nao navega na criacao. Produz: __tests__/app/milon/programs/page.test.tsx com os cenarios que a TASK-025 torna verde. Cenarios: (a) confirmacao de ativacao bloqueada pela guarda -\u003e modal fechado, banner no corpo sem \u0027Tentar novamente\u0027, status do programa intacto; (b) falha de repositorio em ativar/reativar/excluir -\u003e modal fechado, banner sem retry, status anterior mantido; (c) erro de carga da lista -\u003e banner com \u0027Tentar novamente\u0027 que dispara o retry (a pagina repassa errorOrigin do hook ao ProgramList); (d) criacao salva -\u003e router.push chamado com \u0027/milon/programs/\u003cid\u003e\u0027 usando o id do Program devolvido por save(); (e) edicao salva -\u003e router.push nao e chamado. Mock de next/navigation no padrao das paginas do projeto (useRouter.push espionado) e mock do hook usePrograms com factories de defaults. Expected: FAIL antes da TASK-025.",
+                      "assignee":  "minos",
+                      "dependencies":  [
+                                           "TASK-023"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "CA-P3-13: Dado que a pessoa confirma a ativacao de um Programa sem conteudo minimo (guarda vigente nesta feature), quando o bloqueio e apurado, entao o modal de confirmacao fecha, a mensagem do bloqueio aparece em banner no corpo da pagina e esse banner nao tem botao \u0027Tentar novamente\u0027; o status do Programa nao muda",
+                                                 "CA-P3-14: Simulada falha de operacao (ex.: rede) na confirmacao de ativar, reativar ou excluir, entao o modal fecha, a mensagem aparece em banner sem \u0027Tentar novamente\u0027 e a lista mantem o status anterior",
+                                                 "CA-P3-15: Simulada falha do fetch da lista, entao o banner de erro exibe \u0027Tentar novamente\u0027 e o acionamento recarrega a lista - retry presente somente nesta origem de erro",
+                                                 "CA-P3-16: Apos qualquer confirmacao que termina em bloqueio ou falha de operacao, nao permanece modal de confirmacao aberto sobre a tela e a mensagem esta legivel no corpo da pagina - o cenario 5 da homologacao (mensagem atras do backdrop) fica resolvido",
+                                                 "CA-P3-18: Dado que a pessoa cria um programa novo e salva, entao ela termina em \u0027/milon/programs/\u003cid\u003e\u0027 do programa criado, vendo o cabecalho dele - asserido por router.push chamado com o id devolvido por save()",
+                                                 "CA-P3-19: Dada a edicao salva de um programa existente, entao a pessoa permanece em \u0027/milon/programs\u0027 com a lista atualizada - asserido por router.push nao chamado",
+                                                 "Expected: FAIL antes da TASK-025; npm test -- __tests__/app/milon/programs/ falha"
+                                             ],
+                      "files":  [
+                                    "__tests__/app/milon/programs/page.test.tsx"
+                                ]
                   },
                   {
-                      "id": "TASK-025",
-                      "status": "pending",
-                      "title": "Pagina: fecha a confirmacao em todos os terminais e navega para o detalhe apos criar",
-                      "description": "Hefesto implementa o contrato RED da TASK-024 em app/milon/programs/page.tsx. Consome: errorOrigin do hook usePrograms (TASK-023), o Program devolvido por save(), useRouter de next/navigation. Produz: handleConfirm que fecha a confirmacao em sucesso, bloqueio e falha; router.push('/milon/programs/<id>') somente na criacao; prop errorOrigin repassada ao ProgramList. Passos: (1) mover o fechamento da confirmacao (limpeza de localConfirm e do estado do hook via cancelConfirm) para o bloco final de handleConfirm, removendo o catch com o comentario 'Mantém a confirmação aberta'; (2) em handleModalSave, quando nao houver editingProgram, capturar o valor devolvido por save(title) e apos fechar o modal chamar router.push('/milon/programs/' + saved.id); (3) na edicao (save com id) nao chamar router.push; (4) passar errorOrigin do hook na prop homonima do ProgramList. ProgramConfirmModal.tsx, ProgramModal.tsx e lib/milon/hooks/usePrograms.ts nao mudam nesta task.",
-                      "assignee": "hefesto",
-                      "dependencies": [
-                          "TASK-024"
-                      ],
-                      "acceptanceCriteria": [
-                          "app/milon/programs/page.tsx fecha a confirmacao em todos os terminais de handleConfirm (sucesso, bloqueio de dominio e falha de operacao), limpando o estado local de confirmacao e o do hook no bloco final",
-                          "Busca por 'Mantém a confirmação aberta' em app/milon/programs/page.tsx retorna 0 (comentario e comportamento antigos removidos)",
-                          "Criacao: o valor devolvido por save(title) e usado para chamar router.push com '/milon/programs/' concatenado ao id do programa (useRouter de next/navigation)",
-                          "Edicao: save(title, editingProgram.id) nao chama router.push - a pessoa permanece em /milon/programs",
-                          "A pagina repassa o errorOrigin do hook para a prop errorOrigin do ProgramList",
-                          "components/milon/ProgramConfirmModal.tsx nao e modificado nesta task (Restricao Global do Patch v4: componente inalterado, so a pagina decide o fechamento)",
-                          "npm test -- __tests__/app/milon/programs/ passa (Expected: PASS) e npx tsc --noEmit passa"
-                      ],
-                      "files": [
-                          "app/milon/programs/page.tsx"
-                      ]
+                      "id":  "TASK-025",
+                      "status":  "pending",
+                      "title":  "Pagina: fecha a confirmacao em todos os terminais e navega para o detalhe apos criar",
+                      "description":  "Hefesto implementa o contrato RED da TASK-024 em app/milon/programs/page.tsx. Consome: errorOrigin do hook usePrograms (TASK-023), o Program devolvido por save(), useRouter de next/navigation. Produz: handleConfirm que fecha a confirmacao em sucesso, bloqueio e falha; router.push(\u0027/milon/programs/\u003cid\u003e\u0027) somente na criacao; prop errorOrigin repassada ao ProgramList. Passos: (1) mover o fechamento da confirmacao (limpeza de localConfirm e do estado do hook via cancelConfirm) para o bloco final de handleConfirm, removendo o catch com o comentario \u0027Mantém a confirmação aberta\u0027; (2) em handleModalSave, quando nao houver editingProgram, capturar o valor devolvido por save(title) e apos fechar o modal chamar router.push(\u0027/milon/programs/\u0027 + saved.id); (3) na edicao (save com id) nao chamar router.push; (4) passar errorOrigin do hook na prop homonima do ProgramList. ProgramConfirmModal.tsx, ProgramModal.tsx e lib/milon/hooks/usePrograms.ts nao mudam nesta task.",
+                      "assignee":  "hefesto",
+                      "dependencies":  [
+                                           "TASK-024"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "app/milon/programs/page.tsx fecha a confirmacao em todos os terminais de handleConfirm (sucesso, bloqueio de dominio e falha de operacao), limpando o estado local de confirmacao e o do hook no bloco final",
+                                                 "Busca por \u0027Mantém a confirmação aberta\u0027 em app/milon/programs/page.tsx retorna 0 (comentario e comportamento antigos removidos)",
+                                                 "Criacao: o valor devolvido por save(title) e usado para chamar router.push com \u0027/milon/programs/\u0027 concatenado ao id do programa (useRouter de next/navigation)",
+                                                 "Edicao: save(title, editingProgram.id) nao chama router.push - a pessoa permanece em /milon/programs",
+                                                 "A pagina repassa o errorOrigin do hook para a prop errorOrigin do ProgramList",
+                                                 "components/milon/ProgramConfirmModal.tsx nao e modificado nesta task (Restricao Global do Patch v4: componente inalterado, so a pagina decide o fechamento)",
+                                                 "npm test -- __tests__/app/milon/programs/ passa (Expected: PASS) e npx tsc --noEmit passa"
+                                             ],
+                      "files":  [
+                                    "app/milon/programs/page.tsx"
+                                ]
                   },
                   {
-                      "id": "TASK-026",
-                      "status": "pending",
-                      "title": "RED: testes do hook useProgramDetail e da rota /milon/programs/[id]",
-                      "description": "Minos escreve os testes RED do Item C (D16/D17, R18-R21, CA-P3-17 e CA-P3-20) antes da implementacao. Consome: contratos textuais de useProgramDetail e da pagina de detalhe no plan.md 'Aditivo - Patch v4' secao 3; standalone findProgramByIdStandalone ja exportado por lib/milon/repositories/programs.ts e pelo barrel lib/milon/db/programs.ts. Produz dois arquivos de teste novos. (1) __tests__/lib/milon/hooks/useProgramDetail.test.ts com mock do barrel db/programs: carregando (loading true, program null), sucesso (program preenchido, error null), id desconhecido (standalone resolve null -> program null e error null com loading false), falha de repositorio (error nao nulo e retry que recarrega) e flag cancelled (sem setState apos unmount). (2) __tests__/app/milon/programs/[id]/page.test.tsx mockando next/navigation (useParams devolve o id) e o hook: cabecalho exibe titulo, dono e status do programa; nenhum texto de treinos; estado 'Programa não encontrado.' quando program e null sem erro; banner com 'Tentar novamente' quando error nao nulo; dentro de MilonLayout com a aba Programas ativa (aria-current='page'); titulo com a classe font-display. Expected: FAIL - os modulos ainda nao existem.",
-                      "assignee": "minos",
-                      "dependencies": [],
-                      "acceptanceCriteria": [
-                          "CA-P3-17: Dado que a pessoa acessa '/milon/programs/<id>' de um programa existente (navegacao pos-criacao, digitacao no navegador ou refresh), entao a pagina exibe titulo, dono e status daquele programa e nao exibe qualquer secao ou texto de treinos",
-                          "CA-P3-20: A pagina de detalhe nao exibe placeholder de treinos: nenhuma mensagem do tipo 'Treinos em breve', nenhuma secao de treinos, nenhuma lista vazia de treinos - a tela contem so o cabecalho do programa",
-                          "R19: id desconhecido (findProgramByIdStandalone resolve null) exibe estado de não-encontrado com explicacao, nunca outro programa nem tela em branco sem explicacao - distinto do estado de falha de fetch",
-                          "R18: a pagina renderiza dentro de MilonLayout com exatamente as duas abas e a aba 'Programas' com aria-current='page' (regra de prefixo do Patch v3)",
-                          "O cabecalho renderiza o titulo do programa com a classe font-display, alem de dono e badge de status",
-                          "__tests__/lib/milon/hooks/useProgramDetail.test.ts e __tests__/app/milon/programs/[id]/page.test.tsx existem; Expected: FAIL (modulos inexistentes) antes da TASK-027",
-                          "A execucao usa o diretorio sem colchete: npm test -- __tests__/app/milon/programs/"
-                      ],
-                      "files": [
-                          "__tests__/lib/milon/hooks/useProgramDetail.test.ts",
-                          "__tests__/app/milon/programs/[id]/page.test.tsx"
-                      ]
+                      "id":  "TASK-026",
+                      "status":  "pending",
+                      "title":  "RED: testes do hook useProgramDetail e da rota /milon/programs/[id]",
+                      "description":  "Minos escreve os testes RED do Item C (D16/D17, R18-R21, CA-P3-17 e CA-P3-20) antes da implementacao. Consome: contratos textuais de useProgramDetail e da pagina de detalhe no plan.md \u0027Aditivo - Patch v4\u0027 secao 3; standalone findProgramByIdStandalone ja exportado por lib/milon/repositories/programs.ts e pelo barrel lib/milon/db/programs.ts. Produz dois arquivos de teste novos. (1) __tests__/lib/milon/hooks/useProgramDetail.test.ts com mock do barrel db/programs: carregando (loading true, program null), sucesso (program preenchido, error null), id desconhecido (standalone resolve null -\u003e program null e error null com loading false), falha de repositorio (error nao nulo e retry que recarrega) e flag cancelled (sem setState apos unmount). (2) __tests__/app/milon/programs/[id]/page.test.tsx mockando next/navigation (useParams devolve o id) e o hook: cabecalho exibe titulo, dono e status do programa; nenhum texto de treinos; estado \u0027Programa não encontrado.\u0027 quando program e null sem erro; banner com \u0027Tentar novamente\u0027 quando error nao nulo; dentro de MilonLayout com a aba Programas ativa (aria-current=\u0027page\u0027); titulo com a classe font-display. Expected: FAIL - os modulos ainda nao existem.",
+                      "assignee":  "minos",
+                      "dependencies":  [
+
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "CA-P3-17: Dado que a pessoa acessa \u0027/milon/programs/\u003cid\u003e\u0027 de um programa existente (navegacao pos-criacao, digitacao no navegador ou refresh), entao a pagina exibe titulo, dono e status daquele programa e nao exibe qualquer secao ou texto de treinos",
+                                                 "CA-P3-20: A pagina de detalhe nao exibe placeholder de treinos: nenhuma mensagem do tipo \u0027Treinos em breve\u0027, nenhuma secao de treinos, nenhuma lista vazia de treinos - a tela contem so o cabecalho do programa",
+                                                 "R19: id desconhecido (findProgramByIdStandalone resolve null) exibe estado de não-encontrado com explicacao, nunca outro programa nem tela em branco sem explicacao - distinto do estado de falha de fetch",
+                                                 "R18: a pagina renderiza dentro de MilonLayout com exatamente as duas abas e a aba \u0027Programas\u0027 com aria-current=\u0027page\u0027 (regra de prefixo do Patch v3)",
+                                                 "O cabecalho renderiza o titulo do programa com a classe font-display, alem de dono e badge de status",
+                                                 "__tests__/lib/milon/hooks/useProgramDetail.test.ts e __tests__/app/milon/programs/[id]/page.test.tsx existem; Expected: FAIL (modulos inexistentes) antes da TASK-027",
+                                                 "A execucao usa o diretorio sem colchete: npm test -- __tests__/app/milon/programs/"
+                                             ],
+                      "files":  [
+                                    "__tests__/lib/milon/hooks/useProgramDetail.test.ts",
+                                    "__tests__/app/milon/programs/[id]/page.test.tsx"
+                                ]
                   },
                   {
-                      "id": "TASK-027",
-                      "status": "pending",
-                      "title": "Rota de detalhe /milon/programs/[id] com hook useProgramDetail",
-                      "description": "Hefesto implementa o contrato RED da TASK-026. Consome: STATUS_LABEL de lib/milon/program-utils.ts (TASK-023), findProgramByIdStandalone do barrel lib/milon/db/programs, MilonLayout de components/milon/MilonLayout.tsx. Produz: lib/milon/hooks/useProgramDetail.ts exportando useProgramDetail(id), re-exportado por lib/milon/hooks/index.ts; app/milon/programs/[id]/page.tsx. Passos: (1) hook com promise-chain + flag cancelled devolvendo program, loading, error e retry; id desconhecido = program null e error null; falha de fetch = error com retry; (2) pagina client component que le o id via useParams de next/navigation e compoe MilonLayout com pageTitle='Programa' (sem subtitulo); (3) quatro estados mutuamente exclusivos: carregando, falha de fetch com banner e 'Tentar novamente', nao encontrado, cabecalho do programa; (4) cabecalho com titulo (classe font-display), dono e badge de STATUS_LABEL. Sem componente novo, sem story, sem acoes de editar/ativar/reativar/excluir, sem qualquer texto de treinos.",
-                      "assignee": "hefesto",
-                      "dependencies": [
-                          "TASK-026",
-                          "TASK-023"
-                      ],
-                      "acceptanceCriteria": [
-                          "lib/milon/hooks/useProgramDetail.ts exporta useProgramDetail(id) devolvendo program, loading, error e retry, com busca via findProgramByIdStandalone de lib/milon/db/programs e padrao promise-chain com flag cancelled",
-                          "id desconhecido (standalone resolve null) implica program null e error null; falha de fetch implica error nao nulo com retry que recarrega; sucesso implica program preenchido",
-                          "lib/milon/hooks/index.ts re-exporta useProgramDetail e seu tipo de retorno",
-                          "app/milon/programs/[id]/page.tsx existe como client component, le o id via useParams de next/navigation e compoe MilonLayout com pageTitle='Programa'",
-                          "Estados da pagina: 'Carregando programa...' durante o fetch; 'Programa não encontrado.' quando program e null sem erro; banner com 'Tentar novamente' na falha de fetch; cabecalho com titulo (classe font-display), dono e badge de status via STATUS_LABEL",
-                          "Busca case-insensitive por 'treino' em app/milon/programs/[id]/page.tsx retorna 0 ocorrencias",
-                          "Busca por 'Treinos em breve' no repositorio retorna 0 (CA-P3-20)",
-                          "A pagina nao importa ProgramList, ProgramModal nem ProgramConfirmModal (acoes continuam na lista)",
-                          "npm test -- __tests__/app/milon/programs/ e npm test -- __tests__/lib/milon/hooks/ passam e npx tsc --noEmit passa"
-                      ],
-                      "files": [
-                          "lib/milon/hooks/useProgramDetail.ts",
-                          "lib/milon/hooks/index.ts",
-                          "app/milon/programs/[id]/page.tsx"
-                      ]
+                      "id":  "TASK-027",
+                      "status":  "pending",
+                      "title":  "Rota de detalhe /milon/programs/[id] com hook useProgramDetail",
+                      "description":  "Hefesto implementa o contrato RED da TASK-026. Consome: STATUS_LABEL de lib/milon/program-utils.ts (TASK-023), findProgramByIdStandalone do barrel lib/milon/db/programs, MilonLayout de components/milon/MilonLayout.tsx. Produz: lib/milon/hooks/useProgramDetail.ts exportando useProgramDetail(id), re-exportado por lib/milon/hooks/index.ts; app/milon/programs/[id]/page.tsx. Passos: (1) hook com promise-chain + flag cancelled devolvendo program, loading, error e retry; id desconhecido = program null e error null; falha de fetch = error com retry; (2) pagina client component que le o id via useParams de next/navigation e compoe MilonLayout com pageTitle=\u0027Programa\u0027 (sem subtitulo); (3) quatro estados mutuamente exclusivos: carregando, falha de fetch com banner e \u0027Tentar novamente\u0027, nao encontrado, cabecalho do programa; (4) cabecalho com titulo (classe font-display), dono e badge de STATUS_LABEL. Sem componente novo, sem story, sem acoes de editar/ativar/reativar/excluir, sem qualquer texto de treinos.",
+                      "assignee":  "hefesto",
+                      "dependencies":  [
+                                           "TASK-026",
+                                           "TASK-023"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "lib/milon/hooks/useProgramDetail.ts exporta useProgramDetail(id) devolvendo program, loading, error e retry, com busca via findProgramByIdStandalone de lib/milon/db/programs e padrao promise-chain com flag cancelled",
+                                                 "id desconhecido (standalone resolve null) implica program null e error null; falha de fetch implica error nao nulo com retry que recarrega; sucesso implica program preenchido",
+                                                 "lib/milon/hooks/index.ts re-exporta useProgramDetail e seu tipo de retorno",
+                                                 "app/milon/programs/[id]/page.tsx existe como client component, le o id via useParams de next/navigation e compoe MilonLayout com pageTitle=\u0027Programa\u0027",
+                                                 "Estados da pagina: \u0027Carregando programa...\u0027 durante o fetch; \u0027Programa não encontrado.\u0027 quando program e null sem erro; banner com \u0027Tentar novamente\u0027 na falha de fetch; cabecalho com titulo (classe font-display), dono e badge de status via STATUS_LABEL",
+                                                 "Busca case-insensitive por \u0027treino\u0027 em app/milon/programs/[id]/page.tsx retorna 0 ocorrencias",
+                                                 "Busca por \u0027Treinos em breve\u0027 no repositorio retorna 0 (CA-P3-20)",
+                                                 "A pagina nao importa ProgramList, ProgramModal nem ProgramConfirmModal (acoes continuam na lista)",
+                                                 "npm test -- __tests__/app/milon/programs/ e npm test -- __tests__/lib/milon/hooks/ passam e npx tsc --noEmit passa"
+                                             ],
+                      "files":  [
+                                    "lib/milon/hooks/useProgramDetail.ts",
+                                    "lib/milon/hooks/index.ts",
+                                    "app/milon/programs/[id]/page.tsx"
+                                ]
                   },
                   {
-                      "id": "TASK-028",
-                      "status": "pending",
-                      "title": "test-scenarios.md: cenarios Dado/Quando/Entao do Patch v4",
-                      "description": "Minos acrescenta a .agents/modules/milon/02-programas/test-scenarios.md os cenarios do Patch v4 cobrindo CA-P3-13 a CA-P3-20, no mesmo formato Dado/Quando/Entao dos cenarios da v1 e do Patch v3. Inclui explicitamente o cenario 5 da homologacao (mensagem de bloqueio atras do backdrop do modal) como CA-P3-16, os estados da rota de detalhe (CA-P3-17 e R19), a ausencia de placeholder de treinos (CA-P3-20) e a navegacao pos-criacao versus permanencia na edicao (CA-P3-18/19). Nao e criado cenario para CA-P3-21 (e gate de processo) nem para o handoff da Q7 (registro em backlog.md e responsabilidade do Mnemosine).",
-                      "assignee": "minos",
-                      "dependencies": [
-                          "TASK-025",
-                          "TASK-027"
-                      ],
-                      "acceptanceCriteria": [
-                          ".agents/modules/milon/02-programas/test-scenarios.md contem ao menos 8 cenarios Dado/Quando/Entao novos cobrindo CA-P3-13 a CA-P3-20 (um por criterio)",
-                          "Os cenarios citam: modal fechado em bloqueio, modal fechado em falha de operacao, banner com retry so na carga, ausencia de 'Tentar novamente' nas origens operacao e bloqueio, cabecalho do detalhe com titulo/dono/status, id desconhecido com explicacao, navegacao pos-criacao e permanencia na edicao",
-                          "Formato e numeracao consistentes com os cenarios ja existentes no arquivo"
-                      ],
-                      "files": [
-                          ".agents/modules/milon/02-programas/test-scenarios.md"
-                      ]
+                      "id":  "TASK-028",
+                      "status":  "pending",
+                      "title":  "test-scenarios.md: cenarios Dado/Quando/Entao do Patch v4",
+                      "description":  "Minos acrescenta a .agents/modules/milon/02-programas/test-scenarios.md os cenarios do Patch v4 cobrindo CA-P3-13 a CA-P3-20, no mesmo formato Dado/Quando/Entao dos cenarios da v1 e do Patch v3. Inclui explicitamente o cenario 5 da homologacao (mensagem de bloqueio atras do backdrop do modal) como CA-P3-16, os estados da rota de detalhe (CA-P3-17 e R19), a ausencia de placeholder de treinos (CA-P3-20) e a navegacao pos-criacao versus permanencia na edicao (CA-P3-18/19). Nao e criado cenario para CA-P3-21 (e gate de processo) nem para o handoff da Q7 (registro em backlog.md e responsabilidade do Mnemosine).",
+                      "assignee":  "minos",
+                      "dependencies":  [
+                                           "TASK-025",
+                                           "TASK-027"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 ".agents/modules/milon/02-programas/test-scenarios.md contem ao menos 8 cenarios Dado/Quando/Entao novos cobrindo CA-P3-13 a CA-P3-20 (um por criterio)",
+                                                 "Os cenarios citam: modal fechado em bloqueio, modal fechado em falha de operacao, banner com retry so na carga, ausencia de \u0027Tentar novamente\u0027 nas origens operacao e bloqueio, cabecalho do detalhe com titulo/dono/status, id desconhecido com explicacao, navegacao pos-criacao e permanencia na edicao",
+                                                 "Formato e numeracao consistentes com os cenarios ja existentes no arquivo"
+                                             ],
+                      "files":  [
+                                    ".agents/modules/milon/02-programas/test-scenarios.md"
+                                ]
                   },
                   {
-                      "id": "TASK-029",
-                      "status": "pending",
-                      "title": "Suite final Minos + coverage + test-report (Patch v4)",
-                      "description": "Minos executa a suite completa (v1 + Patch v3 + Patch v4): todos os testes de contrato, utils, hooks, componentes e paginas, incluindo a rota nova [id]. Coverage >= 80%. Regenera test-report.json e test-scenarios.md na FEATURE_DIR, promove cenarios de regressao para .agents/modules/milon/regression.md e executa npm run build-storybook sem erros. Gate do processo (CA-P3-21): test-report.failed == 0 e coverage >= 80 antes da review do Argos.",
-                      "assignee": "minos",
-                      "dependencies": [
-                          "TASK-025",
-                          "TASK-027",
-                          "TASK-028"
-                      ],
-                      "acceptanceCriteria": [
-                          "CA-P3-21: Suíte completa verde (nenhum teste existente quebra) com coverage ≥ 80% mantido; `test-report.json` regenerado antes da review (gate do processo)",
-                          "npm test passa com coverage >= 80% (lines/functions/branches/statements >= 80)",
-                          "test-report.json gerado em .agents/modules/milon/02-programas/ com failed=0",
-                          "test-scenarios.md cobre v1 + Patch v3 + Patch v4",
-                          "Cenarios de regressao promovidos para .agents/modules/milon/regression.md",
-                          "npm run build-storybook passa sem erros"
-                      ],
-                      "files": [
-                          ".agents/modules/milon/02-programas/test-report.json",
-                          ".agents/modules/milon/02-programas/test-scenarios.md",
-                          ".agents/modules/milon/regression.md"
-                      ]
+                      "id":  "TASK-029",
+                      "status":  "pending",
+                      "title":  "Suite final Minos + coverage + test-report (Patch v4)",
+                      "description":  "Minos executa a suite completa (v1 + Patch v3 + Patch v4): todos os testes de contrato, utils, hooks, componentes e paginas, incluindo a rota nova [id]. Coverage \u003e= 80%. Regenera test-report.json e test-scenarios.md na FEATURE_DIR, promove cenarios de regressao para .agents/modules/milon/regression.md e executa npm run build-storybook sem erros. Gate do processo (CA-P3-21): test-report.failed == 0 e coverage \u003e= 80 antes da review do Argos.",
+                      "assignee":  "minos",
+                      "dependencies":  [
+                                           "TASK-025",
+                                           "TASK-027",
+                                           "TASK-028"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "CA-P3-21: Suíte completa verde (nenhum teste existente quebra) com coverage ≥ 80% mantido; `test-report.json` regenerado antes da review (gate do processo)",
+                                                 "npm test passa com coverage \u003e= 80% (lines/functions/branches/statements \u003e= 80)",
+                                                 "test-report.json gerado em .agents/modules/milon/02-programas/ com failed=0",
+                                                 "test-scenarios.md cobre v1 + Patch v3 + Patch v4",
+                                                 "Cenarios de regressao promovidos para .agents/modules/milon/regression.md",
+                                                 "npm run build-storybook passa sem erros"
+                                             ],
+                      "files":  [
+                                    ".agents/modules/milon/02-programas/test-report.json",
+                                    ".agents/modules/milon/02-programas/test-scenarios.md",
+                                    ".agents/modules/milon/regression.md"
+                                ]
                   }
               ]
 }

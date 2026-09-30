@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { fn } from "storybook/test";
 import ProgramList from "./ProgramList";
-import type { Program } from "@/lib/milon/types";
+import type { Program, ProgramErrorOrigin } from "@/lib/milon/types";
 
 const meta = {
   title: "Mílon/ProgramList",
@@ -55,6 +55,7 @@ const base = {
   selectedStatuses: ["rascunho", "ativo", "inativo"] as Program["status"][],
   loading: false,
   error: null,
+  errorOrigin: "carga" as ProgramErrorOrigin,
   empty: false,
   noResults: false,
   ...handlers,
@@ -69,6 +70,34 @@ export const Erro: Story = {
     ...base,
     items: [] as Program[],
     error: "Erro ao carregar programas",
+    errorOrigin: "carga" as ProgramErrorOrigin,
+  },
+};
+
+export const ErroCarga: Story = {
+  args: {
+    ...base,
+    items: [] as Program[],
+    error: "Erro ao carregar programas",
+    errorOrigin: "carga" as ProgramErrorOrigin,
+  },
+};
+
+export const ErroOperacao: Story = {
+  args: {
+    ...base,
+    items: [] as Program[],
+    error: "Erro ao atualizar programa",
+    errorOrigin: "operacao" as ProgramErrorOrigin,
+  },
+};
+
+export const ErroBloqueio: Story = {
+  args: {
+    ...base,
+    items: [] as Program[],
+    error: "Adicione pelo menos um treino com exercícios para ativar",
+    errorOrigin: "bloqueio" as ProgramErrorOrigin,
   },
 };
 

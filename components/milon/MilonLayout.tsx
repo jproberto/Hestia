@@ -11,8 +11,8 @@ export interface MilonLayoutProps {
 
 export function MilonLayout({ pageTitle, pageSubtitle, children }: MilonLayoutProps) {
   const milonNavItems: { href: string; label: string }[] = [
-    // Adicione itens de navegação do módulo aqui
-    // { href: "/milon/exemplo", label: "Exemplo" },
+    { href: "/milon/exercises", label: "Exercícios" },
+    { href: "/milon/programs", label: "Programas" },
   ];
 
   return (

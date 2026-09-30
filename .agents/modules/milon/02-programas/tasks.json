@@ -267,7 +267,7 @@
                   },
                   {
                       "id":  "TASK-015",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "ModuleLayout destaca aba ativa derivada da URL (transversal Mílon + Pluto)",
                       "description":  "Modificar components/layout/ModuleLayout.tsx: usar usePathname() de next/navigation; para cada navItem, calcular isActive = pathname === item.href || pathname.startsWith(item.href + \u0027/\u0027); renderizar Link com aria-current={isActive ? \u0027page\u0027 : undefined} e classe condicional de estilo ativo (ex.: \u0027border-b-2 font-semibold\u0027 na color do módulo). Mesmo comportamento para Mílon e Pluto — sem regra por módulo. Impacto transversal aceito (D12): abas do Pluto passam a exibir marca de aba ativa.",
                       "assignee":  "hefesto",

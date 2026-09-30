@@ -353,7 +353,7 @@
                   },
                   {
                       "id":  "TASK-019",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Testes: aba ativa no Pluto (transversal D12)",
                       "description":  "Adicionar asserções de aba ativa em __tests__/app/pluto/budget/page.test.tsx, __tests__/app/pluto/months/page.test.tsx, __tests__/app/pluto/transactions/page.test.tsx (e/ou arquivos de teste de página correspondentes). Em cada teste de renderização da página, verificar que o link da nav correspondente à URL tem aria-current=\u0027page\u0027 e estilo ativo (classe border-b-2 font-semibold na cor #35472D). CA-P3-07: abas do Pluto exibem marca de aba ativa pela mesma regra do Mílon.",
                       "assignee":  "minos",

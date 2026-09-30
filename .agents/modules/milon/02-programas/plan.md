@@ -332,3 +332,175 @@ Cada item da spec seção 3 tem task: campos e tela própria (001/010), status e
 - **TASK-023:** busca por `const STATUS_LABEL` em `components/milon/ProgramList.tsx` retorna 0 (constante movida para `program-utils.ts`); busca por `errorOrigin` em `lib/milon/hooks/usePrograms.ts` retorna ocorrências.
 - **TASK-025:** busca por `Mantém a confirmação aberta` em `app/milon/programs/page.tsx` retorna 0.
 - **TASK-027:** busca case-insensitive por `treino` em `app/milon/programs/[id]/page.tsx` retorna 0; busca por `Treinos em breve` no repositório retorna 0.
+
+---
+
+# Patch v5 — Estados de tela centralizados / AsyncState (Aditivo ao Plano v1 + Patch v3 + Patch v4)
+
+> **Objetivo do patch:** (D18–D20, R22–R25) criar o componente transversal `components/ui/AsyncState.tsx` — presentacional, com stories e teste — cobrindo os **4 estados de tela de lista** (carregando, erro, vazio, no-results) com **precedência fixa**, banner de erro renderizado **ACIMA** do conteúdo (reparo do Cenário 5) e "Tentar novamente" **derivado de `errorOrigin` dentro do componente** (origem ausente ⇒ `carga`); (D21/D23/D25, R26–R28) adotá-lo nas **três telas do Mílon** (`ProgramList`, `ExerciseList`, `app/milon/programs/[id]/page.tsx`), dar `errorOrigin` ao `useExercises` (busca ⇒ `carga`, exclusão ⇒ `operacao`) e **fechar `DeleteExerciseConfirm` em falha** de exclusão; (D26, R29) mover a união de origens para **casa única em `lib/shared`** com `ProgramErrorOrigin` virando apelido. **Sem migração SQL, sem bump de versão, sem nenhum arquivo do Pluto.**
+
+**Arquitetura do patch:** o componente vive em `components/ui/` e importa o tipo de origem **só** de `@/lib/shared` (nunca de um módulo); as telas continuam decidindo *qual* estado têm (flags `loading`/`error`/`empty`/`noResults` vindas dos hooks já existentes) e repassam os **textos exatos de hoje** por props + o conteúdo (lista/cabeçalho) como `children` — a **lógica de precedência e do retry sai das telas e passa a ser do componente**. O Mílon adota nas três telas de D21; `usePrograms` e `useProgramDetail` **não mudam** (só `useExercises` ganha origem); a página de Programas deixa de normalizar origem (o `?? "carga"` da linha 198 sai — o default passa a ser interno ao componente, D20).
+
+**Tech Stack:** inalterada — Next.js 16 App Router (client components), React 18, Vitest + Testing Library, Storybook, `Button` de `components/ui/button.tsx`. Nenhum toque em banco, nem em `lib/shared/supabaseClient.ts`/`database.ts`.
+
+## Restrições Globais do Patch v5
+- **Nenhuma migração SQL nova** — nenhum arquivo em `utils/migrations/` é criado ou editado; nenhum repository, tabela ou coluna muda (spec S1).
+- **Sem bump de versão (SemVer)** — nenhuma alteração de versão de pacote.
+- **`components/ui/` só ganha o `AsyncState`** — `button.tsx`, `input.tsx` e `label.tsx` inalterados (confirmado em disco: são os 3 únicos arquivos do diretório hoje).
+- **`AsyncState` não importa de `lib/milon/*` nem de `components/<modulo>/*`** — só `@/lib/shared` (tipo) e `@/components/ui/button` (retry) (R29).
+- **Adoção limitada às 3 telas de D21** — qualquer outra tela do Mílon ou do Pluto fica fora (spec S5); Pluto **zero-arquivo** (D24/R30).
+- **Textos idênticos aos de hoje** — os 12 textos dos 4 estados estão literais na §3; mudança é composição (banner acima), não conteúdo (CA-P5-5).
+- **Modais inalterados:** `ProgramConfirmModal.tsx` e `ProgramModal.tsx` (D15 vige na página), `DeleteExerciseConfirm.tsx` (D25 muda **quem** fecha, não o componente).
+- **Spec v2 + Patch v3 + Patch v4 íntegros:** R1–R21, D9–D17, CA-P3-1…CA-P3-21 permanecem; nenhuma regra de ciclo de vida, filtro, confirmação ou guarda muda.
+- **Sem "Fechar ✕" no banner** (D22, YAGNI descartado).
+- Proibições do Mapa de Camadas seguem valendo: sem `use-cases/`, `schemas/` (Zod), `mappers.ts`, `services/` ou factories `createXService`; sem `@supabase/*` fora de `lib/shared/`; UI do Mílon consome dados só via `lib/milon/db/*` e tipos só via `lib/milon/types.ts`.
+- **Sem task de documentação nesta patch** — norma do AGENTS.md (D27/R31) e retrofit do Pluto no backlog (D24/R30) são **handoffs da fase 7** (ver seção final).
+
+## 1. Arquitetura do Patch v5
+
+### Casa da união de origens (D26, R29)
+- **Create** `lib/shared/error-origin.ts` — união de string literal `ErrorOrigin` com exatamente três valores ASCII (`carga`, `operacao`, `bloqueio`), exportada pelo **barrel** `lib/shared/index.ts` (linha nova de re-export). Mesmo padrão do tipo `ItemUrgency` já exportado por `lib/shared/utils.ts`.
+- `lib/milon/types.ts` (hoje linha 38) — `ProgramErrorOrigin` deixa de repetir a definição literal e vira **apelido** do tipo de `@/lib/shared` (precedente: `lib/pluto/types.ts` já importa do barrel `@/lib/shared`). Nenhum importador muda: `usePrograms`, `ProgramList`, stories e testes seguem importando `ProgramErrorOrigin` de `lib/milon/types.ts`.
+
+### Componente centralizado (D18–D20, R22–R25)
+- **Create** `components/ui/AsyncState.tsx` — componente presentacional único dos 4 estados. Props: flags de estado + `errorOrigin` opcional + `onRetry` + textos por estado + `children` (região de conteúdo). Precedência fixa D19 (detalhada na §3): carregando → erro → vazio → no-results; erro como **banner acima**; retry interno só para `carga`/origem ausente.
+- **Create** `components/ui/AsyncState.stories.tsx` — padrão do projeto (arquivo ao lado, `title: "UI/AsyncState"`), cobrindo os 4 estados e as 4 entradas de origem.
+- **Create** `__tests__/components/ui/AsyncState.test.tsx` — contrato completo (CA-P5-2, CA-P5-3, CA-P5-4).
+
+### Adoção no Mílon (D21, D23, D25 — R26, R27, R28)
+- `components/milon/ProgramList.tsx` — substitui a cadeia das **linhas 86–116** (hoje: ternário que troca a lista pela mensagem de erro) pela composição do `AsyncState`; mantém todas as props atuais (`errorOrigin` obrigatório nullable já existe); remove o bloco próprio de retry (hoje linhas 93–97).
+- `app/milon/programs/page.tsx` — **linha 198**: `errorOrigin` passa a ser repassado **cru** do hook (o `?? "carga"` sai; normalização vira interna ao componente, D20).
+- `app/milon/programs/[id]/page.tsx` — substitui a cadeia das **linhas 21–47** (carregamento, erro, não-encontrado) pela composição do `AsyncState`; o **não-encontrado continua distinto de falha de carga** (R19): falha ⇒ banner com retry (origem ausente ⇒ `carga`); id desconhecido ⇒ faixa de vazio com "Programa não encontrado." **sem** retry.
+- `lib/milon/hooks/useExercises.ts` — `UseExercisesReturn` ganha `errorOrigin`: rejeição do efeito de montagem e do `fetchList` (hoje linhas 121 e 138) ⇒ `carga`; catch do `remove` (hoje linhas 252–255) ⇒ `operacao`; `applyList` e os pontos que hoje zeram `error` zeram os dois campos; `save`/`saveAndNew` não tocam no canal (relançam para o modal).
+- `components/milon/ExerciseList.tsx` — ganha prop obrigatória `errorOrigin` e substitui a cadeia a **partir da linha 95** (hoje sempre mostra retry, linhas 102–104) pela composição do `AsyncState`.
+- `app/milon/exercises/page.tsx` — `handleDeleteConfirm` (hoje linhas 108–119) **fecha `DeleteExerciseConfirm` em falha**, removendo o comentário "Mantém a confirmação aberta" (linhas 114–116); a página repassa `errorOrigin` do hook ao `ExerciseList`.
+- Stories: `components/milon/ProgramList.stories.tsx` (contrato de props não muda — só verificação de build) e `components/milon/ExerciseList.stories.tsx` (ganha `errorOrigin` com as três origens).
+
+## 2. Componentes (Create/Modify/Test/Docs) — Patch v5
+
+**Create:**
+- `lib/shared/error-origin.ts` — união `ErrorOrigin` (TASK-031).
+- `components/ui/AsyncState.tsx` — 4 estados, precedência, banner acima, retry por origem (TASK-033).
+- `components/ui/AsyncState.stories.tsx` — stories dos 4 estados e origens (TASK-033).
+
+**Modify:**
+- `lib/shared/index.ts` — re-export do arquivo novo (TASK-031).
+- `lib/milon/types.ts` — linha 38 vira apelido de `ErrorOrigin` (TASK-031).
+- `components/milon/ProgramList.tsx` — cadeia 86–116 vira composição do `AsyncState` (TASK-035).
+- `app/milon/programs/page.tsx` — repassa `errorOrigin` cru (linha 198) (TASK-035).
+- `components/milon/ProgramList.stories.tsx` — verificação de contrato/build (TASK-035).
+- `app/milon/programs/[id]/page.tsx` — cadeia 21–47 vira composição do `AsyncState` (TASK-037).
+- `lib/milon/hooks/useExercises.ts` — `errorOrigin` nas gravações mapeadas (TASK-039).
+- `components/milon/ExerciseList.tsx` — prop `errorOrigin` + cadeia 95–123 vira `AsyncState` (TASK-039).
+- `components/milon/ExerciseList.stories.tsx` — contrato com `errorOrigin` (TASK-039).
+- `app/milon/exercises/page.tsx` — repassa origem e fecha a confirmação em falha (TASK-039).
+
+**Inalterado (declaração explícita):** `components/ui/button.tsx`, `components/ui/input.tsx`, `components/ui/label.tsx`, `components/milon/ProgramConfirmModal.tsx`, `components/milon/ProgramModal.tsx`, `components/milon/DeleteExerciseConfirm.tsx`, `lib/milon/hooks/usePrograms.ts`, `lib/milon/hooks/useProgramDetail.ts`, `lib/milon/repositories/*`, `lib/milon/db/*`, `lib/milon/program-utils.ts`, `lib/milon/utils.ts`, `app/milon/programs/page.tsx` (fora da linha 198), `utils/migrations/*` e **todo** `app/pluto/`, `components/pluto/`, `lib/pluto/`.
+
+**Test (Minos cria/adapta; caminhos travados aqui):**
+- `__tests__/lib/milon/types.test.ts` — apelido e identidade com o tipo de `lib/shared` (TASK-030).
+- `__tests__/components/ui/AsyncState.test.tsx` — contrato completo (TASK-032).
+- `__tests__/components/milon/ProgramList.test.tsx` + `__tests__/app/milon/programs/page.test.tsx` — CA-P5-1 e CA-P5-5 (TASK-034).
+- `__tests__/app/milon/programs/[id]/page.test.tsx` — banner acima do cabeçalho + estados preservados (TASK-036).
+- `__tests__/lib/milon/hooks/useExercises.test.ts` + `__tests__/components/milon/ExerciseList.test.tsx` + `__tests__/app/milon/exercises/page.test.tsx` — D23/D25, CA-P5-6 (TASK-038).
+- `.agents/modules/milon/02-programas/test-scenarios.md` — cenários do Patch v5 + reexecução do Cenário 5 (TASK-040).
+- `.agents/modules/milon/02-programas/test-report.json` — regenerado por Minos (TASK-041).
+
+**Docs:** nenhum arquivo de documentação — norma do AGENTS.md e item do backlog do Pluto são handoff da fase 7 (seção final).
+
+## 3. Contratos do Patch v5 (descrições textuais, sem implementação)
+
+- **Tipo compartilhado (`lib/shared/error-origin.ts`):** exporta a união `ErrorOrigin` de string literal com exatamente três valores (`carga`, `operacao`, `bloqueio` — ASCII, sem acento, nenhum quarto valor); re-exportada pelo barrel `lib/shared/index.ts`. `lib/milon/types.ts` exporta `ProgramErrorOrigin` como **apelido** (`=`) desse tipo — mesmos valores, mesmo nome, nenhum importador quebra.
+- **`AsyncState` (props):** `loading` (booleano), `error` (string anulável), `errorOrigin` (tipo de `lib/shared`, **opcional** — ausente ou nulo tratado como `carga`), `empty` (booleano), `noResults` (booleano), `onRetry` (função), `loadingText`, `emptyTitle`, `emptyText`, `noResultsTitle`, `noResultsText` (strings com os textos exatos da tela), `children` (região de conteúdo: lista ou cabeçalho).
+- **`AsyncState` (precedência fixa — D19):** (1) `loading` verdadeiro ⇒ a região mostra **somente** `loadingText` — sem banner, sem vazio, sem no-results, sem `children`; (2) havendo `error` ⇒ banner com a mensagem renderizado **ACIMA** da região, com botão "Tentar novamente" ligado a `onRetry` **somente** quando a origem for `carga` **ou ausente/nula** (`operacao` e `bloqueio` exibem só a mensagem); (3) região de conteúdo: `children` quando fornecido (sob erro o conteúdo permanece visível — CA-P5-1); **sem** `children` e com erro ⇒ somente o banner (nunca mensagem de vazio/no-results sob erro — D19d); sem erro ⇒ `empty` (prevalece) ⇒ cartão vazio; senão `noResults` ⇒ cartão no-results; senão, região vazia. O componente **nunca** substitui o conteúdo por mensagem de erro (R24) e **não** tem botão de fechar (D22).
+- **Textos exatos (props por tela — invariáveis):** Programas: `Carregando programas...` / `Nenhum programa ainda.` + `Crie o primeiro programa para começar.` / `Nada encontrado para essa combinação.` + `Ajuste os filtros para ver mais programas.` Exercícios: `Carregando exercícios...` / `Nenhum exercício cadastrado ainda.` + `Crie o primeiro exercício da biblioteca para começar.` / `Nada encontrado para essa combinação.` + `Ajuste os filtros ou crie o exercício na biblioteca.` Detalhe: `Carregando programa…` (reticência horizontal, como hoje) / faixa de vazio `Programa não encontrado.` + `Este programa não existe ou foi removido. Volte para a lista e escolha outro programa.`; `noResults` fixo nessa tela. Mensagens de erro continuam vindo dos hooks via prop; rótulo de retry é único: `Tentar novamente`.
+- **`ProgramList` (mudança de contrato interno):** props **inalteradas** (inclui `errorOrigin` obrigatório anulável e `onRetry`); a cadeia de estados 86–116 é substituída pela composição do `AsyncState` repassando as flags, os 5 textos exatos e a `<ul>` dos itens filtrados como `children` quando houver itens; filtros (select de dono, checks de status) e cabeçalho da seção ficam **fora** do componente; o botão "Tentar novamente" deixa de existir no arquivo.
+- **Página de Programas:** repassa `errorOrigin` do hook **sem** fallback (linha 198); demais wiring (modais, confirmação, navegação pós-criação do Patch v4) intocado.
+- **Página de detalhe:** compõe `AsyncState` dentro de `MilonLayout` sem informar `errorOrigin` (ausente ⇒ `carga` ⇒ retry na falha de fetch, exercitando o default em tela real); `empty` = id desconhecido (programa nulo e sem erro); `children` = cabeçalho (título com `font-display`, dono, badge `STATUS_LABEL`); `noResults` nunca verdadeiro.
+- **`useExercises` (estado):** `UseExercisesReturn` ganha `errorOrigin` anulável. Gravações: rejeição do efeito de montagem e do `fetchList` ⇒ `carga`; falha em `remove` ⇒ `operacao`; `applyList`, o início de `fetchList`/`remove` e qualquer sucesso zeram `error` **e** `errorOrigin` juntos; `save`/`saveAndNew` não alteram nenhum dos dois. Formato idêntico ao contrato de `usePrograms` (R27).
+- **`ExerciseList` (mudança de contrato interno):** ganha prop obrigatória `errorOrigin` anulável; cadeia 95–123 substituída pelo `AsyncState` com `empty = isEmpty`, `noResults = não vazio && nenhum item visível`, `children` = `<ul>` + botão "Mostrar mais" quando houver itens; botão próprio de retry removido.
+- **Página da biblioteca:** repassa `errorOrigin` ao `ExerciseList`; `handleDeleteConfirm` fecha a confirmação em **todos** os terminais (sucesso e falha — D25), sem o comentário "Mantém a confirmação aberta"; a mensagem permanece no banner da lista com origem `operacao`, sem retry.
+- **Stories novos/ajustados:** `AsyncState.stories.tsx` cobre carregando, erro (4 origens), vazio, no-results e lista sob erro; `ExerciseList.stories.tsx` passa a exercitar as três origens; `ProgramList.stories.tsx` mantém as stories atuais (props não mudam).
+
+## 4. Data Flow do Patch v5
+
+1. **Carga da lista de Programas falha:** `usePrograms` grava `errorMsg` + origem `carga` → página repassa cru → `ProgramList` → `AsyncState` renderiza banner **acima**; sem itens (`children` ausente) ⇒ **só** o banner (sem "Nenhum programa ainda."); "Tentar novamente" chama `onRetry` → recarrega.
+2. **Bloqueio/falha na tela de Programas:** modal fecha (Patch v4, intocado) → origem `bloqueio`/`operacao` → banner **sem** retry **acima da lista visível** (CA-P5-1 — defeito do Cenário 5 corrigido).
+3. **Detalhe — falha de fetch:** `useProgramDetail` rejeita → `error` sem origem → `AsyncState` trata como `carga` → banner com retry que aciona `retry()`; id desconhecido segue pela faixa de vazio (sem retry), distinto da falha (R19).
+4. **Biblioteca — busca falha:** `useExercises` grava `carga` → banner com retry (comportamento homologado mantido).
+5. **Biblioteca — exclusão confirmada falha:** `remove` grava `operacao` e a mensagem → a página **fecha** `DeleteExerciseConfirm` → banner **sem** retry acima da lista, exercício mantido (CA-P5-6; achado latente (b) corrigido).
+6. **Estados sem erro:** `loading` sozinho; base sem registros ⇒ vazio; registros escondidos por filtros/busca ⇒ no-results; vazio prevalece sobre no-results.
+
+## 5. Decisões Técnicas do Patch v5 (para `context.json.decisions` via Zeus)
+
+- **Nome do tipo compartilhado `ErrorOrigin` (a spec fixa casa e apelido em D26/R29, mas não o identificador):** escolhido o nome curto espelhando a prop `errorOrigin`. Descartados `ProgramErrorOrigin` no shared (nomenclatura de módulo em casa transversal) e repetir a união em dois arquivos (violaria casa única).
+- **Textos por props de string (não slots/ReactNode por estado):** mantém o markup centralizado — a alternativa "só um FeedbackBanner"/slots por estado foi descartada na spec (S10) porque deixaria carregando/vazio/no-results duplicados nas três telas e fecharia mal a precedência. Custo: 5 props de texto — o menor contrato que preserva os textos homologados (CA-P5-5).
+- **Markup unificado dos estados dentro do componente (padrão de cartão das listas):** as listas e a faixa de não-encontrado já usam o mesmo cartão (`rounded-lg border bg-card p-8`); o parágrafo de carregamento do detalhe passa a usar o padrão centralizado — **texto idêntico**, classe convergida (risco registrado na §6).
+- **`children` como região de conteúdo:** genérico para lista (`<ul>`) e cabeçalho do detalhe; evita props de itens acopladas ao domínio no componente transversal.
+- **`errorOrigin` opcional só no `AsyncState`; props dos membros seguem obrigatórias:** `ProgramList` mantém o contrato do Patch v4 (`errorOrigin` obrigatório anulável) e `ExerciseList` o recebe obrigatório — o default "ausente ⇒ `carga`" existe **no componente transversal**; a página de detalhe não informa origem (exercita o default). Descartado mover a obrigatoriedade para opcional nas telas: quebraria a distinção de origem já homologada no Programas.
+- **Remoção do `?? "carga"` da linha 198:** endereça o item 6 do backlog do Mílon e o apontamento do `review-report` (fallback mascarava a ausência de origem); o comportamento observado não muda porque o default passou a ser interno ao componente. Marcar o backlog é ato documental da fase 7, sem task aqui.
+- **`ProgramErrorOrigin` como apelido mantém o código interno do Mílon estável:** hooks, componentes e stories do módulo seguem importando de `lib/milon/types.ts`; só o `AsyncState` (e o futuro retrofit do Pluto) importam de `lib/shared` — zero churn nos consumidores existentes.
+- **Pares RED→GREEN por incremento, um commit por par:** precedente dos Patches v3/v4 (commits `TASK-022/023`, `TASK-024/025`, `TASK-026/027`) — separar o par deixaria a baseline vermelha; `TASK-040` e `TASK-041` (documentação de teste e gate) são commits própios (precedente `TASK-028`, `TASK-029`).
+
+## 6. Riscos e Mitigações do Patch v5
+
+- **Comportamento homologado muda (declarado):** o erro deixa de substituir a lista (Cenário 5, D19) e a exclusão da biblioteca fecha a confirmação em falha (D25) — o Argos avalia o diff como mudança aprovada, não regressão (spec S8).
+- **Componente transversal novo:** adoção acidental fora do escopo — mitigada por D21 (3 telas explícitas), prova de herança (CA-P5-7) e norma de D27.
+- **Regressão textual/visual:** os 12 textos estão literais nos criteria das tasks (CA-P5-5); a única troca de classe aceita é o parágrafo de carregamento do detalhe convergindo ao padrão centralizado (texto idêntico).
+- **Prova de herança sensível a texto:** qualquer tela nova que escreva "Tentar novamente" fora do componente quebra CA-P5-7 — proposital (spec S8).
+- **Testes/stories existentes com contrato novo:** `ExerciseList` ganha prop obrigatória e `useExercises` campo novo — Minos ajusta defaults/ factories na própria task RED (precedente TASK-022); nenhum comportamento homologado muda (origem `carga` segue com retry).
+- **Estado mockado "programa + erro" no detalhe (TASK-036):** com o hook atual os dois nunca coexistem; o cenário trava a regra de composição R24 (erro nunca substitui o conteúdo) no nível da tela — se o Argos questionar, é asserção do contrato do componente, não cenário de produto.
+- **Cobertura cair com arquivos novos:** mitigado pela TASK-041 (suite completa, coverage ≥ 80%, `test-report.json` regenerado — CA-P5-9).
+- **Handoffs da fase 7 (D24 e D27):** se a Mnemósine não registrar a norma nem o item do backlog do Pluto, ambos se perdem — única pendência de processo (spec S9).
+- **Dependências:** herda do Patch v4 (R13–R21, D15–D17); nenhuma dependência de banco ou de outra feature.
+
+## Cobertura Patch v5 → Tasks Novas (TASK-030 em diante)
+
+| Requisito / CA | Task(s) |
+|---|---|
+| R22 (componente + stories + teste) | TASK-032 (RED), TASK-033 (GREEN) |
+| R23 / CA-P5-2 (precedência dos 4 estados) | TASK-032 (RED), TASK-033 (GREEN) |
+| R24 / CA-P5-1 (banner acima, conteúdo visível) | TASK-034/035 (Programas), TASK-036/037 (detalhe), TASK-038/039 (biblioteca) |
+| R25 / CA-P5-3 (retry por origem; ausente ⇒ carga) | TASK-032 (RED), TASK-033 (GREEN); default real no detalhe TASK-036/037 |
+| CA-P5-4 (contrato completo sem ramo sem asserção) | TASK-032 (RED), TASK-033 (GREEN) |
+| R26 (adoção nas 3 telas, textos preservados) | TASK-034/035, TASK-036/037, TASK-038/039 |
+| CA-P5-5 (CA-P3-13…16 verdes com a adoção) | TASK-034 (RED), TASK-035 (GREEN), reexecução na TASK-041 |
+| R27 / D23 (`useExercises` com `errorOrigin`) | TASK-038 (RED), TASK-039 (GREEN) |
+| R28 / CA-P5-6 / D25 (exclusão fecha em falha) | TASK-038 (RED), TASK-039 (GREEN) |
+| R29 / D26 (casa em `lib/shared` + apelido) | TASK-030 (RED), TASK-031 (GREEN) |
+| CA-P5-7 (prova de herança) | zeros por arquivo em TASK-035/037/039; busca global na TASK-041 |
+| CA-P5-8 / R31 (norma no AGENTS.md) | fora do plano — Mnemósine, fase 7 (handoff) |
+| CA-P5-9 (suite verde, coverage ≥ 80) | TASK-041 |
+| R30 / D24 (Pluto fora; retrofit no backlog) | fora do plano — Mnemósine, fase 7 (handoff); verificação "AsyncState fora do Pluto" na TASK-041 |
+| S6(a) (exclusão rotulada como carga) | TASK-038, TASK-039 |
+| S6(b) (exclusão atrás do backdrop) | TASK-038, TASK-039 |
+| S7 (testes, cenários, report) | TASK-040 (cenários), TASK-041 (suite + report + regressão) |
+
+## Pares RED/GREEN e agrupamento de commits
+
+| Par | RED (Minos) | GREEN (Hefesto) | Commit |
+|---|---|---|---|
+| Casa da união | TASK-030 | TASK-031 | um commit para o par |
+| Componente | TASK-032 | TASK-033 | um commit para o par |
+| Programas (lista + página) | TASK-034 | TASK-035 | um commit para o par |
+| Detalhe | TASK-036 | TASK-037 | um commit para o par |
+| Biblioteca (hook + lista + página) | TASK-038 | TASK-039 | um commit para o par |
+| Cenários / gate | TASK-040 / TASK-041 | — | commits próprios (precedente v4) |
+
+Cada par é commitado **junto**: separado, o RED deixa a baseline vermelha (mesma regra dos pares do Patch v4).
+
+## Critérios de Substituição do Patch v5 (regra Atena)
+
+- **TASK-031:** busca por `'carga' | 'operacao'` em `lib/milon/types.ts` retorna 0 (definição literal da união saiu do arquivo — mora em `lib/shared/error-origin.ts`).
+- **TASK-033:** busca por `lib/milon` em `components/ui/AsyncState.tsx` retorna 0.
+- **TASK-035:** busca por `Tentar novamente` em `components/milon/ProgramList.tsx` retorna 0; busca por `?? "carga"` em `app/milon/programs/page.tsx` retorna 0.
+- **TASK-037:** busca por `Tentar novamente` em `app/milon/programs/[id]/page.tsx` retorna 0.
+- **TASK-039:** busca por `Tentar novamente` em `components/milon/ExerciseList.tsx` retorna 0; busca por `Mantém a confirmação aberta` em `app/milon/exercises/page.tsx` retorna 0.
+- **TASK-041 (CA-P5-7):** busca pela cadeia `Tentar novamente` em `app/` e `components/` retorna ocorrência **somente** em `components/ui/AsyncState.tsx`; busca por `AsyncState` em `app/pluto/` e `components/pluto/` retorna 0 (R30/D24).
+
+## Handoffs pós-approve-review (fase 7 — Mnemósine; fora do diff de código)
+
+1. **Norma (D27, R31 / CA-P5-8):** escrever na seção **"Onde ponho X?"** do `AGENTS.md` a norma — estados de tela de lista (carregando, erro, vazio, no-results) vão no componente centralizado `components/ui/AsyncState.tsx`; mensagens com origem usam a união de origens de `lib/shared`; retry é derivado de `errorOrigin` (`carga`/ausente com retry; `operacao`/`bloqueio` sem).
+2. **Retrofit do Pluto (D24, R30):** registrar em `.agents/modules/pluto/backlog.md` o item de retrofit dos banners `transactions` e `months` para o componente centralizado, com a nota de que o `errorMsg` misto precisa de classificação de origem antes da migração.
+
+Ambos são entregáveis desta feature anotados na documentação — **não geram teste, task de código nem gate**; são handoff de rastreio (spec S9).

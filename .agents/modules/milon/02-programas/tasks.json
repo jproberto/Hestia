@@ -620,6 +620,268 @@
                                     ".agents/modules/milon/02-programas/test-scenarios.md",
                                     ".agents/modules/milon/regression.md"
                                 ]
+                  },
+                  {
+                      "id":  "TASK-030",
+                      "status":  "pending",
+                      "title":  "RED: teste de casa única da união de origens (ErrorOrigin em lib/shared) e apelido em types.ts",
+                      "description":  "Minos escreve o teste RED do par Casa da união (D26, R29) a partir do contrato textual do plan.md \u0027Patch v5\u0027 §3, sem tocar em produção. Consome: contrato ErrorOrigin/ProgramErrorOrigin — ainda inexistente em lib/shared (a definição literal ainda mora em lib/milon/types.ts linha 38). Produz: __tests__/lib/milon/types.test.ts, que a TASK-031 torna verde. Cenários: (1) importar ErrorOrigin de @/lib/shared funciona e aceita os três literais \u0027carga\u0027, \u0027operacao\u0027, \u0027bloqueio\u0027; (2) ProgramErrorOrigin (exportado por lib/milon/types.ts) e ErrorOrigin são mutuamente atribuíveis — identidade de tipo, não dois tipos estruturalmente parecidos; (3) um quarto literal qualquer não é atribuível a nenhum dos dois. Expected: FAIL hoje (ErrorOrigin não existe em lib/shared).",
+                      "assignee":  "minos",
+                      "dependencies":  [
+
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "__tests__/lib/shared/error-origin.test.ts importa ErrorOrigin de @/lib/shared e ProgramErrorOrigin de lib/milon/types.ts e afirma identidade de tipo (atribuição mútua nas duas direções)",
+                                                 "O teste cobre os três literais válidos (\u0027carga\u0027, \u0027operacao\u0027, \u0027bloqueio\u0027) e a rejeição de um quarto valor",
+                                                 "Nenhum arquivo de produção é criado ou editado nesta task (só o teste)",
+                                                 "Execução atual falha (Expected: FAIL) porque ErrorOrigin não existe em lib/shared — condição de RED da TASK-031"
+                                             ],
+                      "files":  [
+                                    "__tests__/lib/shared/error-origin.test.ts"
+                                ]
+                  },
+                  {
+                      "id":  "TASK-031",
+                      "status":  "pending",
+                      "title":  "Casa única da união: lib/shared/error-origin.ts, re-export no barrel e ProgramErrorOrigin como apelido",
+                      "description":  "Hefesto implementa o contrato RED da TASK-030 (D26, R29). Consome: teste da TASK-030; nenhum importador de ProgramErrorOrigin pode mudar. Produz: lib/shared/error-origin.ts (criado); linha de re-export em lib/shared/index.ts; lib/milon/types.ts com a linha 38 virando apelido. Passos: (1) cria lib/shared/error-origin.ts exportando a união ErrorOrigin com exatamente três literais ASCII \u0027carga\u0027 | \u0027operacao\u0027 | \u0027bloqueio\u0027 (mesmo padrão do tipo ItemUrgency já exportado por lib/shared/utils.ts); (2) lib/shared/index.ts ganha a linha de re-export; (3) lib/milon/types.ts importa o tipo do barrel @/lib/shared e exporta ProgramErrorOrigin como apelido (=), removendo a definição literal; (4) nenhum outro arquivo muda — usePrograms, ProgramList, stories e testes seguem importando ProgramErrorOrigin de lib/milon/types.ts. Hefesto não escreve testes.",
+                      "assignee":  "hefesto",
+                      "dependencies":  [
+                                           "TASK-030"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "lib/shared/error-origin.ts exporta ErrorOrigin com exatamente os valores \u0027carga\u0027, \u0027operacao\u0027 e \u0027bloqueio\u0027 (nenhum quarto valor)",
+                                                 "lib/shared/index.ts re-exporta ErrorOrigin (busca pelo nome no barrel retorna ocorrência)",
+                                                 "Busca por \u0027carga\u0027 | \u0027operacao\u0027 em lib/milon/types.ts retorna 0 (a definição literal saiu do arquivo) e ProgramErrorOrigin continua exportado de lá como apelido de ErrorOrigin",
+                                                 "Nenhum importador existente muda: busca por ProgramErrorOrigin em lib/, components/ e app/ segue resolvendo via lib/milon/types.ts",
+                                                 "npx tsc --noEmit passa e npm test -- __tests__/lib/milon/types.test.ts passa (Expected: PASS)",
+                                                 "Nenhum arquivo de app/pluto/, components/pluto/ ou lib/pluto/ é alterado"
+                                             ],
+                      "files":  [
+                                    "lib/shared/error-origin.ts",
+                                    "lib/shared/index.ts",
+                                    "lib/milon/types.ts"
+                                ]
+                  },
+                  {
+                      "id":  "TASK-032",
+                      "status":  "pending",
+                      "title":  "RED: contrato completo do AsyncState (4 estados, precedência, banner acima, retry por origem)",
+                      "description":  "Minos escreve os testes RED do componente transversal (D18–D20, R22–R25, CA-P5-2 a CA-P5-4) a partir dos contratos textuais do plan.md \u0027Patch v5\u0027 §3, sem tocar em produção. Consome: componente components/ui/AsyncState.tsx — ainda inexistente (components/ui/ hoje só tem button/input/label). Produz: __tests__/components/ui/AsyncState.test.tsx, que a TASK-033 torna verde. Cenários: (1) precedência fixa D19 — loading verdadeiro mostra somente loadingText (sem banner, sem vazio, sem no-results, sem children); erro com children mostra banner ACIMA e o conteúdo permanece visível; sem children e com erro mostra somente o banner (nunca vazio/no-results sob erro); empty prevalece sobre noResults; noResults só sem empty e sem erro; sem nenhuma flag a região fica vazia; (2) retry por origem — \u0027carga\u0027 e origem ausente/nula renderizam \u0027Tentar novamente\u0027 e acionam onRetry; \u0027operacao\u0027 e \u0027bloqueio\u0027 exibem só a mensagem; (3) o componente não tem botão de fechar; (4) as props de texto são repassadas literais nos 4 estados. Expected: FAIL hoje (componente não existe).",
+                      "assignee":  "minos",
+                      "dependencies":  [
+                                           "TASK-031"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "__tests__/components/ui/AsyncState.test.tsx cobre a precedência D19 nos 4 estados: loading sozinho; banner acima com children visível; só banner sem children; empty prevalecendo sobre noResults; noResults sem empty; região vazia sem flags (CA-P5-2)",
+                                                 "Cobre as 4 entradas de origem: \u0027carga\u0027 com retry que dispara onRetry; origem ausente e nula tratadas como carga; \u0027operacao\u0027 e \u0027bloqueio\u0027 sem \u0027Tentar novamente\u0027 (CA-P5-3)",
+                                                 "Cobre a ausência do botão de fechar e a passagem literal dos textos de cada estado pelas props (CA-P5-4)",
+                                                 "Nenhum arquivo de produção é criado ou editado nesta task (só o teste)",
+                                                 "Execução atual falha (Expected: FAIL) porque components/ui/AsyncState.tsx não existe — condição de RED da TASK-033"
+                                             ],
+                      "files":  [
+                                    "__tests__/components/ui/AsyncState.test.tsx"
+                                ]
+                  },
+                  {
+                      "id":  "TASK-033",
+                      "status":  "pending",
+                      "title":  "Componente AsyncState: 4 estados, precedência D19, banner acima e retry por origem + stories",
+                      "description":  "Hefesto implementa o contrato RED da TASK-032 (D18–D20). Consome: testes da TASK-032; botão Button de components/ui/button.tsx (permitido); tipo ErrorOrigin de @/lib/shared (TASK-031). Produz: components/ui/AsyncState.tsx e components/ui/AsyncState.stories.tsx (criados). Passos: (1) componente presentacional com props loading, error, errorOrigin (opcional — ausente ou nulo tratado como carga), empty, noResults, onRetry, loadingText, emptyTitle, emptyText, noResultsTitle, noResultsText e children; (2) precedência fixa D19 — loading mostra só loadingText; erro renderiza banner ACIMA da região com \u0027Tentar novamente\u0027 só para carga/origem ausente; região: children quando fornecido, sem children e com erro só o banner, sem erro empty (prevalece), depois noResults, senão região vazia; (3) nenhum import de lib/milon nem de components/\u003cmodulo\u003e — tipo vem só de @/lib/shared; (4) stories com title UI/AsyncState cobrindo carregando, erro (4 origens), vazio, no-results e lista sob erro. Hefesto não escreve testes.",
+                      "assignee":  "hefesto",
+                      "dependencies":  [
+                                           "TASK-032"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "components/ui/AsyncState.tsx existe com as props do contrato (errorOrigin opcional) e aplica a precedência D19: loading sozinho; banner acima com conteúdo visível; só banner sem children; empty prevalecendo sobre noResults; noResults sem empty; região vazia sem flags",
+                                                 "Botão \u0027Tentar novamente\u0027 renderizado somente para errorOrigin \u0027carga\u0027 ou prop ausente/nula, acionando onRetry; \u0027operacao\u0027 e \u0027bloqueio\u0027 exibem só a mensagem; sem botão de fechar (D22)",
+                                                 "Busca por lib/milon em components/ui/AsyncState.tsx retorna 0 (R29/D26) — o componente importa o tipo só de @/lib/shared e o botão de components/ui/button",
+                                                 "components/ui/AsyncState.stories.tsx existe com title UI/AsyncState cobrindo os 4 estados e as 4 entradas de origem; npm run build-storybook passa",
+                                                 "components/ui/button.tsx, components/ui/input.tsx e components/ui/label.tsx inalterados",
+                                                 "npm test -- __tests__/components/ui/AsyncState.test.tsx passa (Expected: PASS) e npx tsc --noEmit passa",
+                                                 "Nenhum arquivo de app/pluto/, components/pluto/ ou lib/pluto/ é alterado"
+                                             ],
+                      "files":  [
+                                    "components/ui/AsyncState.tsx",
+                                    "components/ui/AsyncState.stories.tsx"
+                                ]
+                  },
+                  {
+                      "id":  "TASK-034",
+                      "status":  "pending",
+                      "title":  "RED: ProgramList e página de Programas com banner acima da lista (CA-P5-1, CA-P5-5)",
+                      "description":  "Minos escreve os testes RED da adoção em Programas (D21, R26, CA-P5-1, CA-P5-5) a partir dos contratos textuais do plan.md \u0027Patch v5\u0027 §3, sem tocar em produção. Consome: componente AsyncState (TASK-033) e a composição nova de ProgramList — ainda inexistente. Produz: adaptações de __tests__/components/milon/ProgramList.test.tsx e __tests__/app/milon/programs/page.test.tsx, que a TASK-035 torna verdes. Cenários novos: (1) CA-P5-1 — com error e origem \u0027bloqueio\u0027/\u0027operacao\u0027 o banner aparece ACIMA e a lista filtrada permanece visível e legível (hoje a lista é substituída pela mensagem — falha); (2) carga falhando sem itens mostra só o banner com \u0027Tentar novamente\u0027, sem \u0027Nenhum programa ainda.\u0027; (3) CA-P5-5 — os cenários CA-P3-13 a CA-P3-16 existentes permanecem no arquivo com as asserções de origem (retry só na carga) e os defaults de props dos cenários de carga seguem válidos. Expected: FAIL para os cenários novos (composição antiga troca a lista pela mensagem).",
+                      "assignee":  "minos",
+                      "dependencies":  [
+                                           "TASK-033"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "__tests__/components/milon/ProgramList.test.tsx cobre: error + \u0027bloqueio\u0027 e error + \u0027operacao\u0027 com itens =\u003e banner acima e lista visível (CA-P5-1); error de carga sem children =\u003e somente o banner com \u0027Tentar novamente\u0027 e sem \u0027Nenhum programa ainda.\u0027",
+                                                 "As asserções de origem existentes (retry só na carga, mensagem visível nas 3 origens) permanecem no arquivo",
+                                                 "__tests__/app/milon/programs/page.test.tsx mantém CA-P3-13, CA-P3-14, CA-P3-15 e CA-P3-16 verdes após a adaptação (CA-P5-5)",
+                                                 "Nenhum arquivo de produção é criado ou editado nesta task (só os testes)",
+                                                 "Execução atual falha (Expected: FAIL) para os cenários novos de banner acima — condição de RED da TASK-035"
+                                             ],
+                      "files":  [
+                                    "__tests__/components/milon/ProgramList.test.tsx",
+                                    "__tests__/app/milon/programs/page.test.tsx"
+                                ]
+                  },
+                  {
+                      "id":  "TASK-035",
+                      "status":  "pending",
+                      "title":  "Adoção em Programas: ProgramList compõe AsyncState e a página repassa errorOrigin cru",
+                      "description":  "Hefesto implementa o contrato RED da TASK-034 (D21, D20). Consome: testes da TASK-034; AsyncState (TASK-033); props atuais de ProgramList inalteradas. Produz: components/milon/ProgramList.tsx com a cadeia das linhas 86–116 substituída pela composição do AsyncState; app/milon/programs/page.tsx sem o fallback da linha 198; ProgramList.stories.tsx só verificada (contrato de props não muda). Passos: (1) ProgramList repassa as flags, os 5 textos exatos (\u0027Carregando programas...\u0027, \u0027Nenhum programa ainda.\u0027, \u0027Crie o primeiro programa para começar.\u0027, \u0027Nada encontrado para essa combinação.\u0027, \u0027Ajuste os filtros para ver mais programas.\u0027) e a \u003cul\u003e dos itens filtrados como children quando houver itens — filtros (select de dono, checks de status) e cabeçalho da seção ficam fora do componente; (2) o bloco próprio de retry sai do arquivo; (3) a página repassa errorOrigin cru do hook (o fallback \u0027?? \"carga\"\u0027 da linha 198 sai — o default passa a ser interno ao componente). Hefesto não escreve testes.",
+                      "assignee":  "hefesto",
+                      "dependencies":  [
+                                           "TASK-034"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "components/milon/ProgramList.tsx compõe o AsyncState com as flags, os 5 textos exatos e a lista como children; props do componente inalteradas (errorOrigin obrigatório anulável); filtros e cabeçalho fora do componente",
+                                                 "Busca por \u0027Tentar novamente\u0027 em components/milon/ProgramList.tsx retorna 0 e busca por \u0027?? \"carga\"\u0027 em app/milon/programs/page.tsx retorna 0 (CA-P5-7 e item 6 do backlog do Mílon)",
+                                                 "Os textos de carregamento, vazio e no-results permanecem idênticos aos de hoje (CA-P5-5)",
+                                                 "npm test -- __tests__/components/milon/ProgramList.test.tsx e npm test -- __tests__/app/milon/programs/page.test.tsx passam (CA-P3-13..16 inclusos) e npx tsc --noEmit passa",
+                                                 "npm run build-storybook passa com ProgramList.stories.tsx sem mudança de contrato",
+                                                 "Modais ProgramConfirmModal.tsx e ProgramModal.tsx inalterados; nenhum arquivo do Pluto é alterado"
+                                             ],
+                      "files":  [
+                                    "components/milon/ProgramList.tsx",
+                                    "app/milon/programs/page.tsx",
+                                    "components/milon/ProgramList.stories.tsx"
+                                ]
+                  },
+                  {
+                      "id":  "TASK-036",
+                      "status":  "pending",
+                      "title":  "RED: rota de detalhe com banner acima do cabeçalho e estados preservados (R19, R24)",
+                      "description":  "Minos escreve os testes RED da adoção no detalhe (D21, R19, R24, default de R25) a partir dos contratos textuais do plan.md \u0027Patch v5\u0027 §3, sem tocar em produção. Consome: AsyncState (TASK-033) e a composição nova de app/milon/programs/[id]/page.tsx — ainda inexistente. Produz: adaptações de __tests__/app/milon/programs/[id]/page.test.tsx, que a TASK-037 torna verdes. Cenários: (1) falha de fetch com conteúdo (estado mockado programa+erro — hoje nunca coexiste; asserção do contrato do componente, risco §6 do plan) =\u003e banner ACIMA do cabeçalho com \u0027Tentar novamente\u0027; (2) falha sem conteúdo =\u003e somente o banner com retry (origem ausente tratada como carga — default exercido em tela real); (3) id desconhecido =\u003e faixa de vazio \u0027Programa não encontrado.\u0027 com a explicação e SEM \u0027Tentar novamente\u0027 (R19 preservado); (4) carregando =\u003e somente \u0027Carregando programa…\u0027. Expected: FAIL hoje (a cadeia das linhas 21–47 não compõe AsyncState).",
+                      "assignee":  "minos",
+                      "dependencies":  [
+                                           "TASK-035"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "__tests__/app/milon/programs/[id]/page.test.tsx cobre: falha de fetch com retry (origem ausente =\u003e carga); id desconhecido com \u0027Programa não encontrado.\u0027 + explicação e sem \u0027Tentar novamente\u0027; carregamento com \u0027Carregando programa…\u0027",
+                                                 "Cobre o estado mockado programa+erro: o cabeçalho permanece visível e o banner aparece acima (R24/CA-P5-1 no nível da tela)",
+                                                 "As asserções existentes do cabeçalho (título, dono, badge STATUS_LABEL) permanecem no arquivo (CA-P3-17/R19)",
+                                                 "Nenhum arquivo de produção é criado ou editado nesta task (só o teste)",
+                                                 "Execução atual falha (Expected: FAIL) para o cenário de banner acima — condição de RED da TASK-037"
+                                             ],
+                      "files":  [
+                                    "__tests__/app/milon/programs/[id]/page.test.tsx"
+                                ]
+                  },
+                  {
+                      "id":  "TASK-037",
+                      "status":  "pending",
+                      "title":  "Adoção no detalhe: cadeia 21–47 vira composição do AsyncState com default de origem ausente",
+                      "description":  "Hefesto implementa o contrato RED da TASK-036 (D21, R19, R25). Consome: testes da TASK-036; AsyncState (TASK-033). Produz: app/milon/programs/[id]/page.tsx com a cadeia das linhas 21–47 substituída. Passos: (1) compõe AsyncState dentro de MilonLayout SEM informar errorOrigin (ausente =\u003e carga =\u003e retry na falha de fetch, exercitando o default em tela real); (2) loading repassa \u0027Carregando programa…\u0027 (reticência horizontal, como hoje); (3) empty = id desconhecido (programa nulo e sem erro) repassando \u0027Programa não encontrado.\u0027 e a explicação; (4) children = cabeçalho (título com font-display, dono, badge STATUS_LABEL); noResults fixo false; (5) o botão próprio \u0027Tentar novamente\u0027 sai do arquivo. Hefesto não escreve testes.",
+                      "assignee":  "hefesto",
+                      "dependencies":  [
+                                           "TASK-036"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "app/milon/programs/[id]/page.tsx compõe o AsyncState sem informar errorOrigin, com empty = id desconhecido, children = cabeçalho e noResults nunca verdadeiro",
+                                                 "Busca por \u0027Tentar novamente\u0027 em app/milon/programs/[id]/page.tsx retorna 0 (CA-P5-7)",
+                                                 "Falha de fetch mostra banner com retry (default ausente =\u003e carga); id desconhecido continua distinto de falha, sem retry (R19 preservado)",
+                                                 "Os textos \u0027Carregando programa…\u0027, \u0027Programa não encontrado.\u0027 e a explicação permanecem idênticos",
+                                                 "npm test -- __tests__/app/milon/programs/[id]/page.test.tsx passa (Expected: PASS) e npx tsc --noEmit passa",
+                                                 "Nenhum arquivo do Pluto é alterado"
+                                             ],
+                      "files":  [
+                                    "app/milon/programs/[id]/page.tsx"
+                                ]
+                  },
+                  {
+                      "id":  "TASK-038",
+                      "status":  "pending",
+                      "title":  "RED: biblioteca com errorOrigin no useExercises, exclusão fecha em falha (D23, D25, CA-P5-6)",
+                      "description":  "Minos escreve os testes RED da adoção na biblioteca (D21, D23, D25, R27, R28, CA-P5-6, achados S6(a) e S6(b)) a partir dos contratos textuais do plan.md \u0027Patch v5\u0027 §3, sem tocar em produção. Consome: AsyncState (TASK-033) e os contratos novos de useExercises/ExerciseList/página — ainda inexistentes. Produz: adaptações de __tests__/lib/milon/hooks/useExercises.test.ts, __tests__/components/milon/ExerciseList.test.tsx e __tests__/app/milon/exercises/page.test.tsx, que a TASK-039 torna verdes. Cenários: (1) useExercises — rejeição do efeito de montagem e do fetchList gravam errorOrigin \u0027carga\u0027; falha em remove grava \u0027operacao\u0027; applyList e sucessos zeram error e errorOrigin juntos; save/saveAndNew não alteram nenhum dos dois (formato idêntico ao contrato de usePrograms, R27); (2) ExerciseList — ganha prop obrigatória errorOrigin; \u0027carga\u0027 com retry, \u0027operacao\u0027/\u0027bloqueio\u0027 sem; banner ACIMA da lista com itens visíveis (CA-P5-1 na biblioteca); (3) página — exclusão confirmada que falha FECHA DeleteExerciseConfirm e mostra a mensagem no banner sem \u0027Tentar novamente\u0027 (CA-P5-6/S6(b)). Expected: FAIL hoje (hook sem errorOrigin, lista sem prop, modal mantido aberto no erro).",
+                      "assignee":  "minos",
+                      "dependencies":  [
+                                           "TASK-037"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "__tests__/lib/milon/hooks/useExercises.test.ts cobre: montagem/fetchList rejeitados =\u003e \u0027carga\u0027; remove falhando =\u003e \u0027operacao\u0027; sucesso/applyList zeram error e errorOrigin; save e saveAndNew não tocam nos dois campos (D23/R27)",
+                                                 "__tests__/components/milon/ExerciseList.test.tsx cobre: prop errorOrigin obrigatória; retry só em \u0027carga\u0027; banner acima com lista visível sob erro de operação; textos de carregamento/vazio/no-results preservados",
+                                                 "__tests__/app/milon/exercises/page.test.tsx cobre CA-P5-6/S6(b): falha de exclusão fecha o modal e mostra a mensagem no banner sem \u0027Tentar novamente\u0027; origem repassada ao ExerciseList",
+                                                 "Nenhum arquivo de produção é criado ou editado nesta task (só os testes)",
+                                                 "Execução atual falha (Expected: FAIL) — condição de RED da TASK-039"
+                                             ],
+                      "files":  [
+                                    "__tests__/lib/milon/hooks/useExercises.test.ts",
+                                    "__tests__/components/milon/ExerciseList.test.tsx",
+                                    "__tests__/app/milon/exercises/page.test.tsx"
+                                ]
+                  },
+                  {
+                      "id":  "TASK-039",
+                      "status":  "pending",
+                      "title":  "Adoção na biblioteca: errorOrigin no useExercises, ExerciseList no AsyncState e exclusão fecha em falha",
+                      "description":  "Hefesto implementa o contrato RED da TASK-038 (D21, D23, D25). Consome: testes da TASK-038; AsyncState (TASK-033); DeleteExerciseConfirm inalterado (muda só quem fecha). Produz: lib/milon/hooks/useExercises.ts com errorOrigin; components/milon/ExerciseList.tsx no AsyncState; app/milon/exercises/page.tsx fechando a confirmação em falha; stories. Passos: (1) UseExercisesReturn ganha errorOrigin anulável — montagem/fetchList =\u003e \u0027carga\u0027, catch de remove =\u003e \u0027operacao\u0027, applyList/zeragens zera os dois campos, save/saveAndNew não tocam no canal (relançam para o modal); (2) ExerciseList ganha prop obrigatória errorOrigin e substitui a cadeia a partir da linha 95 pelo AsyncState (empty = isEmpty, noResults = não vazio \u0026\u0026 nenhum item visível, children = \u003cul\u003e + botão \u0027Mostrar mais\u0027), removendo o botão próprio de retry; (3) a página repassa errorOrigin ao ExerciseList e handleDeleteConfirm fecha DeleteExerciseConfirm em sucesso E falha, removendo o comentário \u0027Mantém a confirmação aberta\u0027; (4) ExerciseList.stories.tsx exercita as três origens. Hefesto não escreve testes.",
+                      "assignee":  "hefesto",
+                      "dependencies":  [
+                                           "TASK-038"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "lib/milon/hooks/useExercises.ts expõe errorOrigin em UseExercisesReturn: montagem/fetchList =\u003e \u0027carga\u0027; remove =\u003e \u0027operacao\u0027; sucesso e applyList zeram error e errorOrigin juntos; save() e saveAndNew() não alteram nenhum dos dois",
+                                                 "components/milon/ExerciseList.tsx tem prop obrigatória errorOrigin e compõe o AsyncState; busca por \u0027Tentar novamente\u0027 em components/milon/ExerciseList.tsx retorna 0",
+                                                 "app/milon/exercises/page.tsx fecha DeleteExerciseConfirm em sucesso e falha; busca por \u0027Mantém a confirmação aberta\u0027 em app/milon/exercises/page.tsx retorna 0 (CA-P5-6/S6(b))",
+                                                 "components/milon/ExerciseList.stories.tsx exercita as três origens de erro; npm run build-storybook passa",
+                                                 "components/milon/DeleteExerciseConfirm.tsx inalterado (muda só quem o fecha)",
+                                                 "Os textos da tela de biblioteca (\u0027Carregando exercícios...\u0027, \u0027Nenhum exercício cadastrado ainda.\u0027, \u0027Crie o primeiro exercício da biblioteca para começar.\u0027, \u0027Nada encontrado para essa combinação.\u0027, \u0027Ajuste os filtros ou crie o exercício na biblioteca.\u0027) permanecem idênticos aos de hoje",
+                                                 "npm test -- nos 3 arquivos de teste da TASK-038 passa (Expected: PASS) e npx tsc --noEmit passa",
+                                                 "Nenhum arquivo do Pluto é alterado"
+                                             ],
+                      "files":  [
+                                    "lib/milon/hooks/useExercises.ts",
+                                    "components/milon/ExerciseList.tsx",
+                                    "components/milon/ExerciseList.stories.tsx",
+                                    "app/milon/exercises/page.tsx"
+                                ]
+                  },
+                  {
+                      "id":  "TASK-040",
+                      "status":  "pending",
+                      "title":  "test-scenarios.md: cenários Dado/Quando/Então do Patch v5",
+                      "description":  "Minos acrescenta à .agents/modules/milon/02-programas/test-scenarios.md os cenários do Patch v5 cobrindo CA-P5-1 a CA-P5-7, no mesmo formato Dado/Quando/Então dos cenários da v1 e dos Patches v3 e v4. Inclui explicitamente a reexecução do Cenário 5 (agora com o banner ACIMA da lista preservada) como CA-P5-1, a precedência dos 4 estados (CA-P5-2), o retry por origem com default ausente (CA-P5-3), o contrato completo do componente (CA-P5-4), a preservação da homologação CA-P3-13..16 (CA-P5-5), a exclusão da biblioteca fechando em falha (CA-P5-6) e a prova de herança (CA-P5-7). Não cria cenário para CA-P5-8 (handoff da fase 7 — norma do AGENTS.md) nem para CA-P5-9 (gate de processo, coberto na TASK-041).",
+                      "assignee":  "minos",
+                      "dependencies":  [
+                                           "TASK-035",
+                                           "TASK-037",
+                                           "TASK-039"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "test-scenarios.md contém ao menos 7 cenários Dado/Quando/Então novos cobrindo CA-P5-1 a CA-P5-7 (um por critério)",
+                                                 "Os cenários citam: banner acima da lista com conteúdo visível em bloqueio/operacao; precedência carregando \u003e erro \u003e vazio \u003e no-results; retry só em carga e origem ausente; textos idênticos aos homologados; exclusão da biblioteca fechando o modal em falha; busca \u0027Tentar novamente\u0027 presente somente no componente centralizado",
+                                                 "Formato e numeração consistentes com os cenários já existentes no arquivo"
+                                             ],
+                      "files":  [
+                                    ".agents/modules/milon/02-programas/test-scenarios.md"
+                                ]
+                  },
+                  {
+                      "id":  "TASK-041",
+                      "status":  "pending",
+                      "title":  "Suite final Minos + coverage + test-report + prova de herança (Patch v5)",
+                      "description":  "Minos executa a suite completa (v1 + Patch v3 + Patch v4 + Patch v5): todos os testes de contrato, utils, hooks, componentes e páginas, incluindo o componente novo AsyncState. Coverage \u003e= 80%. Regenera test-report.json e test-scenarios.md na FEATURE_DIR, promove cenários de regressão para .agents/modules/milon/regression.md e executa npm run build-storybook sem erros. Prova de herança (CA-P5-7): busca pela cadeia \u0027Tentar novamente\u0027 em app/ e components/ retorna ocorrência somente em components/ui/AsyncState.tsx; busca por AsyncState em app/pluto/ e components/pluto/ retorna 0 (R30/D24). Gate do processo (CA-P5-9): test-report.failed == 0 e coverage \u003e= 80 antes da review do Argos.",
+                      "assignee":  "minos",
+                      "dependencies":  [
+                                           "TASK-040"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "CA-P5-9: suíte completa verde (nenhum teste existente quebra) com coverage ≥ 80% mantido; test-report.json regenerado antes da review (gate do processo)",
+                                                 "npm test passa com coverage \u003e= 80% (lines/functions/branches/statements \u003e= 80)",
+                                                 "CA-P5-7: busca pela cadeia \u0027Tentar novamente\u0027 em app/ e components/ retorna ocorrência somente em components/ui/AsyncState.tsx; busca por AsyncState em app/pluto/ e components/pluto/ retorna 0",
+                                                 "test-report.json gerado em .agents/modules/milon/02-programas/ com failed=0",
+                                                 "test-scenarios.md cobre v1 + Patch v3 + Patch v4 + Patch v5",
+                                                 "Cenários de regressão promovidos para .agents/modules/milon/regression.md",
+                                                 "npm run build-storybook passa sem erros"
+                                             ],
+                      "files":  [
+                                    ".agents/modules/milon/02-programas/test-report.json",
+                                    ".agents/modules/milon/02-programas/test-scenarios.md",
+                                    ".agents/modules/milon/regression.md"
+                                ]
                   }
               ]
 }

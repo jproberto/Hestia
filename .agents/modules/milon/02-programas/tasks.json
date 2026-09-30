@@ -529,7 +529,7 @@
                   },
                   {
                       "id":  "TASK-026",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "RED: testes do hook useProgramDetail e da rota /milon/programs/[id]",
                       "description":  "Minos escreve os testes RED do Item C (D16/D17, R18-R21, CA-P3-17 e CA-P3-20) antes da implementacao. Consome: contratos textuais de useProgramDetail e da pagina de detalhe no plan.md \u0027Aditivo - Patch v4\u0027 secao 3; standalone findProgramByIdStandalone ja exportado por lib/milon/repositories/programs.ts e pelo barrel lib/milon/db/programs.ts. Produz dois arquivos de teste novos. (1) __tests__/lib/milon/hooks/useProgramDetail.test.ts com mock do barrel db/programs: carregando (loading true, program null), sucesso (program preenchido, error null), id desconhecido (standalone resolve null -\u003e program null e error null com loading false), falha de repositorio (error nao nulo e retry que recarrega) e flag cancelled (sem setState apos unmount). (2) __tests__/app/milon/programs/[id]/page.test.tsx mockando next/navigation (useParams devolve o id) e o hook: cabecalho exibe titulo, dono e status do programa; nenhum texto de treinos; estado \u0027Programa não encontrado.\u0027 quando program e null sem erro; banner com \u0027Tentar novamente\u0027 quando error nao nulo; dentro de MilonLayout com a aba Programas ativa (aria-current=\u0027page\u0027); titulo com a classe font-display. Expected: FAIL - os modulos ainda nao existem.",
                       "assignee":  "minos",
@@ -552,7 +552,7 @@
                   },
                   {
                       "id":  "TASK-027",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Rota de detalhe /milon/programs/[id] com hook useProgramDetail",
                       "description":  "Hefesto implementa o contrato RED da TASK-026. Consome: STATUS_LABEL de lib/milon/program-utils.ts (TASK-023), findProgramByIdStandalone do barrel lib/milon/db/programs, MilonLayout de components/milon/MilonLayout.tsx. Produz: lib/milon/hooks/useProgramDetail.ts exportando useProgramDetail(id), re-exportado por lib/milon/hooks/index.ts; app/milon/programs/[id]/page.tsx. Passos: (1) hook com promise-chain + flag cancelled devolvendo program, loading, error e retry; id desconhecido = program null e error null; falha de fetch = error com retry; (2) pagina client component que le o id via useParams de next/navigation e compoe MilonLayout com pageTitle=\u0027Programa\u0027 (sem subtitulo); (3) quatro estados mutuamente exclusivos: carregando, falha de fetch com banner e \u0027Tentar novamente\u0027, nao encontrado, cabecalho do programa; (4) cabecalho com titulo (classe font-display), dono e badge de STATUS_LABEL. Sem componente novo, sem story, sem acoes de editar/ativar/reativar/excluir, sem qualquer texto de treinos.",
                       "assignee":  "hefesto",

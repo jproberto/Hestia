@@ -396,7 +396,7 @@
                   },
                   {
                       "id":  "TASK-021",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Suite final Minos + build-storybook (patch v3)",
                       "description":  "Minos executa suite completa: todos os testes (v1 + patch v3). Coverage ≥80%. Gera test-report.json e test-scenarios.md atualizados na FEATURE_DIR. Promove cenários de regressão para .agents/modules/milon/regression.md. Executa npm run build-storybook sem erros. Atualiza test-report.json final. Gate: test-report.failed==0 e coverage≥80 antes de review do Argos.",
                       "assignee":  "minos",

@@ -1,40 +1,51 @@
 {
-  "summary": { "total": 647, "passed": 647, "failed": 0, "coverage": 85.61 },
-  "fullSuite": { "files": 82, "passed": 647, "failed": 0, "pending": 0, "baseline": "603 testes / 81 arquivos antes da TASK-011 (+44 testes, +1 arquivo)" },
+  "scope": "Feature milon/02-programas (Programas) — ciclo v1 (TASK-001…011) + Patch v3 de navegação em abas (TASK-012…021, gate CA-P3-12)",
+  "summary": { "total": 666, "passed": 666, "failed": 0, "coverage": 85.66 },
+  "fullSuite": { "files": 84, "passed": 666, "failed": 0, "pending": 0, "baseline": "647 testes / 82 arquivos antes do Patch v3 (commit 09b7a06, fim do ciclo v1/TASK-011) — Patch v3: +19 testes, +2 arquivos (8 alterados no total), agora 666/666 em 84 arquivos no commit 7339a29" },
   "coverage": {
-    "lines": 85.61,
-    "statements": 85.61,
-    "functions": 87.61,
-    "branches": 88.65,
-    "totals": { "lines": "1935/2260", "functions": "92/105", "branches": "469/529" },
-    "scope": "app/milon/** + components/milon/** + lib/milon/** (31 arquivos de produção, *.stories.tsx INCLuíDOS no denominador — nenhum arquivo excluído para inflar o número)",
+    "lines": 85.66,
+    "statements": 85.66,
+    "functions": 87.73,
+    "branches": 88.67,
+    "totals": { "lines": "1942/2267", "functions": "93/106", "branches": "470/530" },
+    "scope": "app/milon/** + components/milon/** + lib/milon/** (32 arquivos de produção — +1 vs ciclo v1: app/milon/exercises/page.tsx; *.stories.tsx INCLuíDOS no denominador — nenhum arquivo excluído para inflar o número)",
     "tool": "@vitest/coverage-v8 (v8 provider do vitest 2.1.9, já presente em node_modules)",
     "command": "npx vitest run --coverage --coverage.include='app/milon/**' --coverage.include='components/milon/**' --coverage.include='lib/milon/**'",
+    "fullRun": "npx vitest run --coverage correido na íntegra (exit 0, 84 arquivos / 666 testes verdes), mas a linha 'All files' do run cru é 5.19% lines: sem include, o v8 engole os bundles versionados de storybook-static/ e utils/supabase/*. Gate medido no escopo da feature (comando acima), mesmo protocolo do ciclo v1 que mediu 85.61. Medição repo-wide só de código-fonte (app+components+lib+utils): 76.1% lines / 71.98% funcs — débito transversal pré-existente, fora do gate desta feature.",
     "featurePaths": {
-      "app/milon/programs/page.tsx": "98.87% stmts (176/178), 90.9% branch, 100% funcs — descoberto: 154/172 ramos de fallback quando cancelConfirm lança",
-      "components/milon/ProgramList.tsx": "100% (138/138, branch 100%, funcs 100%)",
-      "components/milon/ProgramModal.tsx": "100% (74/74, branch 100%, funcs 100%)",
-      "components/milon/ProgramConfirmModal.tsx": "100% (63/63, branch 100%, funcs 100%)",
+      "app/milon/programs/page.tsx": "98.87% stmts, 90.9% branch, 100% funcs — ramos 154/172 de fallback quando cancelConfirm lança (igual ao ciclo v1)",
+      "app/milon/exercises/page.tsx": "100% stmts, 84% branch, 100% funcs — NOVO no Patch v3 (TASK-013); ramos 16, 100, 109-114",
+      "app/milon/page.tsx": "100% stmts/branch/funcs — server component de redirect (Patch v3, 4 testes, CA-P3-01)",
+      "components/milon/*.tsx (7 componentes)": "100% stmts/branch/funcs — ProgramList, ProgramModal, ProgramConfirmModal, ExerciseList, ExerciseModal, DeleteExerciseConfirm e MilonLayout (MilonLayout estendido no Patch v3, TASK-014)",
       "lib/milon/program-utils.ts": "100% (161/161, branch 100%, funcs 100%)",
       "lib/milon/repositories/programs.ts": "100% stmts (148/148), 92.98% branch, 100% funcs — descoberto: 34/82/102/129 ramos defensivos de mensagem/details e de desativação",
       "lib/milon/repositories/fakes/fakeProgramRepository.ts": "93.1% stmts (81/87), 93.33% branch — descoberto: 47-52 ramo de seed",
       "lib/milon/hooks/usePrograms.ts": "100% stmts (234/234), 85.86% branch, 100% funcs — descoberto: ramos defensivos de cancelConfirm/confirm lançando",
-      "lib/milon/db/programs.ts": "100% (1/1)"
+      "lib/milon/hooks/useExercises.ts": "97.04% stmts, 80.35% branch, 100% funcs — ramos 99, 121, 253-256",
+      "lib/milon/db/*": "100% (exercises.ts e programs.ts)"
     },
     "perFile": {
-      "app/milon/layout.tsx": "0% (4 linhas — wrapper transversal MascotProvider, débito reportado já na feature #1)",
-      "app/milon/page.tsx": "100% stmts, 84% branch",
-      "components/milon/*.stories.tsx (6 arquivos, 276 linhas)": "0% — stories são DX do Storybook e não têm teste unitário; build-storybook validou o build (TASK-007/008/009). Mantidos no denominador.",
-      "lib/milon/index.ts": "0% (5 linhas, barrel legado sem importadores ativos)",
+      "app/milon/layout.tsx": "0% (8 linhas — wrapper transversal MascotProvider, débito reportado já na feature #1)",
+      "components/milon/*.stories.tsx (6 arquivos, 346 linhas)": "0% — stories são DX do Storybook e não têm teste unitário; nenhum arquivo *.stories.* foi alterado pelo Patch v3 (git diff 09b7a06..HEAD vazio). Mantidos no denominador.",
+      "lib/milon/index.ts": "0% (16 linhas, barrel legado sem importadores ativos)",
+      "lib/milon/types.ts": "0% (84 linhas, só declarações de tipo)",
       "lib/milon/repositories/index.ts": "0% (4 linhas, barrel de re-exports)",
-      "lib/milon/repositories/exercises.ts": "82.85% stmts / 57.14% branch (wrappers standalone 112-132, débito da feature #1)"
+      "lib/milon/repositories/exercises.ts": "82.85% stmts / 57.14% branch (wrappers standalone 112-132, débito da feature #1)",
+      "lib/milon/utils.ts": "92.85% stmts / 85.71% branch (raios 68-69, 82-83)"
     }
   },
   "files": [
+    { "file": "__tests__/app/milon/exercises/page.test.tsx", "status": "NOVO (Patch v3, TASK-017 — testes da biblioteca migrados da rota raiz)", "tests": 15, "passed": 15, "failed": 0, "covers": "biblioteca em /milon/exercises dentro do MilonLayout: lista, filtros, busca, ordenar, criação/edição/exclusão, pageTitle font-display (CA-P3-02)" },
+    { "file": "__tests__/app/milon/page.test.tsx", "status": "REESCRITO (Patch v3, TASK-017 — era 14 testes de biblioteca, hoje só redirect)", "tests": 4, "passed": 4, "failed": 0, "covers": "redirect server-side '/' → '/milon/programs' (NEXT_REDIRECT) e ausência da biblioteca na raiz (CA-P3-01, CA-P3-10 do caminho)" },
+    { "file": "__tests__/components/layout/ModuleLayout.test.tsx", "status": "NOVO (Patch v3, TASK-015)", "tests": 8, "passed": 8, "failed": 0, "covers": "aba ativa derivada de usePathname: match exato/prefixo, exatamente um aria-current='page', regra idêntica Mílon e Pluto (transversal D12, CA-P3-05/06/07)" },
+    { "file": "__tests__/components/milon/MilonLayout.test.tsx", "status": "ESTENDIDO (Patch v3, TASK-014 — era 1 teste)", "tests": 3, "passed": 3, "failed": 0, "covers": "milonNavItems com exatamente 2 abas (Exercícios, Programas) repassadas ao ModuleLayout" },
+    { "file": "__tests__/app/dashboard/page.test.tsx", "status": "ESTENDIDO (Patch v3, TASK-018)", "tests": 5, "passed": 5, "failed": 0, "covers": "textos exatos D13 dos cards Mílon/Pluto, zero ocorrências dos textos antigos, hrefs preservados (CA-P3-08/09/10)" },
+    { "file": "__tests__/app/pluto/budget/page.test.tsx", "status": "ESTENDIDO (Patch v3, TASK-019)", "tests": 15, "passed": 15, "failed": 0, "covers": "aba 'Orçamento Anual' é a única com aria-current='page' + estilo ativo (CA-P3-07)" },
+    { "file": "__tests__/app/pluto/months/page.test.tsx", "status": "ESTENDIDO (Patch v3, TASK-019)", "tests": 16, "passed": 16, "failed": 0, "covers": "aba 'Meses e Períodos' ativa por URL direta (CA-P3-07)" },
+    { "file": "__tests__/app/pluto/transactions/page.test.tsx", "status": "ESTENDIDO (Patch v3, TASK-019)", "tests": 16, "passed": 16, "failed": 0, "covers": "aba 'Lançamentos' ativa por URL direta (CA-P3-07)" },
     { "file": "__tests__/lib/milon/repositories/programs-client.test.ts", "status": "NOVO (TASK-011)", "tests": 24, "passed": 24, "failed": 0, "covers": "repository real de programas via IDatabaseClient em memória + 6 standalones + mapeamento de erro de unicidade" },
     { "file": "__tests__/lib/milon/hooks/usePrograms.test.ts", "status": "ESTENDIDO (TASK-011)", "tests": 32, "passed": 32, "failed": 0, "covers": "save (criação/edição/validação/recarga-falha), sessão sem e-mail, reload com falha, fallback de remove, confirm de reativação" },
     { "file": "__tests__/app/milon/programs/page.test.tsx", "status": "ESTENDIDO (TASK-011)", "tests": 18, "passed": 18, "failed": 0, "covers": "cancelar modal, erro de save (Error e não-Error), falha de requestConfirm, confirmação/cancel vindos só do hook" },
-    { "file": "__tests__/app/milon/page.test.tsx", "status": "feature #1", "tests": 14, "passed": 14, "failed": 0 },
     { "file": "__tests__/components/milon/ProgramList.test.tsx", "status": "feature #2 (TASK-007)", "tests": 14, "passed": 14, "failed": 0 },
     { "file": "__tests__/components/milon/ProgramConfirmModal.test.tsx", "status": "feature #2 (TASK-009)", "tests": 16, "passed": 16, "failed": 0 },
     { "file": "__tests__/components/milon/ProgramModal.test.tsx", "status": "feature #2 (TASK-008)", "tests": 10, "passed": 10, "failed": 0 },
@@ -47,7 +58,6 @@
     { "file": "__tests__/components/milon/DeleteExerciseConfirm.test.tsx", "status": "feature #1", "tests": 6, "passed": 6, "failed": 0 },
     { "file": "__tests__/components/milon/ExerciseList.test.tsx", "status": "feature #1", "tests": 13, "passed": 13, "failed": 0 },
     { "file": "__tests__/components/milon/ExerciseModal.test.tsx", "status": "feature #1", "tests": 12, "passed": 12, "failed": 0 },
-    { "file": "__tests__/components/milon/MilonLayout.test.tsx", "status": "feature #1", "tests": 1, "passed": 1, "failed": 0 },
     { "file": "__tests__/lib/milon/types.test.ts", "status": "feature #1", "tests": 10, "passed": 10, "failed": 0 },
     { "file": "__tests__/lib/milon/utils.test.ts", "status": "feature #1", "tests": 17, "passed": 17, "failed": 0 }
   ],
@@ -62,18 +72,31 @@
     "TASK-008": "passed",
     "TASK-009": "passed",
     "TASK-010": "passed",
-    "TASK-011": "passed"
+    "TASK-011": "passed (suite v1: 647/647, coverage 85.61)",
+    "TASK-012": "passed (redirect coberto por __tests__/app/milon/page.test.tsx — CA-P3-01)",
+    "TASK-013": "passed (composição da biblioteca coberta por __tests__/app/milon/exercises/page.test.tsx — CA-P3-02)",
+    "TASK-014": "passed (2 abas declaradas — __tests__/components/milon/MilonLayout.test.tsx, 3 testes)",
+    "TASK-015": "passed (aba ativa transversal — __tests__/components/layout/ModuleLayout.test.tsx, 8 testes — CA-P3-05/06/07)",
+    "TASK-016": "passed (textos D13 — __tests__/app/dashboard/page.test.tsx — CA-P3-08/10)",
+    "TASK-017": "passed (testes migrados + redirect: exercises/page.test.tsx 15 e page.test.tsx 4)",
+    "TASK-018": "passed (dashboard: 5 testes, textos antigos com zero ocorrências — CA-P3-08/09/10)",
+    "TASK-019": "passed (3 páginas do Pluto com asserção de aba ativa — CA-P3-07)",
+    "TASK-020": "passed (test-scenarios.md com 12 cenários do Patch v3, Cenários 23-34)",
+    "TASK-021": "passed (suite 84/666/0 falhas + coverage 85.66 lines ≥80 + report + promoção de regressão)"
   },
   "checks": {
-    "npm test": "82 arquivos / 647 testes / 0 falhas",
-    "coverage >= 80": "lines 85.61 / statements 85.61 / functions 87.61 / branches 88.65",
-    "npm run lint": "0 erros (47 warnings pré-existentes do repositório)",
+    "npm test": "84 arquivos / 666 testes / 0 falhas (exit 0) — suite final re-executada após a regeneração deste report",
+    "coverage >= 80": "lines 85.66 / statements 85.66 / functions 87.73 / branches 88.67 (escopo Mílon — todos ≥80; ciclo v1 mediu 85.61/85.61/87.61/88.65)",
+    "npx vitest run --coverage (run cru)": "exit 0 e 84/666 verdes; linha 'All files' = 5.19% por engolir storybook-static/ — ver coverage.fullRun",
+    "npm run lint": "0 erros (48 warnings do repositório, todos @typescript-eslint/no-unused-vars e no-img-element pré-existentes)",
     "npx tsc --noEmit": "exit 0",
-    "npm run build-storybook": "pass — 'Storybook build completed successfully' (primeira validação das stories TASK-007/008/009)"
+    "npm run build-storybook": "NÃO re-executado no Patch v3 — fora do escopo da TASK-021 (suite + coverage + report + regression). Última validação: ciclo v1/TASK-011 ('Storybook build completed successfully'); nenhum *.stories.* foi alterado pelo patch (git diff 09b7a06..HEAD vazio), mas o AC 'npm run build-storybook' da TASK-021 segue em aberto para o gate do Argos"
   },
   "gaps": [
-    "6 arquivos de stories em components/milon/*.stories.tsx (276 linhas) a 0% — DX do Storybook; build validado por npm run build-storybook, comportamento coberto pelos testes dos componentes",
-    "app/milon/layout.tsx (4 linhas) e lib/milon/index.ts / lib/milon/repositories/index.ts (barrels) a 0% — sem comportamento próprio testável",
+    "Run cru de coverage sem --coverage.include marcara 5.19% porque versiona bundles do Storybook em storybook-static/ (e não é gitignorado de fato pelo v8) — gate sempre medido no escopo da feature, protocolo idêntico ao do ciclo v1",
+    "Cobertura repo-wide só de código-fonte (app+components+lib+utils) = 76.1% lines / 71.98% funcs — abaixo de 80 no agregado por débito transversal pré-existente (app/layout.tsx, app/page.tsx, app/login, wrappers de lib/pluto) e não desta feature",
+    "6 arquivos de stories em components/milon/*.stories.tsx (346 linhas) a 0% — DX do Storybook; comportamento coberto pelos testes dos componentes; build não re-validado nesta task (ver checks)",
+    "app/milon/layout.tsx (8 linhas) e barrels lib/milon/index.ts / lib/milon/types.ts / lib/milon/repositories/index.ts a 0% — sem comportamento próprio testável",
     "Ramos defensivos de 'nunca acontece' em usePrograms (cancelConfirm/confirm lançando) e programs.ts (linhas 34/82/102/129) — branch 85.86% e 92.98% respectivamente, acima de 80",
     "Wrappers standalone de lib/milon/repositories/exercises.ts (112-132) — débito herdado da feature #1, não desta feature",
     "Cobertura real de 'guarda de ativação com conteúdo >=1 treino' depende da feature 3 (flag fixa em false nesta feature — comportamento observável é o bloqueio, coberto)"
@@ -82,9 +105,15 @@
     ".agents/modules/milon/02-programas/test-report.json",
     ".agents/modules/milon/02-programas/test-scenarios.md",
     ".agents/modules/milon/regression.md",
-    "__tests__/lib/milon/repositories/programs-client.test.ts",
-    "__tests__/lib/milon/hooks/usePrograms.test.ts",
-    "__tests__/app/milon/programs/page.test.tsx"
+    "__tests__/app/milon/exercises/page.test.tsx",
+    "__tests__/app/milon/page.test.tsx",
+    "__tests__/components/layout/ModuleLayout.test.tsx",
+    "__tests__/components/milon/MilonLayout.test.tsx",
+    "__tests__/app/dashboard/page.test.tsx",
+    "__tests__/app/pluto/budget/page.test.tsx",
+    "__tests__/app/pluto/months/page.test.tsx",
+    "__tests__/app/pluto/transactions/page.test.tsx"
   ],
-  "timestamp": "2026-09-29T16:19:59-03:00"
+  "commit": "7339a29",
+  "timestamp": "2026-09-29T22:39:19-03:00"
 }

@@ -19,3 +19,9 @@ Cenários promovidos pelos testes de cada feature (Minos promove a partir de `te
 1. Acesse `/milon` e confira que termina em `/milon/programs` com a aba **Programas** destacada (aria-current="page").
 2. Clique em **Exercícios**, confira `/milon/exercises` com a biblioteca e a aba **Exercícios** destacada.
 3. Abra `/milon/programs` por URL direta e confira a aba **Programas** já destacada sem clique prévio.
+
+## Programas — confirmação fecha com mensagem legível e criação navega ao detalhe (Patch v4)
+
+1. Acesse `/milon/programs`, clique em "Novo programa", salve com um título novo e confira que a criação navega para `/milon/programs/<id>` exibindo título, dono e status.
+2. Volte à lista, clique em "Ativar" em um programa sem treinos, confirme e confira que o modal de confirmação **fecha** e a mensagem aparece no corpo da página **sem** o botão "Tentar novamente".
+3. Recarregue a lista com a rede simulada como falhando (DevTools offline) e confira que o banner de erro de carga exibe "Tentar novamente" e que o clique recarrega os programas.

@@ -598,7 +598,7 @@
                   },
                   {
                       "id":  "TASK-029",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Suite final Minos + coverage + test-report (Patch v4)",
                       "description":  "Minos executa a suite completa (v1 + Patch v3 + Patch v4): todos os testes de contrato, utils, hooks, componentes e paginas, incluindo a rota nova [id]. Coverage \u003e= 80%. Regenera test-report.json e test-scenarios.md na FEATURE_DIR, promove cenarios de regressao para .agents/modules/milon/regression.md e executa npm run build-storybook sem erros. Gate do processo (CA-P3-21): test-report.failed == 0 e coverage \u003e= 80 antes da review do Argos.",
                       "assignee":  "minos",

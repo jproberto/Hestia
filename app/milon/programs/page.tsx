@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { MilonLayout } from "@/components/milon/MilonLayout";
 import ProgramList from "@/components/milon/ProgramList";
 import ProgramModal from "@/components/milon/ProgramModal";
@@ -25,6 +26,7 @@ interface LocalConfirm {
  * em `usePrograms`; sorteio de sugestão via `sortearSugestao()`.
  */
 export default function ProgramsPage() {
+  const router = useRouter();
   const {
     programs,
     filteredPrograms,
@@ -114,11 +116,14 @@ export default function ProgramsPage() {
       try {
         if (editingProgram) {
           await save(title, editingProgram.id);
+          setModalOpen(false);
+          setEditingProgram(null);
         } else {
-          await save(title);
+          const saved = await save(title);
+          setModalOpen(false);
+          setEditingProgram(null);
+          router.push(`/milon/programs/${saved.id}`);
         }
-        setModalOpen(false);
-        setEditingProgram(null);
       } catch (err: unknown) {
         // Nunca fecha no erro: registra mensagem visível e relança para
         // o modal preservar o digitado (padrão homologado).
@@ -129,7 +134,7 @@ export default function ProgramsPage() {
         setSaving(false);
       }
     },
-    [editingProgram, save],
+    [editingProgram, save, router],
   );
 
   const effectiveConfirm: LocalConfirm | null = localConfirm ?? confirmAction ?? null;
@@ -147,18 +152,18 @@ export default function ProgramsPage() {
         } else {
           await remove(target.program);
         }
-        setLocalConfirm(null);
-        try {
-          cancelConfirm();
-        } catch {
-          // Limpeza do hook é complementar; o fechamento local já ocorreu.
-        }
       } else {
         await confirm();
       }
     } catch {
-      // Mantém a confirmação aberta; o erro fica visível na lista via hook.
+      // O erro fica visível na lista via hook; o fechamento ocorre no bloco final.
     } finally {
+      setLocalConfirm(null);
+      try {
+        cancelConfirm();
+      } catch {
+        // Limpeza do hook é complementar; o fechamento local já ocorreu.
+      }
       setProcessing(false);
     }
   }, [effectiveConfirm, localConfirm, activate, reactivate, remove, cancelConfirm, confirm]);

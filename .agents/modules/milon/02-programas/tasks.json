@@ -485,7 +485,7 @@
                   },
                   {
                       "id":  "TASK-024",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "RED: testes da pagina - modal fecha em bloqueio/falha, banner sem retry e navegacao pos-criacao",
                       "description":  "Minos escreve os testes RED da tela de Programas para CA-P3-13 a CA-P3-19, a partir do plan.md \u0027Aditivo - Patch v4\u0027 (secoes 3 e 4). Consome: contrato errorOrigin (TASK-023) e a pagina atual app/milon/programs/page.tsx, que ainda mantem o modal aberto no erro e nao navega na criacao. Produz: __tests__/app/milon/programs/page.test.tsx com os cenarios que a TASK-025 torna verde. Cenarios: (a) confirmacao de ativacao bloqueada pela guarda -\u003e modal fechado, banner no corpo sem \u0027Tentar novamente\u0027, status do programa intacto; (b) falha de repositorio em ativar/reativar/excluir -\u003e modal fechado, banner sem retry, status anterior mantido; (c) erro de carga da lista -\u003e banner com \u0027Tentar novamente\u0027 que dispara o retry (a pagina repassa errorOrigin do hook ao ProgramList); (d) criacao salva -\u003e router.push chamado com \u0027/milon/programs/\u003cid\u003e\u0027 usando o id do Program devolvido por save(); (e) edicao salva -\u003e router.push nao e chamado. Mock de next/navigation no padrao das paginas do projeto (useRouter.push espionado) e mock do hook usePrograms com factories de defaults. Expected: FAIL antes da TASK-025.",
                       "assignee":  "minos",
@@ -507,7 +507,7 @@
                   },
                   {
                       "id":  "TASK-025",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Pagina: fecha a confirmacao em todos os terminais e navega para o detalhe apos criar",
                       "description":  "Hefesto implementa o contrato RED da TASK-024 em app/milon/programs/page.tsx. Consome: errorOrigin do hook usePrograms (TASK-023), o Program devolvido por save(), useRouter de next/navigation. Produz: handleConfirm que fecha a confirmacao em sucesso, bloqueio e falha; router.push(\u0027/milon/programs/\u003cid\u003e\u0027) somente na criacao; prop errorOrigin repassada ao ProgramList. Passos: (1) mover o fechamento da confirmacao (limpeza de localConfirm e do estado do hook via cancelConfirm) para o bloco final de handleConfirm, removendo o catch com o comentario \u0027Mantém a confirmação aberta\u0027; (2) em handleModalSave, quando nao houver editingProgram, capturar o valor devolvido por save(title) e apos fechar o modal chamar router.push(\u0027/milon/programs/\u0027 + saved.id); (3) na edicao (save com id) nao chamar router.push; (4) passar errorOrigin do hook na prop homonima do ProgramList. ProgramConfirmModal.tsx, ProgramModal.tsx e lib/milon/hooks/usePrograms.ts nao mudam nesta task.",
                       "assignee":  "hefesto",

@@ -7,7 +7,7 @@ import type {
   ProgramConfirmAction,
   ProgramConfirmState,
 } from "@/lib/milon/hooks/usePrograms";
-import type { Program, ProgramStatus } from "@/lib/milon/types";
+import type { Program, ProgramErrorOrigin, ProgramStatus } from "@/lib/milon/types";
 
 /**
  * Contrato — tasks.json TASK-010 (acceptanceCriteria) + spec.md §3
@@ -37,9 +37,46 @@ import type { Program, ProgramStatus } from "@/lib/milon/types";
  * `confirmAction`/`requestConfirm` do hook (plan.md §3 "Confirmação antes de
  * ativar/reativar/excluir via estado ... no hook") quanto quando a página
  * guarda o alvo da confirmação localmente.
+ *
+ * ---------------------------------------------------------------------------
+ * Patch v4 — contratos RED da TASK-024 (spec.md Q4 CA-P3-13…19; plan.md
+ * "Aditivo - Patch v4" §3 "Página de lista" + §4 data flow 2/3/5/6 + §5
+ * "O modal fecha em qualquer terminal da confirmação"):
+ * - CA-P3-13 / CA-P3-16: bloqueio da guarda → `handleConfirm` fecha a
+ *   confirmação (sem backdrop `z-50` cobrindo a página), mensagem no banner do
+ *   corpo e **sem** "Tentar novamente" (exclusivo da origem `carga`);
+ * - CA-P3-14: falha de operação (repositório rejeita) em ativar/reativar/
+ *   excluir → mesmo terminal: modal fecha, banner sem retry;
+ * - CA-P3-15: falha de carga → banner **com** "Tentar novamente" que dispara
+ *   o retry da lista (a página repassa `errorOrigin` do hook ao `ProgramList`);
+ * - CA-P3-18: criação salva → `router.push('/milon/programs/<id>')` com o
+ *   `Program` devolvido por `save()`;
+ * - CA-P3-19: edição salva → **nenhuma** navegação (permanece na lista).
+ *
+ * `next/navigation` é mockado no padrão das páginas do repo (`useRouter.push`
+ * espionado). Em produção o `useRouter` só entra na página na TASK-025 — por
+ * isso CA-P3-18 é RED e CA-P3-19 nasce como trava de regressão.
  */
 
 vi.mock("@/lib/milon/hooks/usePrograms", () => ({ usePrograms: vi.fn() }));
+
+// Espião único de navegação: `push` compartilhado entre os renders do mock.
+const mockPush = vi.hoisted(() => vi.fn());
+const mockUseRouter = vi.hoisted(() => vi.fn(() => ({
+  push: mockPush,
+  replace: vi.fn(),
+  refresh: vi.fn(),
+  back: vi.fn(),
+  forward: vi.fn(),
+  prefetch: vi.fn(),
+})));
+const mockUsePathname = vi.hoisted(() => vi.fn(() => "/milon/programs"));
+
+vi.mock("next/navigation", () => ({
+  usePathname: mockUsePathname,
+  useRouter: mockUseRouter,
+  useSearchParams: vi.fn(() => ({ get: vi.fn() })),
+}));
 
 // Valor único devolvido pelo sorteio mockado — assertions provêm que o título
 // pré-preenchido no ProgramModal vem de `sortearSugestao()`, de onde quer que
@@ -80,6 +117,9 @@ interface HookState {
   statusFilters: ProgramStatus[];
   loading: boolean;
   errorMsg: string | null;
+  // Canal de origem (Patch v4 / TASK-023): a página repassa ao ProgramList —
+  // decide se o banner tem "Tentar novamente" (só `carga`).
+  errorOrigin: ProgramErrorOrigin | null;
   confirmAction: ProgramConfirmState | null;
   setOwnerFilter: Mock;
   toggleStatusFilter: Mock;
@@ -103,6 +143,7 @@ function defaultHookState(): HookState {
     statusFilters: [...TODOS_STATUS],
     loading: false,
     errorMsg: null,
+    errorOrigin: null,
     confirmAction: null,
     setOwnerFilter: vi.fn(),
     toggleStatusFilter: vi.fn(),
@@ -170,6 +211,39 @@ function scopeOf(heading: HTMLElement): HTMLElement {
 function savedTitleArg(state: HookState): unknown {
   const first = state.save.mock.calls[0]?.[0];
   return typeof first === "string" ? first : (first as { title?: string })?.title;
+}
+
+/** Títulos do ProgramConfirmModal (`components/milon/ProgramConfirmModal.tsx`). */
+const TITULO_CONFIRM: Record<ProgramConfirmAction, string> = {
+  ativar: "Ativar programa",
+  reativar: "Reativar programa",
+  excluir: "Excluir programa",
+};
+
+/**
+ * Aciona a ação pela linha da lista e confirma dentro do ProgramConfirmModal
+ * (escopo do heading, mesmo caminho de uma pessoa usando a tela).
+ */
+async function runConfirm(action: ProgramConfirmAction): Promise<void> {
+  await clickConnectedButton(new RegExp(`^${action}$`, "i"));
+  const heading = await screen.findByRole("heading", { name: TITULO_CONFIRM[action] });
+  fireEvent.click(
+    within(scopeOf(heading)).getByRole("button", { name: new RegExp(`^${action}$`, "i") }),
+  );
+}
+
+/**
+ * CA-P3-16: a confirmação não permanece aberta — some o heading **e** o
+ * backdrop fixo `z-50` (que deixaria a mensagem atrás do overlay; cenário 5
+ * da homologação).
+ */
+async function expectConfirmClosed(action: ProgramConfirmAction): Promise<void> {
+  await waitFor(() => {
+    expect(
+      screen.queryByRole("heading", { name: TITULO_CONFIRM[action] }),
+    ).not.toBeInTheDocument();
+  });
+  expect(document.querySelector(".fixed.inset-0.z-50")).toBeNull();
 }
 
 describe("Página /milon/programs — Programas (Mílon #2, TASK-010)", () => {
@@ -624,5 +698,236 @@ describe("Página /milon/programs — Programas (Mílon #2, TASK-010)", () => {
     // …e a troca delega ao hook.
     fireEvent.click(screen.getByRole("checkbox", { name: /^inativo$/i }));
     expect(state.toggleStatusFilter).toHaveBeenCalledWith("inativo");
+  });
+
+  /**
+   * Patch v4 — terminais de `handleConfirm` e navegação pós-salvar
+   * (spec.md Q4 CA-P3-13…19; plan.md §3 "Página de lista", §4 itens 2/3/5/6
+   * e §5 "O modal fecha em qualquer terminal da confirmação").
+   *
+   * Cada operação que falha **emula o contrato do hook** (plan.md §3 "Hook
+   * usePrograms"): grava `errorMsg` + `errorOrigin` no state devolvido pelo
+   * mock e relança — o re-render de fim de `handleConfirm`
+   * (`setProcessing(false)`) revela a mensagem no banner do corpo. O que se
+   * testa aqui é a decisão da **página**: fechar (ou não) a confirmação e
+   * navegar (ou não) após salvar.
+   */
+  describe("Patch v4 — terminais da confirmação e navegação pós-salvar (TASK-024)", () => {
+    const MENSAGEM_BLOQUEIO = "Adicione pelo menos um treino com exercícios para ativar";
+    const MENSAGEM_FALHA_ATIVAR = "Erro ao atualizar programa";
+    const MENSAGEM_FALHA_EXCLUIR = "Erro ao excluir programa";
+
+    it("CA-P3-13 + CA-P3-16: bloqueio da guarda na ativação fecha a confirmação e mostra banner sem retry", async () => {
+      const rascunho = makeProgram({
+        id: "prog-1",
+        title: "Ficha Verão 2026",
+        owner: DONOS[0],
+        status: "rascunho",
+      });
+      const state = setupHook({
+        programs: [rascunho],
+        filteredPrograms: [rascunho],
+        ownerFilter: DONOS[0],
+      });
+      // Guarda de ativação: o hook grava origem `bloqueio` e relança
+      // (lib/milon/hooks/usePrograms.ts — runActivation).
+      state.activate.mockImplementation(async () => {
+        state.errorMsg = MENSAGEM_BLOQUEIO;
+        state.errorOrigin = "bloqueio";
+        throw new Error(MENSAGEM_BLOQUEIO);
+      });
+
+      render(<ProgramsPage />);
+      await runConfirm("ativar");
+      await waitFor(() => expect(state.activate).toHaveBeenCalledTimes(1));
+
+      // CA-P3-16: nenhuma confirmação permanece aberta (sem backdrop z-50)…
+      await expectConfirmClosed("ativar");
+      // …a mensagem do bloqueio está legível no corpo da página…
+      expect(screen.getByText(MENSAGEM_BLOQUEIO)).toBeInTheDocument();
+      // …e o banner não tem "Tentar novamente" (exclusivo da origem `carga`).
+      expect(screen.queryByRole("button", { name: /tentar novamente/i })).not.toBeInTheDocument();
+      // CA-P3-13: o status do Programa não muda (a página não mexe na lista).
+      expect(state.programs).toHaveLength(1);
+      expect(state.programs[0]).toMatchObject({ id: "prog-1", status: "rascunho" });
+    });
+
+    it("CA-P3-14: falha de operação ao ativar fecha a confirmação e mostra banner sem retry", async () => {
+      const rascunho = makeProgram({
+        id: "prog-1",
+        title: "Ficha Verão 2026",
+        owner: DONOS[0],
+        status: "rascunho",
+      });
+      const state = setupHook({
+        programs: [rascunho],
+        filteredPrograms: [rascunho],
+        ownerFilter: DONOS[0],
+      });
+      // Falha de repositório (ex.: rede) — origem `operacao`.
+      state.activate.mockImplementation(async () => {
+        state.errorMsg = MENSAGEM_FALHA_ATIVAR;
+        state.errorOrigin = "operacao";
+        throw new Error(MENSAGEM_FALHA_ATIVAR);
+      });
+
+      render(<ProgramsPage />);
+      await runConfirm("ativar");
+      await waitFor(() => expect(state.activate).toHaveBeenCalledTimes(1));
+
+      await expectConfirmClosed("ativar");
+      expect(screen.getByText(MENSAGEM_FALHA_ATIVAR)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /tentar novamente/i })).not.toBeInTheDocument();
+      // Lista mantém o status anterior.
+      expect(state.programs[0]).toMatchObject({ id: "prog-1", status: "rascunho" });
+    });
+
+    it("CA-P3-14: falha de operação ao reativar fecha a confirmação e mostra banner sem retry", async () => {
+      const inativo = makeProgram({
+        id: "prog-3",
+        title: "Ficha Antiga",
+        owner: DONOS[1],
+        status: "inativo",
+      });
+      const state = setupHook({
+        programs: [inativo],
+        filteredPrograms: [inativo],
+        ownerFilter: DONOS[1],
+      });
+      state.reactivate.mockImplementation(async () => {
+        state.errorMsg = MENSAGEM_FALHA_ATIVAR;
+        state.errorOrigin = "operacao";
+        throw new Error(MENSAGEM_FALHA_ATIVAR);
+      });
+
+      render(<ProgramsPage />);
+      await runConfirm("reativar");
+      await waitFor(() => expect(state.reactivate).toHaveBeenCalledTimes(1));
+
+      await expectConfirmClosed("reativar");
+      expect(screen.getByText(MENSAGEM_FALHA_ATIVAR)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /tentar novamente/i })).not.toBeInTheDocument();
+      expect(state.programs[0]).toMatchObject({ id: "prog-3", status: "inativo" });
+    });
+
+    it("CA-P3-14: falha de operação ao excluir fecha a confirmação e mostra banner sem retry", async () => {
+      const rascunho = makeProgram({
+        id: "prog-1",
+        title: "Ficha Verão 2026",
+        owner: DONOS[0],
+        status: "rascunho",
+      });
+      const state = setupHook({
+        programs: [rascunho],
+        filteredPrograms: [rascunho],
+        ownerFilter: DONOS[0],
+      });
+      state.remove.mockImplementation(async () => {
+        state.errorMsg = MENSAGEM_FALHA_EXCLUIR;
+        state.errorOrigin = "operacao";
+        throw new Error(MENSAGEM_FALHA_EXCLUIR);
+      });
+
+      render(<ProgramsPage />);
+      await runConfirm("excluir");
+      await waitFor(() => expect(state.remove).toHaveBeenCalledTimes(1));
+
+      await expectConfirmClosed("excluir");
+      expect(screen.getByText(MENSAGEM_FALHA_EXCLUIR)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /tentar novamente/i })).not.toBeInTheDocument();
+      // Nada foi excluído: a lista do hook preserva o item.
+      expect(state.programs).toHaveLength(1);
+      expect(state.programs[0]).toMatchObject({ id: "prog-1", status: "rascunho" });
+    });
+
+    it("terminal de sucesso: exclusão de rascunho confirmada fecha a confirmação", async () => {
+      const rascunho = makeProgram({
+        id: "prog-1",
+        title: "Ficha Verão 2026",
+        owner: DONOS[0],
+        status: "rascunho",
+      });
+      const state = setupHook({
+        programs: [rascunho],
+        filteredPrograms: [rascunho],
+        ownerFilter: DONOS[0],
+      });
+
+      render(<ProgramsPage />);
+      await runConfirm("excluir");
+      await waitFor(() => expect(state.remove).toHaveBeenCalledTimes(1));
+
+      await expectConfirmClosed("excluir");
+      expect(state.errorMsg).toBeNull();
+      expect(screen.queryByRole("button", { name: /tentar novamente/i })).not.toBeInTheDocument();
+    });
+
+    it("CA-P3-15: erro de carga exibe 'Tentar novamente' e o acionamento recarrega a lista", async () => {
+      const state = setupHook({
+        errorMsg: "Erro ao carregar programas",
+        errorOrigin: "carga",
+      });
+
+      render(<ProgramsPage />);
+
+      expect(screen.getByText(/erro ao carregar programas/i)).toBeInTheDocument();
+      await clickConnectedButton(/tentar novamente/i);
+      expect(state.retry).toHaveBeenCalledTimes(1);
+      // Retry exclusivo desta origem — operação/bloqueio não o têm (testes acima).
+      expect(state.errorOrigin).toBe("carga");
+    });
+
+    it("CA-P3-18: salvar um programa novo navega para /milon/programs/<id> do programa criado", async () => {
+      const state = setupHook({ programs: [], filteredPrograms: [] });
+      // `save()` devolve o Program criado (plan.md §3 — contrato inalterado).
+      state.save.mockResolvedValue(
+        makeProgram({ id: "prog-criado-42", title: "Ficha Monstro 2026" }),
+      );
+
+      render(<ProgramsPage />);
+
+      await clickConnectedButton(/^(novo|criar)(\s+programa)?$/i);
+      const input = await screen.findByLabelText("Título");
+      fireEvent.change(input, { target: { value: "Ficha Monstro 2026" } });
+      await clickConnectedButton(/^salvar$/i);
+
+      await waitFor(() => expect(state.save).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(mockPush).toHaveBeenCalledTimes(1));
+      expect(mockPush).toHaveBeenCalledWith("/milon/programs/prog-criado-42");
+      // A criação também sai do modal — a pessoa termina no detalhe.
+      await waitFor(() => {
+        expect(screen.queryByRole("heading", { name: "Novo programa" })).not.toBeInTheDocument();
+      });
+    });
+
+    it("CA-P3-19: salvar a edição permanece na lista — nenhuma navegação e modal fecha", async () => {
+      const item = makeProgram({
+        id: "prog-1",
+        title: "Ficha Verão 2026",
+        status: "rascunho",
+      });
+      const state = setupHook({
+        programs: [item],
+        filteredPrograms: [item],
+        ownerFilter: DONOS[0],
+      });
+
+      render(<ProgramsPage />);
+
+      await clickConnectedButton(/^editar$/i);
+      const input = await screen.findByLabelText("Título");
+      fireEvent.change(input, { target: { value: "Ficha Verão 2026 Editada" } });
+      await clickConnectedButton(/^salvar$/i);
+
+      await waitFor(() => expect(state.save).toHaveBeenCalledTimes(1));
+      expect(savedTitleArg(state)).toBe("Ficha Verão 2026 Editada");
+      expect(state.save.mock.calls[0][1]).toBe("prog-1");
+      // Permanece em /milon/programs: nenhuma navegação…
+      expect(mockPush).not.toHaveBeenCalled();
+      // …e o modal de edição fecha.
+      await waitFor(() => {
+        expect(screen.queryByRole("heading", { name: "Editar programa" })).not.toBeInTheDocument();
+      });
+    });
   });
 });

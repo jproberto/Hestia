@@ -65,6 +65,14 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 ---
 
+## Regra — cenários de teste bloqueados por dependência (pedido humano 2026-09-30)
+
+- **Repassar, não deixar órfão:** cenário de teste que não pode ser executado numa feature porque depende de uma feature futura deve ser **repassado para a feature que o libera** — entra no escopo de teste (`test-scenarios.md`) dessa feature futura, em vez de ser descartado ou adiado sem registro.
+- **Exemplo identificado (feature #2 Programas):** os cenários **pós-ativação** (guarda liberada com `hasWorkoutWithExercise = true`) dependem da **feature #3 — Treinos + séries planejadas** e devem ser repassados a ela. Contexto: na #2 a UI nunca passa a flag (`app/milon/programs/page.tsx` chama `usePrograms()` sem opções → default `false`), então toda ativação é bloqueada na tela; o efeito colateral (desativar o programa anterior do mesmo dono) só é exercitado no fluxo de ativação em `__tests__/lib/milon/hooks/usePrograms.test.ts`, bloco "4. Ativação/reativação com hasWorkoutWithExercise = true" — cobertura atual. A regra pura correspondente (`guardaAtivacao`/`aplicarEfeitoColateralAtivacao`) também tem teste direto em `__tests__/lib/milon/program-utils.test.ts`.
+- A regra vale para qualquer cenário bloqueado do módulo (incluindo os da home/feature #4 — Treino do dia, quando forem registrados).
+
+---
+
 ## Fora de Escopo (YAGNI — decisão de discovery 2026-09-12)
 
 - **RPE/RIR:** fora do backlog por decisão explícita do dono — não entra nem como V2/V3.

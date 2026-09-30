@@ -284,3 +284,119 @@ Fora desta feature: o conteúdo dos treinos (exercícios, séries, ordem A/B/C d
 - **A (duas abas reais, sem placeholder)** venceu rótulo "Biblioteca" (redundância com o título) e aba-placeholder (armação morta).
 - **D11 Programas como padrão** venceu manter a biblioteca como destino: o atalho do dashboard passa a mostrar o módulo novo; a troca é um alvo de redirect, reversível barato.
 - **D12 destaque no componente compartilhado** venceu "sem destaque" (aba ativa invisível) e "só Mílon" (bifurcação permanente por módulo), aceitando o custo visual no Pluto.
+
+---
+
+## Patch v4 — Achados da homologação (B/C) (2026-09-30)
+
+> **Formato:** seção nova demarcada, anexada à spec sem editar nem apagar nada das seções 1–7 nem do Patch v3 — ambos permanecem integralmente válidos. Este patch soma a v4 da mesma spec.
+>
+> **Origem:** três achados da homologação manual encerrada após o Patch v3, com as decisões **já tomadas pelo humano** (caminhos B e C) — este amendment grava as decisões; não há hipótese aberta nem discovery novo. A numeração segue a sequência existente: D15+, R13+, CA-P3-13+.
+
+### Q1. Escopo do patch — o que muda e o que não muda
+
+**Muda:**
+
+1. Comunicação de erro na tela de Programas: passa a haver distinção entre **erro de carga**, **erro de operação** e **bloqueio de domínio** (D15) — o modal de confirmação fecha nos dois últimos e o botão "Tentar novamente" fica exclusivo da carga.
+2. Nova rota de **detalhe do programa** `/milon/programs/[id]`, com cabeçalho do programa e sem conteúdo de treinos (D16).
+3. Navegação pós-salvar: **criação vai ao detalhe; edição permanece na lista** (D17).
+4. Nota de handoff: cenários de teste não executáveis agora são repassados às features que os liberam (seção Q7).
+
+**Não muda:**
+
+- **Toda a regra da spec v2 e do Patch v3 permanece intocada:** ciclo de vida rascunho→ativo⇄inativo, unicidade do ativo por dono, guarda de ativação, edição por status, confirmações, exclusão de rascunho, filtros, ordenação, sugestões sorteadas, D9–D14 e as duas abas.
+- **Modal de confirmação:** mesmo componente, mesmos rótulos, títulos e estados de processamento — só muda **quando ele fecha** (D15).
+- **Formulário de criação/edição:** inalterado (validação de título vazio, sugestão sorteada, mensagem no modal).
+- **Rotas existentes:** `/milon/programs` e `/milon/exercises` inalteradas; nenhuma aba nova (D10 do Patch v3 mantém exatamente duas).
+- **Erro de carga:** mantido exatamente como homologado — banner com "Tentar novamente".
+- **Banco e migração:** **nenhum** — a página de detalhe lê o modelo de dados já existente (id, título, dono, status, data de criação).
+
+### Q2. Decisões do patch (D15–D17)
+
+- **D15 — Mensagem de erro: três origens, modal fecha, "Tentar novamente" só na carga (caminho B — decisão exclusiva do humano):** quando a operação confirmada (ativar, reativar, excluir) termina **bloqueada por regra de domínio** (guarda de ativação; regra "somente rascunho pode excluir") **ou falha como erro de operação** (ex.: rede), o **modal de confirmação fecha** e a mensagem aparece em **banner no corpo da página, sem botão "Tentar novamente"**. O botão "Tentar novamente" fica **exclusivo do erro de carga** (falha do fetch da lista), que continua com banner + retry. **Motivo do achado (cenário 5 da homologação):** hoje a mensagem de bloqueio/operação cai em `components/milon/ProgramList.tsx` atrás do backdrop fixo de nível `z-50` de `components/milon/ProgramConfirmModal.tsx`, porque o modal permanece aberto por design do catch (`app/milon/programs/page.tsx`, comentário "Mantém a confirmação aberta") — a pessoa não lê a mensagem. **Base em disco:** `lib/milon/hooks/usePrograms.ts` registra bloqueio e falha de operação no mesmo estado de mensagem da lista (linhas 205–208 na ativação/reativação; 241–247 na exclusão, `setErrorMsg` + `throw`) e `components/milon/ProgramList.tsx` (linhas 93–97) renderiza a mensagem com "Tentar novamente" para **toda** origem — carga, operação e bloqueio indistintamente.
+- **D16 — Página de detalhe do programa (caminho C, escopo mínimo — decisão exclusiva do humano):** nova rota `/milon/programs/[id]` correspondente à página de **detalhe do programa**, composta **apenas pelo cabeçalho do programa — título, dono e status** — derivados do modelo de dados existente (os mesmos campos que a lista já exibe). **Sem placeholder de treinos e sem seção de treinos:** os Treinos chegam na feature 3 e passarão a morar nessa página; nesta feature a tela é só o cabeçalho. A página segue o layout do módulo Mílon, **sem aba nova** (D10 do Patch v3 segue valendo).
+- **D17 — Navegação pós-salvar: criação vai ao detalhe, edição permanece na lista (YAGNI justificado):** ao **salvar um programa novo**, a pessoa é navegada para `/milon/programs/<id>` do programa recém-criado. Ao **salvar uma edição**, ela **permanece na lista** `/milon/programs`. **Justificativa:** nesta feature a página de detalhe só tem cabeçalho (D16) — a edição é operação pontual sobre o container e a lista já reflete o dado atualizado; redirecionar a edição para o detalhe acrescentaria um passo de navegação sem entregar informação nova. Com a feature 3 fazendo a edição tocar conteúdo dentro do programa, a navegação pós-edição pode ser revisitada — declarado como evolução futura, **não** como pendência desta feature.
+
+### Q3. Requisitos do patch (R13–R21)
+
+**Origem da mensagem (D15)**
+
+- **R13:** a tela de Programas distingue a **origem** de cada mensagem em três classes: **carga** (falha ao buscar a lista), **operação** (falha de ativação, reativação ou exclusão em execução) e **bloqueio de domínio** (guarda de ativação ou regra "somente rascunho pode excluir"). Toda mensagem aparece como banner no corpo da página, na mesma área de erro já usada na tela.
+- **R14 (carga):** erro de carga → banner com o botão "Tentar novamente", cujo acionamento recarrega a lista — comportamento já homologado, mantido sem mudança.
+- **R15 (bloqueio de domínio):** quando a pessoa confirma ativação, reativação ou exclusão e a regra de domínio bloqueia a operação, o **modal de confirmação fecha** e a mensagem do bloqueio aparece em banner **sem botão "Tentar novamente"**; status e lista permanecem como estavam. Para tentar de novo, a pessoa repete a ação pela via normal (botão na lista), quando o bloqueio deixar de existir.
+- **R16 (erro de operação):** falha de execução (ex.: rede) em ativação, reativação ou exclusão segue o mesmo tratamento do bloqueio: **modal fecha**, banner **sem botão de retry**, estado anterior preservado — nenhum status muda.
+- **R17 (visibilidade):** nenhuma mensagem de bloqueio ou de operação fica atrás do modal: como o modal fecha (D15), o banner no corpo da página é lido sem sobreposição — é o reparo direto do cenário 5 da homologação.
+
+**Página de detalhe (D16/D17)**
+
+- **R18 (rota de detalhe):** `/milon/programs/[id]` serve a página de detalhe do programa indicado pelo endereço, exibindo **apenas o cabeçalho — título, dono e status** — derivado do modelo de dados existente, dentro do layout do módulo Mílon (duas abas do Patch v3, nenhuma aba nova). A página **não** contém seção, título, mensagem ou placeholder de treinos.
+- **R19 (id desconhecido):** um endereço que não corresponde a nenhum programa não pode exibir programa errado nem tela em branco sem explicação — segue o padrão de erro/estado vazio já usado no módulo.
+- **R20 (navegação pós-criação):** ao salvar um programa novo, o destino é `/milon/programs/<id>` do programa recém-criado, com o cabeçalho dele; a lista não é o destino desse caminho. O fluxo de criação já recebe o programa salvo de volta (`save` devolve o Program criado) — a base para navegar existe sem mudança de contrato.
+- **R21 (navegação pós-edição):** ao salvar a edição de um programa existente, a pessoa permanece em `/milon/programs`, com a lista refletindo o dado atualizado — **sem** navegação para o detalhe (D17).
+
+### Q4. Critérios de aceite novos (testáveis) — CA-P3-13 … CA-P3-21
+
+- **CA-P3-13 (bloqueio de domínio):** Dado que a pessoa confirma a ativação de um Programa sem conteúdo mínimo (guarda vigente nesta feature), quando o bloqueio é apurado, então o modal de confirmação **fecha**, a mensagem do bloqueio aparece em banner no corpo da página e **esse banner não tem botão "Tentar novamente"**; o status do Programa não muda.
+- **CA-P3-14 (erro de operação):** Simulada falha de operação (ex.: rede) na confirmação de ativar, reativar ou excluir, então o modal fecha, a mensagem aparece em banner **sem** "Tentar novamente" e a lista mantém o status anterior.
+- **CA-P3-15 (erro de carga):** Simulada falha do fetch da lista, então o banner de erro exibe "Tentar novamente" e o acionamento recarrega a lista — retry presente **somente** nesta origem de erro.
+- **CA-P3-16 (visibilidade):** Após qualquer confirmação que termina em bloqueio ou falha de operação, **não permanece modal de confirmação aberto** sobre a tela e a mensagem está legível no corpo da página — o cenário 5 da homologação (mensagem atrás do backdrop) fica resolvido.
+- **CA-P3-17 (rota de detalhe):** Dado que a pessoa acessa `/milon/programs/<id>` de um programa existente (navegação pós-criação, digitação no navegador ou refresh), então a página exibe título, dono e status daquele programa e **não** exibe qualquer seção ou texto de treinos.
+- **CA-P3-18 (navegação pós-criação):** Dado que a pessoa cria um programa novo e salva, então ela termina em `/milon/programs/<id>` do programa criado, vendo o cabeçalho dele.
+- **CA-P3-19 (navegação pós-edição):** Dada a edição salva de um programa existente, então a pessoa permanece em `/milon/programs` com a lista atualizada — sem passar pela página de detalhe.
+- **CA-P3-20 (sem placeholder):** A página de detalhe não exibe placeholder de treinos: nenhuma mensagem do tipo "Treinos em breve", nenhuma seção de treinos, nenhuma lista vazia de treinos — a tela contém só o cabeçalho do programa.
+- **CA-P3-21 (portão do processo):** Suíte completa verde (nenhum teste existente quebra) com coverage ≥ 80% mantido; `test-report.json` regenerado antes da review (gate do processo).
+
+### Q5. Fora de escopo do patch (YAGNI)
+
+- **Placeholder ou seção de treinos na página de detalhe** — feature 3; recusado explicitamente pelo humano ("Treinos em breve" não entra).
+- **Entrada na página de detalhe por clique/linha da lista de Programas** — não decidida neste amendment; as entradas especificadas são a navegação pós-criação (R20) e o acesso direto por endereço (R18).
+- **Editar, ativar, reativar ou excluir a partir da página de detalhe** — fora; as ações continuam na lista.
+- **Navegação pós-edição para o detalhe** — recusada em D17 com justificativa; revisitar só se a feature 3 mudar o que a edição toca.
+- **Nova aba ou rota de navegação** — fora (D10 do Patch v3: exatamente duas abas).
+- **Botão "Tentar novamente" em erro de operação ou bloqueio de domínio** — recusado em D15.
+- **Migração ou mudança de dados** — nenhuma; o patch não toca em banco.
+- **Qualquer mudança de regra da spec v2 ou do Patch v3** — intocada por definição.
+
+### Q6. Compatibilidade com a spec v2 e com o Patch v3
+
+- A frase da v2 "Falha em qualquer ação mostra mensagem de erro visível, preserva o estado anterior e **permite tentar de novo**" ganha especificação em D15/R15/R16: a tentativa de novo é **repetir a ação pela via normal da lista**; o botão "Tentar novamente" no banner é exclusivo do erro de carga. Continua valendo que nada muda silenciosamente — status intacto e mensagem visível.
+- A frase da v2 "**nenhuma ação fecha tela** ou muda status silenciosamente no erro" não é contrariada: quem fecha é o **modal de confirmação** (D15); a pessoa permanece na mesma tela de Programas, com a mensagem lida no corpo da página.
+- O CA da v2 "Simulada falha em ativação, reativação ou exclusão, então a mensagem de erro fica visível, o status da lista não muda e nenhuma tela fecha silenciosamente" continua verificado — este patch **acrescenta** o fechamento do modal e a ausência do retry, sem remover nada.
+- O Patch v3 permanece integral: nenhuma rota muda, nenhuma aba nova, D9–D14 intactos.
+
+### Q7. Nota de handoff — cenários repassados às features que os liberam (achado 3)
+
+Requisito de **processo**, não de produto: cenários de teste desta spec que **não podem ser executados agora** porque dependem de conteúdo de treino (feature 3) são **repassados à feature que os libera**, em vez de ficarem adormecidos ou virarem pendência desta feature. Exemplos já identificados na homologação:
+
+- ativação **liberada** pela guarda com `hasWorkoutWithExercise` verdadeiro (o Programa tem ≥1 treino com ≥1 exercício) — correspondente à seção de guarda de ativação da spec v2;
+- reativação liberada pelo mesmo critério de conteúdo mínimo;
+- o efeito colateral (o ativo anterior do mesmo dono fica inativo) exercitado sobre programa com conteúdo real.
+
+**Onde fica o registro:** `.agents/modules/milon/backlog.md` (backlog do módulo Mílon), anotado na fase de documentação pelo **Mnemósine**, apontando a feature 3 como dona desses cenários. Esta nota **não é critério de aceite** da feature 2 — não gera teste, task nem gate; é handoff de rastreio para não perder os cenários.
+
+### Q8. Impactos esperados (arquivos e testes, por leitura em disco)
+
+**Produto/arquivos:**
+
+- `components/milon/ProgramList.tsx` — o banner deixa de ser único: passa a exibir retry **só** para erro de carga (hoje rose + "Tentar novamente" para toda mensagem, linhas 93–97).
+- `lib/milon/hooks/usePrograms.ts` — bloqueio de domínio e falha de operação deixam de alimentar indistintamente a mesma mensagem da lista (hoje `setErrorMsg` + `throw`, linhas 205–208 e 241–247); a origem precisa chegar até a tela para R13.
+- `app/milon/programs/page.tsx` — hoje mantém o modal aberto no erro (comentário "Mantém a confirmação aberta"); com D15 o modal fecha em bloqueio e falha, com a mensagem permanecendo visível. O mesmo arquivo recebe a navegação pós-criação (R20) mantendo a edição na lista (R21).
+- Rota nova `app/milon/programs/[id]/page.tsx` — página de detalhe com cabeçalho (D16/R18); sem seção de treinos.
+- `components/milon/ProgramConfirmModal.tsx` — inalterado (D15 muda quem o fecha, não o componente).
+
+**Testes:**
+
+- `__tests__/components/milon/ProgramList.test.tsx` — cenários do banner passam a separar carga (com retry) de operação/bloqueio (sem retry).
+- `__tests__/lib/milon/hooks/usePrograms.test.ts` — origem da mensagem (carga × operação × bloqueio) e fechamento da confirmação.
+- `__tests__/app/milon/programs/page.test.tsx` — modal fecha em bloqueio/falha com banner legível (CA-P3-13/14/16) e navegação pós-criação vs permanência na lista na edição (CA-P3-18/19).
+- Teste novo da rota de detalhe (caminho espelhado em `__tests__/app/milon/programs/`) — CA-P3-17 e CA-P3-20.
+- `.agents/modules/milon/02-programas/test-scenarios.md` — ganha os cenários do Patch v4.
+- `.agents/modules/milon/02-programas/test-report.json` — regenerado por Minos: a rota nova e o teste novo alteram contagens e cobertura.
+
+### Q9. Riscos e Dependências (patch)
+
+- **Comportamento homologado muda de propósito:** o modal hoje permanece aberto no erro por decisão de implementação; D15 inverte isso — fica declarado para o Argos avaliar o diff como mudança aprovada, não regressão.
+- **Mensagem sem retry pode parecer "travada":** mitigado por R15/R17 — a ação se repete pela via normal da lista e a mensagem permanece visível; se na homologação a pessoa pedir retry também na operação, é decisão nova, não ambiguidade desta spec.
+- **Página de detalhe com endereço inválido:** R19 amarra ao padrão existente do módulo; nenhum dado de outro programa pode aparecer.
+- **Handoff dos cenários (Q7):** se o registro no `backlog.md` do módulo não for feito na documentação, os cenários da feature 3 se perdem — é a única pendência de processo declarada aqui.
+- **Dependências:** nenhuma dependência nova de banco ou de outra feature; a feature 3 continua sendo quem entrega o conteúdo de treino e quem poderá motivar revisitar a navegação pós-edição (D17).

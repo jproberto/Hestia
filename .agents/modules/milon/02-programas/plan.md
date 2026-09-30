@@ -199,3 +199,136 @@ Cada item da spec seção 3 tem task: campos e tela própria (001/010), status e
 - **TASK-014:** `components/milon/MilonLayout.tsx` exporta `navItems` com exatamente 2 itens: `href="/milon/exercises" label="Exercícios"` e `href="/milon/programs" label="Programas"`.
 - **TASK-015:** `components/layout/ModuleLayout.tsx` renderiza `navItems` com `aria-current="page"` no item ativo derivado de `usePathname()`; busca por `aria-current` no componente retorna ocorrências.
 - **TASK-016:** `app/dashboard/page.tsx` contém exatamente `"Módulo de Acompanhamento de Treinos e Evolução"` e `"Módulo Orçamentário e Financeiro"`; busca pelos textos antigos retorna 0.
+
+---
+
+# Patch v4 — Origens de mensagem, rota de detalhe e navegação pós-salvar (Aditivo ao Plano v1 + Patch v3)
+
+> **Objetivo do patch:** (B) separar as três origens de mensagem da tela de Programas — carga continua com banner + "Tentar novamente"; bloqueio de domínio e erro de operação fecham o `ProgramConfirmModal` e exibem banner **sem** retry (D15/R13–R17); (C) criar a rota `/milon/programs/[id]` exibindo **apenas o cabeçalho** do programa (D16/R18/R19) e navegar para ela ao **criar**, permanecendo na lista ao **editar** (D17/R20/R21). **Sem migração SQL, sem bump de versão.**
+
+**Arquitetura do patch:** Continua o Mapa de Camadas pós-41/47/52. O canal de origem entra como **segundo campo de estado** em `lib/milon/hooks/usePrograms.ts` (o `errorMsg` homologado mantém nome e tipo) e vira uma prop obrigatória em `components/milon/ProgramList.tsx`, que passa a decidir o retry pela origem. O fechamento do modal sai do catch "Mantém a confirmação aberta" e passa a ocorrer em **todos** os terminais de confirmação em `app/milon/programs/page.tsx`, que também consome o `Program` devolvido por `save()` para navegar na criação. A página de detalhe é uma rota nova client component com fetch em hook dedicado `useProgramDetail(id)` sobre o standalone `findProgramByIdStandalone` já existente no barrel `db/programs`.
+
+**Tech Stack:** inalterada — Next.js 16 App Router (client components; `useParams`/`useRouter` de `next/navigation`), React 18, Vitest + Testing Library, Storybook. Nenhum toque em banco.
+
+## Restrições Globais do Patch v4
+- **Nenhuma migração SQL nova:** o patch só lê o modelo já existente (`id`, `title`, `owner`, `status`, `created_at`, `created_by`); nenhum arquivo em `utils/migrations/` é criado ou editado.
+- **Sem task de bump (SemVer):** nenhuma alteração de versão de pacote ou de contrato público de lib.
+- **`components/milon/ProgramConfirmModal.tsx` inalterado** — D15 muda *quem* fecha o modal (a página), não o componente: mesmos rótulos, títulos, estados de processamento e backdrop.
+- **Spec v2 e Patch v3 íntegros:** ciclo de vida rascunho→ativo⇄inativo, unicidade do ativo por dono, guarda de ativação, edição por status, confirmações, exclusão de rascunho, filtros, ordenação, sugestões, D9–D14 e as duas abas permanecem; nenhuma aba nova e nenhuma rota além de `/milon/programs/[id]` é acrescentada.
+- **`save()` não muda de contrato:** já devolve o `Program` criado (`UseProgramsReturn.save`), portanto R20 consome o retorno existente sem alterar assinatura.
+- **Formulário de criação/edição intocado:** validação de título não-vazio, sugestão sorteada e mensagem de erro dentro do modal seguem como homologado (erro de save continua não alimentando a lista).
+- **Erro de carga da lista mantido exatamente:** banner + "Tentar novamente" + recarregar (R14/CA-P3-15).
+- **Nenhum texto de treinos em `/milon/programs/[id]`** — sem placeholder, sem seção, sem "Treinos em breve" (CA-P3-20); a feature 3 é quem traz treinos.
+- **Sem entrada na lista para o detalhe (Q5):** `ProgramList.tsx` não ganha link, href nem clique que navegue para `/milon/programs/<id>`; as únicas entradas do detalhe são a navegação pós-criação (R20) e o acesso direto por endereço (R18). Editar/ativar/reativar/excluir a partir do detalhe também ficam fora — as ações continuam na lista.
+- Proibições do Mapa de Camadas seguem valendo: sem `use-cases/`, `schemas/` (Zod), `mappers.ts`, `services/` ou factories `createXService`; sem `@supabase/*` fora de `lib/shared/`; UI consome dados só via `lib/milon/db/*`; tipos só via `lib/milon/types.ts`.
+
+## 1. Arquitetura do Patch v4
+
+### Item B — três origens de mensagem (D15, R13–R17)
+- `lib/milon/hooks/usePrograms.ts` mantém `errorMsg: string | null` e ganha `errorOrigin: ProgramErrorOrigin | null`, com quatro pontos de gravação já mapeados no código: efeito de montagem e `fetchList` (hoje linhas 81–99 e 137–149) → origem `carga`; bloqueio da guarda de ativação/reativação (hoje 205–208) e regra "somente rascunho pode excluir" (hoje 241–246) → origem `bloqueio`; falha de repositório em ativar/reativar (hoje 222–226) e em excluir (hoje 250–254) → origem `operacao`; todo caminho de sucesso zera os dois campos. `save()` continua fora desse canal (erro fica no modal).
+- `lib/milon/types.ts` recebe o tipo union `ProgramErrorOrigin` com exatamente três valores literais: `carga`, `operacao`, `bloqueio` — fonte única consumida pelo hook e pelo componente.
+- `components/milon/ProgramList.tsx` ganha a prop obrigatória `errorOrigin` e deixa de mostrar retry para toda mensagem (hoje 93–97): o botão "Tentar novamente" só é renderizado quando há erro **e** a origem é `carga`; para `operacao` e `bloqueio` só a mensagem, no mesmo banner do corpo da página.
+- `app/milon/programs/page.tsx` repassa `errorOrigin` do hook ao `ProgramList` e fecha a confirmação em **todos** os terminais de `handleConfirm` (sucesso, bloqueio e falha), substituindo o comentário "Mantém a confirmação aberta" — assim a mensagem nunca fica atrás do backdrop `z-50` (R17/CA-P3-16).
+
+### Item C — rota de detalhe e navegação (D16/D17, R18–R21)
+- **Create** `lib/milon/hooks/useProgramDetail.ts` — hook dedicado de um único registro (não reutiliza `usePrograms`, que carrega lista inteira, filtros e estado de confirmação): recebe `id`, busca via `findProgramByIdStandalone` do barrel `lib/milon/db/programs.ts`, devolve `program`, `loading`, `error`, `retry`, no padrão promise-chain + flag `cancelled`.
+- **Create** `app/milon/programs/[id]/page.tsx` — client component; lê o parâmetro com `useParams` de `next/navigation` (Next 16 entrega `params` como Promise em client components; `useParams` é o caminho síncrono e já aparece mockado nos testes do projeto); compõe `MilonLayout` com `pageTitle="Programa"` e renderiza **só** o cabeçalho: título com token `font-display`, dono e badge de status. Quatro estados mutuamente exclusivos: carregando, falha de fetch (banner com "Tentar novamente", mesmo padrão de carga do módulo), id desconhecido (estado de erro/estado vazio do padrão do módulo, com explicação) e cabeçalho do programa.
+- `app/milon/programs/page.tsx` — na criação, captura o retorno de `save()` e faz `push` para `/milon/programs/<id>`; na edição, não navega (permanece na lista, CA-P3-19).
+- A aba "Programas" já fica ativa na rota de detalhe pela regra de prefixo do Patch v3 (`pathname.startsWith(item.href + '/')` em `components/layout/ModuleLayout.tsx`) — nenhuma mudança é necessária nesse arquivo.
+
+## 2. Componentes (Create/Modify/Test/Docs) — Patch v4
+
+**Create:**
+- `lib/milon/hooks/useProgramDetail.ts` — fetch de um programa por id (TASK-027).
+- `app/milon/programs/[id]/page.tsx` — página de detalhe com cabeçalho (TASK-027).
+
+**Modify:**
+- `lib/milon/types.ts` — adiciona `ProgramErrorOrigin` (TASK-023).
+- `lib/milon/hooks/usePrograms.ts` — estado `errorOrigin` + gravação nas quatro origens (TASK-023).
+- `components/milon/ProgramList.tsx` — prop `errorOrigin`, retry exclusivo da carga, import de `STATUS_LABEL` (TASK-023).
+- `components/milon/ProgramList.stories.tsx` — stories de erro por origem (TASK-023).
+- `lib/milon/program-utils.ts` — exporta `STATUS_LABEL` (rascunho/ativo/inativo), que passa a ser a única fonte dos rótulos de status (TASK-023).
+- `app/milon/programs/page.tsx` — fecha a confirmação em todos os terminais, repassa `errorOrigin`, navega na criação (TASK-025).
+- `lib/milon/hooks/index.ts` — re-exporta `useProgramDetail` (TASK-027).
+
+**Inalterado (declaração explícita):** `components/milon/ProgramConfirmModal.tsx`, `components/milon/ProgramModal.tsx`, `components/milon/MilonLayout.tsx`, `components/layout/ModuleLayout.tsx`, `app/milon/exercises/page.tsx`, `app/dashboard/page.tsx`, `lib/milon/repositories/*`, `lib/milon/db/*`, `utils/migrations/*`.
+
+**Test (Minos cria; caminhos travados aqui):**
+- `__tests__/lib/milon/hooks/usePrograms.test.ts` — origem da mensagem nas 4 gravações (TASK-022).
+- `__tests__/components/milon/ProgramList.test.tsx` — banner com retry só na carga (TASK-022).
+- `__tests__/app/milon/programs/page.test.tsx` — modal fecha + navegação pós-criação/edição (TASK-024).
+- `__tests__/lib/milon/hooks/useProgramDetail.test.ts` (TASK-026).
+- `__tests__/app/milon/programs/[id]/page.test.tsx` (TASK-026).
+- `.agents/modules/milon/02-programas/test-scenarios.md` — ganha os cenários Dado/Quando/Então do Patch v4 (TASK-028).
+- `.agents/modules/milon/02-programas/test-report.json` — regenerado por Minos (rota nova + testes novos mudam contagens/cobertura) (TASK-029).
+
+**Docs:** registro do handoff dos cenários de treino para a feature 3 (spec Q7, `.agents/modules/milon/backlog.md`) é **fora deste plano** — Mnemósine o faz na fase de documentação; não gera task nem gate aqui.
+
+## 3. Contratos do Patch v4 (descrições textuais, sem implementação)
+
+- **Tipo de origem (`lib/milon/types.ts`):** union de string literal exportada como `ProgramErrorOrigin` com exatamente três valores: `carga`, `operacao`, `bloqueio` (sem acento, ASCII). Nenhum quarto valor.
+- **Hook `usePrograms` (estado):** `UseProgramsReturn` ganha o campo `errorOrigin: ProgramErrorOrigin | null`, nulo quando não há mensagem. Regras de gravação: falha do fetch da lista (montagem e `fetchList`) grava mensagem com origem `carga`; bloqueio da guarda de ativação/reativação e regra de exclusão de não-rascunho grava origem `bloqueio`; falha de repositório em ativar, reativar e excluir grava origem `operacao`; qualquer sucesso zera `errorMsg` e `errorOrigin`; `save()` não grava em nenhum dos dois (relança para o modal). Mensagens atuais preservadas literalmente.
+- **ProgramList (props):** acrescenta `errorOrigin: ProgramErrorOrigin | null` (obrigatória, nullable) ao contrato já existente. Renderização do banner: a mensagem continua no mesmo bloco do corpo; o botão "Tentar novamente" aparece **somente** quando houver `error` e `errorOrigin` for `carga`; para `operacao` ou `bloqueio` renderiza apenas a mensagem. Demais props e estados (loading, empty, noResults, filtros, ações) inalterados.
+- **Rótulos de status (`lib/milon/program-utils.ts`):** exporta o mapa de rótulos de status (`Rascunho`, `Ativo`, `Inativo`) indexado por `ProgramStatus`; `ProgramList` e a página de detalhe importam dele — a constante local deixa de existir em `ProgramList.tsx`.
+- **Página de lista (`app/milon/programs/page.tsx`):** `handleConfirm` encerra com o fechamento da confirmação em **qualquer** terminal — sucesso, bloqueio de domínio ou falha de operação — limpendo o estado local de confirmação e o estado do hook, e devolvendo o processamento a falso; a mensagem permanece no banner do corpo via `errorMsg`/`errorOrigin`. `handleModalSave` na criação usa o `Program` devolvido por `save(title)` e navega para `/milon/programs/` concatenado com o `id` desse programa; na edição (`save(title, editingProgram.id)`) não navega. A página repassa `errorOrigin` do hook para a prop homônima do `ProgramList`. Uso de `useRouter` vindo de `next/navigation`.
+- **Hook `useProgramDetail` (`lib/milon/hooks/useProgramDetail.ts`):** função `useProgramDetail(id: string)` devolvendo `program: Program | null`, `loading: boolean`, `error: string | null` e `retry: () => Promise<void>`. Busca por `findProgramByIdStandalone` do barrel `lib/milon/db/programs` (já exportado em `lib/milon/repositories/programs.ts`). Estados: id desconhecido (standalone resolve nulo) ⇒ `program` nulo **e** `error` nulo (não-confusão entre "não existe" e "falha de rede"); falha do fetch ⇒ `error` com mensagem e `retry` recarregando; sucesso ⇒ `program` preenchido. Padrão promise-chain com flag `cancelled`; não lê nem escreve estado de `usePrograms`.
+- **Página de detalhe (`app/milon/programs/[id]/page.tsx`):** client component; id obtido via `useParams`; compõe `MilonLayout` com `pageTitle="Programa"` (sem subtítulo) e quatro estados mutuamente exclusivos: carregando ("Carregando programa…"), falha de fetch (banner rose com "Tentar novamente" ligado ao `retry`), id desconhecido ("Programa não encontrado." no cartão de estado vazio do padrão do módulo) e cabeçalho do programa (título com token `font-display`, dono e badge de status via `STATUS_LABEL`). Não importa `ProgramList`, `ProgramModal` nem `ProgramConfirmModal`; não contém qualquer seção, título, mensagem ou placeholder de treinos; nenhuma ação de editar/ativar/excluir aqui.
+- **Navegação pós-salvar:** destino da criação = `/milon/programs/<id>` com o cabeçalho do programa recém-criado; destino da edição = permanecer em `/milon/programs` com a lista atualizada.
+
+## 4. Data Flow do Patch v4
+
+1. **Carga falha:** fetch da lista rejeita → hook grava `errorMsg` + `errorOrigin='carga'` → página repassa aos dois campos → `ProgramList` renderiza banner com "Tentar novamente" → acionar chama `retry`/`reload` e a origem volta a ser `carga` no novo fetch.
+2. **Confirmação com bloqueio de domínio:** pessoa confirma no modal → hook avalia `guardaAtivacao` → grava `errorMsg` + `errorOrigin='bloqueio'` e lança → `handleConfirm` encerra **fechando** a confirmação (local e do hook) → banner legível no corpo, sem retry, status e lista intactos; nova tentativa só pela ação normal da lista.
+3. **Confirmação com falha de operação:** mesmo caminho do item 2, com origem `operacao` vinda do catch do repositório → modal fecha, banner sem retry, estado anterior preservado.
+4. **Sucesso da confirmação:** repositório grava → efeito colateral aplicado em memória → confirmação fecha (já fechava) → `errorMsg`/`errorOrigin` nulos.
+5. **Criação:** modal salva → `save()` devolve o `Program` criado → página fecha o modal e faz `push` para `/milon/programs/<id>` → a rota nova busca o registro por id e renderiza só o cabeçalho com a aba "Programas" ativa.
+6. **Edição:** `save(title, id)` devolve o programa atualizado → sem `push` → lista já refletindo o dado.
+7. **Acesso direto/refresh ao detalhe:** `useParams` lê o id → `useProgramDetail` busca no standalone → sucesso renderiza cabeçalho; id desconhecido renderiza o estado de não-encontrado; falha renderiza banner com retry.
+
+## 5. Decisões Técnicas do Patch v4 (para `context.json.decisions` via Zeus)
+
+- **Canal de origem = segundo campo (`errorOrigin`), não objeto nem código de erro (D15, caminho B):** alternativas rejeitadas — (a) *um campo objeto* `{ mensagem, origem }` substituindo `errorMsg`: quebraria o contrato homologado e toda a base de testes que lê `errorMsg` (CA-P3-21 exige suíte verde); (b) *código de erro embutido no texto* (prefixo/sufixo): acopla render a texto, é frágil a troca de mensagem e esbarra em acentuação; (c) *booleano `canRetry`*: colapsaria `operacao` e `bloqueio` em duas classes visíveis e não atenderia R13, que exige três classes na tela. Custo aceito: um estado e uma prop a mais — o menor canal que satisfaz R13 sem over-engineering.
+- **O modal fecha em qualquer terminal da confirmação:** como os três desfechos pós-confirmação (sucesso, bloqueio, falha) encerram com o modal fechado (D15/R15/R16), a página não precisa distinguir origem para decidir o fechamento — a distinção é necessária **só** para o retry do banner. Menor lógica possível, e a mensagem continua vinda do hook.
+- **`ProgramConfirmModal` não recebe nenhuma prop nova:** o componente continua puro de apresentação; mover o fechamento para a página mantém o contrato "processando/cancelar" intocado e evita re-testar o componente.
+- **Hook dedicado `useProgramDetail` em vez de reaproveitar `usePrograms`:** `usePrograms` carrega lista completa, filtros, confirmação e efeito colateral — semântica e custo errados para um registro único, e reusá-lo criaria estado fantasma na rota de detalhe. Fetch direto na página foi descartado por violar "page enxuta" do Mapa de Camadas.
+- **Cabeçalho inline na página (sem componente novo + story):** há um único consumidor e a página é limite de composição; criar `ProgramDetailHeader` exigiria story e props sem segunda utilização (YAGNI).
+- **`STATUS_LABEL` extraído para `program-utils.ts`:** dois consumidores (lista e detalhe) passam a ler o mesmo mapa de rótulos — fonte única, função pura testável; evita que a feature 3 troque rótulo em uma tela e não na outra.
+- **`useParams` para ler o id:** em Next 16 o client component recebe `params` como Promise; `useParams` devolve o valor síncrono, é o padrão do App Router e já é mockado nos testes do projeto via `vi.mock("next/navigation")`.
+- **Navegação por `router.push` de `next/navigation`:** mesmo precedente de `components/pluto/BudgetOverflowModal.tsx` e `app/login/login-form.tsx` — descartado `window.location` (recarrega a página inteira) e `<Link>` programático (não é navegação imperativa).
+- **Retry também na falha de carga do detalhe:** R19 amarra o detalhe ao "padrão de erro/estado vazio já usado no módulo", e esse padrão de carga é banner + "Tentar novamente" (R14). Não cria um segundo padrão.
+- **Aba "Programas" ativa sem código novo:** decorre da regra de prefixo já homologada no Patch v3; o patch só a trava com teste.
+
+## 6. Riscos e Mitigações do Patch v4
+
+- **Mudança de propósito de comportamento homologado:** o modal permanecia aberto no erro por decisão de implementação e D15 inverte isso — declarado para o Argos avaliar o diff como mudança aprovada, não regressão (spec Q9).
+- **Testes/stories existentes de `ProgramList` montados sem a prop nova:** a prop é obrigatória; Minos ajusta os defaults na própria task RED (TASK-022) e Hefesto ajusta as stories (TASK-023). Nenhum comportamento homologado muda — a origem `carga` continua exibindo retry.
+- **Mensagem sem retry parecer "travada":** mitigado por R15/R17 — a ação se repete pela via normal da lista e a mensagem permanece visível; se a homologação pedir retry também na operação, é decisão nova, não ambiguidade desta spec (spec Q9).
+- **Colchete no caminho `[id]` em glob/filtro de teste:** o diretório literal `[id]` é aceito por NTFS e pelo include padrão do Vitest; os comandos de teste do patch usam o prefixo do diretório `__tests__/app/milon/programs/` para que nenhum shell interprete colchete como classe de caracteres.
+- **Id desconhecido exibir programa errado ou tela vazia sem explicação:** R19 amarra aos quatro estados mutuamente exclusivos do detalhe; `findProgramByIdStandalone` devolve nulo e o estado de não-encontrado é distinto do erro de fetch (testado separadamente).
+- **"Treinos em breve" ou menção a treinos entrando por hábito:** travado por critério de busca com retorno 0 na página e no repositório (CA-P3-20).
+- **Conflito de edição em `ProgramList.tsx` entre B e C:** a extração de `STATUS_LABEL` acontece na TASK-023 e a TASK-027 apenas a consome, com dependência explícita no DAG.
+- **Cobertura cair com arquivos novos:** mitigado pela TASK-029 (suite completa, coverage ≥ 80%, `test-report.json` regenerado antes da review — CA-P3-21).
+
+## Cobertura Patch v4 → Tasks Novas (TASK-022 em diante)
+
+| Requisito / CA | Task(s) |
+|---|---|
+| R13 (três classes de origem) | TASK-022 (RED), TASK-023 (origem no hook/na lista) |
+| R14 / CA-P3-15 (carga com retry) | TASK-022 (banner), TASK-023 (retry só na carga), TASK-024/025 (página repassa origem) |
+| R15 / CA-P3-13 (bloqueio: modal fecha, sem retry) | TASK-024 (RED), TASK-025 (fecha em todos os terminais) |
+| R16 / CA-P3-14 (falha de operação: modal fecha, sem retry) | TASK-024 (RED), TASK-025 (fecha em todos os terminais) |
+| R17 / CA-P3-16 (mensagem legível, sem backdrop) | TASK-024 (RED), TASK-025 (fechamento fora do catch) |
+| R18 / CA-P3-17 (rota de detalhe com cabeçalho) | TASK-026 (RED), TASK-027 (hook + página) |
+| R19 (id desconhecido com explicação) | TASK-026 (RED), TASK-027 (estado de não-encontrado) |
+| R20 / CA-P3-18 (criação vai ao detalhe) | TASK-024 (RED), TASK-025 (push pós-save) |
+| R21 / CA-P3-19 (edição permanece na lista) | TASK-024 (RED), TASK-025 (sem push na edição) |
+| CA-P3-20 (sem placeholder de treinos) | TASK-026 (RED), TASK-027 (busca retorna 0) |
+| P6/Q8 (test-scenarios e test-report) | TASK-028 (cenários), TASK-029 (suite + report) |
+| CA-P3-21 (suite verde, coverage ≥ 80%) | TASK-029 |
+| Q7 (handoff de cenários de treino para a feature 3) | fora do plano — Mnemósine, na documentação |
+
+## Critérios de Substituição do Patch v4 (regra Atena)
+
+- **TASK-023:** busca por `const STATUS_LABEL` em `components/milon/ProgramList.tsx` retorna 0 (constante movida para `program-utils.ts`); busca por `errorOrigin` em `lib/milon/hooks/usePrograms.ts` retorna ocorrências.
+- **TASK-025:** busca por `Mantém a confirmação aberta` em `app/milon/programs/page.tsx` retorna 0.
+- **TASK-027:** busca case-insensitive por `treino` em `app/milon/programs/[id]/page.tsx` retorna 0; busca por `Treinos em breve` no repositório retorna 0.

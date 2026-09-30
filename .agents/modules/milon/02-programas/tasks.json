@@ -288,7 +288,7 @@
                   },
                   {
                       "id":  "TASK-016",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Dashboard: textos exatos dos cards Mílon e Pluto (D13)",
                       "description":  "Modificar app/dashboard/page.tsx: substituir o parágrafo do card Mílon (\u0027Acesse a biblioteca de exercícios da academia.\u0027) por \u0027Módulo de Acompanhamento de Treinos e Evolução\u0027; substituir o parágrafo do card Pluto (\u0027Acesse o controle de orçamento anual, categorias de receitas e despesas previstas.\u0027) por \u0027Módulo Orçamentário e Financeiro\u0027. Títulos (\u0027Mílon\u0027/\u0027Pluto\u0027), hrefs (/milon e /pluto/budget), mascotes e layout permanecem inalterados.",
                       "assignee":  "hefesto",
@@ -332,7 +332,7 @@
                   },
                   {
                       "id":  "TASK-018",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Testes: dashboard com novos textos dos cards",
                       "description":  "Atualizar __tests__/app/dashboard/page.test.tsx: renomear teste \u0027renders Milon card linking to the exercise library\u0027 para refletir destino real (ex.: \u0027renders Milon card linking to programs via redirect\u0027); adicionar asserções que travam os dois novos textos exatos (CA-P3-08); adicionar asserção que busca pelos textos antigos retorna 0 (CA-P3-10). Hrefs e títulos dos links (\u0027Mílon\u0027/\u0027Pluto\u0027) permanecem válidos.",
                       "assignee":  "minos",

@@ -165,6 +165,170 @@
         "npm run build-storybook passa sem erros",
         "test-report.json final atualizado com coverage final"
       ]
+    },
+    {
+      "id": "TASK-012",
+      "status": "pending",
+      "title": "Redirect server-side /milon → /milon/programs em app/milon/page.tsx",
+      "description": "Substituir app/milon/page.tsx (client component que compunha a biblioteca) por server component que executa redirect('/milon/programs') via next/navigation. Remove 'use client', imports de hooks/componentes da biblioteca, e toda a composição JSX. A página passa a exportar default function MilonRootPage() { redirect('/milon/programs'); }. Critério de substituição: busca por 'Biblioteca de exercícios' em app/milon/page.tsx retorna 0 (a rota raiz não compõe mais a biblioteca).",
+      "assignee": "hefesto",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "app/milon/page.tsx existe e NÃO contém 'use client'",
+        "app/milon/page.tsx importa redirect de 'next/navigation' e executa redirect('/milon/programs')",
+        "Busca por 'Biblioteca de exercícios' em app/milon/page.tsx retorna 0 ocorrências",
+        "Busca por 'useExercises' ou 'ExerciseList' ou 'ExerciseModal' em app/milon/page.tsx retorna 0",
+        "Arquivo é server component (sem 'use client' directive)"
+      ],
+      "files": ["app/milon/page.tsx"]
+    },
+    {
+      "id": "TASK-013",
+      "status": "pending",
+      "title": "Nova rota /milon/exercises com composição da biblioteca",
+      "description": "Criar app/milon/exercises/page.tsx como client component ('use client') com a mesma composição exata do antigo app/milon/page.tsx: usa useExercises, MilonLayout com pageTitle='Biblioteca de exercícios' e pageSubtitle='Cadastre uma vez e reuse nos treinos', ExerciseList, ExerciseModal, DeleteExerciseConfirm. Wiring idêntico (openCreateModal, handleEdit, handleDeleteRequest, handleModalSave, handleDeleteConfirm, handleDeleteCancel). pageTitle usa token font-display via MilonLayout → ModuleLayout.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-012"],
+      "acceptanceCriteria": [
+        "app/milon/exercises/page.tsx existe e contém 'use client'",
+        "Exporta default function MilonExercisesPage() com composição idêntica ao antigo app/milon/page.tsx",
+        "MilonLayout recebe pageTitle='Biblioteca de exercícios' e pageSubtitle='Cadastre uma vez e reuse nos treinos'",
+        "Usa useExercises, ExerciseList, ExerciseModal, DeleteExerciseConfirm com mesmo wiring",
+        "pageTitle renderizado com font-display (via ModuleLayout h1 text-3xl font-display)"
+      ],
+      "files": ["app/milon/exercises/page.tsx"]
+    },
+    {
+      "id": "TASK-014",
+      "status": "pending",
+      "title": "MilonLayout declara navItems das duas abas",
+      "description": "Modificar components/milon/MilonLayout.tsx: substituir o array vazio milonNavItems por [{href:'/milon/exercises',label:'Exercícios'},{href:'/milon/programs',label:'Programas'}]. Ordem: Exercícios primeiro, Programas segundo (P5: ordem visual não especificada; esta é a ordem declarada). Passa navItems para ModuleLayout inalterado.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-012", "TASK-013"],
+      "acceptanceCriteria": [
+        "components/milon/MilonLayout.tsx define milonNavItems com exatamente 2 itens",
+        "Item 1: href='/milon/exercises', label='Exercícios'",
+        "Item 2: href='/milon/programs', label='Programas'",
+        "navItems passado para ModuleLayout via prop",
+        "Sem itens adicionais, sem placeholders, sem comentários de exemplo"
+      ],
+      "files": ["components/milon/MilonLayout.tsx"]
+    },
+    {
+      "id": "TASK-015",
+      "status": "pending",
+      "title": "ModuleLayout destaca aba ativa derivada da URL (transversal Mílon + Pluto)",
+      "description": "Modificar components/layout/ModuleLayout.tsx: usar usePathname() de next/navigation; para cada navItem, calcular isActive = pathname === item.href || pathname.startsWith(item.href + '/'); renderizar Link com aria-current={isActive ? 'page' : undefined} e classe condicional de estilo ativo (ex.: 'border-b-2 font-semibold' na color do módulo). Mesmo comportamento para Mílon e Pluto — sem regra por módulo. Impacto transversal aceito (D12): abas do Pluto passam a exibir marca de aba ativa.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-014"],
+      "acceptanceCriteria": [
+        "components/layout/ModuleLayout.tsx importa usePathname de 'next/navigation'",
+        "Para cada navItem, calcula isActive comparando pathname com href (match exato ou prefixo + '/')",
+        "Link ativo recebe aria-current='page' e classe de estilo distinto (border-b-2 font-semibold na color do módulo)",
+        "Exatamente um link tem aria-current='page' em qualquer momento",
+        "Funciona para Mílon (/milon/exercises, /milon/programs) e Pluto (/pluto/budget, /pluto/months, /pluto/transactions) sem código condicional por módulo",
+        "Acessível: tecnologia assistiva identifica a página atual via aria-current"
+      ],
+      "files": ["components/layout/ModuleLayout.tsx"]
+    },
+    {
+      "id": "TASK-016",
+      "status": "pending",
+      "title": "Dashboard: textos exatos dos cards Mílon e Pluto (D13)",
+      "description": "Modificar app/dashboard/page.tsx: substituir o parágrafo do card Mílon ('Acesse a biblioteca de exercícios da academia.') por 'Módulo de Acompanhamento de Treinos e Evolução'; substituir o parágrafo do card Pluto ('Acesse o controle de orçamento anual, categorias de receitas e despesas previstas.') por 'Módulo Orçamentário e Financeiro'. Títulos ('Mílon'/'Pluto'), hrefs (/milon e /pluto/budget), mascotes e layout permanecem inalterados.",
+      "assignee": "hefesto",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "app/dashboard/page.tsx contém exatamente 'Módulo de Acompanhamento de Treinos e Evolução' no card Mílon",
+        "app/dashboard/page.tsx contém exatamente 'Módulo Orçamentário e Financeiro' no card Pluto",
+        "Busca por 'Acesse a biblioteca de exercícios da academia.' em app/dashboard/page.tsx retorna 0",
+        "Busca por 'Acesse o controle de orçamento anual, categorias de receitas e despesas previstas.' em app/dashboard/page.tsx retorna 0",
+        "Hrefs dos cards inalterados: Mílon → '/milon', Pluto → '/pluto/budget'"
+      ],
+      "files": ["app/dashboard/page.tsx"]
+    },
+    {
+      "id": "TASK-017",
+      "status": "pending",
+      "title": "Testes: mover biblioteca para /milon/exercises + teste de redirect",
+      "description": "Mover __tests__/app/milon/page.test.tsx → __tests__/app/milon/exercises/page.test.tsx (mesmo conteúdo, import da página muda para '@/app/milon/exercises/page'). Adicionar NOVO arquivo de teste __tests__/app/milon/page.test.tsx cobrindo o redirect server-side: renderiza app/milon/page.tsx (server component) e verifica que redirect('/milon/programs') é chamado (mock de next/navigation.redirect). Critérios mapeados: CA-P3-01 (redirect), CA-P3-02 (biblioteca na rota nova).",
+      "assignee": "minos",
+      "dependencies": ["TASK-012", "TASK-013"],
+      "acceptanceCriteria": [
+        "__tests__/app/milon/exercises/page.test.tsx existe e importa '@/app/milon/exercises/page'",
+        "Todos os ~15 cenários originais da biblioteca passam na nova rota (mocks de useExercises idênticos)",
+        "__tests__/app/milon/page.test.tsx (novo) testa redirect: mocka next/navigation.redirect, renderiza page.tsx, verifica redirect chamado com '/milon/programs'",
+        "CA-P3-01 coberto: acesso a /milon redireciona para /milon/programs",
+        "CA-P3-02 coberto: /milon/exercises exibe biblioteca com título 'Biblioteca de exercícios' e funcionalidades homologadas",
+        "npm test -- __tests__/app/milon/exercises/page.test.tsx passa",
+        "npm test -- __tests__/app/milon/page.test.tsx passa"
+      ],
+      "files": ["__tests__/app/milon/exercises/page.test.tsx", "__tests__/app/milon/page.test.tsx"]
+    },
+    {
+      "id": "TASK-018",
+      "status": "pending",
+      "title": "Testes: dashboard com novos textos dos cards",
+      "description": "Atualizar __tests__/app/dashboard/page.test.tsx: renomear teste 'renders Milon card linking to the exercise library' para refletir destino real (ex.: 'renders Milon card linking to programs via redirect'); adicionar asserções que travam os dois novos textos exatos (CA-P3-08); adicionar asserção que busca pelos textos antigos retorna 0 (CA-P3-10). Hrefs e títulos dos links ('Mílon'/'Pluto') permanecem válidos.",
+      "assignee": "minos",
+      "dependencies": ["TASK-016"],
+      "acceptanceCriteria": [
+        "Teste renomeado para não descrever 'exercise library' como destino",
+        "Asserção: screen.getByText('Módulo de Acompanhamento de Treinos e Evolução') no card Mílon",
+        "Asserção: screen.getByText('Módulo Orçamentário e Financeiro') no card Pluto",
+        "Asserção: queryByText para cada texto antigo retorna null (CA-P3-10)",
+        "Href do card Mílon continua '/milon' (funciona via redirect)",
+        "npm test -- __tests__/app/dashboard/page.test.tsx passa"
+      ],
+      "files": ["__tests__/app/dashboard/page.test.tsx"]
+    },
+    {
+      "id": "TASK-019",
+      "status": "pending",
+      "title": "Testes: aba ativa no Pluto (transversal D12)",
+      "description": "Adicionar asserções de aba ativa em __tests__/app/pluto/budget/page.test.tsx, __tests__/app/pluto/months/page.test.tsx, __tests__/app/pluto/transactions/page.test.tsx (e/ou arquivos de teste de página correspondentes). Em cada teste de renderização da página, verificar que o link da nav correspondente à URL tem aria-current='page' e estilo ativo (classe border-b-2 font-semibold na cor #35472D). CA-P3-07: abas do Pluto exibem marca de aba ativa pela mesma regra do Mílon.",
+      "assignee": "minos",
+      "dependencies": ["TASK-015"],
+      "acceptanceCriteria": [
+        "Cada página de teste do Pluto (/budget, /months, /transactions) tem asserção de aba ativa",
+        "Em /pluto/budget: link 'Orçamento Anual' tem aria-current='page' e estilo ativo",
+        "Em /pluto/months: link 'Meses e Períodos' tem aria-current='page' e estilo ativo",
+        "Em /pluto/transactions: link 'Lançamentos' tem aria-current='page' e estilo ativo",
+        "Estilo ativo usa border-b-2 font-semibold na cor do módulo (#35472D)",
+        "npm test -- __tests__/app/pluto/ passa"
+      ],
+      "files": ["__tests__/app/pluto/budget/page.test.tsx", "__tests__/app/pluto/months/page.test.tsx", "__tests__/app/pluto/transactions/page.test.tsx"]
+    },
+    {
+      "id": "TASK-020",
+      "status": "pending",
+      "title": "Test-scenarios.md: cenários de navegação do patch",
+      "description": "Atualizar .agents/modules/milon/02-programas/test-scenarios.md adicionando cenários Dado/Quando/Então do patch v3: (1) Redirect raiz: Dado acesso a /milon, Quando navega, Então termina em /milon/programs com aba Programas ativa. (2) Biblioteca em rota explícita: Dado acesso a /milon/exercises, Então vê biblioteca com título 'Biblioteca de exercícios' e aba Exercícios ativa. (3) Alternância de abas: Dado em /milon/exercises, Quando clica aba Programas, Então navega para /milon/programs mantendo layout do módulo (mascote/título visíveis). (4) Aba ativa por URL direta: Dado acesso direto a /milon/programs, Então aba Programas já ativa sem clique prévio. (5) Pluto aba ativa: Dado acesso a /pluto/budget, Então aba Orçamento Anual ativa. (6) Dashboard textos: Dado dashboard renderizado, Então card Mílon exibe 'Módulo de Acompanhamento de Treinos e Evolução' e card Pluto exibe 'Módulo Orçamentário e Financeiro'.",
+      "assignee": "minos",
+      "dependencies": ["TASK-017", "TASK-018", "TASK-019"],
+      "acceptanceCriteria": [
+        ".agents/modules/milon/02-programas/test-scenarios.md contém 6+ cenários Dado/Quando/Então do patch v3",
+        "Cenários cobrem CA-P3-01 a CA-P3-11",
+        "Formato consistente com cenários existentes da feature v1"
+      ],
+      "files": [".agents/modules/milon/02-programas/test-scenarios.md"]
+    },
+    {
+      "id": "TASK-021",
+      "status": "pending",
+      "title": "Suite final Minos + build-storybook (patch v3)",
+      "description": "Minos executa suite completa: todos os testes (v1 + patch v3). Coverage ≥80%. Gera test-report.json e test-scenarios.md atualizados na FEATURE_DIR. Promove cenários de regressão para .agents/modules/milon/regression.md. Executa npm run build-storybook sem erros. Atualiza test-report.json final. Gate: test-report.failed==0 e coverage≥80 antes de review do Argos.",
+      "assignee": "minos",
+      "dependencies": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006", "TASK-007", "TASK-008", "TASK-009", "TASK-010", "TASK-011", "TASK-012", "TASK-013", "TASK-014", "TASK-015", "TASK-016", "TASK-017", "TASK-018", "TASK-019", "TASK-020"],
+      "acceptanceCriteria": [
+        "npm test passa com coverage ≥80% (lines/functions/branches/statements ≥80)",
+        "test-report.json gerado em .agents/modules/milon/02-programas/ com failed=0",
+        "test-scenarios.md atualizado com cenários v1 + patch v3",
+        "Cenários de regressão promovidos para .agents/modules/milon/regression.md",
+        "npm run build-storybook passa sem erros",
+        "test-report.json final atualizado com coverage final"
+      ],
+      "files": [".agents/modules/milon/02-programas/test-report.json", ".agents/modules/milon/02-programas/test-scenarios.md", ".agents/modules/milon/regression.md"]
     }
   ]
 }

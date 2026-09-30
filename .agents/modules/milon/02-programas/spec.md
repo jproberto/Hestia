@@ -156,3 +156,131 @@ Fora desta feature: o conteúdo dos treinos (exercícios, séries, ordem A/B/C d
 - **H — pool de sugestões de título (Pergunta 7):** (A) gerador combinatório puro com pools/templates escritos manualmente — variedade enorme e offline, mas exige trabalho manual de curadoria que o humano recusou; (B) lista fixa de frases prontas gerada uma vez por IA e commitada — tom afiado e esforço one-shot, mas variedade finita e frases soltas; (C) **escolhida:** IA gera uma vez os **templates e as pools de palavras**, o **humano valida**, e a **combinação/sorteio acontece em runtime** — variedade quase infinita, tom calibrado na geração, offline, manutenção zero e nenhum trabalho manual contínuo do usuário; a validação humana do material é parte da regra.
 - **I — confirmação nas ações (feedback da spec v1):** sem confirmação (ágil, mas arriscado para ativação/exclusão) vs confirmação em tudo (atrapalha o fluxo). **Escolhida a via do meio ditada pelo humano:** confirmação explícita em **ativar, reativar e excluir**, no modal de confirmação já existente no projeto, sem invenção de padrão novo.
 - **J — guarda de ativação (feedback da spec v1):** ativação livre desde a criação vs guarda por conteúdo. **Escolhida a guarda:** ativar exige ≥1 treino com ≥1 exercício; nesta feature a manifestação é a ação de ativar nascendo bloqueada com mensagem, porque o conteúdo vem da feature 3.
+
+---
+
+## Patch v3 — Navegação em abas do Mílon (2026-09-29)
+
+> **Formato:** seção nova demarcada, anexada à spec v2 aprovada sem editar nem apagar nada das seções 1–7 acima — que permanecem integralmente válidas. Este patch soma a v3 da mesma spec.
+>
+> **Origem (pedido humano, 2026-09-29):** "Ao entrar em localhost:3000/milon, caímos direto na biblioteca de exercícios, sem opção de navegação para a tela de programas. Deveríamos ter abas, como em Pluto." A tela de Programas já existe (`app/milon/programs/page.tsx`, feature entregue e homologada); o que falta é a navegação entre as telas do módulo. Este patch também concretiza, sem alterá-lo, o que a seção 3 da spec v2 diz — "tela própria de Programas acessível pelo módulo de academia" — especificando **como** ela é acessível.
+
+### P1. Escopo do patch — o que muda e o que não muda
+
+**Muda (somente rotas e apresentação):**
+
+1. Rotas do Mílon: a biblioteca ganha rota explícita e a raiz do módulo vira ponto neutro com redirect (D9).
+2. Barra de navegação do Mílon deixa de ser vazia e passa a exibir duas abas (D10), com aba padrão definida (D11).
+3. Passa a existir marca de "aba ativa" no layout de módulo compartilhado, derivada da URL — com efeito aceito no Pluto (D12).
+4. Textos descritivos dos cards do dashboard (Mílon e Pluto) passam às redações exatas fornecidas pelo humano (D13).
+5. Norma de navegação registrada para novos módulos (D14).
+
+**Não muda:**
+
+- **Toda a regra de negócio da spec v2** (ciclo de vida rascunho→ativo⇄inativo, unicidade do ativo por dono, guarda de ativação, filtros de dono/status, ordenação, confirmações, exclusão de rascunho, sugestões sorteadas, somente-leitura de inativos) permanece **integralmente válida e intocada**.
+- `app/milon/programs/page.tsx` e toda a experiência da tela de Programas: inalteradas; rota `/milon/programs`: inalterada.
+- Dados e banco: **nenhuma migração** — o patch é de rotas/UI; nenhum hook, repository ou tipo em `lib/milon/*` muda.
+- Mascote do módulo: `lib/hestia/mascots.ts` resolve por prefixo (`/milon` casa `/milon/exercises` e `/milon/programs`) — verificado, sem impacto.
+- Pluto: **não é reestruturado** — rotas, ordem e rótulos de suas abas existentes permanecem; só recebe o destaque de aba ativa já aceito (D12).
+- Dashboard: hrefs dos cards permanecem (`/milon` e `/pluto/budget`) — só muda o parágrafo descritivo.
+
+### P2. Decisões do patch (discovery com o humano, D9–D14)
+
+- **D9 — Rotas (caminho B — escolhido):** biblioteca migra para rota explícita `/milon/exercises`; `/milon/programs` permanece; `/milon` (raiz) redireciona para a aba padrão. Alternativas do discovery: **(A)** manter a biblioteca servida em `/milon` (descartada: amarra a raiz do módulo a uma tela e não dá rota própria por aba); **(C)** fazer da raiz já o Programas sem rota explícita para a biblioteca (descartada como caminho único; o destino "raiz → Programas" foi adotado depois, em D11). B foi escolhida por dar rota explícita a cada aba e transformar a raiz em ponto neutro reversível.
+- **D10 — Abas do MVP (caminho A — escolhido):** exatamente duas abas, "Exercícios" → `/milon/exercises` e "Programas" → `/milon/programs`; `pageTitle` "Biblioteca de exercícios" permanece na tela. Alternativas descartadas: rótulo "Biblioteca" (repete a palavra com o título da tela e é menos específico) e aba-placeholder de tela futura (anti-YAGNI — recusada).
+- **D11 — Aba padrão (caminho B — escolhido):** `/milon` redireciona para **`/milon/programs`** — Programas é a cara do módulo no atalho do dashboard. Alternativa descartada: usar a biblioteca como padrão (manteria o destino antigo, mas deixaria o atalho do dashboard apontando para uma tela de cadastro de apoio). Efeito conhecido e aceito: quem entra pelo card do dashboard passa a cair em Programas, não na biblioteca.
+- **D12 — Aba ativa (caminho A — escolhido):** a marca de aba ativa é implementada **uma única vez no layout de módulo compartilhado**, derivada da URL. **Impacto transversal aceito explicitamente pelo humano: as abas do Pluto passam a destacar a atual.** Alternativas descartadas: **(B)** não destacar (padrão incompleto — em duas abas de estilo igual o usuário não vê onde está) e **(C)** destacar só no Mílon (criaria bifurcação permanente por módulo no componente compartilhado — descartada).
+- **D13 — Textos do dashboard (caminho iii — redação fornecida pelo humano, a ser usada exatamente):** card do Mílon = **"Módulo de Acompanhamento de Treinos e Evolução"**; card do Pluto = **"Módulo Orçamentário e Financeiro"**. Substituem, respectivamente, "Acesse a biblioteca de exercícios da academia." (hoje em `app/dashboard/page.tsx`, linha do card Mílon) e "Acesse o controle de orçamento anual, categorias de receitas e despesas previstas." (linha do card Pluto) — textos mapeados por leitura direta do arquivo.
+- **D14 — Norma transversal para novos módulos:** o padrão adotado aqui **deve ser seguido por todos os módulos novos**: rotas explícitas por aba; raiz do módulo = ponto neutro com redirect para a aba padrão; barra de abas no layout de módulo com aba ativa visível. A norma **não retroage ao Pluto** (nada de reordenar, renomear ou mover rotas existentes do Pluto — o único efeito nele é o destaque de D12, já aceito).
+
+### P3. Requisitos de navegação (patch)
+
+**Rotas**
+
+- **R1:** a biblioteca de exercícios passa a ser servida em `/milon/exercises`, com o mesmo conteúdo, `pageTitle` "Biblioteca de exercícios" e o mesmo comportamento homologado na spec v2 — muda apenas a URL.
+- **R2:** `/milon/programs` continua exatamente como está.
+- **R3:** acessar `/milon` (digitação no navegador, refresh ou card do dashboard) **redireciona para `/milon/programs`** — a pessoa termina na tela de Programas; a biblioteca não é exibida nesse caminho.
+- **R4:** nenhum link interno aponta para a rota antiga da biblioteca além do card do dashboard, e esse card mantém o destino `/milon`, que funciona via redirect (verificado por busca: só `app/dashboard/page.tsx` linka `/milon`).
+
+**Abas**
+
+- **R5:** as telas `/milon/exercises` e `/milon/programs` exibem a barra de navegação do módulo com **exatamente dois itens**: "Exercícios" apontando para `/milon/exercises` e "Programas" apontando para `/milon/programs` — nenhum item adicional, nenhum placeholder.
+- **R6:** a aba não substitui o cabeçalho da página: o `pageTitle` "Biblioteca de exercícios" permanece na tela da biblioteca, e "Programas" permanece na tela de Programas.
+- **R7:** cada aba é link navegável: clicar troca de tela permanecendo dentro do módulo (mascote e título do módulo continuam visíveis nas duas telas).
+
+**Aba ativa**
+
+- **R8:** em toda tela com barra de navegação de módulo, **exatamente uma** aba aparece marcada como ativa — visualmente distinta das demais e identificável por tecnologia assistiva como a página atual.
+- **R9:** a marca deriva da URL: ao chegar em qualquer URL do módulo por digitação, refresh ou deep link (sem clique anterior), a aba correta já aparece ativa; ao navegar por clique, a marca acompanha.
+- **R10:** o comportamento é único para todos os módulos (sem regra por módulo): **as abas do Pluto também passam a exibir a marca de aba ativa** — impacto transversal aceito em D12.
+
+**Dashboard**
+
+- **R11:** o card do Mílon exibe exatamente "Módulo de Acompanhamento de Treinos e Evolução" e o card do Pluto exibe exatamente "Módulo Orçamentário e Financeiro" (D13); títulos, hrefs e demais elementos do dashboard permanecem.
+- **R12 (norma D14):** o padrão de navegação para **novos módulos** é: rotas explícitas por aba, raiz do módulo com redirect para a aba padrão e barra de abas com aba ativa visível, no layout de módulo já usado pelo Pluto.
+
+### P4. Critérios de aceite novos (testáveis)
+
+- **CA-P3-01:** Dado que a pessoa acessa `/milon` (URL digitada ou card do dashboard), então ela termina na tela de Programas em `/milon/programs`; a biblioteca não aparece nesse caminho.
+- **CA-P3-02:** Dado que a pessoa acessa `/milon/exercises`, então vê a biblioteca com título "Biblioteca de exercícios" e as mesmas funcionalidades homologadas da spec v2 (lista, filtro de músculo, busca, ordenação, mostrar mais, criar/editar/excluir com modais), mudando só a URL.
+- **CA-P3-03:** Dado que a pessoa acessa `/milon/programs`, então a tela responde exatamente como descrito na spec v2 — nenhuma mudança observável.
+- **CA-P3-04:** Nas telas `/milon/exercises` e `/milon/programs`, a barra exibe exatamente dois links: "Exercícios" com destino `/milon/exercises` e "Programas" com destino `/milon/programs`.
+- **CA-P3-05:** Em `/milon/exercises`, "Exercícios" aparece marcada como ativa e "Programas" não; em `/milon/programs`, o inverso — sempre exatamente uma aba ativa.
+- **CA-P3-06:** Acessada qualquer URL do módulo diretamente (digitação ou refresh), a aba ativa já corresponde à URL, sem depender de clique anterior.
+- **CA-P3-07:** Em qualquer tela do Pluto (orçamento, meses, lançamentos), a aba correspondente à URL aparece marcada como ativa, pela mesma regra do Mílon (impacto transversal aceito).
+- **CA-P3-08:** No dashboard, o card Mílon exibe exatamente "Módulo de Acompanhamento de Treinos e Evolução" e o card Pluto exibe exatamente "Módulo Orçamentário e Financeiro".
+- **CA-P3-09:** No dashboard, o link do card Mílon continua com destino `/milon` e leva a Programas via redirect; o link do card Pluto continua com destino `/pluto/budget`.
+- **CA-P3-10:** A busca pelos textos antigos — "Acesse a biblioteca de exercícios da academia." e "Acesse o controle de orçamento anual, categorias de receitas e despesas previstas." — retorna zero ocorrências em código de produção.
+- **CA-P3-11:** Ao alternar entre as duas abas, a pessoa permanece no layout do módulo (mascote e título do Mílon visíveis nas duas telas) e o botão de voltar do navegador não a tira do módulo em uma troca simples de aba.
+- **CA-P3-12:** Suíte completa verde (nenhum teste existente quebra) com coverage ≥ 80% mantido; `test-report.json` regenerado antes da review (gate do processo).
+
+### P5. Fora de escopo do patch (YAGNI)
+
+- **Home do Mílon / "Treino do dia" / terceira aba** — feature 4; aba-placeholder de tela futura foi explicitamente recusada.
+- **Reestruturação do Pluto** (mover rotas, reordenar, renomear abas, mudar destinos) — fora; só o destaque de aba ativa entra (D12).
+- **Aba ou rota de treinos/séries** — feature 3.
+- **Ordem visual entre as duas abas do Mílon** — não é requisito desta patch: nenhum critério de aceite depende dela (decisão deliberada, não pendência).
+- **Barra de navegação no dashboard, breadcrumbs, menu suspenso, atalho "voltar ao módulo" além do já existente** — fora.
+- **Retroagir a norma D14 ao Pluto** (alterar rotas/rótulos/ordem existentes do módulo financeiro) — fora.
+- **Alterar qualquer regra de negócio da spec v2** (ciclo de vida, filtros, confirmações, exclusão, guarda de ativação, sugestões) — intocadas por definição.
+- **Migração ou mudança de dados** — nenhuma; o patch não toca em banco.
+- **Redirecionamentos extras além de `/milon`** — não existe outra rota antiga: as únicas rotas do módulo são `/milon` e `/milon/programs` (verificado).
+
+### P6. Impactos declarados (arquivos e testes, por leitura em disco)
+
+**Produto/arquivos:**
+
+- `app/milon/page.tsx` — deixa de compor a tela da biblioteca; a rota raiz passa a ser o ponto de redirecionamento para `/milon/programs`.
+- Rota nova `/milon/exercises` — recebe a composição da biblioteca (mesmos componentes, hook e `pageTitle` de hoje).
+- `components/milon/MilonLayout.tsx` — a lista de navegação, hoje vazia com comentário-placeholder, passa a declarar as duas abas (D10).
+- `components/layout/ModuleLayout.tsx` (compartilhado por Pluto e Mílon) — passa a marcar a aba ativa derivada da URL; **impacto transversal aceito (D12): as abas do Pluto passam a destacar a atual**; um único comportamento, sem regra por módulo.
+- `components/layout/PlutoLayout.tsx` e páginas `app/pluto/budget|months|transactions/page.tsx` — sem mudança de rota nem de estrutura; recebem apenas o destaque via componente compartilhado.
+- `app/dashboard/page.tsx` — parágrafos dos dois cards substituídos pelas redações exatas de D13; hrefs inalterados.
+- `lib/hestia/mascots.ts` — sem impacto (match por prefixo, verificado).
+- `lib/milon/*` (hooks, repositories, tipos, utils) e banco — sem impacto: nenhum desses arquivos muda.
+
+**Testes:**
+
+- `__tests__/app/milon/page.test.tsx` — hoje importa a página de `@/app/milon/page` e cobre ~15 cenários da biblioteca; com a mudança de rota, os cenários passam a acompanhar a página em `/milon/exercises` (arquivo espelho no caminho novo) e **entra teste novo** cobrindo o redirect `/milon` → `/milon/programs`.
+- `__tests__/app/dashboard/page.test.tsx` — as asserções existentes permanecem válidas (o href `/milon` não muda; os nomes "Mílon" e "Pluto" dos links vêm dos títulos, que não mudam); **muda o nome** do teste "renders Milon card linking to the exercise library", que deixa de descrever o destino real (agora Programas); **entram asserções** que travam os dois novos textos dos cards (CA-P3-08).
+- `__tests__/app/milon/programs/page.test.tsx` — rota inalterada; verificado que o arquivo não faz asserções de links de rota, então a chegada da barra de abas não colide com cenários existentes.
+- `__tests__/components/milon/MilonLayout.test.tsx` — asserções atuais (título, subtítulo, conteúdo) permanecem válidas; a barra de abas passa a ser coberta pelos testes das telas.
+- `__tests__/app/pluto/*` — verificado por busca: nenhuma asserção existe sobre estado ativo da navegação (nenhuma ocorrência de marcação de navegação ou de ordem de abas); o destaque entra sem cobertura prévia a quebrar e ganha cobertura nova.
+- `.agents/modules/milon/02-programas/test-scenarios.md` — ganha cenários de navegação (redirect da raiz, duas abas, aba ativa, textos do dashboard).
+- `.agents/modules/milon/02-programas/test-report.json` — regenerado por Minos: rota nova e arquivo de teste espelhado novo alteram contagens e cobertura.
+
+### P7. Riscos e Dependências (patch)
+
+- **Destino antigo mudou (aceito):** links ou bookmarks para `/milon` caem em Programas, não na biblioteca — consequência direta de D11/D9; o único link interno afetado é o card do dashboard (verificado por busca).
+- **Tela homologada do Pluto muda visualmente:** aceito explicitamente pelo humano (D12); fica declarado para Argos avaliar o diff como mudança aprovada.
+- **Dependências:** feature 1 (biblioteca, concluída) e feature 2 (Programas, implementada) — patch não cria dependência nova de banco nem de outra feature.
+- **Documentação da norma (D14):** registrar o padrão de navegação para novos módulos na documentação transversal é handoff para a fase de documentação (Mnemósine) — não é conteúdo de código deste patch.
+- **Evolução futura:** a feature 4 pode querer outra home do Mílon; com D9 isso é uma troca do alvo do redirect, sem nova estrutura de rotas.
+
+### P8. Por que este formato e estes caminhos (trade-offs resumidos)
+
+- **Seção nova demarcada em vez de edição inline:** preserva o histórico aprovado da v2 sob a regra da spec v1 rejeitada (nada aprovado é apagado); a v3 inteira é revisável como bloco único.
+- **B (rotas explícitas) venceu A e C:** dá rota própria por aba e torna a raiz neutra/reversível, ao custo de mover uma tela já homologada — custo mapeado em P6.
+- **A (duas abas reais, sem placeholder)** venceu rótulo "Biblioteca" (redundância com o título) e aba-placeholder (armação morta).
+- **D11 Programas como padrão** venceu manter a biblioteca como destino: o atalho do dashboard passa a mostrar o módulo novo; a troca é um alvo de redirect, reversível barato.
+- **D12 destaque no componente compartilhado** venceu "sem destaque" (aba ativa invisível) e "só Mílon" (bifurcação permanente por módulo), aceitando o custo visual no Pluto.

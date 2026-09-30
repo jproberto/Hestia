@@ -9,6 +9,9 @@ Portão manual da feature (`SPEC_APPROVED` → `APPROVED`). Derivado exclusivame
   (suíte `npm test`, 647 testes, 0 falhas).
 - **Status:** os testes automatizados estão verdes; a coluna "Homologado" fica para
   o humano marcar ao executar (gate `approve-review`).
+- **Patch v3 (TASK-020):** a seção "Patch v3 — Navegação em abas (CA-P3-01…12)"
+  ao final do arquivo acrescenta os cenários Dado/Quando/Então da navegação em
+  abas — os 22 cenários do ciclo v1 acima permanecem intactos.
 
 | # | Critério (spec §5) | Automatizado em | Homologado |
 |---|---|---|---|
@@ -230,6 +233,138 @@ Automatizado (estrutura do material): `__tests__/lib/milon/program-utils.test.ts
 Automatizado: `__tests__/lib/milon/hooks/usePrograms.test.ts` → "padrão ao montar: dono = getUserEmail() e todos os status marcados" (lista bruta é a família; o filtro é refino) + "filtro de dono por igualdade: limpar vê a família inteira"; `__tests__/lib/milon/repositories/contract-programs.test.ts` → nenhum critério do contrato depende da sessão (`listAll` devolve a família inteira).
 
 ---
+
+## Patch v3 — Navegação em abas (CA-P3-01…12)
+
+Cenários Dado/Quando/Então do **Patch v3 de navegação** (spec §P2 decisões D9–D14,
+§P3 requisitos R1–R12, §P4 critérios CA-P3-01…12), acrescentados na TASK-020
+sem alterar os 22 cenários do ciclo v1 acima. Mapeio 1:1 cada `CA-P3-xx` para um
+cenário e para o teste automatizado que o exercita (nomes conferidos em disco).
+
+- **Execução:** subir o app (`npm run dev`), logar e navegar pelas rotas indicadas.
+- **Status:** os testes automatizados estão verdes; a coluna "Homologado" fica para
+  o humano marcar ao executar (gate `approve-review`).
+
+| # | Critério (spec §P4) | Decisão / req. | Automatizado em | Homologado |
+|---|---|---|---|---|
+| 23 | CA-P3-01 — `/milon` termina em `/milon/programs`, sem biblioteca | D9, D11 · R3 | ver Cenário 23 | ☐ |
+| 24 | CA-P3-02 — biblioteca em `/milon/exercises`, conteúdo homologado | D9, D10 · R1 | ver Cenário 24 | ☐ |
+| 25 | CA-P3-03 — `/milon/programs` sem mudança observável | R2 | ver Cenário 25 | ☐ |
+| 26 | CA-P3-04 — barra com exatamente 2 links com rotas exatas | D10 · R5 | ver Cenário 26 | ☐ |
+| 27 | CA-P3-05 — exatamente uma aba ativa em cada tela | R8 | ver Cenário 27 | ☐ |
+| 28 | CA-P3-06 — URL direta/refresh já chega com aba ativa correta | R9 | ver Cenário 28 | ☐ |
+| 29 | CA-P3-07 — abas do Pluto também destacam a atual | D12 · R10 | ver Cenário 29 | ☐ |
+| 30 | CA-P3-08 — textos exatos dos cards Mílon e Pluto | D13 · R11 | ver Cenário 30 | ☐ |
+| 31 | CA-P3-09 — hrefs preservados; card Mílon chega a Programas | D11 · R4, R11 | ver Cenário 31 | ☐ |
+| 32 | CA-P3-10 — textos antigos com zero ocorrências | D13 · R11 | ver Cenário 32 | ☐ |
+| 33 | CA-P3-11 — alternar abas permanece no layout do módulo | R6, R7 | ver Cenário 33 | ☐ |
+| 34 | CA-P3-12 — suíte verde e coverage ≥ 80% mantidos | gate do processo | ver Cenário 34 | ☐ |
+
+---
+
+### Cenário 23: Raiz do módulo redireciona para Programas (CA-P3-01 · R3 · D9/D11)
+
+**Dado** que a pessoa acessa `/milon` — digitando no navegador, dando refresh ou clicando no card do dashboard
+**Quando** a rota raiz é resolvida
+**Então** ela termina na tela de Programas em `/milon/programs`, com a aba "Programas" ativa, e a biblioteca de exercícios **não** aparece nesse caminho
+
+Automatizado: `__tests__/app/milon/page.test.tsx` → "acessar /milon chama redirect('/milon/programs')" + "a biblioteca não aparece no caminho da raiz (sem 'Novo exercício' nem título)" + "não compõe a biblioteca: 0 ocorrências dos tokens da tela antiga".
+
+### Cenário 24: Biblioteca em rota explícita, mesmo conteúdo (CA-P3-02 · R1 · D9/D10)
+
+**Dado** que a pessoa acessa `/milon/exercises` diretamente
+**Quando** a tela carrega
+**Então** vê a biblioteca com título "Biblioteca de exercícios" (token `font-display`) e as mesmas funcionalidades homologadas da spec v2 — lista, filtro de músculo, busca, ordenação, mostrar mais, criar/editar/excluir com modais — mudando **só** a URL
+
+Automatizado: `__tests__/app/milon/exercises/page.test.tsx` → describe "ExercisesPage /milon/exercises - Biblioteca de exercícios (CA-P3-02 / TASK-013)" (16 casos: "abre em MilonLayout com lista, filtro, busca e lotes ligados ao hook", "pageTitle 'Biblioteca de exercícios' no token font-display com o subtítulo (TASK-013)", "trocar filtro por músculo delega ao hook", "digitar busca delega ao hook", "mostrar-mais delega ao hook", "controle 'Ordenar por' ligado ao hook: exibe ordem atual e troca dispara setSortOrder", "criar via Salvar fecha o modal e grava na lista", "editar abre o modal preenchido a partir da lista e salva com o id", "excluir pede confirmação com nome e músculo antes de sumir da lista").
+
+### Cenário 25: Tela de Programas permanece idêntica (CA-P3-03 · R2)
+
+**Dado** que a pessoa acessa `/milon/programs` (URL existente da spec v2)
+**Quando** a tela carrega e ela interage com lista, filtros, criação, edição e transições
+**Então** tudo responde exatamente como descrito na spec v2 — nenhuma mudança observável em relação ao ciclo v1 (Cenários 1–22 continuam válidos)
+
+Automatizado: `__tests__/app/milon/programs/page.test.tsx` → "renderização inicial: MilonLayout, título de tela e lista filtrada do hook" + a suíte completa do arquivo (20 casos do ciclo v1: estados de fetch, criar, editar, ativar, reativar, excluir, filtros, erros).
+
+### Cenário 26: Barra do módulo tem exatamente duas abas com rotas exatas (CA-P3-04 · R5 · D10)
+
+**Dado** que a pessoa está em qualquer uma das telas `/milon/exercises` ou `/milon/programs`
+**Quando** ela olha a barra de navegação do módulo
+**Então** há exatamente dois links — "Exercícios" com destino `/milon/exercises` e "Programas" com destino `/milon/programs` — sem itens adicionais, sem placeholder e sem link para rota antiga
+
+Automatizado: `__tests__/components/milon/MilonLayout.test.tsx` → "exibe exatamente 2 links na navegação do módulo, sem itens extras" + "cada link é navegável com rótulo e rota exatos (Exercícios e Programas)".
+
+### Cenário 27: Exatamente uma aba ativa em cada tela (CA-P3-05 · R8)
+
+**Dado** que a pessoa abre `/milon/exercises` e depois `/milon/programs`
+**Quando** cada tela é renderizada
+**Então** em `/milon/exercises` a aba "Exercícios" aparece marcada como ativa (estilo distinto + `aria-current="page"`) e "Programas" não; em `/milon/programs` o inverso — **sempre exatamente uma** aba ativa, identificável por tecnologia assistiva
+
+Automatizado: `__tests__/components/layout/ModuleLayout.test.tsx` → "em /milon/exercises, Exercícios tem aria-current='page' + estilo ativo e Programas não" + "em /milon/programs, Programas é a única aba ativa (URL direta, sem clique anterior)" + "em /milon/exercises, exatamente um link da nav fica com aria-current='page'" + "a aba ativa é identificável por tecnologia assistiva via aria-current='page'".
+
+### Cenário 28: URL direta ou refresh chega com a aba já correta (CA-P3-06 · R9)
+
+**Dado** que a pessoa chega em qualquer URL do módulo por digitação ou refresh, sem nenhum clique anterior
+**Quando** a página renderiza
+**Então** a marca de aba ativa já corresponde à URL — `/milon/programs` mostra "Programas" ativa, `/milon/exercises` mostra "Exercícios" ativa (inclusive em subcaminho como `/milon/exercises/abc`, por match de prefixo)
+
+Automatizado: `__tests__/components/layout/ModuleLayout.test.tsx` → "em /milon/programs, Programas é a única aba ativa (URL direta, sem clique anterior)" + "match por prefixo + '/': pathname /milon/exercises/abc mantém Exercícios ativa".
+
+### Cenário 29: Pluto ganha destaque de aba ativa pela mesma regra (CA-P3-07 · R10 · D12)
+
+**Dado** que a pessoa acessa `/pluto/budget`, `/pluto/months` ou `/pluto/transactions` diretamente
+**Quando** a tela renderiza
+**Então** a aba correspondente à URL ("Orçamento Anual", "Meses e Períodos" ou "Lançamentos") é a única marcada com estilo ativo e `aria-current="page"` — mesmo comportamento do Mílon, sem código condicional por módulo (impacto transversal aceito em D12); rotas, ordem e rótulos do Pluto não mudam
+
+Automatizado: `__tests__/components/layout/ModuleLayout.test.tsx` → describe "Pluto — transversal, sem código condicional por módulo (CA-P3-07 / D12)" (`it.each` nos 3 caminhos: "em %s, o link %s é o único ativo, pela mesma regra do Mílon"); `__tests__/app/pluto/budget/page.test.tsx` → "em /pluto/budget, 'Orçamento Anual' é a única aba com aria-current='page' + estilo ativo"; `__tests__/app/pluto/months/page.test.tsx` → "em /pluto/months, 'Meses e Períodos' é a única aba com aria-current='page' + estilo ativo"; `__tests__/app/pluto/transactions/page.test.tsx` → "em /pluto/transactions, 'Lançamentos' é a única aba com aria-current='page' + estilo ativo".
+
+### Cenário 30: Cards do dashboard com as redações exatas (CA-P3-08 · R11 · D13)
+
+**Dado** que o dashboard está renderizado
+**Quando** a pessoa olha os cards dos módulos
+**Então** o card Mílon exibe exatamente "Módulo de Acompanhamento de Treinos e Evolução" e o card Pluto exibe exatamente "Módulo Orçamentário e Financeiro"; títulos, hrefs e demais elementos permanecem
+
+Automatizado: `__tests__/app/dashboard/page.test.tsx` → "renders Milon card with D13 text linking to the Mílon module" + "renders Pluto card with D13 text linking to the budget" (asserções `getByText` dos textos exatos de D13).
+
+### Cenário 31: Atalhos do dashboard continuam com destino original (CA-P3-09 · R4, R11 · D11)
+
+**Dado** que o dashboard está renderizado
+**Quando** a pessoa clica no card Mílon e, em outra sessão, no card Pluto
+**Então** o card Mílon mantém o destino `/milon` e chega a **Programas** via redirect (Cenário 23), sem passar pela biblioteca; o card Pluto mantém o destino `/pluto/budget` — e nenhum outro link interno aponta para rota antiga da biblioteca além desse card
+
+Automatizado: `__tests__/app/dashboard/page.test.tsx` → "renders Milon card with D13 text linking to the Mílon module" (href `/milon`) + "renders Pluto card with D13 text linking to the budget" (href `/pluto/budget`); `__tests__/app/milon/page.test.tsx` → "acessar /milon chama redirect('/milon/programs')" (o destino `/milon` do card funciona via redirect).
+
+### Cenário 32: Textos antigos do dashboard não existem mais (CA-P3-10 · R11 · D13)
+
+**Dado** que o dashboard está renderizado (e a raiz do módulo foi reescrita como redirect)
+**Quando** a pessoa procura as redações antigas
+**Então** "Acesse a biblioteca de exercícios da academia." e "Acesse o controle de orçamento anual, categorias de receitas e despesas previstas." não aparecem em nenhuma tela — zero ocorrências no código renderizado/produção
+
+Automatizado: `__tests__/app/dashboard/page.test.tsx` → `queryByText` de cada texto antigo retorna `null` nas asserções "renders Milon card with D13 text linking to the Mílon module" e "renders Pluto card with D13 text linking to the budget"; `__tests__/app/milon/page.test.tsx` → "não compõe a biblioteca: 0 ocorrências dos tokens da tela antiga".
+
+### Cenário 33: Alternar abas permanece dentro do módulo (CA-P3-11 · R6, R7)
+
+**Dado** que a pessoa está em `/milon/exercises` com a barra de abas visível
+**Quando** ela clica em "Programas" (e depois volta clicando em "Exercícios")
+**Então** a navegação troca de tela permanecendo no layout do módulo — mascote e título "Mílon" visíveis nas duas telas, `pageTitle` próprio de cada tela preservado ("Biblioteca de exercícios" na biblioteca, "Programas" na tela de programas) — e o botão de voltar do navegador, numa troca simples de aba, não a tira do módulo
+
+Automatizado (composição + destinos das duas telas): `__tests__/app/milon/exercises/page.test.tsx` → "abre em MilonLayout com lista, filtro, busca e lotes ligados ao hook" + "pageTitle 'Biblioteca de exercícios' no token font-display com o subtítulo (TASK-013)"; `__tests__/app/milon/programs/page.test.tsx` → "renderização inicial: MilonLayout, título de tela e lista filtrada do hook"; `__tests__/components/milon/MilonLayout.test.tsx` → "cada link é navegável com rótulo e rota exatos (Exercícios e Programas)". A parte de **histórico do navegador (botão voltar)** não tem como ser exercitada no jsdom — é verificação **manual** na homologação.
+
+### Cenário 34: Suíte completa verde com coverage ≥ 80% (CA-P3-12 · gate do processo)
+
+**Dado** que todas as tasks do patch v3 (TASK-012…020) foram implementadas
+**Quando** a suíte completa é executada
+**Então** nenhum teste existente quebra (baseline `3c26daa` mantida), `test-report.json` é regenerado com `failed = 0` e coverage ≥ 80%, mantendo verde o gate antes da review do Argos
+
+Automatizado: suíte completa `npm test` (todos os arquivos citados nos Cenários 23–33, além dos 666 testes da baseline) + gate `test-report.json` em `.agents/modules/milon/02-programas/` (regenerado na TASK-021 antes da review).
+
+> **D14 · R12 (norma para novos módulos):** o padrão "rotas explícitas por aba + raiz
+> com redirect para a aba padrão + barra de abas com aba ativa visível" é norma
+> **documental** para novos módulos — não é tela homologável nesta feature; o
+> registro na documentação transversal é handoff para Mnemósine (spec §P7).
+
+---
+
 
 ## Fora do escopo confirmado pela spec (não homologar aqui)
 

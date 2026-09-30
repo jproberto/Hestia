@@ -376,7 +376,7 @@
                   },
                   {
                       "id":  "TASK-020",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Test-scenarios.md: cenários de navegação do patch",
                       "description":  "Atualizar .agents/modules/milon/02-programas/test-scenarios.md adicionando cenários Dado/Quando/Então do patch v3: (1) Redirect raiz: Dado acesso a /milon, Quando navega, Então termina em /milon/programs com aba Programas ativa. (2) Biblioteca em rota explícita: Dado acesso a /milon/exercises, Então vê biblioteca com título \u0027Biblioteca de exercícios\u0027 e aba Exercícios ativa. (3) Alternância de abas: Dado em /milon/exercises, Quando clica aba Programas, Então navega para /milon/programs mantendo layout do módulo (mascote/título visíveis). (4) Aba ativa por URL direta: Dado acesso direto a /milon/programs, Então aba Programas já ativa sem clique prévio. (5) Pluto aba ativa: Dado acesso a /pluto/budget, Então aba Orçamento Anual ativa. (6) Dashboard textos: Dado dashboard renderizado, Então card Mílon exibe \u0027Módulo de Acompanhamento de Treinos e Evolução\u0027 e card Pluto exibe \u0027Módulo Orçamentário e Financeiro\u0027.",
                       "assignee":  "minos",

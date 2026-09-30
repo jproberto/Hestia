@@ -12,6 +12,11 @@ Portão manual da feature (`SPEC_APPROVED` → `APPROVED`). Derivado exclusivame
 - **Patch v3 (TASK-020):** a seção "Patch v3 — Navegação em abas (CA-P3-01…12)"
   ao final do arquivo acrescenta os cenários Dado/Quando/Então da navegação em
   abas — os 22 cenários do ciclo v1 acima permanecem intactos.
+- **Patch v4 (TASK-028):** a seção "Patch v4 — Origem de mensagem, detalhe e
+  navegação (CA-P3-13…20)" ao final do arquivo acrescenta os cenários
+  Dado/Quando/Então do patch de origem de mensagem, rota de detalhe e navegação
+  pós-salvar — os 34 cenários anteriores (22 v1 + 12 do Patch v3) permanecem
+  intactos.
 
 | # | Critério (spec §5) | Automatizado em | Homologado |
 |---|---|---|---|
@@ -365,6 +370,105 @@ Automatizado: suíte completa `npm test` (todos os arquivos citados nos Cenário
 
 ---
 
+## Patch v4 — Origem de mensagem, detalhe e navegação (CA-P3-13…20)
+
+Cenários Dado/Quando/Então do **Patch v4** (spec §Q2 decisões D15–D17, §Q3
+requisitos R13–R21, §Q4 critérios CA-P3-13…20), acrescentados na TASK-028 sem
+alterar nada dos 22 cenários do ciclo v1 nem dos 12 do Patch v3 (Cenários 1–34
+permanecem intactos). Mapeio 1:1 cada `CA-P3-xx` para um cenário e para o teste
+automatizado que o exercita (nomes conferidos em disco).
+
+- **Execução:** subir o app (`npm run dev`), logar e abrir `/milon/programs`
+  (e `/milon/programs/<id>` para o detalhe).
+- **Status:** os testes automatizados estão verdes; a coluna "Homologado" fica para
+  o humano marcar ao executar (gate `approve-review`).
+- **Sem cenário para CA-P3-21** (gate de processo — regeneração de
+  `test-report.json` com `failed = 0` e coverage ≥ 80%, coberto na TASK-029) nem
+  para o handoff da Q7 (cenários repassados à feature 3 se registram em
+  `backlog.md` — responsabilidade do Mnemósine), conforme `tasks.json` TASK-028.
+
+| # | Critério (spec §Q4) | Decisão / req. | Automatizado em | Homologado |
+|---|---|---|---|---|
+| 35 | CA-P3-13 — bloqueio fecha a confirmação, banner sem retry, status intacto | D15 · R15 | ver Cenário 35 | ☐ |
+| 36 | CA-P3-14 — falha de operação fecha a confirmação, banner sem retry, status anterior | D15 · R16 | ver Cenário 36 | ☐ |
+| 37 | CA-P3-15 — erro de carga com "Tentar novamente" (única origem com retry) | R14 | ver Cenário 37 | ☐ |
+| 38 | CA-P3-16 — sem modal aberto sobre a mensagem (cenário 5 da homologação resolvido) | D15 · R17 | ver Cenário 38 | ☐ |
+| 39 | CA-P3-17 — detalhe com título/dono/status; id desconhecido explicado | D16 · R18, R19 | ver Cenário 39 | ☐ |
+| 40 | CA-P3-18 — criação salva navega ao detalhe do programa novo | D17 · R20 | ver Cenário 40 | ☐ |
+| 41 | CA-P3-19 — edição salva permanece na lista | D17 · R21 | ver Cenário 41 | ☐ |
+| 42 | CA-P3-20 — detalhe sem placeholder de treinos | D16 · R18, Q5 | ver Cenário 42 | ☐ |
+
+---
+
+### Cenário 35: Bloqueio de domínio fecha a confirmação e não oferece retry (CA-P3-13 · R15 · D15)
+
+**Dado** que a pessoa confirma a ativação de um Programa sem conteúdo mínimo (a guarda de ativação desta feature apura o bloqueio)
+**Quando** o bloqueio é apurado
+**Então** o modal de confirmação **fecha**, a mensagem do bloqueio aparece em banner no corpo da página **sem** botão "Tentar novamente", o status do Programa permanece o de antes e o repositório de atualização não é chamado
+
+Automatizado: `__tests__/app/milon/programs/page.test.tsx` → "CA-P3-13 + CA-P3-16: bloqueio da guarda na ativação fecha a confirmação e mostra banner sem retry"; `__tests__/lib/milon/hooks/usePrograms.test.ts` → "guarda de ativação bloqueando grava origem 'bloqueio' sem chamar o repositório" + "guarda de reativação bloqueando grava origem 'bloqueio' sem chamar o repositório" + "regra de exclusão de não-rascunho grava origem 'bloqueio' com a mensagem exata e sem chamar o repositório"; `__tests__/components/milon/ProgramList.test.tsx` → "error + errorOrigin 'bloqueio' renderiza a mensagem SEM o botão 'Tentar novamente'".
+
+### Cenário 36: Falha de operação fecha a confirmação e preserva o estado (CA-P3-14 · R16 · D15)
+
+**Dado** uma ativação, reativação ou exclusão confirmada que falha no repositório (ex.: rede)
+**Quando** a falha de operação ocorre
+**Então** o modal de confirmação **fecha**, a mensagem aparece em banner **sem** "Tentar novamente" e a lista mantém o status anterior — nenhum status muda
+
+Automatizado: `__tests__/app/milon/programs/page.test.tsx` → "CA-P3-14: falha de operação ao ativar fecha a confirmação e mostra banner sem retry" + "CA-P3-14: falha de operação ao reativar fecha a confirmação e mostra banner sem retry" + "CA-P3-14: falha de operação ao excluir fecha a confirmação e mostra banner sem retry"; `__tests__/lib/milon/hooks/usePrograms.test.ts` → `it.each` "falha de repositório em %s grava origem 'operacao' preservando o status" (activate, reactivate) + "falha de delete em remove grava origem 'operacao' preservando a lista"; `__tests__/components/milon/ProgramList.test.tsx` → "error + errorOrigin 'operacao' renderiza a mensagem SEM o botão 'Tentar novamente'".
+
+### Cenário 37: Erro de carga é a única origem com "Tentar novamente" (CA-P3-15 · R14)
+
+**Dado** que o fetch da lista falha (rede/banco indisponível)
+**Quando** a pessoa vê a tela e aciona "Tentar novamente"
+**Então** o banner exibe o botão "Tentar novamente" e o acionamento recarrega a lista — retry presente **somente** nesta origem de erro
+
+Automatizado: `__tests__/app/milon/programs/page.test.tsx` → "CA-P3-15: erro de carga exibe 'Tentar novamente' e o acionamento recarrega a lista" + "erro de carregamento mostra retry que dispara o hook"; `__tests__/components/milon/ProgramList.test.tsx` → "error + errorOrigin 'carga' renderiza a mensagem e 'Tentar novamente', que dispara onRetry (CA-P3-15)"; `__tests__/lib/milon/hooks/usePrograms.test.ts` → "fetch de carga falhando na montagem grava errorMsg não nulo com origem 'carga'" + "falha no fetchList (reload) também grava origem 'carga'".
+
+### Cenário 38: Mensagem legível — o cenário 5 da homologação fica resolvido (CA-P3-16 · R17 · D15)
+
+**Dado** que uma confirmação termina em bloqueio ou falha de operação (achado registrado como cenário 5 da homologação manual: a mensagem ficava atrás do backdrop fixo `z-50` do modal, porque a confirmação permanecia aberta)
+**Quando** o terminal da confirmação é tratado
+**Então** **nenhum** modal de confirmação permanece aberto sobre a tela e a mensagem está legível no corpo da página, sem sobreposição — inclusive no terminal de sucesso, em que a confirmação também fecha
+
+Automatizado: `__tests__/app/milon/programs/page.test.tsx` → "CA-P3-13 + CA-P3-16: bloqueio da guarda na ativação fecha a confirmação e mostra banner sem retry" + "CA-P3-14: falha de operação ao ativar fecha a confirmação e mostra banner sem retry" + "terminal de sucesso: exclusão de rascunho confirmada fecha a confirmação" (todos assertam a confirmação fechada com a mensagem no corpo da página).
+
+### Cenário 39: Detalhe do programa com cabeçalho completo; id desconhecido explicado (CA-P3-17 · R18, R19 · D16)
+
+**Dado** que a pessoa acessa `/milon/programs/<id>` de um programa existente (navegação pós-criação, digitação no navegador ou refresh)
+**Quando** a página carrega
+**Então** ela exibe título, dono e status daquele programa dentro do layout do Mílon (aba "Programas" ativa) e **não** exibe qualquer seção ou texto de treinos
+
+**Dado** um endereço que não corresponde a nenhum programa
+**Quando** a busca pelo id resolve sem resultado
+**Então** a tela mostra "Programa não encontrado." com explicação — sem programa errado, sem tela em branco e sem confundir com erro de carga
+
+Automatizado: `__tests__/app/milon/programs/[id]/page.test.tsx` → "cabeçalho exibe título, dono e status do programa buscado pelo id da rota (CA-P3-17)" + "id desconhecido: 'Programa não encontrado.' com explicação, sem erro de carga nem loading (R19)" + "renderiza dentro de MilonLayout com exatamente as duas abas e 'Programas' ativa (R18)" + "estado de carregamento exibe 'Carregando programa…' e nenhum programa"; `__tests__/lib/milon/hooks/useProgramDetail.test.ts` → "sucesso: programa preenchido, loading false e error nulo" + "id desconhecido (R19): standalone resolve nulo ⇒ program nulo E error nulo com loading false".
+
+### Cenário 40: Criação salva navega ao detalhe do programa novo (CA-P3-18 · R20 · D17)
+
+**Dado** que a pessoa criou um programa e o salvou com sucesso
+**Quando** o salvamento termina
+**Então** ela é navegada para `/milon/programs/<id>` do programa recém-criado (o destino usa o id devolvido por `save()`), vendo o cabeçalho dele — a lista não é o destino desse caminho, e o modal de criação também fecha
+
+Automatizado: `__tests__/app/milon/programs/page.test.tsx` → "CA-P3-18: salvar um programa novo navega para /milon/programs/<id> do programa criado" (asserção de `router.push` com o id devolvido por `save()`).
+
+### Cenário 41: Edição salva permanece na lista (CA-P3-19 · R21 · D17)
+
+**Dado** que a pessoa salvou a edição de um programa existente
+**Quando** o salvamento termina
+**Então** ela permanece em `/milon/programs` com a lista atualizada — **nenhuma** navegação para a página de detalhe — e o modal de edição fecha
+
+Automatizado: `__tests__/app/milon/programs/page.test.tsx` → "CA-P3-19: salvar a edição permanece na lista — nenhuma navegação e modal fecha" (`router.push` não é chamado).
+
+### Cenário 42: Detalhe sem placeholder de treinos (CA-P3-20 · R18 · D16 / Q5)
+
+**Dado** que a página de detalhe está em qualquer um dos seus estados (carregando, com programa, não encontrada ou erro de fetch)
+**Quando** a pessoa observa a tela
+**Então** não há mensagem do tipo "Treinos em breve", nem seção de treinos, nem lista vazia de treinos — a tela contém só o cabeçalho do programa (conteúdo de treinos é da feature 3)
+
+Automatizado: `__tests__/app/milon/programs/[id]/page.test.tsx` → "nenhum dos quatro estados da página menciona treinos (CA-P3-20)".
+
+---
 
 ## Fora do escopo confirmado pela spec (não homologar aqui)
 

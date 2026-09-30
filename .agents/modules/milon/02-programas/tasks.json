@@ -579,7 +579,7 @@
                   },
                   {
                       "id":  "TASK-028",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "test-scenarios.md: cenarios Dado/Quando/Entao do Patch v4",
                       "description":  "Minos acrescenta a .agents/modules/milon/02-programas/test-scenarios.md os cenarios do Patch v4 cobrindo CA-P3-13 a CA-P3-20, no mesmo formato Dado/Quando/Entao dos cenarios da v1 e do Patch v3. Inclui explicitamente o cenario 5 da homologacao (mensagem de bloqueio atras do backdrop do modal) como CA-P3-16, os estados da rota de detalhe (CA-P3-17 e R19), a ausencia de placeholder de treinos (CA-P3-20) e a navegacao pos-criacao versus permanencia na edicao (CA-P3-18/19). Nao e criado cenario para CA-P3-21 (e gate de processo) nem para o handoff da Q7 (registro em backlog.md e responsabilidade do Mnemosine).",
                       "assignee":  "minos",

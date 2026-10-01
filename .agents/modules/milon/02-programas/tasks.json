@@ -752,7 +752,7 @@
                   },
                   {
                       "id":  "TASK-036",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "RED: rota de detalhe com banner acima do cabeçalho e estados preservados (R19, R24)",
                       "description":  "Minos escreve os testes RED da adoção no detalhe (D21, R19, R24, default de R25) a partir dos contratos textuais do plan.md \u0027Patch v5\u0027 §3, sem tocar em produção. Consome: AsyncState (TASK-033) e a composição nova de app/milon/programs/[id]/page.tsx — ainda inexistente. Produz: adaptações de __tests__/app/milon/programs/[id]/page.test.tsx, que a TASK-037 torna verdes. Cenários: (1) falha de fetch com conteúdo (estado mockado programa+erro — hoje nunca coexiste; asserção do contrato do componente, risco §6 do plan) =\u003e banner ACIMA do cabeçalho com \u0027Tentar novamente\u0027; (2) falha sem conteúdo =\u003e somente o banner com retry (origem ausente tratada como carga — default exercido em tela real); (3) id desconhecido =\u003e faixa de vazio \u0027Programa não encontrado.\u0027 com a explicação e SEM \u0027Tentar novamente\u0027 (R19 preservado); (4) carregando =\u003e somente \u0027Carregando programa…\u0027. Expected: FAIL hoje (a cadeia das linhas 21–47 não compõe AsyncState).",
                       "assignee":  "minos",
@@ -772,7 +772,7 @@
                   },
                   {
                       "id":  "TASK-037",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Adoção no detalhe: cadeia 21–47 vira composição do AsyncState com default de origem ausente",
                       "description":  "Hefesto implementa o contrato RED da TASK-036 (D21, R19, R25). Consome: testes da TASK-036; AsyncState (TASK-033). Produz: app/milon/programs/[id]/page.tsx com a cadeia das linhas 21–47 substituída. Passos: (1) compõe AsyncState dentro de MilonLayout SEM informar errorOrigin (ausente =\u003e carga =\u003e retry na falha de fetch, exercitando o default em tela real); (2) loading repassa \u0027Carregando programa…\u0027 (reticência horizontal, como hoje); (3) empty = id desconhecido (programa nulo e sem erro) repassando \u0027Programa não encontrado.\u0027 e a explicação; (4) children = cabeçalho (título com font-display, dono, badge STATUS_LABEL); noResults fixo false; (5) o botão próprio \u0027Tentar novamente\u0027 sai do arquivo. Hefesto não escreve testes.",
                       "assignee":  "hefesto",

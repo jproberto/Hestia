@@ -1,0 +1,19 @@
+{
+  "sessionId": "milon-03-treinos-series-20261001",
+  "module": "milon",
+  "slug": "03-treinos-series",
+  "objective": "Feature 3: Treinos + séries planejadas — Dentro de um Programa, cada treino tem N exercícios em ordem; cada exercício tem N séries com reps alvo, carga alvo e descanso (segundos). Edição do planejado permitida antes e durante a execução.",
+  "currentPhase": "SPEC_DRAFT",
+  "history": [
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-01T14:41:00.000Z",
+      "action": "Feature directory created, initializing state"
+    }
+  ],
+  "approvals": {
+    "spec": "pending",
+    "review": "pending"
+  },
+  "decisions": []
+}

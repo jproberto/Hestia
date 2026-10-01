@@ -1,0 +1,11 @@
+{
+  "currentPhase": "SPEC_DRAFT",
+  "validTransitions": ["SPEC_APPROVED"],
+  "phaseHistory": [
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-01T14:41:00.000Z"
+    }
+  ],
+  "lastUpdated": "2026-10-01T14:41:00.000Z"
+}

@@ -33,6 +33,7 @@ export default function MilonExercisesPage() {
     sortOrder,
     loading,
     error,
+    errorOrigin,
     successNotice,
     setMuscleFilter,
     setSearchText,
@@ -110,10 +111,10 @@ export default function MilonExercisesPage() {
     setDeleting(true);
     try {
       await remove(deleteTarget.id);
-      setDeleteTarget(null);
     } catch {
-      // Mantém a confirmação aberta; o erro fica visível na lista via hook.
+      // O erro fica visível na lista via hook; o fechamento ocorre no bloco final.
     } finally {
+      setDeleteTarget(null);
       setDeleting(false);
     }
   }, [deleteTarget, remove]);
@@ -143,6 +144,7 @@ export default function MilonExercisesPage() {
           sortOrder={sortOrder}
           loading={loading}
           error={error}
+          errorOrigin={errorOrigin}
           isEmpty={isEmpty}
           onFilterChange={setMuscleFilter}
           onSearchChange={setSearchText}

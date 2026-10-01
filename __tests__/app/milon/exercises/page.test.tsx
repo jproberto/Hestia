@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { render, screen, cleanup, waitFor, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import ExercisesPage from "@/app/milon/exercises/page";
@@ -45,6 +47,9 @@ function defaultHookState(overrides: Record<string, unknown> = {}) {
     visibleCount: 20,
     loading: false,
     error: null as string | null,
+    // Canal de origem (Patch v5 / TASK-039): a página repassa ao ExerciseList —
+    // decide se o banner tem "Tentar novamente" (só `carga`; `operacao` não).
+    errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
     successNotice: null as string | null,
     setMuscleFilter: vi.fn(),
     setSearchText: vi.fn(),
@@ -390,5 +395,171 @@ describe("ExercisesPage /milon/exercises - Biblioteca de exercícios (CA-P3-02 /
 
     fireEvent.change(control, { target: { value: "name" } });
     expect(setSortOrder).toHaveBeenCalledWith("name");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Patch v5 (D25, R28, CA-P5-6) — EXCLUSÃO DA BIBLIOTECA FECHA EM FALHA +
+// repasse CRU de `errorOrigin` ao ExerciseList (D21/D23).
+// Contrato RED da TASK-038. Fonte: spec.md "Patch v5" (D21, D23, D25, R26–R28,
+// CA-P5-6, achados S6(a)/S6(b)) + plan.md "Patch v5" §2 alvos
+// (app/milon/exercises/page.tsx — `handleDeleteConfirm`, linhas 108–119) e §3
+// contratos ("Página da biblioteca") + §4 data flow item 5 + tasks.json
+// TASK-038 acceptanceCriteria 3.
+//
+// CONTRATO CONSUMIDO (ainda INEXISTENTE na produção):
+//   - `handleDeleteConfirm` FECHA `DeleteExerciseConfirm` em SUCESSO E FALHA
+//     (D25 — extensão da semântica D15/R16 à outra tela de confirmação do
+//     Mílon); o comentário "Mantém a confirmação aberta" sai do arquivo;
+//   - a página repassa `errorOrigin` CRU do hook ao `ExerciseList` (sem
+//     fallback `?? "carga"`), de modo que a falha de exclusão vira banner SEM
+//     "Tentar novamente" (origem `operacao`) ACIMA da lista, com o exercício
+//     mantido (CA-P5-6 / S6(a) + S6(b)).
+//
+// STATUS: RED esperado (TASK-039/Hefesto torna verde). Hoje a confirmação
+// permanece aberta na falha (falha: "heading ainda no documento") e a página
+// não repassa a origem (falha: "o botão 'Tentar novamente' não deveria
+// existir") — comportamento esperado, não erro de sintaxe.
+// ---------------------------------------------------------------------------
+
+/** Título do modal de confirmação (`components/milon/DeleteExerciseConfirm.tsx`). */
+const TITULO_CONFIRM_EXCLUSAO = "Excluir exercício";
+
+/** CA-P5-6: a confirmação não permanece aberta — some o heading E o backdrop. */
+async function expectDeleteConfirmClosed(): Promise<void> {
+  await waitFor(() => {
+    expect(
+      screen.queryByRole("heading", { name: TITULO_CONFIRM_EXCLUSAO }),
+    ).not.toBeInTheDocument();
+  });
+  expect(document.querySelector(".fixed.inset-0.z-50")).toBeNull();
+}
+
+/** O nó `earlier` aparece antes de `later` na árvore (banner ACIMA). */
+function expectAppearsBefore(earlier: HTMLElement, later: HTMLElement): void {
+  const position = earlier.compareDocumentPosition(later);
+  expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+    Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+}
+
+describe("Patch v5 — exclusão fecha em falha e origem repassada (TASK-038 RED)", () => {
+  const MENSAGEM_FALHA = "Erro ao excluir exercício";
+
+  it("CA-P5-6/S6(b): falha de exclusão FECHA a confirmação e mostra a mensagem no banner sem 'Tentar novamente'", async () => {
+    const item = makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" });
+    const state = setupHook({
+      exercises: [item],
+      filteredExercises: [item],
+      visibleExercises: [item],
+      muscleOptions: ["Peito"],
+    });
+    // O hook grava `error` + origem `operacao` e RELANÇA (plan §3 "useExercises"
+    // e §4 data flow item 5) — a decisão da página é fechar a confirmação.
+    state.remove.mockImplementation(async () => {
+      state.error = MENSAGEM_FALHA;
+      state.errorOrigin = "operacao";
+      throw new Error(MENSAGEM_FALHA);
+    });
+
+    render(<ExercisesPage />);
+
+    await clickConnectedButton(/excluir supino reto/i);
+    expect(
+      screen.getByRole("heading", { name: TITULO_CONFIRM_EXCLUSAO }),
+    ).toBeInTheDocument();
+    expect(state.remove).not.toHaveBeenCalled();
+
+    await clickConnectedButton(/confirmar exclusão/i);
+    await waitFor(() => expect(state.remove).toHaveBeenCalledWith("ex-1"));
+
+    // CA-P5-6 / D25: a confirmação NÃO permanece aberta na falha.
+    await expectDeleteConfirmClosed();
+
+    // A mensagem está legível no banner da lista…
+    expect(screen.getByText(MENSAGEM_FALHA)).toBeInTheDocument();
+    // …SEM "Tentar novamente" (exclusivo da origem `carga`)…
+    expect(
+      screen.queryByRole("button", { name: /tentar novamente/i }),
+    ).not.toBeInTheDocument();
+    // …e o exercício permanece na lista (a exclusão falhou).
+    expect(screen.getByText("Supino reto")).toBeInTheDocument();
+  });
+
+  it("terminal de sucesso: exclusão confirmada fecha a confirmação e zera o erro", async () => {
+    const item = makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" });
+    const state = setupHook({
+      exercises: [item],
+      filteredExercises: [item],
+      visibleExercises: [item],
+      muscleOptions: ["Peito"],
+    });
+
+    render(<ExercisesPage />);
+
+    await clickConnectedButton(/excluir supino reto/i);
+    await clickConnectedButton(/confirmar exclusão/i);
+    await waitFor(() => expect(state.remove).toHaveBeenCalledWith("ex-1"));
+
+    await expectDeleteConfirmClosed();
+    expect(state.error).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /tentar novamente/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("CA-P5-6: origem 'operacao' crua do hook => banner ACIMA da lista visível, sem retry", async () => {
+    const item = makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" });
+    setupHook({
+      exercises: [item],
+      filteredExercises: [item],
+      visibleExercises: [item],
+      muscleOptions: ["Peito"],
+      error: MENSAGEM_FALHA,
+      errorOrigin: "operacao",
+    });
+
+    render(<ExercisesPage />);
+
+    const banner = await screen.findByText(MENSAGEM_FALHA);
+    const itemNode = screen.getByText("Supino reto");
+    expectAppearsBefore(banner, itemNode);
+    expect(
+      screen.queryByRole("button", { name: /tentar novamente/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/filtrar por músculo/i)).toBeInTheDocument();
+  });
+
+  it("CA-P3-15/CA-P5-5: origem 'carga' crua do hook => banner com 'Tentar novamente' que dispara retry", async () => {
+    const state = setupHook({
+      error: "Falha ao buscar exercícios",
+      errorOrigin: "carga",
+    });
+
+    render(<ExercisesPage />);
+
+    expect(screen.getByText("Falha ao buscar exercícios")).toBeInTheDocument();
+    await clickConnectedButton(/tentar novamente/i);
+    expect(state.retry).toHaveBeenCalledTimes(1);
+    expect(state.errorOrigin).toBe("carga");
+  });
+});
+
+/** Fonte da página da biblioteca (mesmo padrão de leitura de page.test.tsx). */
+function exercisesPageSource(): string {
+  return fs.readFileSync(
+    path.resolve(__dirname, "../../../../app/milon/exercises/page.tsx"),
+    "utf8",
+  );
+}
+
+describe("TASK-039 — critérios de substituição (buscas por placeholder → 0)", () => {
+  it("CA-P5-6/S6(b): 'Mantém a confirmação aberta' em app/milon/exercises/page.tsx => 0 ocorrências", () => {
+    expect(exercisesPageSource().split("Mantém a confirmação aberta").length - 1).toBe(0);
+  });
+
+  it("D21/D23: a página repassa errorOrigin CRU do hook ao ExerciseList (sem fallback '?? \"carga\"')", () => {
+    expect(exercisesPageSource()).toMatch(/errorOrigin\s*=\s*\{errorOrigin\}/);
+    expect(exercisesPageSource()).not.toMatch(/\?\?\s*["']carga["']/);
   });
 });

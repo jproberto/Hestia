@@ -793,7 +793,7 @@
                   },
                   {
                       "id":  "TASK-038",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "RED: biblioteca com errorOrigin no useExercises, exclusão fecha em falha (D23, D25, CA-P5-6)",
                       "description":  "Minos escreve os testes RED da adoção na biblioteca (D21, D23, D25, R27, R28, CA-P5-6, achados S6(a) e S6(b)) a partir dos contratos textuais do plan.md \u0027Patch v5\u0027 §3, sem tocar em produção. Consome: AsyncState (TASK-033) e os contratos novos de useExercises/ExerciseList/página — ainda inexistentes. Produz: adaptações de __tests__/lib/milon/hooks/useExercises.test.ts, __tests__/components/milon/ExerciseList.test.tsx e __tests__/app/milon/exercises/page.test.tsx, que a TASK-039 torna verdes. Cenários: (1) useExercises — rejeição do efeito de montagem e do fetchList gravam errorOrigin \u0027carga\u0027; falha em remove grava \u0027operacao\u0027; applyList e sucessos zeram error e errorOrigin juntos; save/saveAndNew não alteram nenhum dos dois (formato idêntico ao contrato de usePrograms, R27); (2) ExerciseList — ganha prop obrigatória errorOrigin; \u0027carga\u0027 com retry, \u0027operacao\u0027/\u0027bloqueio\u0027 sem; banner ACIMA da lista com itens visíveis (CA-P5-1 na biblioteca); (3) página — exclusão confirmada que falha FECHA DeleteExerciseConfirm e mostra a mensagem no banner sem \u0027Tentar novamente\u0027 (CA-P5-6/S6(b)). Expected: FAIL hoje (hook sem errorOrigin, lista sem prop, modal mantido aberto no erro).",
                       "assignee":  "minos",
@@ -815,7 +815,7 @@
                   },
                   {
                       "id":  "TASK-039",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Adoção na biblioteca: errorOrigin no useExercises, ExerciseList no AsyncState e exclusão fecha em falha",
                       "description":  "Hefesto implementa o contrato RED da TASK-038 (D21, D23, D25). Consome: testes da TASK-038; AsyncState (TASK-033); DeleteExerciseConfirm inalterado (muda só quem fecha). Produz: lib/milon/hooks/useExercises.ts com errorOrigin; components/milon/ExerciseList.tsx no AsyncState; app/milon/exercises/page.tsx fechando a confirmação em falha; stories. Passos: (1) UseExercisesReturn ganha errorOrigin anulável — montagem/fetchList =\u003e \u0027carga\u0027, catch de remove =\u003e \u0027operacao\u0027, applyList/zeragens zera os dois campos, save/saveAndNew não tocam no canal (relançam para o modal); (2) ExerciseList ganha prop obrigatória errorOrigin e substitui a cadeia a partir da linha 95 pelo AsyncState (empty = isEmpty, noResults = não vazio \u0026\u0026 nenhum item visível, children = \u003cul\u003e + botão \u0027Mostrar mais\u0027), removendo o botão próprio de retry; (3) a página repassa errorOrigin ao ExerciseList e handleDeleteConfirm fecha DeleteExerciseConfirm em sucesso E falha, removendo o comentário \u0027Mantém a confirmação aberta\u0027; (4) ExerciseList.stories.tsx exercita as três origens. Hefesto não escreve testes.",
                       "assignee":  "hefesto",

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
+import type { ErrorOrigin } from "@/lib/shared";
 import {
   listExercisesStandalone,
   createExerciseStandalone,
@@ -36,6 +37,7 @@ export interface UseExercisesReturn {
   visibleCount: number;
   loading: boolean;
   error: string | null;
+  errorOrigin: ErrorOrigin | null;
   successNotice: string | null;
   setMuscleFilter: (value: string) => void;
   setSearchText: (value: string) => void;
@@ -89,6 +91,7 @@ export function useExercises(): UseExercisesReturn {
   const [visibleCount, setVisibleCount] = useState<number>(EXERCISE_PAGE_SIZE);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorOrigin, setErrorOrigin] = useState<ErrorOrigin | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -109,16 +112,19 @@ export function useExercises(): UseExercisesReturn {
   const applyList = useCallback((items: Exercise[]) => {
     setExercises(sortExercises(items, sortOrderRef.current));
     setError(null);
+    setErrorOrigin(null);
   }, []);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setErrorOrigin(null);
     try {
       const items = await listExercisesStandalone();
       applyList(items ?? []);
     } catch (err: unknown) {
       setError(toErrorMessage(err, "Erro ao carregar exercícios"));
+      setErrorOrigin("carga");
     } finally {
       setLoading(false);
     }
@@ -131,11 +137,13 @@ export function useExercises(): UseExercisesReturn {
         if (cancelled) return;
         setExercises(sortExercises(items ?? [], sortOrderRef.current));
         setError(null);
+        setErrorOrigin(null);
         setLoading(false);
       },
       (err: unknown) => {
         if (cancelled) return;
         setError(toErrorMessage(err, "Erro ao carregar exercícios"));
+        setErrorOrigin("carga");
         setLoading(false);
       },
     );
@@ -200,10 +208,12 @@ export function useExercises(): UseExercisesReturn {
 
   const save = useCallback(
     async (input: SaveExerciseInput, id?: string | null): Promise<Exercise> => {
-      // Erro de save NÃO alimenta o `error` da lista: ele é relançado para
-      // o modal exibir via `modalError` (page.tsx). A lista preserva
-      // itens/filtros; só fetch (fetchList) toca no `error` da lista.
-      // Sucesso limpa via applyList; falha deixa o `error` intacto.
+      // Canal error/errorOrigin (D23/R27): save NÃO toca em nenhum dos dois —
+      // nem em falha, nem em sucesso. O erro de save é relançado para o modal
+      // exibir via `modalError` (page.tsx), como em usePrograms (R27).
+      // A lista é atualizada sem passar por applyList: recarrega do banco e
+      // garante o item salvo visível (upsert idempotente — sem efeito quando
+      // a recarga já contém o salvo).
       try {
         const payload: CreateExerciseInput = {
           name: input.name,
@@ -221,7 +231,11 @@ export function useExercises(): UseExercisesReturn {
           saved = await createExerciseStandalone(payload, await resolveEmail());
         }
         const items = await listExercisesStandalone();
-        applyList(items ?? []);
+        const base = items ?? [];
+        const upserted = base.some((item) => item.id === saved.id)
+          ? base.map((item) => (item.id === saved.id ? saved : item))
+          : [saved, ...base];
+        setExercises(sortExercises(upserted, sortOrderRef.current));
         flashSuccess(SUCCESS_SAVE_MESSAGE);
         return saved;
       } catch (err: unknown) {
@@ -229,7 +243,7 @@ export function useExercises(): UseExercisesReturn {
         throw err instanceof Error ? err : new Error(message);
       }
     },
-    [applyList, flashSuccess, resolveEmail],
+    [flashSuccess, resolveEmail],
   );
 
   const saveAndNew = useCallback(
@@ -244,6 +258,7 @@ export function useExercises(): UseExercisesReturn {
   const remove = useCallback(
     async (id: string): Promise<void> => {
       setError(null);
+      setErrorOrigin(null);
       try {
         await deleteExerciseStandalone(id);
         const items = await listExercisesStandalone();
@@ -252,6 +267,7 @@ export function useExercises(): UseExercisesReturn {
       } catch (err: unknown) {
         const message = toErrorMessage(err, "Erro ao excluir exercício");
         setError(message);
+        setErrorOrigin("operacao");
         throw err instanceof Error ? err : new Error(message);
       }
     },
@@ -270,6 +286,7 @@ export function useExercises(): UseExercisesReturn {
     visibleCount,
     loading,
     error,
+    errorOrigin,
     successNotice,
     setMuscleFilter,
     setSearchText,

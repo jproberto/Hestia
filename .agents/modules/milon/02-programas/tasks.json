@@ -882,6 +882,96 @@
                                     ".agents/modules/milon/02-programas/test-scenarios.md",
                                     ".agents/modules/milon/regression.md"
                                 ]
+                  },
+                  {
+                      "id":  "TASK-042",
+                      "status":  "completed",
+                      "title":  "RED: título do item do ProgramList é link com href exato para o detalhe (CA-P6-1…5)",
+                      "description":  "Minos escreve os testes RED do Patch v6 (D28–D32, R32–R37, CA-P6-1 a CA-P6-5) a partir dos contratos textuais do plan.md \u0027Aditivo - Patch v6\u0027 §3, sem tocar em produção. Consome: components/milon/ProgramList.tsx com o título em texto puro (h3 das linhas 108–110, sem link) e a rota de detalhe já existente /milon/programs/\u003cid\u003e (Patch v4, D16/R18) — o comportamento alvo ainda não existe. Produz: extensão de __tests__/components/milon/ProgramList.test.tsx, que a TASK-043 torna verde, com describe novo \u0027Patch v6 — título é link para o detalhe (TASK-042 RED)\u0027 sem alterar os describes existentes. Cenários: (1) CA-P6-1 — lista com 3 itens de ids distintos: por item, getByRole(\u0027link\u0027, { name: título }) com href exatamente \u0027/milon/programs/\u003cid\u003e\u0027 daquele item, sem barra final, sem query e sem id de outro programa, exatamente 1 link por item; (2) CA-P6-2 — o link existe nos três status (rascunho, ativo e inativo) e o destino é asserido pelo href exato (a passagem real fica no cenário de homologação, spec T4); (3) CA-P6-3 — ações por status intactas (rascunho: Editar/Ativar/Excluir; ativo: Editar; inativo: Reativar), cada botão FORA do link (closest(\u0027a\u0027) nulo e o link não contém botão), clique dispara o callback com o item, dono e selo permanecem texto simples sem link; (4) CA-P6-4 — classes exatas do link: text-[#B7602B] no repouso; hover:text-[#C2703D] (tom de marrom diferente do repouso) + transition-colors; no-underline presente e regex (^|[\\s:])underline aplicada às classes de todo elemento do h3 retornando 0 (nenhuma marcação de sublinhado em repouso, hover ou foco); focus-visible:outline-2, focus-visible:outline-offset-2 e focus-visible:outline-[#B7602B] presentes; (5) CA-P6-5 — getByRole(\u0027heading\u0027, { level: 3, name: título }) e getByRole(\u0027link\u0027, { name: título }) com o mesmo nome acessível, o link sendo âncora com href (alcançável por teclado). Sem mock novo de rota — precedente: os cards do dashboard asserem href de Link renderizado e next/navigation já é mockado globalmente em __tests__/setup.ts (spec T7). Expected: FAIL hoje — o título ainda não é link. Minos não corrige produção.",
+                      "assignee":  "minos",
+                      "dependencies":  [
+
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "CA-P6-1: __tests__/components/milon/ProgramList.test.tsx cobre uma lista com 3 itens de ids distintos — cada título é link com href exatamente \u0027/milon/programs/\u003cid\u003e\u0027 do próprio item (sem barra final, sem query, sem id de outro programa) e há exatamente 1 link por item",
+                                                 "CA-P6-2: o link está presente nos três status (rascunho, ativo, inativo) com destino asserido pelo href exato; a passagem real é do cenário de homologação em test-scenarios.md (spec T4)",
+                                                 "CA-P6-3: ações por status preservadas (rascunho: Editar/Ativar/Excluir; ativo: Editar; inativo: Reativar); cada botão de ação está FORA do link (closest(\u0027a\u0027) nulo e o link não contém o botão) e o clique dispara o callback com o item; dono e selo seguem texto simples — 1 link por item",
+                                                 "CA-P6-4: classes exatas no link — text-[#B7602B] no repouso, hover:text-[#C2703D] + transition-colors no hover, no-underline presente; regex (^|[\\s:])underline sobre as classes de todos os elementos do h3 retorna 0; focus-visible:outline-2, focus-visible:outline-offset-2 e focus-visible:outline-[#B7602B] presentes",
+                                                 "CA-P6-5: heading de nível 3 com nome acessível igual ao texto do programa e link interno com o MESMO nome acessível; o link é âncora com href (alcançável por teclado)",
+                                                 "Nenhum arquivo de produção é criado ou editado nesta task (só o teste) e os describes existentes do arquivo permanecem intactos",
+                                                 "Execução atual falha (Expected: FAIL) — o título ainda não é link — condição de RED da TASK-043"
+                                             ],
+                      "files":  [
+                                    "__tests__/components/milon/ProgramList.test.tsx"
+                                ]
+                  },
+                  {
+                      "id":  "TASK-043",
+                      "status":  "completed",
+                      "title":  "Título do item vira Link do Next.js com afordância de cor no hover e foco visível (D28–D32)",
+                      "description":  "Hefesto implementa o contrato RED da TASK-042 (D28–D32, R32–R37). Consome: testes da TASK-042; rota de detalhe já existente /milon/programs/\u003cid\u003e (Patch v4, D16/R18); padrão de Link de app/dashboard/page.tsx (import de next/link). Produz: components/milon/ProgramList.tsx com o Link no título — único arquivo modificado. Passos: (1) importar Link de \u0027next/link\u0027 no topo do arquivo; (2) o h3 das linhas 108–110 mantém só as classes de tipografia e corte (font-display text-sm leading-snug tracking-wider truncate) e passa a conter o Link com href montado como \u0027/milon/programs/\u0027 + program.id, envolvendo somente o texto do programa; (3) a cor sai do h3 e mora no link, com as classes exatas do contrato: text-[#B7602B] (repouso), hover:text-[#C2703D], transition-colors, no-underline, focus-visible:outline-2, focus-visible:outline-offset-2 e focus-visible:outline-[#B7602B] — nenhuma classe de sublinhado em qualquer estado; (4) nada além das linhas 108–110 e do import muda: dono, selo de status, filtros, AsyncState, botões de ação e demais blocos permanecem idênticos; (5) nenhuma prop nova, nenhum handler novo, nenhuma mudança em stories (props inalteradas). Hefesto não escreve testes.",
+                      "assignee":  "hefesto",
+                      "dependencies":  [
+                                           "TASK-042"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "components/milon/ProgramList.tsx importa Link de \u0027next/link\u0027 e o h3 de cada item contém o Link com href \u0027/milon/programs/\u0027 + program.id — exatamente o id do próprio item, sem barra final, sem query",
+                                                 "O h3 permanece heading com o link dentro (hierarquia h2 da seção / h3 por item intacta) e o texto visível do título é o mesmo de hoje",
+                                                 "Classes do link: text-[#B7602B] no repouso, hover:text-[#C2703D] + transition-colors no hover, no-underline e foco focus-visible:outline-2 com focus-visible:outline-offset-2 e focus-visible:outline-[#B7602B]",
+                                                 "Nenhuma classe de sublinhado além de no-underline: buscas por \u0027hover:underline\u0027, \u0027focus:underline\u0027 e \u0027focus-visible:underline\u0027 em components/milon/ProgramList.tsx retornam 0",
+                                                 "Ações intactas e fora do link: os botões Editar/Ativar/Reativar/Excluir permanecem no bloco à direita, irmão do bloco de título (fora do \u003ca\u003e), com os mesmos rótulos, condições por status e callbacks; dono e selo continuam texto simples; a linha não é clicável por inteiro",
+                                                 "ProgramListProps inalterada (nenhuma prop nova) e nenhum arquivo além de components/milon/ProgramList.tsx é modificado — página, hooks, modais, types, repositories, db, stories e utils/migrations intocados",
+                                                 "npm test -- __tests__/components/milon/ProgramList.test.tsx passa (Expected: PASS, incluindo CA-P6-1 a CA-P6-5 da TASK-042) e npx tsc --noEmit passa",
+                                                 "npm run build-storybook passa (ProgramList.stories.tsx sem mudança de contrato)",
+                                                 "Nenhum arquivo de app/pluto/, components/pluto/ ou lib/pluto/ é alterado"
+                                             ],
+                      "files":  [
+                                    "components/milon/ProgramList.tsx"
+                                ]
+                  },
+                  {
+                      "id":  "TASK-044",
+                      "status":  "pending",
+                      "title":  "test-scenarios.md: Cenário 52 do Patch v6 (CA-P6-1 a CA-P6-5)",
+                      "description":  "Minos acrescenta à .agents/modules/milon/02-programas/test-scenarios.md o Cenário 52 — o próximo número após o Cenário 51 — cobrindo CA-P6-1 a CA-P6-5 no mesmo formato Dado/Quando/Então dos blocos dos Patches v4 e v5, sem alterar nem renumerar os Cenários 1–51. Conteúdo do cenário: (a) o título de cada item é link com href exatamente \u0027/milon/programs/\u003cid\u003e\u0027 daquele item (CA-P6-1); (b) clicar no título leva à página de detalhe do programa, caminho válido para rascunho, ativo e inativo — na suíte asserido pelo href exato e a passagem exercida manualmente (CA-P6-2); (c) ações por status intactas e fora do link — acionar uma ação dispara o comportamento de sempre e não navega (CA-P6-3); (d) afordância: repouso #B7602B sem sublinhado, hover com mudança de cor do marrom com transição e foco por teclado visível, zero sublinhado em qualquer estado (CA-P6-4); (e) heading h3 e link com o mesmo nome acessível, link alcançável por teclado (CA-P6-5). Cada item cita os testes automatizados correspondentes em __tests__/components/milon/ProgramList.test.tsx. CA-P6-6 não vira cenário: é gate de processo verificado pela TASK-045 (spec T6 limita o cenário novo a CA-P6-1…CA-P6-5).",
+                      "assignee":  "minos",
+                      "dependencies":  [
+                                           "TASK-043"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "test-scenarios.md contém o Cenário 52 (número seguinte ao 51) no formato Dado/Quando/Então cobrindo CA-P6-1, CA-P6-2, CA-P6-3, CA-P6-4 e CA-P6-5 — um item por critério",
+                                                 "Os Cenários 1–51 permanecem intactos: o acréscimo não edita, não renumera e não remove nada existente no arquivo",
+                                                 "O cenário cita os testes automatizados de __tests__/components/milon/ProgramList.test.tsx que exercitam cada critério",
+                                                 "A seção do Patch v6 segue o padrão das seções dos Patches v4 e v5 no mesmo arquivo (introdução, mapeamento e blocos Dado/Quando/Então)",
+                                                 "CA-P6-6 permanece sem cenário próprio (gate de processo na TASK-045, conforme spec T6)"
+                                             ],
+                      "files":  [
+                                    ".agents/modules/milon/02-programas/test-scenarios.md"
+                                ]
+                  },
+                  {
+                      "id":  "TASK-045",
+                      "status":  "pending",
+                      "title":  "Suite final Minos + coverage + test-report + regressão (Patch v6 — CA-P6-6)",
+                      "description":  "Minos executa a suite completa (v1 + Patch v3 + v4 + v5 + v6): todos os testes de contrato, utils, hooks, componentes e páginas, incluindo os cenários novos de __tests__/components/milon/ProgramList.test.tsx. Coverage ≥ 80%. Regenera test-report.json e test-scenarios.md na FEATURE_DIR (Cenário 52 incluído, Cenários 1–51 intactos), promove cenários de regressão para .agents/modules/milon/regression.md e executa npm run build-storybook sem erros. Buscas de fechamento: \u0027next/link\u0027 em components/milon/ProgramList.tsx retorna 1 ocorrência de import; \u0027hover:underline\u0027 e \u0027focus-visible:underline\u0027 em components/ retornam 0; nenhum arquivo em utils/migrations/ é criado ou editado (sem DDL) e nenhuma versão de pacote muda (sem SemVer). Gate do processo (CA-P6-6): test-report.failed == 0 e coverage ≥ 80 antes da review do Argos.",
+                      "assignee":  "minos",
+                      "dependencies":  [
+                                           "TASK-044"
+                                       ],
+                      "acceptanceCriteria":  [
+                                                 "CA-P6-6: suíte completa verde (nenhum teste existente quebra) com coverage ≥ 80% mantido; test-report.json regenerado por Minos antes da review (gate do processo)",
+                                                 "npm test passa com coverage ≥ 80% (lines/functions/branches/statements ≥ 80)",
+                                                 "test-report.json gerado em .agents/modules/milon/02-programas/ com failed = 0",
+                                                 "test-scenarios.md cobre v1 + Patch v3 + Patch v4 + Patch v5 + Patch v6 (Cenário 52 presente; Cenários 1–51 intactos)",
+                                                 "Cenários de regressão promovidos para .agents/modules/milon/regression.md",
+                                                 "npm run build-storybook passa sem erros",
+                                                 "Busca por \u0027next/link\u0027 em components/milon/ProgramList.tsx retorna 1; buscas por \u0027hover:underline\u0027 e \u0027focus-visible:underline\u0027 em components/ retornam 0; nenhum arquivo de utils/migrations/ é criado ou editado (sem DDL) e nenhum bump de versão"
+                                             ],
+                      "files":  [
+                                    ".agents/modules/milon/02-programas/test-report.json",
+                                    ".agents/modules/milon/02-programas/test-scenarios.md",
+                                    ".agents/modules/milon/regression.md"
+                                ]
                   }
               ]
 }

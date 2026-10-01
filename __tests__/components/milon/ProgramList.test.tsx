@@ -628,4 +628,229 @@ describe("ProgramList", () => {
       ).toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Patch v6 (TASK-042 RED) — título do item é link para o detalhe:
+  // spec.md §T2 D28–D32, §T3 R32–R37, §T4 CA-P6-1…CA-P6-5;
+  // plan.md "Patch v6" §3 "Contratos" (classes exatas do link, h3 mantém
+  // heading com o link dentro, ações fora do <a>, um link por item).
+  //
+  // Hoje o h3 (linhas 108–110 de components/milon/ProgramList.tsx) é texto
+  // puro — sem Link de next/link, sem href — então TODOS os cenários abaixo
+  // falham ao procurar role="link" (motivo esperado: "Unable to find an
+  // accessible element with the role 'link'"). É a condição de RED da
+  // TASK-043. Sem mock novo de rota: precedente dos cards do dashboard
+  // (__tests__/app/dashboard/page.test.tsx) e next/navigation mockado
+  // globalmente em __tests__/setup.ts (spec T7 / plan §6).
+  //
+  // Describe NOVO — os describes existentes permanecem intactos.
+  // -------------------------------------------------------------------------
+  describe("Patch v6 — título é link para o detalhe (TASK-042 RED)", () => {
+    const RASCUNHO = makeProgram({
+      id: "prog-rascunho-001",
+      title: "Ficha Verão 2026",
+      owner: DONOS[0],
+      status: "rascunho",
+    });
+    const ATIVO = makeProgram({
+      id: "prog-ativo-002",
+      title: "Ficha Maromba Total",
+      owner: DONOS[1],
+      status: "ativo",
+    });
+    const INATIVO = makeProgram({
+      id: "prog-inativo-003",
+      title: "Ficha Antiga 2025",
+      owner: DONOS[0],
+      status: "inativo",
+    });
+    const ITENS = [RASCUNHO, ATIVO, INATIVO];
+
+    /** href exato do detalhe (D28/R32): '/milon/programs/' + id do próprio item. */
+    function hrefExato(program: Program): string {
+      return `/milon/programs/${program.id}`;
+    }
+
+    it("CA-P6-1: cada título é link com href exatamente '/milon/programs/<id>' do próprio item (1 link por item)", () => {
+      render(<ProgramList {...defaultProps({ items: ITENS })} />);
+
+      for (const program of ITENS) {
+        // Exatamente 1 link com aquele nome por item.
+        const links = screen.getAllByRole("link", { name: program.title });
+        expect(links).toHaveLength(1);
+
+        const href = links[0].getAttribute("href");
+        // Href exato do próprio item — sem barra final e sem query…
+        expect(href).toBe(hrefExato(program));
+        expect(href?.endsWith("/")).toBe(false);
+        expect(href).not.toContain("?");
+        // …e sem id de outro programa da lista.
+        for (const outro of ITENS) {
+          if (outro.id === program.id) continue;
+          expect(href).not.toContain(outro.id);
+        }
+      }
+
+      // Lista inteira: um link por item — dono, selo e ações não viram link.
+      expect(screen.getAllByRole("link")).toHaveLength(ITENS.length);
+    });
+
+    it("CA-P6-2: o link está presente nos três status (rascunho, ativo, inativo) com destino asserido pelo href exato", () => {
+      render(<ProgramList {...defaultProps({ items: ITENS })} />);
+
+      for (const program of ITENS) {
+        expect(
+          screen.getByRole("link", { name: program.title }),
+        ).toBeInTheDocument();
+        // Destino travado pelo href exato em cada status (a passagem real do
+        // clique é exercida no cenário de homologação — spec T4/CA-P6-2).
+        expect(
+          within(itemOf(program.title)).getByRole("link", { name: program.title }),
+        ).toHaveAttribute("href", hrefExato(program));
+      }
+    });
+
+    it("CA-P6-3: ações por status intactas e FORA do link — clique dispara o callback; dono e selo seguem texto simples", () => {
+      const onEdit = vi.fn();
+      const onActivateReactivate = vi.fn();
+      const onDelete = vi.fn();
+      render(
+        <ProgramList
+          {...defaultProps({
+            items: ITENS,
+            onEdit,
+            onActivateReactivate,
+            onDelete,
+          })}
+        />,
+      );
+
+      // --- rascunho: Editar, Ativar e Excluir (3 botões) ---
+      const itemRascunho = itemOf(RASCUNHO.title);
+      const linkRascunho = within(itemRascunho).getByRole("link", {
+        name: RASCUNHO.title,
+      });
+      const editar = within(itemRascunho).getByRole("button", { name: /editar/i });
+      const ativar = within(itemRascunho).getByRole("button", { name: /\bativar\b/i });
+      const excluir = within(itemRascunho).getByRole("button", { name: /excluir/i });
+
+      for (const botao of [editar, ativar, excluir]) {
+        // FORA do link: nenhum botão mora dentro de uma âncora…
+        expect(botao.closest("a")).toBeNull();
+        // …e o link não contém botão algum.
+        expect(linkRascunho.contains(botao)).toBe(false);
+        expect(within(linkRascunho).queryByRole("button")).toBeNull();
+      }
+      expect(within(itemRascunho).getAllByRole("button")).toHaveLength(3);
+
+      // Clique dispara o callback de sempre com o item (sem navegação).
+      fireEvent.click(editar);
+      expect(onEdit).toHaveBeenCalledWith(RASCUNHO);
+      fireEvent.click(ativar);
+      expect(onActivateReactivate).toHaveBeenCalledWith(RASCUNHO);
+      fireEvent.click(excluir);
+      expect(onDelete).toHaveBeenCalledWith(RASCUNHO);
+
+      // --- ativo: somente Editar ---
+      const itemAtivo = itemOf(ATIVO.title);
+      const linkAtivo = within(itemAtivo).getByRole("link", { name: ATIVO.title });
+      const editarAtivo = within(itemAtivo).getByRole("button", { name: /editar/i });
+      expect(editarAtivo.closest("a")).toBeNull();
+      expect(linkAtivo.contains(editarAtivo)).toBe(false);
+      expect(within(itemAtivo).getAllByRole("button")).toHaveLength(1);
+      fireEvent.click(editarAtivo);
+      expect(onEdit).toHaveBeenCalledWith(ATIVO);
+
+      // --- inativo: somente Reativar ---
+      const itemInativo = itemOf(INATIVO.title);
+      const linkInativo = within(itemInativo).getByRole("link", {
+        name: INATIVO.title,
+      });
+      const reativar = within(itemInativo).getByRole("button", { name: /reativar/i });
+      expect(reativar.closest("a")).toBeNull();
+      expect(linkInativo.contains(reativar)).toBe(false);
+      expect(within(itemInativo).getAllByRole("button")).toHaveLength(1);
+      fireEvent.click(reativar);
+      expect(onActivateReactivate).toHaveBeenCalledWith(INATIVO);
+
+      // Contagens do conjunto — nenhum callback disparado a mais.
+      expect(onEdit).toHaveBeenCalledTimes(2); // rascunho + ativo
+      expect(onActivateReactivate).toHaveBeenCalledTimes(2); // ativar + reativar
+      expect(onDelete).toHaveBeenCalledTimes(1); // só rascunho
+
+      // Dono e selo de status: texto simples, fora de qualquer âncora (D31),
+      // e continua exatamente 1 link por item.
+      for (const program of ITENS) {
+        const item = itemOf(program.title);
+        expect(within(item).getByText(program.owner).closest("a")).toBeNull();
+        expect(
+          within(item).getByText(
+            program.status === "rascunho"
+              ? "Rascunho"
+              : program.status === "ativo"
+                ? "Ativo"
+                : "Inativo",
+          ).closest("a"),
+        ).toBeNull();
+        expect(within(item).getAllByRole("link")).toHaveLength(1);
+      }
+    });
+
+    it("CA-P6-4: afordância — cor no hover com transição, foco visível e ZERO sublinhado em qualquer estado", () => {
+      render(<ProgramList {...defaultProps({ items: [RASCUNHO] })} />);
+
+      const link = screen.getByRole("link", { name: RASCUNHO.title });
+      const classes = link.getAttribute("class") ?? "";
+
+      // Repouso: o marrom de hoje.
+      expect(classes).toContain("text-[#B7602B]");
+      // Hover: outro tom do marrom (Alternativa C) com transição de cor.
+      expect(classes).toContain("hover:text-[#C2703D]");
+      expect(classes).toContain("transition-colors");
+      const hoverColor = classes.match(/hover:text-\[(#[0-9a-fA-F]{6})\]/)?.[1];
+      expect(hoverColor).toBeDefined();
+      expect(String(hoverColor).toUpperCase()).not.toBe("#B7602B");
+
+      // Trava positiva do sem-sublinhado…
+      expect(classes).toContain("no-underline");
+
+      // Foco visível por teclado (contorno na cor do módulo).
+      expect(classes).toContain("focus-visible:outline-2");
+      expect(classes).toContain("focus-visible:outline-offset-2");
+      expect(classes).toContain("focus-visible:outline-[#B7602B]");
+
+      // Trava negativa: nenhuma marcação de sublinhado em NENHUM elemento do
+      // h3 (repouso, hover ou foco). O regex exige início, espaço ou ':' antes
+      // de "underline" — portanto `no-underline` NÃO conta como marca.
+      const h3 = screen.getByRole("heading", { level: 3, name: RASCUNHO.title });
+      const elementos = [h3, ...Array.from(h3.querySelectorAll("*"))];
+      let marcasDeSublinhado = 0;
+      for (const elemento of elementos) {
+        const classesDoElemento = elemento.getAttribute("class") ?? "";
+        marcasDeSublinhado += (classesDoElemento.match(/(^|[\s:])underline/g) ?? [])
+          .length;
+      }
+      expect(marcasDeSublinhado).toBe(0);
+    });
+
+    it("CA-P6-5: heading h3 e link com o MESMO nome acessível; o link é âncora com href (alcançável por teclado)", () => {
+      render(<ProgramList {...defaultProps({ items: [RASCUNHO] })} />);
+
+      // Mesmo nome acessível: a MESMA consulta de nome resolve os dois papéis.
+      const heading = screen.getByRole("heading", {
+        level: 3,
+        name: RASCUNHO.title,
+      });
+      expect(heading.tagName).toBe("H3");
+
+      const link = screen.getByRole("link", { name: RASCUNHO.title });
+      expect(link.textContent?.trim()).toBe(RASCUNHO.title);
+      // h3 permanece heading COM o link dentro (D29/R34).
+      expect(within(heading).getByRole("link", { name: RASCUNHO.title })).toBe(link);
+
+      // Âncora com href ⇒ alcançável por navegação de teclado (D32/R37).
+      expect(link.tagName).toBe("A");
+      expect(link).toHaveAttribute("href", hrefExato(RASCUNHO));
+    });
+  });
 });

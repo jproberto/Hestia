@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AsyncState } from "@/components/ui/AsyncState";
 import { STATUS_LABEL } from "@/lib/milon/program-utils";
@@ -105,8 +106,13 @@ export default function ProgramList({
               className="rounded-lg border bg-card text-card-foreground shadow-sm px-3 py-2 flex items-center justify-between gap-2"
             >
               <div className="flex flex-col gap-0.5 min-w-0">
-                <h3 className="font-display text-sm leading-snug text-[#B7602B] tracking-wider truncate">
-                  {program.title}
+                <h3 className="font-display text-sm leading-snug tracking-wider truncate">
+                  <Link
+                    href={"/milon/programs/" + program.id}
+                    className="text-[#B7602B] hover:text-[#C2703D] transition-colors no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B7602B]"
+                  >
+                    {program.title}
+                  </Link>
                 </h3>
                 <span className="text-xs text-muted-foreground">{program.owner}</span>
                 <span className="text-xs rounded border px-1.5 py-0.5 w-fit">

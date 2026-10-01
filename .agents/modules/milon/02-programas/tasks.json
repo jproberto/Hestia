@@ -708,7 +708,7 @@
                   },
                   {
                       "id":  "TASK-034",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "RED: ProgramList e página de Programas com banner acima da lista (CA-P5-1, CA-P5-5)",
                       "description":  "Minos escreve os testes RED da adoção em Programas (D21, R26, CA-P5-1, CA-P5-5) a partir dos contratos textuais do plan.md \u0027Patch v5\u0027 §3, sem tocar em produção. Consome: componente AsyncState (TASK-033) e a composição nova de ProgramList — ainda inexistente. Produz: adaptações de __tests__/components/milon/ProgramList.test.tsx e __tests__/app/milon/programs/page.test.tsx, que a TASK-035 torna verdes. Cenários novos: (1) CA-P5-1 — com error e origem \u0027bloqueio\u0027/\u0027operacao\u0027 o banner aparece ACIMA e a lista filtrada permanece visível e legível (hoje a lista é substituída pela mensagem — falha); (2) carga falhando sem itens mostra só o banner com \u0027Tentar novamente\u0027, sem \u0027Nenhum programa ainda.\u0027; (3) CA-P5-5 — os cenários CA-P3-13 a CA-P3-16 existentes permanecem no arquivo com as asserções de origem (retry só na carga) e os defaults de props dos cenários de carga seguem válidos. Expected: FAIL para os cenários novos (composição antiga troca a lista pela mensagem).",
                       "assignee":  "minos",
@@ -729,7 +729,7 @@
                   },
                   {
                       "id":  "TASK-035",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Adoção em Programas: ProgramList compõe AsyncState e a página repassa errorOrigin cru",
                       "description":  "Hefesto implementa o contrato RED da TASK-034 (D21, D20). Consome: testes da TASK-034; AsyncState (TASK-033); props atuais de ProgramList inalteradas. Produz: components/milon/ProgramList.tsx com a cadeia das linhas 86–116 substituída pela composição do AsyncState; app/milon/programs/page.tsx sem o fallback da linha 198; ProgramList.stories.tsx só verificada (contrato de props não muda). Passos: (1) ProgramList repassa as flags, os 5 textos exatos (\u0027Carregando programas...\u0027, \u0027Nenhum programa ainda.\u0027, \u0027Crie o primeiro programa para começar.\u0027, \u0027Nada encontrado para essa combinação.\u0027, \u0027Ajuste os filtros para ver mais programas.\u0027) e a \u003cul\u003e dos itens filtrados como children quando houver itens — filtros (select de dono, checks de status) e cabeçalho da seção ficam fora do componente; (2) o bloco próprio de retry sai do arquivo; (3) a página repassa errorOrigin cru do hook (o fallback \u0027?? \"carga\"\u0027 da linha 198 sai — o default passa a ser interno ao componente). Hefesto não escreve testes.",
                       "assignee":  "hefesto",

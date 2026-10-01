@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { AsyncState } from "@/components/ui/AsyncState";
 import { STATUS_LABEL } from "@/lib/milon/program-utils";
 import type { Program, ProgramErrorOrigin, ProgramStatus } from "@/lib/milon/types";
 
@@ -83,39 +84,21 @@ export default function ProgramList({
         </fieldset>
       </div>
 
-      {loading ? (
-        <p className="p-8 text-center text-sm font-display text-[#B7602B] tracking-wider">
-          Carregando programas...
-        </p>
-      ) : error ? (
-        <div className="rounded-lg border bg-card p-8 text-center shadow-sm flex flex-col items-center gap-2">
-          <p className="text-sm text-rose-700 dark:text-rose-300">{error}</p>
-          {errorOrigin === "carga" ? (
-            <Button onClick={onRetry} size="sm" variant="outline">
-              Tentar novamente
-            </Button>
-          ) : null}
-        </div>
-      ) : empty ? (
-        <div className="rounded-lg border bg-card p-8 text-center text-sm shadow-sm flex flex-col items-center gap-2">
-          <p className="font-display text-[#B7602B] tracking-wider">
-            Nenhum programa ainda.
-          </p>
-          <p className="text-muted-foreground">
-            Crie o primeiro programa para começar.
-          </p>
-        </div>
-      ) : noResults ? (
-        <div className="rounded-lg border bg-card p-8 text-center text-sm shadow-sm flex flex-col items-center gap-2">
-          <p className="font-display text-[#B7602B] tracking-wider">
-            Nada encontrado para essa combinação.
-          </p>
-          <p className="text-muted-foreground">
-            Ajuste os filtros para ver mais programas.
-          </p>
-        </div>
-      ) : (
-        <ul className="flex flex-col gap-1.5">
+      <AsyncState
+        loading={loading}
+        error={error}
+        errorOrigin={errorOrigin}
+        empty={empty}
+        noResults={noResults}
+        onRetry={onRetry}
+        loadingText="Carregando programas..."
+        emptyTitle="Nenhum programa ainda."
+        emptyText="Crie o primeiro programa para começar."
+        noResultsTitle="Nada encontrado para essa combinação."
+        noResultsText="Ajuste os filtros para ver mais programas."
+      >
+        {items.length > 0 ? (
+          <ul className="flex flex-col gap-1.5">
           {items.map((program) => (
             <li
               key={program.id}
@@ -174,8 +157,9 @@ export default function ProgramList({
               </div>
             </li>
           ))}
-        </ul>
-      )}
+          </ul>
+        ) : null}
+      </AsyncState>
     </section>
   );
 }

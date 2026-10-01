@@ -195,7 +195,7 @@ export default function ProgramsPage() {
           selectedStatuses={statusFilters}
           loading={loading}
           error={errorMsg}
-          errorOrigin={errorOrigin ?? "carga"}
+          errorOrigin={errorOrigin}
           empty={empty}
           noResults={noResults}
           onChangeOwner={setOwnerFilter}

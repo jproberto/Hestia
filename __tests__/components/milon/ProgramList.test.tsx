@@ -416,4 +416,216 @@ describe("ProgramList", () => {
       expect(screen.getByText("Ficha Verão 2026")).toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Patch v5 (TASK-034 RED) — adoção do AsyncState em ProgramList.
+  // spec.md §S2 D19/D20/D21, §S3 R24/R25/R26, §S4 CA-P5-1/CA-P5-3/CA-P5-5;
+  // plan.md "Patch v5" §2 alvos (cadeia das linhas 86–116) e §3 contratos.
+  //
+  // A cadeia ternária `loading ? … : error ? … : empty ? … : noResults ? … :
+  // lista` (e o retry próprio) passa a ser composição de
+  // `components/ui/AsyncState`, com filtros (select/checks) e cabeçalho da
+  // seção FORA da região de estados.
+  //
+  // Expected: FAIL (RED) nos cenários de banner ACIMA com lista visível — hoje
+  // a mensagem de erro SUBSTITUI a lista (motivo esperado: o título do item não
+  // está no documento) — e para `errorOrigin` nulo, porque o retry próprio só
+  // aceita o literal 'carga' (o default ausente/nulo ⇒ carga só existe dentro
+  // do AsyncState, D20). Os demais são travas de regressão verdes antes e
+  // depois (CA-P5-5).
+  // -------------------------------------------------------------------------
+  describe("Patch v5 — banner acima da lista e precedência (TASK-034 RED)", () => {
+    const MENSAGEM_BLOQUEIO = "Adicione pelo menos um treino com exercícios para ativar";
+    const MENSAGEM_OPERACAO = "Erro ao atualizar programa";
+    const MENSAGEM_CARGA = "Erro ao carregar programas";
+    const ITEM = "Ficha Verão 2026";
+
+    /** O nó `earlier` aparece antes de `later` na árvore (banner ACIMA). */
+    function expectAppearsBefore(earlier: HTMLElement, later: HTMLElement): void {
+      const position = earlier.compareDocumentPosition(later);
+      expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    }
+
+    it("CA-P5-1: error + 'bloqueio' com itens => banner ACIMA, lista visível e sem retry", () => {
+      const onRetry = vi.fn();
+      render(
+        <ProgramList
+          {...defaultProps({
+            items: [makeProgram({ title: ITEM })],
+            error: MENSAGEM_BLOQUEIO,
+            errorOrigin: "bloqueio",
+            empty: false,
+            noResults: false,
+            onRetry,
+          })}
+        />,
+      );
+
+      const banner = screen.getByText(MENSAGEM_BLOQUEIO);
+      // R24/CA-P5-1: a lista filtrada permanece visível e legível…
+      const item = screen.getByText(ITEM);
+      expectAppearsBefore(banner, item);
+      // …a mensagem não ganha retry (origem `bloqueio`, R25)…
+      expect(
+        screen.queryByRole("button", { name: /tentar novamente/i }),
+      ).not.toBeInTheDocument();
+      expect(onRetry).not.toHaveBeenCalled();
+      // …e filtros + cabeçalho seguem fora da região de estados (R26).
+      expect(
+        screen.getByRole("heading", { level: 2, name: /programas/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+    });
+
+    it("CA-P5-1: error + 'operacao' com itens => banner ACIMA, lista visível e sem retry", () => {
+      const onRetry = vi.fn();
+      render(
+        <ProgramList
+          {...defaultProps({
+            items: [makeProgram({ title: ITEM })],
+            error: MENSAGEM_OPERACAO,
+            errorOrigin: "operacao",
+            empty: false,
+            noResults: false,
+            onRetry,
+          })}
+        />,
+      );
+
+      const banner = screen.getByText(MENSAGEM_OPERACAO);
+      const item = screen.getByText(ITEM);
+      expectAppearsBefore(banner, item);
+      expect(
+        screen.queryByRole("button", { name: /tentar novamente/i }),
+      ).not.toBeInTheDocument();
+      expect(onRetry).not.toHaveBeenCalled();
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+    });
+
+    it("CA-P5-2: error de carga com itens => banner com 'Tentar novamente' ACIMA e a lista visível", () => {
+      const onRetry = vi.fn();
+      render(
+        <ProgramList
+          {...defaultProps({
+            items: [makeProgram({ title: ITEM })],
+            error: MENSAGEM_CARGA,
+            errorOrigin: "carga",
+            empty: false,
+            noResults: false,
+            onRetry,
+          })}
+        />,
+      );
+
+      const banner = screen.getByText(MENSAGEM_CARGA);
+      const item = screen.getByText(ITEM);
+      expectAppearsBefore(banner, item);
+
+      // Retry da carga continua acionando o callback recebido.
+      fireEvent.click(screen.getByRole("button", { name: /tentar novamente/i }));
+      expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+
+    it("D20/CA-P5-3: errorOrigin NULO é tratado como carga — 'Tentar novamente' dispara onRetry", () => {
+      const onRetry = vi.fn();
+      render(
+        <ProgramList
+          {...defaultProps({
+            items: [],
+            error: MENSAGEM_CARGA,
+            errorOrigin: null,
+            empty: true,
+            onRetry,
+          })}
+        />,
+      );
+
+      expect(screen.getByText(MENSAGEM_CARGA)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /tentar novamente/i }));
+      expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+
+    it("CA-P5-1/CA-P5-2: falha de carga SEM itens => somente o banner com retry, sem 'Nenhum programa ainda.'", () => {
+      const onRetry = vi.fn();
+      render(
+        <ProgramList
+          {...defaultProps({
+            items: [],
+            error: MENSAGEM_CARGA,
+            errorOrigin: "carga",
+            empty: true,
+            noResults: false,
+            onRetry,
+          })}
+        />,
+      );
+
+      expect(screen.getByText(MENSAGEM_CARGA)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /tentar novamente/i }),
+      ).toBeInTheDocument();
+      // D19d: falha de carga nunca chega a dizer "nenhum item".
+      expect(screen.queryByText("Nenhum programa ainda.")).not.toBeInTheDocument();
+      expect(screen.queryByText(/primeiro programa/i)).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /tentar novamente/i }));
+      expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+
+    it("precedência D19: loading verdadeiro vence erro e lista — só 'Carregando programas...'", () => {
+      render(
+        <ProgramList
+          {...defaultProps({
+            loading: true,
+            items: [makeProgram({ title: ITEM })],
+            error: MENSAGEM_OPERACAO,
+            errorOrigin: "operacao",
+            empty: false,
+            noResults: false,
+          })}
+        />,
+      );
+
+      expect(screen.getByText("Carregando programas...")).toBeInTheDocument();
+      expect(screen.queryByText(MENSAGEM_OPERACAO)).not.toBeInTheDocument();
+      expect(screen.queryByText(ITEM)).not.toBeInTheDocument();
+    });
+
+    it("precedência D19: empty prevalece sobre noResults quando não há erro", () => {
+      render(<ProgramList {...defaultProps({ items: [], empty: true, noResults: true })} />);
+
+      expect(screen.getByText("Nenhum programa ainda.")).toBeInTheDocument();
+      expect(screen.getByText("Crie o primeiro programa para começar.")).toBeInTheDocument();
+      expect(
+        screen.queryByText("Nada encontrado para essa combinação."),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Ajuste os filtros para ver mais programas."),
+      ).not.toBeInTheDocument();
+    });
+
+    it("CA-P5-5: texto de carregamento idêntico ao de hoje", () => {
+      render(<ProgramList {...defaultProps({ loading: true, items: [] })} />);
+
+      expect(screen.getByText("Carregando programas...")).toBeInTheDocument();
+    });
+
+    it("CA-P5-5: textos de vazio idênticos aos de hoje", () => {
+      render(<ProgramList {...defaultProps({ items: [], empty: true })} />);
+
+      expect(screen.getByText("Nenhum programa ainda.")).toBeInTheDocument();
+      expect(screen.getByText("Crie o primeiro programa para começar.")).toBeInTheDocument();
+    });
+
+    it("CA-P5-5: textos de no-results idênticos aos de hoje", () => {
+      render(<ProgramList {...defaultProps({ items: [], noResults: true })} />);
+
+      expect(screen.getByText("Nada encontrado para essa combinação.")).toBeInTheDocument();
+      expect(
+        screen.getByText("Ajuste os filtros para ver mais programas."),
+      ).toBeInTheDocument();
+    });
+  });
 });

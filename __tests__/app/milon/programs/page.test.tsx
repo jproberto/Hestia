@@ -930,4 +930,131 @@ describe("Página /milon/programs — Programas (Mílon #2, TASK-010)", () => {
       });
     });
   });
+
+  /**
+   * Patch v5 (TASK-034 RED) — adoção do AsyncState na tela de Programas.
+   * spec.md §S4 CA-P5-1/CA-P5-5; plan.md "Patch v5" §3 "Página de lista",
+   * §4 data flow item 2 e §7 alvos (linha 198: `errorOrigin` repassado CRU).
+   *
+   * CA-P5-1 (Cenário 5 corrigido): com erro de origem `bloqueio`/`operacao`
+   * executado pela pessoa, o banner aparece ACIMA da lista e a lista permanece
+   * visível e legível. D20: a página não normaliza mais a origem — o
+   * `?? "carga"` da linha 198 sai e o default ausente ⇒ carga passa a ser
+   * interno ao AsyncState (a remoção é textual: normalização e default
+   * interno rendem o mesmo DOM, então o critério `?? "carga"` → 0 é verificado
+   * pela busca de substituição da TASK-035; aqui fica a trava comportamental
+   * de que origem nula do hook continua exibindo retry — CA-P5-3/CA-P5-5).
+   *
+   * Expected: FAIL nos cenários de banner acima (hoje a cadeia ternária do
+   * ProgramList troca a lista pela mensagem — motivo esperado: o título do
+   * item não está no documento). Os cenários CA-P3-13…16 existentes do bloco
+   * Patch v4 permanecem intactos (CA-P5-5).
+   */
+  describe("Patch v5 — banner acima da lista na tela de Programas (TASK-034 RED)", () => {
+    const MENSAGEM_BLOQUEIO = "Adicione pelo menos um treino com exercícios para ativar";
+    const MENSAGEM_FALHA_EXCLUIR = "Erro ao excluir programa";
+    const ITEM = "Ficha Verão 2026";
+
+    /** O nó `earlier` aparece antes de `later` na árvore (banner ACIMA). */
+    function expectAppearsBefore(earlier: HTMLElement, later: HTMLElement): void {
+      const position = earlier.compareDocumentPosition(later);
+      expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    }
+
+    it("CA-P5-1 (Cenário 5): bloqueio na ativação => modal fecha, banner ACIMA e a lista permanece visível, sem retry", async () => {
+      const rascunho = makeProgram({
+        id: "prog-1",
+        title: ITEM,
+        owner: DONOS[0],
+        status: "rascunho",
+      });
+      const state = setupHook({
+        programs: [rascunho],
+        filteredPrograms: [rascunho],
+        ownerFilter: DONOS[0],
+      });
+      // Guarda de ativação: o hook grava origem `bloqueio` e relança.
+      state.activate.mockImplementation(async () => {
+        state.errorMsg = MENSAGEM_BLOQUEIO;
+        state.errorOrigin = "bloqueio";
+        throw new Error(MENSAGEM_BLOQUEIO);
+      });
+
+      render(<ProgramsPage />);
+      await runConfirm("ativar");
+      await waitFor(() => expect(state.activate).toHaveBeenCalledTimes(1));
+      await expectConfirmClosed("ativar");
+
+      const banner = screen.getByText(MENSAGEM_BLOQUEIO);
+      // CA-P5-1: a lista filtrada permanece visível e legível…
+      const item = screen.getByText(ITEM);
+      expectAppearsBefore(banner, item);
+      // …o banner não ganha retry (origem `bloqueio`)…
+      expect(
+        screen.queryByRole("button", { name: /tentar novamente/i }),
+      ).not.toBeInTheDocument();
+      // …e filtros seguem na tela.
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      expect(state.programs[0]).toMatchObject({ id: "prog-1", status: "rascunho" });
+    });
+
+    it("CA-P5-1: falha de operação na exclusão => modal fecha, banner ACIMA e a lista permanece visível, sem retry", async () => {
+      const rascunho = makeProgram({
+        id: "prog-1",
+        title: ITEM,
+        owner: DONOS[0],
+        status: "rascunho",
+      });
+      const state = setupHook({
+        programs: [rascunho],
+        filteredPrograms: [rascunho],
+        ownerFilter: DONOS[0],
+      });
+      // Falha de repositório (ex.: rede) — origem `operacao`.
+      state.remove.mockImplementation(async () => {
+        state.errorMsg = MENSAGEM_FALHA_EXCLUIR;
+        state.errorOrigin = "operacao";
+        throw new Error(MENSAGEM_FALHA_EXCLUIR);
+      });
+
+      render(<ProgramsPage />);
+      await runConfirm("excluir");
+      await waitFor(() => expect(state.remove).toHaveBeenCalledTimes(1));
+      await expectConfirmClosed("excluir");
+
+      const banner = screen.getByText(MENSAGEM_FALHA_EXCLUIR);
+      const item = screen.getByText(ITEM);
+      expectAppearsBefore(banner, item);
+      expect(
+        screen.queryByRole("button", { name: /tentar novamente/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      // Nada foi excluído: a lista preserva o item.
+      expect(state.programs).toHaveLength(1);
+    });
+
+    it("CA-P5-5: falha de carga sem programas => somente o banner com retry, sem 'Nenhum programa ainda.'", async () => {
+      const state = setupHook({
+        programs: [],
+        filteredPrograms: [],
+        errorMsg: "Erro ao carregar programas",
+        errorOrigin: "carga",
+      });
+
+      render(<ProgramsPage />);
+
+      expect(screen.getByText("Erro ao carregar programas")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /tentar novamente/i }),
+      ).toBeInTheDocument();
+      // D19d: a tela não chega a dizer "nenhum item" quando houve falha.
+      expect(screen.queryByText("Nenhum programa ainda.")).not.toBeInTheDocument();
+      expect(screen.queryByText(/primeiro programa/i)).not.toBeInTheDocument();
+
+      await clickConnectedButton(/tentar novamente/i);
+      expect(state.retry).toHaveBeenCalledTimes(1);
+    });
+  });
 });

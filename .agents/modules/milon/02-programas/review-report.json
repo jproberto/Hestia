@@ -1,0 +1,11 @@
+{
+  "status": "approved",
+  "findings": [],
+  "blockers": [],
+  "testGaps": [
+    "useProgramDetail.ts branch coverage 73.33% (ramo defensivo da flag cancelled, linhas 54-55) — abaixo de 80% no arquivo isolado, mas agregado do escopo em 88.45% (pré-existente do Patch v4, não introduzido pelo Patch v6)",
+    "app/milon/programs/[id]/page.tsx branch coverage 71.42% (ramos 10-11, default de errorOrigin ausente exercido em tela) — abaixo de 80% no arquivo isolado, mas agregado do escopo em 88.45% (pré-existente do Patch v5, não introduzido pelo Patch v6)",
+    "components/ui/AsyncState.tsx e lib/shared/error-origin.ts são transversais e ficam fora do include-padrão do gate; medidos à parte em run dedicado (100% e tipo-only respectivamente) — protocolo idêntico aos gates anteriores"
+  ],
+  "questions": []
+}

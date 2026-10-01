@@ -623,7 +623,7 @@
                   },
                   {
                       "id":  "TASK-030",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "RED: teste de casa única da união de origens (ErrorOrigin em lib/shared) e apelido em types.ts",
                       "description":  "Minos escreve o teste RED do par Casa da união (D26, R29) a partir do contrato textual do plan.md \u0027Patch v5\u0027 §3, sem tocar em produção. Consome: contrato ErrorOrigin/ProgramErrorOrigin — ainda inexistente em lib/shared (a definição literal ainda mora em lib/milon/types.ts linha 38). Produz: __tests__/lib/milon/types.test.ts, que a TASK-031 torna verde. Cenários: (1) importar ErrorOrigin de @/lib/shared funciona e aceita os três literais \u0027carga\u0027, \u0027operacao\u0027, \u0027bloqueio\u0027; (2) ProgramErrorOrigin (exportado por lib/milon/types.ts) e ErrorOrigin são mutuamente atribuíveis — identidade de tipo, não dois tipos estruturalmente parecidos; (3) um quarto literal qualquer não é atribuível a nenhum dos dois. Expected: FAIL hoje (ErrorOrigin não existe em lib/shared).",
                       "assignee":  "minos",
@@ -642,7 +642,7 @@
                   },
                   {
                       "id":  "TASK-031",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Casa única da união: lib/shared/error-origin.ts, re-export no barrel e ProgramErrorOrigin como apelido",
                       "description":  "Hefesto implementa o contrato RED da TASK-030 (D26, R29). Consome: teste da TASK-030; nenhum importador de ProgramErrorOrigin pode mudar. Produz: lib/shared/error-origin.ts (criado); linha de re-export em lib/shared/index.ts; lib/milon/types.ts com a linha 38 virando apelido. Passos: (1) cria lib/shared/error-origin.ts exportando a união ErrorOrigin com exatamente três literais ASCII \u0027carga\u0027 | \u0027operacao\u0027 | \u0027bloqueio\u0027 (mesmo padrão do tipo ItemUrgency já exportado por lib/shared/utils.ts); (2) lib/shared/index.ts ganha a linha de re-export; (3) lib/milon/types.ts importa o tipo do barrel @/lib/shared e exporta ProgramErrorOrigin como apelido (=), removendo a definição literal; (4) nenhum outro arquivo muda — usePrograms, ProgramList, stories e testes seguem importando ProgramErrorOrigin de lib/milon/types.ts. Hefesto não escreve testes.",
                       "assignee":  "hefesto",

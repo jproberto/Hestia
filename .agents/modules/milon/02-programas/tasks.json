@@ -665,7 +665,7 @@
                   },
                   {
                       "id":  "TASK-032",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "RED: contrato completo do AsyncState (4 estados, precedência, banner acima, retry por origem)",
                       "description":  "Minos escreve os testes RED do componente transversal (D18–D20, R22–R25, CA-P5-2 a CA-P5-4) a partir dos contratos textuais do plan.md \u0027Patch v5\u0027 §3, sem tocar em produção. Consome: componente components/ui/AsyncState.tsx — ainda inexistente (components/ui/ hoje só tem button/input/label). Produz: __tests__/components/ui/AsyncState.test.tsx, que a TASK-033 torna verde. Cenários: (1) precedência fixa D19 — loading verdadeiro mostra somente loadingText (sem banner, sem vazio, sem no-results, sem children); erro com children mostra banner ACIMA e o conteúdo permanece visível; sem children e com erro mostra somente o banner (nunca vazio/no-results sob erro); empty prevalece sobre noResults; noResults só sem empty e sem erro; sem nenhuma flag a região fica vazia; (2) retry por origem — \u0027carga\u0027 e origem ausente/nula renderizam \u0027Tentar novamente\u0027 e acionam onRetry; \u0027operacao\u0027 e \u0027bloqueio\u0027 exibem só a mensagem; (3) o componente não tem botão de fechar; (4) as props de texto são repassadas literais nos 4 estados. Expected: FAIL hoje (componente não existe).",
                       "assignee":  "minos",
@@ -685,7 +685,7 @@
                   },
                   {
                       "id":  "TASK-033",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Componente AsyncState: 4 estados, precedência D19, banner acima e retry por origem + stories",
                       "description":  "Hefesto implementa o contrato RED da TASK-032 (D18–D20). Consome: testes da TASK-032; botão Button de components/ui/button.tsx (permitido); tipo ErrorOrigin de @/lib/shared (TASK-031). Produz: components/ui/AsyncState.tsx e components/ui/AsyncState.stories.tsx (criados). Passos: (1) componente presentacional com props loading, error, errorOrigin (opcional — ausente ou nulo tratado como carga), empty, noResults, onRetry, loadingText, emptyTitle, emptyText, noResultsTitle, noResultsText e children; (2) precedência fixa D19 — loading mostra só loadingText; erro renderiza banner ACIMA da região com \u0027Tentar novamente\u0027 só para carga/origem ausente; região: children quando fornecido, sem children e com erro só o banner, sem erro empty (prevalece), depois noResults, senão região vazia; (3) nenhum import de lib/milon nem de components/\u003cmodulo\u003e — tipo vem só de @/lib/shared; (4) stories com title UI/AsyncState cobrindo carregando, erro (4 origens), vazio, no-results e lista sob erro. Hefesto não escreve testes.",
                       "assignee":  "hefesto",

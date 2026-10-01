@@ -23,7 +23,7 @@ export default function DashboardPage() {
               Pluto
             </h2>
             <p className="text-sm text-muted-foreground">
-              Acesse o controle de orçamento anual, categorias de receitas e despesas previstas.
+              Módulo Orçamentário e Financeiro
             </p>
           </div>
         </Link>
@@ -42,7 +42,7 @@ export default function DashboardPage() {
               Mílon
             </h2>
             <p className="text-sm text-muted-foreground">
-              Acesse a biblioteca de exercícios da academia.
+              Módulo de Acompanhamento de Treinos e Evolução
             </p>
           </div>
         </Link>

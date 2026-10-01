@@ -482,3 +482,242 @@ describe("useExercises (TASK-005)", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Patch v5 (D23, R27) — ORIGEM DA MENSAGEM NO useExercises
+// Contrato RED da TASK-038. Fonte: spec.md "Patch v5" (D21, D23, R26, R27,
+// CA-P5-6, achados S6(a)/S6(b)) + plan.md "Patch v5" §3 contratos
+// ("useExercises (estado)") e §4 data flow itens 4/5 + tasks.json TASK-038
+// acceptanceCriteria 1.
+//
+// CONTRATO CONSUMIDO (plan.md §3, ainda INEXISTENTE na produção):
+//   - `UseExercisesReturn` ganha `errorOrigin` anulável;
+//   - rejeição do efeito de montagem e do `fetchList` => 'carga';
+//   - falha em `remove` => 'operacao';
+//   - `applyList`, o início de `fetchList`/`remove` e qualquer sucesso zeram
+//     `error` E `errorOrigin` juntos;
+//   - `save`/`saveAndNew` não alteram nenhum dos dois (o erro de save fica no
+//     modal, via relançamento).
+// Formato idêntico ao contrato de usePrograms (R27) — ver
+// `usePrograms.test.ts` describe "Patch v4".
+//
+// STATUS: RED esperado (TASK-039/Hefesto torna verde, sem mexer neste arquivo).
+// Hoje o hook não expõe `errorOrigin`: toda asserção de origem falha com
+// `undefined` — o motivo exato exigido pelo acceptanceCriteria 5
+// ("Execução atual falha (Expected: FAIL)"), não erro de sintaxe. O cast fixa
+// os NOMES travados no plan para o tsc --noEmit seguir verde até a TASK-039.
+// ---------------------------------------------------------------------------
+
+interface ContratoUseExercisesComOrigem {
+  errorOrigin: "carga" | "operacao" | "bloqueio" | null;
+}
+
+/** Lê o campo `errorOrigin` do contrato do plan (hoje ausente → `undefined`). */
+function origemDe(result: { current: unknown }): ContratoUseExercisesComOrigem["errorOrigin"] {
+  return (result.current as ContratoUseExercisesComOrigem).errorOrigin;
+}
+
+/** Zera as gravações entre os testes do describe de contrato. */
+function resetarMocksExercises(): void {
+  vi.clearAllMocks();
+  vi.mocked(listExercisesStandalone).mockReset();
+  vi.mocked(createExerciseStandalone).mockReset();
+  vi.mocked(updateExerciseStandalone).mockReset();
+  vi.mocked(deleteExerciseStandalone).mockReset();
+}
+
+describe("Mílon #2 — useExercises: origem da mensagem (Patch v5, TASK-038 RED)", () => {
+  beforeEach(() => {
+    resetarMocksExercises();
+  });
+
+  // -------------------------------------------------------------------------
+  // 1. Gravações de origem: busca => 'carga', exclusão => 'operacao'
+  //    (TASK-038 acceptanceCriteria 1; plan.md §3 "useExercises (estado)")
+  // -------------------------------------------------------------------------
+  describe("1. Gravação da origem nos pontos mapeados", () => {
+    it("rejeição do efeito de montagem grava errorOrigin 'carga' com a mensagem", async () => {
+      vi.mocked(listExercisesStandalone).mockRejectedValueOnce(new Error("falha de rede"));
+
+      const { result } = renderHook(() => useExercises());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.error).toContain("falha de rede");
+      expect(origemDe(result)).toBe("carga");
+      expect(result.current.exercises).toEqual([]);
+    });
+
+    it("falha no fetchList (reload/retry) também grava origem 'carga'", async () => {
+      mockList([makeExercise({ id: "ex-1" })]);
+
+      const { result } = renderHook(() => useExercises());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      vi.mocked(listExercisesStandalone).mockRejectedValueOnce(
+        new Error("rede caiu no reload"),
+      );
+      await act(async () => {
+        await result.current.reload();
+      });
+
+      expect(result.current.error).toContain("rede caiu no reload");
+      expect(origemDe(result)).toBe("carga");
+    });
+
+    it("falha em remove grava origem 'operacao', preserva a lista e relança (S6(a))", async () => {
+      mockList([
+        makeExercise({ id: "ex-1", name: "Supino reto", muscle: "peito" }),
+        makeExercise({ id: "ex-2", name: "Agachamento", muscle: "perna" }),
+      ]);
+      vi.mocked(deleteExerciseStandalone).mockRejectedValueOnce(
+        new Error("Erro ao excluir exercício"),
+      );
+
+      const { result } = renderHook(() => useExercises());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.exercises).toHaveLength(2);
+
+      await act(async () => {
+        await expect(result.current.remove("ex-1")).rejects.toThrow(
+          "Erro ao excluir exercício",
+        );
+      });
+
+      expect(result.current.error).toContain("Erro ao excluir exercício");
+      expect(origemDe(result)).toBe("operacao");
+      // A exclusão falhou: o exercício permanece na lista (CA-P5-6).
+      expect(result.current.exercises.map((e) => e.id)).toEqual(["ex-1", "ex-2"]);
+      expect(result.current.successNotice).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 2. Sucesso/applyList zeram error e errorOrigin JUNTOS
+  //    (TASK-038 acceptanceCriteria 1, última parte; plan.md §3
+  //    "`applyList` … e qualquer sucesso zeram `error` e `errorOrigin` juntos")
+  // -------------------------------------------------------------------------
+  describe("2. Sucesso zera error e errorOrigin juntos", () => {
+    it("recuperação após falha de carga zera os dois campos", async () => {
+      vi.mocked(listExercisesStandalone)
+        .mockRejectedValueOnce(new Error("falha de rede"))
+        .mockResolvedValue([makeExercise({ id: "ex-1" })]);
+
+      const { result } = renderHook(() => useExercises());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(origemDe(result)).toBe("carga");
+
+      await act(async () => {
+        await result.current.reload();
+      });
+
+      expect(result.current.error).toBeNull();
+      expect(origemDe(result)).toBeNull();
+      expect(result.current.exercises).toHaveLength(1);
+    });
+
+    it("exclusão bem-sucedida após falha de operação zera os dois campos", async () => {
+      const restante = makeExercise({ id: "ex-2", name: "Agachamento", muscle: "perna" });
+      vi.mocked(listExercisesStandalone)
+        .mockResolvedValueOnce([
+          makeExercise({ id: "ex-1", name: "Supino reto", muscle: "peito" }),
+          restante,
+        ])
+        .mockResolvedValueOnce([restante]);
+      vi.mocked(deleteExerciseStandalone)
+        .mockRejectedValueOnce(new Error("Erro ao excluir exercício"))
+        .mockResolvedValueOnce(undefined);
+
+      const { result } = renderHook(() => useExercises());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await act(async () => {
+        await expect(result.current.remove("ex-1")).rejects.toThrow();
+      });
+      expect(origemDe(result)).toBe("operacao");
+
+      await act(async () => {
+        await result.current.remove("ex-1");
+      });
+
+      expect(result.current.error).toBeNull();
+      expect(origemDe(result)).toBeNull();
+      expect(result.current.exercises.map((e) => e.id)).toEqual(["ex-2"]);
+      expect(result.current.successNotice).not.toBeNull();
+    });
+
+    it("montagem bem-sucedida deixa error e errorOrigin nulos (sucesso zera)", async () => {
+      mockList([makeExercise({ id: "ex-1" })]);
+
+      const { result } = renderHook(() => useExercises());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.error).toBeNull();
+      expect(origemDe(result)).toBeNull();
+      expect(result.current.exercises).toHaveLength(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 3. save/saveAndNew ficam FORA do canal de origem
+  //    (TASK-038 acceptanceCriteria 1; plan.md §3 "`save`/`saveAndNew` não
+  //    alteram nenhum dos dois" — o erro de save continua só no modal)
+  // -------------------------------------------------------------------------
+  describe("3. save e saveAndNew não alimentam o canal de origem", () => {
+    it("falha de save relança ao modal preservando error e errorOrigin da carga anterior", async () => {
+      vi.mocked(listExercisesStandalone).mockRejectedValueOnce(new Error("falha de rede"));
+      vi.mocked(createExerciseStandalone).mockRejectedValueOnce(new Error("duplicado"));
+
+      const { result } = renderHook(() => useExercises());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(origemDe(result)).toBe("carga");
+
+      await act(async () => {
+        await expect(
+          result.current.save({ name: "Rosca direta", muscle: "braco", videoLink: null }),
+        ).rejects.toThrow("duplicado");
+      });
+
+      // O save não limpa nem reclassifica o canal da lista: o erro de save vai
+      // só para o modal (page.tsx) e o erro de carga continua sendo de carga.
+      expect(result.current.error).toContain("falha de rede");
+      expect(origemDe(result)).toBe("carga");
+      expect(result.current.successNotice).toBeNull();
+    });
+
+    it("saveAndNew com falha relança ao modal sem tocar em error nem errorOrigin", async () => {
+      mockList([]);
+      vi.mocked(createExerciseStandalone).mockRejectedValueOnce(new Error("duplicado"));
+
+      const { result } = renderHook(() => useExercises());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.error).toBeNull();
+      expect(origemDe(result)).toBeNull();
+
+      await act(async () => {
+        await expect(
+          result.current.saveAndNew({ name: "Rosca direta", muscle: "braco", videoLink: null }),
+        ).rejects.toThrow("duplicado");
+      });
+
+      expect(result.current.error).toBeNull();
+      expect(origemDe(result)).toBeNull();
+    });
+
+    it("save bem-sucedido com estado limpo mantém error e errorOrigin nulos", async () => {
+      const criado = makeExercise({ id: "ex-novo", name: "Rosca direta", muscle: "braco" });
+      mockList([]);
+      vi.mocked(createExerciseStandalone).mockResolvedValueOnce(criado);
+
+      const { result } = renderHook(() => useExercises());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await act(async () => {
+        await result.current.save({ name: "Rosca direta", muscle: "braco", videoLink: null });
+      });
+
+      expect(result.current.error).toBeNull();
+      expect(origemDe(result)).toBeNull();
+      expect(result.current.exercises.map((e) => e.id)).toEqual(["ex-novo"]);
+    });
+  });
+});

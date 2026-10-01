@@ -65,6 +65,36 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 ---
 
+## Regra — cenários de teste bloqueados por dependência (pedido humano 2026-09-30)
+
+- **Repassar, não deixar órfão:** cenário de teste que não pode ser executado numa feature porque depende de uma feature futura deve ser **repassado para a feature que o libera** — entra no escopo de teste (`test-scenarios.md`) dessa feature futura, em vez de ser descartado ou adiado sem registro.
+- **Exemplo identificado (feature #2 Programas):** os cenários **pós-ativação** (guarda liberada com `hasWorkoutWithExercise = true`) dependem da **feature #3 — Treinos + séries planejadas** e devem ser repassados a ela. Contexto: na #2 a UI nunca passa a flag (`app/milon/programs/page.tsx` chama `usePrograms()` sem opções → default `false`), então toda ativação é bloqueada na tela; o efeito colateral (desativar o programa anterior do mesmo dono) só é exercitado no fluxo de ativação em `__tests__/lib/milon/hooks/usePrograms.test.ts`, bloco "4. Ativação/reativação com hasWorkoutWithExercise = true" — cobertura atual. A regra pura correspondente (`guardaAtivacao`/`aplicarEfeitoColateralAtivacao`) também tem teste direto em `__tests__/lib/milon/program-utils.test.ts`.
+- A regra vale para qualquer cenário bloqueado do módulo (incluindo os da home/feature #4 — Treino do dia, quando forem registrados).
+
+---
+
+## Achados de review (Argos) — feature #2 Programas
+
+Registro dos achados minor do review do Argos (decisão humana 2026-09-30: "vão para backlog"). 7 achados: 5 da review do Patch v3 (aprovada) + 2 da review do Patch v4 (aprovada). Textos originais do Argos (os 5 do v3 recuperados do log — o `review-report.json` atual contém apenas os 2 do v4).
+
+| # | Patch | Arquivo:linha | Achado | Encaminhamento |
+|---|---|---|---|---|
+| 1 | v3 | `lib/milon/program-utils.ts:154` | `transicoesPermitidas('ativo')` retorna `['inativar']`, mas a UI não expõe ação "Inativar" (inativação é efeito colateral automático de ativar outro programa). Sugestão: renomear para `acoesInterfacePorStatus` ou remover `'inativar'` do retorno de `'ativo'`. | backlog (refatoração futura) |
+| 2 | v3 | `components/milon/ProgramConfirmModal.tsx:78` | Botão de confirmar usa cores rose-500/rose-600 (destrutivas) para TODAS as ações, incluindo Ativar/Reativar, que não são destrutivas. Sugestão: cor do módulo (#B7602B) para ativar/reativar, rose apenas para excluir. | backlog (ajuste visual) |
+| 3 | v3 | `lib/milon/types.ts:70` | Tipos legados `MilonItemRow`, `MilonItem`, `CreateMilonInput` ("Legado do scaffold" da feature #1) permanecem com 0 usos em código vivo. Sugestão: remover. | backlog (limpeza) |
+| 4 | v3 | `.agents/modules/milon/02-programas/test-report.json:93` | `npm run build-storybook` não re-executado no Patch v3. | RESOLVIDO no Patch v4: gate re-executado pelo Zeus antes do approve-review (exit 0), registrado no test-report |
+| 5 | v3 | `utils/migrations/migration-0008-milon-programs.sql:49` | `executed_by` hardcoded como email fixo em vez de usuário real da execução. Sugestão: usar `CURRENT_USER`/variável de ambiente na execução real; manter placeholder documentado no script. | backlog (aplicar na migração — atenção: migração ainda NÃO aplicada no Supabase) |
+| 6 | v4 | `app/milon/programs/page.tsx:198` | Fallback `errorOrigin ?? "carga"` mascara ausência de `errorOrigin` do hook: se o hook falhar em setar a origem, o banner mostraria "Tentar novamente" indevidamente para bloqueio/operação. Sugestão: remover fallback e confiar no hook (já coberto por testes), ou documentar por quê. | backlog |
+| 7 | v4 | `__tests__` (página+hook) | Falta teste de integração onde o hook retorna `errorOrigin=null` com `errorMsg` setado, para confirmar o comportamento do fallback. Sugestão: adicionar esse teste. | backlog (candidato a Minos numa próxima feature/rodada) |
+
+**Gaps de teste apontados (testGaps)**
+
+- Ramos defensivos "nunca acontece" (cancelConfirm/confirm lançando, violação de índice único) sem exercício direto — `repositories/programs.ts` 92.98% branch e `usePrograms.ts` 85.86% branch (acima do gate, mas lacuna comportamental).
+- CA-P3-11 (histórico do navegador / botão voltar na alternância de abas) não exercitável em jsdom — requer homologação manual (entra na reexecução manual da feature #2).
+- Gap "guarda de ativação com conteúdo real": ver regra acima (já registrada na seção anterior — não duplicada).
+
+---
+
 ## Fora de Escopo (YAGNI — decisão de discovery 2026-09-12)
 
 - **RPE/RIR:** fora do backlog por decisão explícita do dono — não entra nem como V2/V3.

@@ -10,9 +10,22 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 ### Adicionado
 - **Mílon #1 — Biblioteca de exercícios (`/milon`):** tabela `public.exercises` via `utils/migrations/migration-0007-milon-exercises.sql`; tela com lista, filtro por músculo, busca por texto (a partir do 3º caractere), lotes de 20 com mostrar mais e controle "Ordenar por" (Músculo|Nome); modal único criar/editar com Salvar e Salvar e incluir outro; anti-duplicata nome+músculo com normalização; exclusão com confirmação; card Mílon no dashboard; adendo UX (lista compacta mobile, link "ver vídeo", ordenação). Suíte em 495 testes, review aprovado.
 - **Testes de integração contra Supabase real (item 8):** `__tests__/integration/` reutiliza os 6 contracts via binding Supabase (`test:integration`, config própria sem mocks globais); job `integration` no CI sobe Supabase efêmero, aplica as migrations do zero e executa.
+- **Mílon #2 — Programas (`/milon/programs`):** CRUD de programas por dono com ciclo de vida `rascunho` → `ativo` → `inativo` (nasce em rascunho; ativar/reativar exige confirmação e inativa automaticamente o programa ativo anterior do mesmo dono), ativação com guarda (exige ≥1 treino com exercício — na #2 a UI nasce sempre bloqueada, liberação na feature #3), exclusão só de rascunho, filtros por dono/status, ordenação mais novo → mais antigo e sugestões pré-preenchidas; tabela `public.programs` via `utils/migrations/migration-0008-milon-programs.sql` (Patch v1).
+- **Navegação em abas do Mílon (Patch v3):** biblioteca passa para `/milon/exercises`, `/milon` redireciona para a aba padrão, barra de abas com aba ativa derivada da URL no `ModuleLayout` compartilhado (sem branching por módulo — vale também para o Pluto) e textos dos cards do dashboard atualizados.
+- **Rota de detalhe do programa `/milon/programs/[id]` (Patch v4):** cabeçalho com título (`font-display`), dono, badge de status e data; "não encontrado" distinto de erro de carga; criar navega ao detalhe, editar permanece na lista; três origens de mensagem (`errorOrigin`: carga/operacao/bloqueio) com retry só na carga.
+- **Estados de tela centralizados (Patch v5):** componente transversal `components/ui/AsyncState` (com stories e teste) cobrindo os 4 estados de lista — carregando, erro, vazio, no-results — com precedência fixa, banner de erro **acima** do conteúdo e "Tentar novamente" derivado de `errorOrigin`; união de origens em casa única `lib/shared`; adotado nas três telas do Mílon (Programas, biblioteca e detalhe). Norma registrada em `AGENTS.md` ("Onde ponho X?", D27/R31).
+- **Link no título do programa → detalhe (Patch v6):** `Link` do Next.js dentro do `h3` de cada item da lista para `/milon/programs/<id>`, com afordância de mudança de cor no hover (Opção C), foco visível por teclado e sem sublinhado; ações (Editar/Ativar/Reativar/Excluir) permanecem fora do link.
+
+### Alterado
+- **Padrão de estados de tela centralizado:** novas telas usam `components/ui/AsyncState` em vez de reimplementar carregando/erro/vazio/no-results — proibido reimplementar (norma no `AGENTS.md`); retrofit dos banners do Pluto (`transactions`, `months`) registrado como item pendente no backlog do módulo (D24/R30).
+- **Afordância de link no título (Opção C):** título de item da lista é link com mudança de cor no hover e foco visível, sem sublinhado em nenhum estado (antes: título texto puro, sem indicação de navegação).
 
 ### Corrigido
 - **`initBudget` agora idempotente:** implementação real fazia insert cego e reprovaria no próprio contrato (que exige mesmo id em chamadas repetidas) — virou get-or-create, alinhada ao fake.
+- **Cenário 5 da homologação (Mílon #2):** erro deixa de **substituir** a lista de programas — banner passa a aparecer **acima** com a lista visível (padrão de `transactions`), via `AsyncState` (Patch v5).
+- **Modais de confirmação fecham em falha (Patch v4):** `ProgramConfirmModal` fecha em qualquer terminal da operação (sucesso, erro de operação ou bloqueio) em vez de ficar aberto sem feedback; `router.push` só na criação.
+- **Retry só na carga:** "Tentar novamente" aparece exclusivamente para erro de carga (`errorOrigin: carga`); bloqueio de domínio e erro de operação exibem banner sem retry (Patch v4/v5).
+- **Biblioteca de exercícios — exclusão com falha fecha a confirmação (Patch v5):** `DeleteExerciseConfirm` deixa de permanecer aberto no erro (mensagem caía atrás do backdrop `z-50`) — modal fecha e a mensagem aparece no banner, sem retry (origem `operacao`).
 
 ## [1.0.0] - 2026-09-10
 

@@ -9,7 +9,7 @@ permission:
   edit: allow
   glob: allow
   grep: allow
-  bash: deny
+  bash: allow
   task: deny
 ---
 
@@ -79,7 +79,7 @@ Remova com firmeza. O que não entra nesta versão não é ambiguidade — é de
 - **Responda interrupções primeiro:** se o humano fizer uma pergunta no meio do discovery, responda-a antes de fazer a próxima pergunta; nunca ignore
 - **Validação incremental leve:** resuma o entendido e peça confirmação quando houver risco real de desalinhamento — não como ritual obrigatório ao fim de cada fase
 - Diálogo fluido, não checklist mecânico — cada pergunta demonstra entendimento do domínio
-- Não gere `spec.md` enquanto houver ponto cego de UX/regra/escopo
+- **Zero hipóteses na spec (regra dura):** `spec.md` só pode ser escrita quando **TODAS** as hipóteses e pontos abertos do discovery tiverem sido **confirmadas ou refutadas pelo humano**. Nenhuma seção de "hipóteses abertas", "a confirmar na aprovação" ou equivalente — spec com hipótese dentro = entregável inválido, Zeus rejeita no guardian e devolve. Enquanto restar ponto aberto, continue perguntando
 - Se escopo pedir múltiplos subsistemas independentes: liste subprojetos, relações, ordem, escolha com humano o 1º — só então faça discovery dele
 
 ### 5) Explorar 2-3 Abordagens
@@ -104,6 +104,8 @@ Antes de fechar, apresente alternativas com trade-offs e recomendação (custo, 
 ```
 
 **Qualidade:** cada critério de aceite deve ser verificável por teste manual ou automatizado; sem `TBD`, `TODO` ou vago.
+
+**Portão de entrega:** zero hipóteses/pontos abertos na spec — se você hesitar em alguma parte, ela não está pronta; volte ao humano e pergunte antes de escrever.
 
 ---
 

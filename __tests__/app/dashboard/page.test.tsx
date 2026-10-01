@@ -62,10 +62,29 @@ describe('DashboardPage', () => {
     expect(document.querySelector('.mascot-background')).not.toBeInTheDocument()
   })
 
-  it('renders Milon card linking to the exercise library', () => {
+  it('renders Milon card with D13 text linking to the Mílon module', () => {
     renderDashboardWithProvider()
     const milonLink = screen.getByRole('link', { name: /Mílon/ })
     expect(milonLink).toBeInTheDocument()
     expect(milonLink).toHaveAttribute('href', '/milon')
+    // CA-P3-08: texto exato do card Mílon (D13)
+    expect(screen.getByText('Módulo de Acompanhamento de Treinos e Evolução')).toBeInTheDocument()
+    // CA-P3-10: texto antigo removido
+    expect(screen.queryByText('Acesse a biblioteca de exercícios da academia.')).toBeNull()
+  })
+
+  it('renders Pluto card with D13 text linking to the budget', () => {
+    renderDashboardWithProvider()
+    const plutoLink = screen.getByRole('link', { name: /Pluto/ })
+    expect(plutoLink).toBeInTheDocument()
+    expect(plutoLink).toHaveAttribute('href', '/pluto/budget')
+    // CA-P3-08: texto exato do card Pluto (D13)
+    expect(screen.getByText('Módulo Orçamentário e Financeiro')).toBeInTheDocument()
+    // CA-P3-10: texto antigo removido
+    expect(
+      screen.queryByText(
+        'Acesse o controle de orçamento anual, categorias de receitas e despesas previstas.'
+      )
+    ).toBeNull()
   })
 })

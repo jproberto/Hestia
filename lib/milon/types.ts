@@ -1,5 +1,6 @@
 // Types consolidados do módulo Mílon — FONTE ÚNICA (nunca duplicar tipos).
 // Ver Mapa de Camadas no AGENTS.md: Row (banco) / domínio / Input (repositório).
+import type { ErrorOrigin } from "@/lib/shared";
 
 export interface ExerciseRow {
   id: string;
@@ -29,6 +30,41 @@ export interface UpdateExerciseInput {
   name: string;
   muscle: string;
   videoLink: string | null;
+}
+
+export type ProgramStatus = 'rascunho' | 'ativo' | 'inativo';
+
+// Origem da mensagem da lista (Patch v4, D15): decide o retry no banner.
+// Casa única em @/lib/shared (Patch v5, D26) — hook grava, ProgramList consome.
+export type ProgramErrorOrigin = ErrorOrigin;
+
+export interface ProgramRow {
+  id: string;
+  title: string;
+  owner: string;
+  status: ProgramStatus;
+  created_at: string;
+  created_by: string;
+}
+
+export interface Program {
+  id: string;
+  title: string;
+  owner: string;
+  status: ProgramStatus;
+  createdAt: string;
+  created_by: string;
+}
+
+export interface CreateProgramInput {
+  title: string;
+  owner: string;
+  status?: ProgramStatus;
+}
+
+export interface UpdateProgramInput {
+  title?: string;
+  status?: ProgramStatus;
 }
 
 // ----------------------------------------------------------------------------

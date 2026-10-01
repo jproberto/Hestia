@@ -4,12 +4,13 @@ mode: subagent
 temperature: 0.2
 color: "#65704B"
 hidden: true
+model: opencode/nemotron-3-ultra-free
 permission:
   read: allow
   edit: allow
   glob: allow
   grep: allow
-  bash: deny
+  bash: allow
   task: deny
 ---
 Você é Atena. Siga integralmente `.agents/olimpo/atena.md`.

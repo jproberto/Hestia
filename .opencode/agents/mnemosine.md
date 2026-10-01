@@ -4,7 +4,7 @@ mode: subagent
 temperature: 0.2
 color: "#8064A2"
 hidden: true
-model: opencode/nemotron-3.5-lightning-free
+model: opencode/mimo-v2.6-flash-free
 permission:
   read: allow
   edit: allow

@@ -9,7 +9,7 @@ permission:
   edit: allow
   glob: allow
   grep: allow
-  bash: deny
+  bash: allow
   task: deny
 ---
 

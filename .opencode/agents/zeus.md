@@ -3,7 +3,6 @@ description: "⚡ Orquestrador supremo do Olympus. State machine, guardian nativ
 mode: primary
 temperature: 0.1
 color: "#D4A72C"
-model: opencode/mimo-v2.6-flash-free
 permission:
   read: allow
   edit: allow

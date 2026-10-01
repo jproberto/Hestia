@@ -931,7 +931,7 @@
                   },
                   {
                       "id":  "TASK-044",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "test-scenarios.md: Cenário 52 do Patch v6 (CA-P6-1 a CA-P6-5)",
                       "description":  "Minos acrescenta à .agents/modules/milon/02-programas/test-scenarios.md o Cenário 52 — o próximo número após o Cenário 51 — cobrindo CA-P6-1 a CA-P6-5 no mesmo formato Dado/Quando/Então dos blocos dos Patches v4 e v5, sem alterar nem renumerar os Cenários 1–51. Conteúdo do cenário: (a) o título de cada item é link com href exatamente \u0027/milon/programs/\u003cid\u003e\u0027 daquele item (CA-P6-1); (b) clicar no título leva à página de detalhe do programa, caminho válido para rascunho, ativo e inativo — na suíte asserido pelo href exato e a passagem exercida manualmente (CA-P6-2); (c) ações por status intactas e fora do link — acionar uma ação dispara o comportamento de sempre e não navega (CA-P6-3); (d) afordância: repouso #B7602B sem sublinhado, hover com mudança de cor do marrom com transição e foco por teclado visível, zero sublinhado em qualquer estado (CA-P6-4); (e) heading h3 e link com o mesmo nome acessível, link alcançável por teclado (CA-P6-5). Cada item cita os testes automatizados correspondentes em __tests__/components/milon/ProgramList.test.tsx. CA-P6-6 não vira cenário: é gate de processo verificado pela TASK-045 (spec T6 limita o cenário novo a CA-P6-1…CA-P6-5).",
                       "assignee":  "minos",
@@ -951,7 +951,7 @@
                   },
                   {
                       "id":  "TASK-045",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Suite final Minos + coverage + test-report + regressão (Patch v6 — CA-P6-6)",
                       "description":  "Minos executa a suite completa (v1 + Patch v3 + v4 + v5 + v6): todos os testes de contrato, utils, hooks, componentes e páginas, incluindo os cenários novos de __tests__/components/milon/ProgramList.test.tsx. Coverage ≥ 80%. Regenera test-report.json e test-scenarios.md na FEATURE_DIR (Cenário 52 incluído, Cenários 1–51 intactos), promove cenários de regressão para .agents/modules/milon/regression.md e executa npm run build-storybook sem erros. Buscas de fechamento: \u0027next/link\u0027 em components/milon/ProgramList.tsx retorna 1 ocorrência de import; \u0027hover:underline\u0027 e \u0027focus-visible:underline\u0027 em components/ retornam 0; nenhum arquivo em utils/migrations/ é criado ou editado (sem DDL) e nenhuma versão de pacote muda (sem SemVer). Gate do processo (CA-P6-6): test-report.failed == 0 e coverage ≥ 80 antes da review do Argos.",
                       "assignee":  "minos",

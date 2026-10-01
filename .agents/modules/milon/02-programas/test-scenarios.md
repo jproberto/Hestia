@@ -6,8 +6,8 @@ Portão manual da feature (`SPEC_APPROVED` → `APPROVED`). Derivado exclusivame
 
 - **Execução:** subir o app (`npm run dev`), logar e abrir `/milon/programs`.
 - **Referência de teste:** cada cenário aponta o teste automatizado que o exercita
-  (suíte `npm test`, **781 testes / 88 arquivos, 0 falhas** — suite final da
-  TASK-041, v1 + Patch v3 + Patch v4 + Patch v5).
+  (suíte `npm test`, **786 testes / 88 arquivos, 0 falhas** — suite final da
+  TASK-045, v1 + Patch v3 + Patch v4 + Patch v5 + Patch v6).
 - **Status:** os testes automatizados estão verdes; a coluna "Homologado" fica para
   o humano marcar ao executar (gate `approve-review`).
 - **Patch v3 (TASK-020):** a seção "Patch v3 — Navegação em abas (CA-P3-01…12)"
@@ -34,7 +34,27 @@ Portão manual da feature (`SPEC_APPROVED` → `APPROVED`). Derivado exclusivame
   9 novos:** 8 executáveis (43–49, 51) · **0 bloqueados pela feature #3** (o
   patch não toca ativação/ciclo de vida) · 1 handoff da fase 7 (Cenário 50,
   CA-P5-8) · +1 sub-bloco `[NÃO TESTÁVEL MANUAL]` (estado mockado
-  programa+erro do detalhe). Contagem do arquivo: **51 cenários** (42 + 9).
+   programa+erro do detalhe). Contagem do arquivo: **51 cenários** (42 + 9).
+- **Patch v6 (TASK-044):** a seção "Patch v6 — Link no título do item da lista
+  (CA-P6-1…5)" ao final do arquivo acrescenta os cenários Dado/Quando/Então do
+  patch de link no título (**CA-P6-1…5**, Cenário 52) — os 51 cenários
+  anteriores (22 v1 + 12 do Patch v3 + 8 do Patch v4 + 9 do Patch v5) permanecem
+  intactos. É o patch que **fecha o ponto que o Patch v4 deixou em aberto**
+  (entrada na página de detalhe a partir da lista): título vira link com href
+  exato `/milon/programs/<id>` por item (CA-P6-1), o clique navega ao cabeçalho
+  do programa nos três status (CA-P6-2), as ações permanecem botões **fora** do
+  link disparando os callbacks de sempre (CA-P6-3), a afordância é mudança de
+  cor no hover **sem sublinhado** com foco visível (CA-P6-4, Alternativa C) e a
+  semântica preserva heading `h3` + link com o **mesmo nome acessível**
+  (CA-P6-5). **Classificação do novo cenário:** **1 executável** (52) · **0
+  bloqueados pela feature #3** (o patch não toca ativação nem ciclo de vida —
+  muda só a apresentação do título) · CA-P6-6 **sem cenário próprio** (gate de
+  processo na TASK-045, spec T6). Contagem do arquivo: **52 cenários** (51 + 1).
+  **Suite completa executada na TASK-045 (2026-10-01):** **786/786 em 88
+  arquivos, 0 falhas**, coverage **84,51% lines / 84,51% statements / 88,45%
+  branches / 88,29% functions** (todos ≥ 80) — gate **CA-P6-6 PASS**,
+  `test-report.json` regenerado, `regression.md` atualizado e
+  `npm run build-storybook` exit 0.
 
 ---
 
@@ -211,8 +231,8 @@ Observações para rodar agora:
   migração 0007 já aplicada) — independe da 0008.
 - **Cenário 34:** rodar `npm test` (sem banco — a suíte usa fakes) e conferir
   `test-report.json` (`failed = 0`, `coverage ≥ 80`). Referência atual do
-  arquivo: **781/781 em 88 arquivos, coverage 84,48% lines** (suite final da
-  TASK-041 — v1 + Patches v3/v4/v5).
+  arquivo: **786/786 em 88 arquivos, coverage 84,51% lines** (suite final da
+  TASK-045 — v1 + Patches v3/v4/v5/v6).
 
 ### (iii) PRÉ-CONDIÇÃO — absorvido por (ii)
 
@@ -791,7 +811,10 @@ disco).
   nos **8 arquivos do Patch v5** → **176 testes, 0 falhas**. Suíte completa e
   regeneração de `test-report.json` executadas na **TASK-041 (CA-P5-9)**:
   **781/781 em 88 arquivos · coverage 84,48% lines · 0 falhas** — gate verde
-  antes da review do Argos.
+  antes da review do Argos. **Reexecutadas na TASK-045 (CA-P6-6,
+  2026-10-01):** os mesmos 176 testes do Patch v5 seguem verdes dentro da
+  suíte completa de **786/786 em 88 arquivos · coverage 84,51% lines · 0
+  falhas** — nada do Patch v5 quebrou com o Patch v6 (CA-P5-5 preservado).
 - **Classificação (buckets do checklist acima):** os buckets da reexecução
   2026-09-30 referem-se aos **Cenários 1–42**; a classificação dos **43–51** está
   no quadro ao final desta introdução. **Nenhum cenário do Patch v5 depende da
@@ -959,7 +982,11 @@ Automatizado: `__tests__/app/milon/exercises/page.test.tsx` → "CA-P5-6/S6(b): 
 `AsyncState` em `app/pluto/` e `components/pluto/` retorna **0** (Pluto intocado,
 D24/R30)
 
-Automatizado: `__tests__/components/milon/ExerciseList.test.tsx` → "CA-P5-7: 'Tentar novamente' em components/milon/ExerciseList.tsx => 0 ocorrências" + "CA-P5-7 (reafirmação): 'lib/milon' em components/ui/AsyncState.tsx => 0 ocorrências" + "D21/R26: ExerciseList compõe o AsyncState (import de '@/components/ui/AsyncState')"; `__tests__/app/milon/programs/[id]/page.test.tsx` → "CA-P5-7: 'Tentar novamente' em app/milon/programs/[id]/page.tsx => 0 ocorrências" + "D21/R26: a página compõe o AsyncState (import de '@/components/ui/AsyncState')" + "CA-P5-7 (reafirmação): 'lib/milon' em components/ui/AsyncState.tsx => 0 ocorrências". **Busca global** (a cadeia em `app/` + `components/`, a de `AsyncState` no Pluto e o zero do `ProgramList.tsx`) é reexecutada por Minos no gate da **TASK-041 (CA-P5-9)** — conferência de disco de 2026-09-30 já em verde: única ocorrência `components/ui/AsyncState.tsx:59`, zero em `app/pluto/` e `components/pluto/`.
+Automatizado: `__tests__/components/milon/ExerciseList.test.tsx` → "CA-P5-7: 'Tentar novamente' em components/milon/ExerciseList.tsx => 0 ocorrências" + "CA-P5-7 (reafirmação): 'lib/milon' em components/ui/AsyncState.tsx => 0 ocorrências" + "D21/R26: ExerciseList compõe o AsyncState (import de '@/components/ui/AsyncState')"; `__tests__/app/milon/programs/[id]/page.test.tsx` → "CA-P5-7: 'Tentar novamente' em app/milon/programs/[id]/page.tsx => 0 ocorrências" + "D21/R26: a página compõe o AsyncState (import de '@/components/ui/AsyncState')" + "CA-P5-7 (reafirmação): 'lib/milon' em components/ui/AsyncState.tsx => 0 ocorrências". **Busca global** (a cadeia em `app/` + `components/`, a de `AsyncState` no Pluto e o zero do `ProgramList.tsx`) é reexecutada por Minos no gate da **TASK-041 (CA-P5-9)** e **reexecutada de
+novo no gate da TASK-045 (CA-P6-6)** — conferência de disco de 2026-10-01
+em verde: única ocorrência `components/ui/AsyncState.tsx:59`, zero em
+`app/pluto/` e `components/pluto/` (detalhe no bloco `inheritanceProof` do
+`test-report.json`).
 
 > **Execução manual:** é verificação de **código** (grep/IDE no repositório),
 > não fluxo de UI — mesmo formato do Cenário 32 (busca de textos antigos).
@@ -1003,6 +1030,112 @@ antes da review). **Resultado da TASK-041 (2026-09-30):** suíte **781/781 em
 regenerado com `failed = 0`, `npm run build-storybook` **exit 0** e prova de
 herança do Cenário 49 reexecutada em verde (1 ocorrência — só
 `components/ui/AsyncState.tsx`).
+**Reexecução na TASK-045 (2026-10-01, gate CA-P6-6):** o mesmo protocolo
+reexecutado após o Patch v6 → suíte **786/786 em 88 arquivos, 0 falhas**,
+coverage **84,51% lines / 84,51% statements / 88,45% branches / 88,29%
+functions** (todos ≥ 80), `test-report.json` regenerado com `failed = 0` e a
+prova de herança do Cenário 49 mantida em verde.
+
+---
+
+## Patch v6 — Link no título do item da lista (CA-P6-1…5)
+
+Cenários Dado/Quando/Então do **Patch v6 de link no título** (spec §T2 decisões
+D28–D32, §T3 requisitos R32–R37, §T4 critérios CA-P6-1…6), acrescentados na
+TASK-044 sem alterar nem renumerar nada dos 22 cenários do ciclo v1, dos 12 do
+Patch v3, dos 8 do Patch v4 nem dos 9 do Patch v5 (Cenários 1–51 permanecem
+intactos). Um bloco Dado/Quando/Então por critério (CA-P6-1 a CA-P6-5), no
+mesmo formato das seções dos Patches v4 e v5, citando os testes automatizados
+que o exercita (nomes conferidos em disco).
+
+- **Execução:** subir o app (`npm run dev`), logar e abrir `/milon/programs` —
+  a página de detalhe `/milon/programs/<id>` já existe desde o Patch v4; este
+  patch só cria o link que aponta para ela (nenhuma rota nova).
+- **Status:** conferência de disco de **2026-10-01** (Minos): `npx vitest run
+  __tests__/components/milon/ProgramList.test.tsx` → **33 testes, 0 falhas**
+  (describe "Patch v6 — título é link para o detalhe (TASK-042 RED)" verde
+  desde a TASK-043/GREEN). **Suite completa e regeneração de
+  `test-report.json` EXECUTADAS na TASK-045 (CA-P6-6, 2026-10-01), antes da
+  review do Argos: 786/786 em 88 arquivos, 0 falhas, coverage 84,51% lines —
+  gate PASS** (detalhe no bloco "Suite completa executada na TASK-045" no
+  início deste arquivo e em `test-report.json`).
+- **Classificação (buckets do checklist acima):** **executável** — **0
+  `[BLOQUEADO — #3]`**: o patch não toca ativação, reativação nem ciclo de
+  vida (muda só a apresentação do título), então nada aqui depende de conteúdo
+  real de treinos nem de status `ativo`/`inativo` alcançáveis. **Ressalva:**
+  com dados reais, até a feature #3 a lista só tem itens em `rascunho`
+  (mesma ressalva do Cenário 16) — o clique, a afordância e a acessibilidade
+  exercitam-se nele; a cobertura dos três status fica nos automatizados
+  (CA-P6-2) e nos testes de contrato.
+- **CA-P6-6 não vira cenário:** é gate de processo verificado pela TASK-045
+  (`test-report.json` com `failed = 0` e coverage ≥ 80%), conforme spec T6 —
+  precedente dos Cenários 34 (CA-P3-12) e 51 (CA-P5-9).
+
+| # | Critério (spec §T4) | Decisão / req. | Automatizado em | Homologado |
+|---|---|---|---|---|
+| 52 | CA-P6-1 — título é link com href exato `/milon/programs/<id>` por item | D28 · R32 | ver Cenário 52 (bloco 1) | ☐ |
+| 52 | CA-P6-2 — clique no título navega ao detalhe (rascunho, ativo, inativo) | D28 · R33 | ver Cenário 52 (bloco 2) | ☐ |
+| 52 | CA-P6-3 — ações por status intactas e fora do link; ação nunca navega | D31 · R36 | ver Cenário 52 (bloco 3) | ☐ |
+| 52 | CA-P6-4 — cor no hover + foco visível, sem sublinhado em qualquer estado | D30 · R35 | ver Cenário 52 (bloco 4) | ☐ |
+| 52 | CA-P6-5 — heading `h3` e link com o mesmo nome acessível, foco visível | D29/D32 · R34, R37 | ver Cenário 52 (bloco 5) | ☐ |
+
+---
+
+### Cenário 52: Título do programa é link para a página de detalhe (CA-P6-1…5)
+
+**Dado** (CA-P6-1) a lista de Programas renderizada com itens nos três status
+(rascunho, ativo e inativo), cada um com seu id
+**Quando** a pessoa olha o título de cada item
+**Então** o título é um link (`Link` do Next.js) com href exatamente
+`/milon/programs/<id>` **daquele item** — um link por item, sem barra final,
+sem query e sem id de outro programa — nos três status
+
+**Dado** (CA-P6-2) a mesma lista com o título de um item já renderizado como
+link
+**Quando** a pessoa clica no título
+**Então** ela navega para `/milon/programs/<id>` **daquele programa** e vê o
+cabeçalho dele (título, dono, status) — o caminho vale para rascunho, ativo e
+inativo; a rota de destino é a mesma do Patch v4 (nenhuma rota nova nasce aqui)
+
+**Dado** (CA-P6-3) a lista com as ações de cada status — rascunho: Editar,
+Ativar e Excluir; ativo: Editar; inativo: Reativar
+**Quando** a pessoa aciona uma dessas ações
+**Então** o botão permanece à direita, **fora** do link, dispara o callback de
+sempre (mesmo rótulo, mesma condição por status) e **nunca navega** para o
+detalhe; dono e selo de status continuam texto simples não clicáveis e a linha
+inteira não é clicável
+
+**Dado** (CA-P6-4) o título em repouso, depois com o mouse sobre ele e depois
+alcançado por teclado (Tab)
+**Quando** a pessoa passa o mouse sobre o título ou navega até o link
+**Então** em repouso a cor é o marrom `#B7602B` **sem sublinhado**; no hover a
+cor muda para outro tom do marrom com transição (padrão dashboard,
+Alternativa C) e **continua sem sublinhado**; com foco por teclado o foco é
+**visível** (contorno na cor do módulo) e também sem sublinhado — **zero**
+marcação de sublinhado em qualquer estado
+
+**Dado** (CA-P6-5) a lista renderizada, com o título sendo heading de nível 3
+e o link dentro dele
+**Quando** a pessoa percorre os itens por teclado ou uma tecnologia assistiva
+anuncia a tela
+**Então** o título é identificado como **heading `h3`** com nome acessível
+igual ao texto do programa e o elemento interno é identificado como **link
+com o mesmo nome**, alcançável por teclado com foco visível — a hierarquia de
+headings (h2 da seção → h3 por item) não muda e a linha não vira link
+
+Automatizado: `__tests__/components/milon/ProgramList.test.tsx` → describe
+"Patch v6 — título é link para o detalhe (TASK-042 RED)" (conferido verde em
+2026-10-01, 33/33 no arquivo; **suite completa da TASK-045: 786/786 em 88
+arquivos, 0 falhas**) → "CA-P6-1: cada título é link com href exatamente
+'/milon/programs/<id>' do próprio item (1 link por item)" (bloco 1);
+"CA-P6-2: o link está presente nos três status (rascunho, ativo, inativo) com
+destino asserido pelo href exato" (bloco 2 — na suíte o caminho é asserido pelo
+href exato; a **passagem real do clique** é a verificação manual deste cenário,
+spec T4); "CA-P6-3: ações por status intactas e FORA do link — clique dispara o
+callback; dono e selo seguem texto simples" (bloco 3); "CA-P6-4: afordância —
+cor no hover com transição, foco visível e ZERO sublinhado em qualquer estado"
+(bloco 4); "CA-P6-5: heading h3 e link com o MESMO nome acessível; o link é
+âncora com href (alcançável por teclado)" (bloco 5).
 
 ---
 

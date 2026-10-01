@@ -34,8 +34,16 @@ Cenários promovidos pelos testes de cada feature (Minos promove a partir de `te
 
 > Preservados: os cenários **CA-P3-13…16** (bloqueio/falha fecham a confirmação com mensagem legível, retry só na carga) continuam válidos e são reexercitados pelos passos acima — a mudança do Patch v5 é de **composição** (banner acima, lista visível), não de conteúdo. Cobertos também por CA-P5-2/4 (precedência dos 4 estados e textos por props) na suíte automatizada; CA-P5-8 é handoff da fase 7 (Mnemósine) e CA-P5-9 é o gate de processo do `test-report.json`.
 
-## Prova de herança — "Tentar novamente" só no componente centralizado (Patch v5 · CA-P5-7)
+## Programas — título do item é link para o detalhe (Patch v6 · CA-P6-1…5)
 
-1. Busque a cadeia `Tentar novamente` em `app/` e `components/` — deve retornar **1 ocorrência, somente** `components/ui/AsyncState.tsx` (zero em `ProgramList.tsx`, `ExerciseList.tsx` e em qualquer tela).
-2. Busque `AsyncState` em `app/pluto/` e `components/pluto/` — deve retornar **0** (Pluto intocado).
-3. Confira `.agents/modules/milon/02-programas/test-report.json` → bloco `inheritanceProof` com os 4 resultados `PASS` e `summary.failed = 0`.
+1. Acesse `/milon/programs` e confira que o **título** de cada item da lista é um link clicável com destino `/milon/programs/<id>` daquele item (cor marrom `#B7602B` no repouso, outra tom no hover e foco visível por teclado, **sem sublinhado**).
+2. Clique no título de um programa e confira que a navegação chega a `/milon/programs/<id>` exibindo título, dono e status (cabeçalho do programa).
+3. Volte à lista e confira que as ações por status continuam funcionando **fora** do link (rascunho: Editar/Ativar/Excluir; ativo: Editar; inativo: Reativar) — o clique na ação dispara o modal/callback de sempre e **nunca** navega; dono e selo de status seguem texto simples.
+
+> **Preservados (reexecutados verdes na TASK-045/CA-P6-6):** os critérios do Patch v5 seguem íntegros — **CA-P5-1…9** (banner ACIMA com lista visível, precedência dos 4 estados, retry só na carga, contrato do componente, adoção preservando CA-P3-13…16, exclusão da biblioteca fechando em falha, norma de documentação e gate de processo) — e a prova de herança **CA-P5-7** foi reexecutada em verde (seção abaixo). Os testes automatizados correspondentes: 33/33 em `__tests__/components/milon/ProgramList.test.tsx`, 176 verdes nos 8 arquivos do Patch v5 e 786/786 da suíte completa.
+
+## Prova de herança — "Tentar novamente" só no componente centralizado (Patch v5 · CA-P5-7 — mantida no Patch v6)
+
+1. Busque a cadeia `Tentar novamente` em `app/` e `components/` — deve retornar **1 ocorrência, somente** `components/ui/AsyncState.tsx` (zero em `ProgramList.tsx`, `ExerciseList.tsx` e em qualquer tela). *Reexecutado na TASK-045 (2026-10-01): PASS.*
+2. Busque `AsyncState` em `app/pluto/` e `components/pluto/` — deve retornar **0** (Pluto intocado). *Reexecutado na TASK-045: PASS.*
+3. Confira `.agents/modules/milon/02-programas/test-report.json` → bloco `inheritanceProof` com os 4 resultados `PASS`, bloco `closingSearches` do Patch v6 em verde e `summary.failed = 0`. *Regenerado na TASK-045: 786 testes, 0 falhas, coverage 84,51% lines.*

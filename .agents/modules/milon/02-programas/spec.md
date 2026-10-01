@@ -555,3 +555,111 @@ Ambos são entregáveis de documentação desta feature, anotados na fase de doc
 - **Só um FeedbackBanner:** criar apenas o componente de banner de erro. **Descartado:** resolveria só a camada de erro e deixaria carregando, vazio e no-results duplicados nas três telas; não fecha o defeito de precedência do Cenário 5 nem entrega a herança.
 - **Alternativa 2 de escopo (Pluto junto agora):** Mílon mais retrofit dos banners `transactions` e `months` na mesma patch. **Descartada pela decisão humana de 2026-09-30 (Alternativa 1):** o `errorMsg` do Pluto é misto, sem origem rotulada — migrar exigiria inventar decisões de classificação em código homologado; adiar separa o risco e mantém a patch com escopo de produto único.
 - **Alternativa 3 de escopo (Pluto antes do Mílon):** começar pelo retrofit do Pluto e deixar a adoção do Mílon para depois. **Descartada pela mesma decisão:** o defeito do Cenário 5 vive no Mílon e é o que trava a homologação da feature — adiar manteria o defeito vivo enquanto se refatora um módulo sem defeito declarado.
+
+---
+
+## Patch v6 — Link no título do item da lista (2026-10-01)
+
+> **Formato:** seção nova demarcada, anexada à spec sem editar nem apagar nada das seções 1–7, do Patch v3 (P), do Patch v4 (Q) nem do Patch v5 (S) — todos permanecem integralmente válidos. Este patch soma a v6 da mesma spec. Os prefixos de seção seguem a sequência P (v3) → Q (v4) → S (v5) → **T** (v6; a letra R continua reservada aos requisitos). A numeração de conteúdo segue a existente: decisões **D28+**, requisitos **R32+**, critérios de aceite **CA-P6-x**.
+>
+> **Origem:** discovery anterior conduzido pela Hera com o humano, cujas **5 decisões (a–e) estão todas fechadas**, somado à **decisão humana de 2026-10-01 — ALTERNATIVA C** para a afordância do link (mudança de cor no hover, padrão dashboard, sem sublinhado); guardian autorizou SPEC_DRAFT. **Nenhum ponto aberto:** toda hipótese do discovery foi confirmada ou refutada pelo humano antes da redação desta seção.
+
+### T1. Escopo do patch — o que muda e o que não muda
+
+**Muda (somente a apresentação do título de um item da lista):**
+
+1. O **título de cada item do `ProgramList`** passa a ser **link** para a página de detalhe do programa — `/milon/programs/<id>` — renderizado com o **`Link` do Next.js** (D28).
+2. A **afordância do link** é **mudança de cor no hover**, no padrão do dashboard: o marrom `#B7602B` do título passa a um tom mais claro/escuro do marrom quando o mouse chega, **sem sublinhado** — nem no hover, nem em repouso — e com **foco visível** por teclado (D30, alternativa C).
+3. O **`h3` permanece heading**, com o link **dentro** dele (D29).
+4. As **ações** (Editar/Ativar/Reativar/Excluir) ficam **intactas como botões à direita**, fora do link (D31). As demais entradas na página de detalhe continuam as já especificadas: navegação pós-criação (R20) e acesso direto por endereço (R18).
+
+**Não muda:**
+
+- **Toda a regra da spec v2, do Patch v3, do Patch v4 e do Patch v5 permanece intocada:** ciclo de vida rascunho→ativo⇄inativo, unicidade do ativo por dono, guarda de ativação, filtros, ordenação, confirmações, exclusão de rascunho, sugestões sorteadas, as duas abas, as três origens de erro e o componente centralizado de estados.
+- **Página de detalhe** `app/milon/programs/[id]/page.tsx` (D16/R18): inalterada — este patch apenas passa a **linkar** para ela a partir da lista, encerrando o ponto que o Patch v4 deixou explicitamente em aberto ("entrada na página de detalhe por clique/linha da lista — não decidida neste amendment", Q5).
+- **Hooks, modais, tipos, repositórios e banco:** nenhum arquivo desses muda; a lista continua recebendo itens filtrados via props.
+- **`ExerciseList` e a biblioteca, Pluto, dashboard e as demais telas do Mílon:** inalterados.
+- Dono, selo de status, filtros e os quatro estados de lista: inalterados — muda só o título.
+
+### T2. Decisões do patch (D28–D32 — discovery a–e, todos fechados)
+
+- **D28 (a) — Link no título apontando para o detalhe:** o título de cada item da lista vira link para `/milon/programs/<id>` — o id do próprio programa — usando o **`Link` do Next.js**. É o caminho de entrada na página de detalhe a partir da lista; a página de destino já existe desde o Patch v4 e **nenhuma rota nova** nasce aqui.
+- **D29 (b) — Estrutura: `h3` permanece heading com o link dentro:** o elemento do título segue sendo heading de nível 3 com o link por dentro — **não** se envolve o `h3` inteiro em um link, **não** se transforma a linha (nem o bloco de título/dono/selo) em link. Mantém a hierarquia de headings (h2 da seção, h3 por item) e o nome do heading continua sendo o texto do programa.
+- **D30 (c) — AFORDÂNCIA: decisão humana de 2026-10-01 — ALTERNATIVA C (mudança de cor no hover, sem sublinhado, padrão dashboard):** em repouso o título permanece `#B7602B`; **no hover a cor muda** para um tom mais claro/escuro do marrom, com transição de cor, **sem sublinhado em qualquer estado**, e o link exibe **foco visível** quando alcançado por teclado. É o mesmo princípio do título do card do dashboard, que muda de cor no hover. **Alternativas descartadas:** **A** (sublinhado no hover e/ou no foco) e **B** (sublinhado permanente) — trade-offs em T8.
+- **D31 (d) — Ações intactas, fora do link:** o link cobre **apenas o texto do título**; os botões de ação (Editar/Ativar/Reativar/Excluir) permanecem à direita, com os mesmos rótulos, mesmas condições por status e mesmos callbacks, **fora** do link — acionar uma ação **nunca navega**. Dono e selo de status continuam texto simples, não clicáveis, e a linha inteira **não** vira link.
+- **D32 (e) — Acessibilidade (role, nome e foco):** o título segue sendo heading com nome igual ao texto do programa; o link dentro dele é identificado como link com **o mesmo nome** (nome acessível igual ao título) e é alcançável por teclado com **foco visível** — a tecnologia assistiva anuncia o título como heading e o link como link, sem perda de semântica.
+
+### T3. Requisitos do patch (R32–R37)
+
+**Link e navegação (D28)**
+
+- **R32:** o título de cada item da lista é um link com **href exato** `/milon/programs/<id>` — o `<id>` do programa daquele item — renderizado com o `Link` do Next.js; um link por item, cada um apontando para o próprio programa.
+- **R33:** clicar no título leva a pessoa à página de detalhe `/milon/programs/<id>` daquele programa, que responde com o cabeçalho dele (rota e comportamento já entregues no Patch v4, R18) — o caminho vale para programa em rascunho, ativo ou inativo.
+
+**Estrutura (D29)**
+
+- **R34:** o título permanece heading `h3` com o link **dentro** dele; a hierarquia de headings não muda (h2 na seção da lista, h3 por item) e o texto visível do título é o mesmo de hoje.
+
+**Afordância (D30)**
+
+- **R35:** fora do hover, o título permanece `#B7602B` **sem sublinhado**; **no hover**, a cor muda para um tom diferente do marrom (mais claro ou mais escuro, na direção do padrão do dashboard), com transição de cor e **sem sublinhado**; no foco por teclado, o link exibe **foco visível** (contorno ou anel) e **não** ganha sublinhado. **Nenhum estado do título usa sublinhado** — o tom exato de hover é escolha de implementação no plano, o requisito fixado aqui é a mudança de cor.
+
+**Ações (D31)**
+
+- **R36:** as ações por status permanecem intactas — mesmos botões, mesmos rótulos, mesma posição à direita e mesmos callbacks — e ficam **fora** do link: acionar uma ação não navega; dono e selo de status continuam texto simples e não clicáveis; a linha não é clicável por inteiro.
+
+**Acessibilidade (D32)**
+
+- **R37:** o heading do item mantém nome acessível igual ao título do programa e contém um link com **o mesmo nome**; o link é identificado como link (role) e é alcançável por navegação de teclado, com foco visível.
+
+### T4. Critérios de aceite novos (testáveis) — CA-P6-1 a CA-P6-6
+
+- **CA-P6-1 (título é link com href exato):** Dado um programa na lista, então o título daquele item é um link com href exatamente `/milon/programs/<id>` do próprio programa — asserido por item, sem id de outro programa, sem barra final, sem query e sem destino diferente.
+- **CA-P6-2 (navegação ao detalhe):** Dado que a pessoa clica no título de um item, então ela termina na página de detalhe `/milon/programs/<id>` daquele programa, vendo o cabeçalho dele — o caminho vale para rascunho, ativo e inativo; na suíte automatizada o caminho é asserido pelo href exato (CA-P6-1) e a passagem real é exercida no cenário de homologação em `test-scenarios.md`.
+- **CA-P6-3 (ações por status intactas):** Dada a lista com os três status, então as ações são exatamente as de hoje — rascunho: Editar, Ativar e Excluir; ativo: Editar; inativo: Reativar — na condição e com o callback de sempre, **fora** do link: acionar uma ação dispara o callback e **não** navega para o detalhe.
+- **CA-P6-4 (afordância: cor no hover + foco visível, sem sublinhado):** Dado o título em repouso, então ele está em `#B7602B` sem sublinhado; no hover, a cor muda (outro tom do marrom, com transição) e **continua sem sublinhado**; focado por teclado, o link exibe foco visível sem sublinhado — a verificação no DOM encontra estado de hover com cor diferente de `#B7602B` e **zero** marcação de sublinhado no título.
+- **CA-P6-5 (role/nome/foco acessíveis):** o título continua identificado como heading `h3` com nome igual ao texto do programa, e o elemento interno é identificado como link com nome igual a esse mesmo texto, alcançável por teclado com foco visível.
+- **CA-P6-6 (portão do processo):** suíte completa verde (nenhum teste existente quebra), coverage ≥ 80% mantido e `test-report.json` regenerado por Minos antes da review (gate do processo).
+
+### T5. Fora de escopo do patch (YAGNI)
+
+- **Página de detalhe** (`app/milon/programs/[id]/page.tsx`) — inalterada; já entregue no Patch v4 (D16). Este patch só cria o link que aponta para ela.
+- **Hooks** (`lib/milon/hooks/*`, notadamente `usePrograms` e `useProgramDetail`) — nenhum muda.
+- **Modais** (formulário de criação/edição, `ProgramConfirmModal`, `DeleteExerciseConfirm`) — inalterados.
+- **Banco, dados e migração** — nenhum; o patch não toca em dados nem cria script de migração.
+- **`ExerciseList` e a biblioteca de exercícios** — fora; o link não entra na lista de exercícios.
+- **Pluto** — nenhum arquivo alterado.
+- **Sublinhado no link (alternativas A e B)** — recusados pela decisão humana D30.
+- **Linha inteira clicável, ações dentro do link ou bloco de título/dono/selo como link** — fora (D31); o link cobre só o texto do título.
+- **Rota, href ou destino novos** — fora; o destino é a rota já existente `/milon/programs/<id>`.
+- **Outras telas do Mílon** (detalhe, criação, edição, exercícios) — fora.
+- **Qualquer mudança de regra da spec v2 ou dos Patches v3, v4 e v5** — intocada por definição.
+
+### T6. Alvos por arquivo (produto e testes)
+
+**Produto:**
+
+- `components/milon/ProgramList.tsx` — o título de cada item (o `h3` de hoje, linhas 108–110) passa a conter o link com `href` montado como `/milon/programs/` + id do programa, via `Link` do Next.js, e ganha as classes de hover/foco do D30; dono, selo, filtros, estados e botões de ação permanecem sem mudança.
+
+**Testes:**
+
+- `__tests__/components/milon/ProgramList.test.tsx` — estendido: título é link com href exato por item (CA-P6-1), ações intactas e fora do link (CA-P6-3), afordância/foco sem sublinhado (CA-P6-4) e semântica de heading + link (CA-P6-5); asserções existentes permanecem válidas.
+- `.agents/modules/milon/02-programas/test-scenarios.md` — cenário novo (próximo número da sequência, após o Cenário 51), no formato Dado/Quando/Então, cobrindo CA-P6-1 a CA-P6-5.
+- `.agents/modules/milon/02-programas/test-report.json` — regenerado por Minos: a extensão de teste altera contagens e cobertura (CA-P6-6).
+
+**Demais arquivos:** nenhum outro arquivo de produto ou de teste muda.
+
+### T7. Riscos e Dependências (patch)
+
+- **Tela homologada muda visualmente:** o título ganha comportamento de link (cor no hover + foco visível) — mudança **aprovada pelo humano** (D30, 2026-10-01), para o Argos avaliar o diff como mudança aprovada e não como regressão.
+- **Corte de texto do título (`truncate`):** o link dentro do `h3` não pode quebrar o corte em uma linha nem mudar alinhamento da linha — risco de regressão de layout; coberto pelas asserções de texto existentes do teste do `ProgramList` e verificável na homologação visual.
+- **Clique em ação navegando por engano:** mitigado por D31 — as ações ficam fora do link e a linha não é clicável por inteiro (CA-P6-3 trava o comportamento).
+- **href sensível a detalhes de endereço:** travado por CA-P6-1 — href exato, por item, sem barra final, query ou destino diferente.
+- **Renderização do `Link` em teste de componente:** o componente `Link` já é exercitado em testes do projeto — os cards do dashboard são `Link` com href asserido em `__tests__/app/dashboard/page.test.tsx` — e o teste estendido do `ProgramList` segue esse mesmo caminho, sem exigir mock novo de rota.
+- **Dependências:** página de detalhe existente (Patch v4, D16/R18) — pré-requisito já entregue; nenhuma dependência nova de banco, de hook ou de outra feature.
+
+### T8. Alternativas descartadas (D30 — afordância do link)
+
+- **A — sublinhado no hover e/ou no foco:** marcaria o link da forma clássica de texto interativo, inclusive para quem navega por teclado. **Descartada:** quebra o padrão do dashboard (hover = mudança de cor), introduz um segundo idioma visual para o mesmo tipo de alvo dentro do mesmo produto e o sublinhado em título de heading compete com o corte da própria linha.
+- **B — sublinhado permanente:** o título ficaria sempre sublinhado, sinal de link visível sem precisar do hover. **Descartada:** a lista é composta por vários títulos do mesmo tipo, todos na mesma cor e fonte — sublinhado permanente em todos polui a leitura da linha, destaca demais um elemento que já é o mais forte nela (marrom `#B7602B`, `font-display`) e não segue o padrão do dashboard.
+- **C — escolhida (decisão humana de 2026-10-01):** mudança de cor no hover, sem sublinhado, com foco visível — mesmo princípio dos cards do dashboard; sinal de interação aparece quando o mouse chega, o repouso da lista fica intacto e o custo de manutenção é nulo (uma classe de hover, sem variação por módulo).

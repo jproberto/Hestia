@@ -504,3 +504,137 @@ Cada par é commitado **junto**: separado, o RED deixa a baseline vermelha (mesm
 2. **Retrofit do Pluto (D24, R30):** registrar em `.agents/modules/pluto/backlog.md` o item de retrofit dos banners `transactions` e `months` para o componente centralizado, com a nota de que o `errorMsg` misto precisa de classificação de origem antes da migração.
 
 Ambos são entregáveis desta feature anotados na documentação — **não geram teste, task de código nem gate**; são handoff de rastreio (spec S9).
+
+---
+
+# Patch v6 — Link no título do item da lista (Aditivo ao Plano v1 + Patch v3 + Patch v4 + Patch v5)
+
+> **Objetivo do patch:** (D28–D32, R32–R37, CA-P6-1…CA-P6-6) transformar o título de cada item do `ProgramList` em **link** — `Link` do Next.js para `/milon/programs/<id>` (rota já existente desde o Patch v4, D16/R18) — com afordância de **mudança de cor no hover** (Alternativa C, decisão humana de 2026-10-01), **sem sublinhado em qualquer estado** e **foco visível** por teclado; o `h3` permanece heading com o link dentro; as ações (Editar/Ativar/Reativar/Excluir) ficam intactas e **fora** do link. **Sem migração SQL, sem bump de versão, sem task de documentação.**
+
+**Arquitetura do patch:** mudança pontual em **um único arquivo de produto** — `components/milon/ProgramList.tsx` (o `h3` das linhas 108–110 ganha o `Link` com href montado e as classes de cor/foco; o bloco de ações à direita, dono, selo, filtros e estados não mudam). Padrão **RED/GREEN por pares**: Minos escreve o teste RED (estende `__tests__/components/milon/ProgramList.test.tsx`) → Hefesto implementa o mínimo para GREEN; o par é commitado junto. `test-scenarios.md` ganha o **Cenário 52** (após o 51) e o gate **CA-P6-6** regenera `test-report.json`.
+
+**Tech Stack:** inalterada — Next.js 16 App Router (`Link` de `next/link`, mesmo padrão de `app/dashboard/page.tsx`), React 18, Tailwind CSS 4, Vitest + Testing Library, Storybook. Nenhum toque em banco, nenhuma migração, nenhum bump de versão.
+
+## Restrições Globais do Patch v6
+- **Nenhuma migração SQL nova** — nenhum arquivo em `utils/migrations/` é criado ou editado; nenhum repository, hook, tipo, tabela ou coluna muda (spec T5). Nenhum DDL nesta patch.
+- **Sem bump de versão (SemVer)** — nenhuma alteração de versão de pacote ou de contrato público.
+- **Alvo de produto exclusivo:** `components/milon/ProgramList.tsx` (linhas 108–110 + import de `Link`). Nenhum outro arquivo de produto muda (spec T6).
+- **`h3` permanece heading com o link dentro** (D29): hierarquia h2 da seção → h3 por item intacta; o `h3` **não** é envolvido pelo link; a linha inteira, o bloco de título/dono/selo, dono e selo de status **não** viram link (D31).
+- **Ações intactas e fora do link** (D31): mesmos botões, rótulos, condições por status e callbacks; acionar uma ação **nunca navega**.
+- **Zero sublinhado em qualquer estado** — repouso, hover e foco (D30 Alternativa C; alternativas A e B recusadas).
+- **Sem rota, href ou destino novos** — destino é a rota já existente `/milon/programs/<id>` (Patch v4); a página de detalhe `app/milon/programs/[id]/page.tsx` fica inalterada.
+- **Spec v2 + Patch v3 + Patch v4 + Patch v5 íntegros** — R1–R31, D9–D27, CA-P3-x e CA-P5-x permanecem; as asserções existentes de `__tests__/components/milon/ProgramList.test.tsx` seguem válidas (spec T6).
+- **Testes mudam só em 3 arquivos:** `__tests__/components/milon/ProgramList.test.tsx` (estendido), `test-scenarios.md` (Cenário 52) e `test-report.json` (regenerado) — nenhum outro arquivo de teste muda (spec T6).
+- **Sem task de documentação nesta patch** — a spec v6 (T1–T8) não declara handoff de fase 7; docs permanece responsabilidade da Mnemósine (fase 7) sem entregável novo declarado.
+- **Padrão RED/GREEN por pares:** Minos escreve o teste RED → Hefesto implementa o mínimo para GREEN; Hefesto **nunca** edita teste; Minos **nunca** corrige produção; cada par é commitado **junto** (separado, deixa a baseline vermelha).
+- Proibições do Mapa de Camadas seguem valendo: sem `use-cases/`, `schemas/` (Zod), `mappers.ts`, `services/` ou factories `createXService`; sem `@supabase/*` fora de `lib/shared/`; tipos só via `lib/milon/types.ts`; UI consome dados só via `lib/milon/db/*`.
+
+## 1. Arquitetura do Patch v6
+
+### Link no título (D28, D29 — R32, R33, R34)
+- `components/milon/ProgramList.tsx` passa a importar `Link` de `next/link` (mesmo import de `app/dashboard/page.tsx`).
+- Dentro de cada `<li>`, o `h3` (hoje linhas 108–110) mantém as classes de tipografia e corte de hoje (`font-display text-sm leading-snug tracking-wider truncate`) e passa a **conter** o `Link` envolvendo **só** o texto do programa; o `href` é montado como `/milon/programs/` concatenado ao `program.id` do próprio item (sem barra final, sem query).
+- A cor do título **sai do `h3` e mora no link**: um único elemento dono dos estados visuais do texto (repouso e hover na mesma âncora).
+
+### Afordância — D30, Alternativa C (decisão humana de 2026-10-01)
+Classes exatas do link (contrato travado aqui para o teste RED da TASK-042):
+- **repouso:** `text-[#B7602B]` (mesmo marrom de hoje);
+- **hover:** `hover:text-[#C2703D]` — marrom **mais claro**, o mesmo tom já homologado no módulo como "marrom visivelmente mais claro que os títulos #B7602B" (link "ver vídeo" de `ExerciseList`, `text-[#C2703D]`), na direção do dashboard (que clareia `#EC5223` → `#FF8C42`);
+- **transição:** `transition-colors`;
+- **sem sublinhado:** `no-underline` (trava positiva) e **nenhuma** classe de sublinhado em qualquer estado (trava negativa);
+- **foco visível:** `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B7602B]` (contorno na cor do módulo — CA-P6-4 aceita contorno ou anel).
+
+### Ações e restante da linha (D31 — R36)
+- O bloco de botões à direita (hoje linhas 116–157) permanece **irmão** do bloco de título, **fora** do `<a>`: mesmos rótulos (rascunho: Editar/Ativar/Excluir; ativo: Editar; inativo: Reativar), mesmas condições e mesmos callbacks. Dono e selo continuam texto simples; a linha não ganha `onClick`, `href` nem wrapper clicável.
+
+### Acessibilidade (D32 — R37)
+- O `h3` segue como heading com **nome acessível igual ao texto do programa** (o link dentro fornece o texto); o elemento interno é identificado como **link** (âncora com `href`) com o **mesmo nome**, alcançável por teclado (âncora com `href` é focável por natureza) e com o contorno de foco visível — a tecnologia assistiva anuncia heading e link sem perda de semântica.
+
+## 2. Componentes (Create/Modify/Test/Docs) — Patch v6
+
+**Create:** nenhum arquivo de produto novo (YAGNI — um único consumidor, comportamento de apresentação).
+
+**Modify:**
+- `components/milon/ProgramList.tsx` — `h3` das linhas 108–110 ganha o `Link` (href montado + classes de cor/hover/foco), cor sai do `h3` para o link, import de `Link` (TASK-043).
+
+**Inalterado (declaração explícita):** `components/milon/ProgramList.stories.tsx` (props não mudam — só verificação de build), `components/milon/ProgramModal.tsx`, `components/milon/ProgramConfirmModal.tsx`, `components/milon/ExerciseList.tsx`, `components/milon/MilonLayout.tsx`, `components/layout/ModuleLayout.tsx`, `components/layout/BaseLayout.tsx`, `components/ui/*`, `app/milon/programs/page.tsx`, `app/milon/programs/[id]/page.tsx`, `app/milon/exercises/page.tsx`, `app/dashboard/page.tsx`, `lib/milon/**` (hooks, types, utils, program-utils, repositories, db), `lib/shared/**`, `utils/migrations/*` e **todo** `app/pluto/`, `components/pluto/`, `lib/pluto/`.
+
+**Test (Minos cria; caminhos travados aqui):**
+- `__tests__/components/milon/ProgramList.test.tsx` — estendido com o describe do Patch v6 cobrindo CA-P6-1 a CA-P6-5; asserções existentes permanecem (TASK-042).
+- `.agents/modules/milon/02-programas/test-scenarios.md` — Cenário 52 (próximo número, após o Cenário 51), Dado/Quando/Então, cobrindo CA-P6-1 a CA-P6-5 (TASK-044).
+- `.agents/modules/milon/02-programas/test-report.json` — regenerado por Minos: a extensão de teste altera contagens e cobertura (TASK-045, CA-P6-6).
+
+**Docs:** nenhum arquivo de documentação — a spec v6 não declara handoff de fase 7; docs segue na fase 7 (Mnemósine) sem entregável novo desta patch.
+
+## 3. Contratos do Patch v6 (descrições textuais, sem implementação)
+
+- **`ProgramList` (mudança pontual, props inalteradas):** `ProgramListProps` **não ganha campo nenhum**. O item mantém `<li>` com bloco de título/dono/selo à esquerda e bloco de ações à direita. O `h3` mantém exatamente as classes de tipografia e corte de hoje (`font-display text-sm leading-snug tracking-wider truncate`) **sem** cor própria; dentro dele, o `Link` (de `next/link`) envolve **só** o texto do programa com `href` = `/milon/programs/` + `program.id` e as classes de estado exatas: `text-[#B7602B]`, `hover:text-[#C2703D]`, `transition-colors`, `no-underline`, `focus-visible:outline-2`, `focus-visible:outline-offset-2`, `focus-visible:outline-[#B7602B]`.
+- **Ações:** bloco de botões permanece fora do link, com os mesmos quatro rótulos e condições de hoje (rascunho: Editar, Ativar, Excluir; ativo: Editar; inativo: Reativar), mesmos callbacks (`onEdit`, `onActivateReactivate`, `onDelete`); nenhum elemento da linha além do título é navegável.
+- **Acessibilidade (D32):** um heading `h3` por item com nome acessível igual ao título do programa; dentro dele **exatamente um** link com o mesmo nome; dono e selo seguem como texto simples (um link por item — os demais elementos da linha não são links).
+- **Navegação (R33):** o `Link` entrega navegação client-side para `/milon/programs/<id>`, rota homologada no Patch v4 (cabeçalho do programa), válida para rascunho, ativo e inativo; na suíte o caminho é asserido pelo **href exato** (CA-P6-1) e a passagem real é exercida no cenário de homologação (spec T4).
+- **Teste novo (`__tests__/components/milon/ProgramList.test.tsx`):** describe novo do Patch v6, **sem alterar** os describes existentes. Cenários: (1) **CA-P6-1** — lista de 3 itens com ids distintos: por item, `getByRole('link', { name: título })` com href exatamente `/milon/programs/<id>` daquele item — sem barra final, sem query, sem id de outro programa; exatamente 1 link por item; (2) **CA-P6-2** — o link existe nos três status (rascunho, ativo, inativo) e o destino é asserido pelo href exato; (3) **CA-P6-3** — ações por status preservadas e **fora** do link (`closest('a')` nulo em cada botão; o link não contém botões), o clique dispara o callback com o item, dono e selo sem link; (4) **CA-P6-4** — classes exatas no link: repouso `text-[#B7602B]`; hover `hover:text-[#C2703D]` (tom ≠ `#B7602B`) + `transition-colors`; `no-underline` presente; regex `(^|[\s:])underline` aplicada às classes de todo elemento do `h3` retorna **0** (nenhuma marcação de sublinhado em repouso/hover/foco); foco `focus-visible:outline-2`, `focus-visible:outline-offset-2` e `focus-visible:outline-[#B7602B]`; (5) **CA-P6-5** — `getByRole('heading', { level: 3, name: título })` e `getByRole('link', { name: título })` com o **mesmo nome acessível**, o link sendo âncora com `href` (alcançável por teclado). **Expected: FAIL** antes da TASK-043 (o título ainda não é link). **Sem mock novo de rota** — precedente: os cards do dashboard renderizam `Link` e asserem href no teste de página, e `next/navigation` já é mockado globalmente em `__tests__/setup.ts` (spec T7).
+- **Cenário 52 (`test-scenarios.md`):** bloco Dado/Quando/Então com o número seguinte ao 51, cobrindo CA-P6-1 a CA-P6-5, citando os testes automatizados correspondentes, no mesmo formato dos blocos dos Patches v4 e v5; **CA-P6-6 não vira cenário** (gate de processo, limitação explícita da spec T6).
+- **Gate (`test-report.json`, CA-P6-6):** suíte completa verde (nenhum teste existente quebra), coverage ≥ 80% mantido (lines/functions/branches/statements), `failed = 0`, regenerado antes da review do Argos.
+
+## 4. Data Flow do Patch v6
+
+1. A lista renderiza os itens filtrados → cada título é um `Link` para `/milon/programs/<id>` do próprio item, em repouso `#B7602B`, sem sublinhado.
+2. O mouse chega ao título → `hover:text-[#C2703D]` com `transition-colors` muda a cor **sem** sublinhado; o mouse sai → volta ao repouso.
+3. Teclado: `Tab` alcança o link (âncora com `href`), o contorno `focus-visible` aparece; `Enter` navega.
+4. Clique no título → navegação client-side para `/milon/programs/<id>` → página de detalhe do Patch v4 responde com o cabeçalho do programa (válido para rascunho, ativo e inativo).
+5. Clique em Editar/Ativar/Reativar/Excluir → callback da ação (modal de edição ou de confirmação) — **sem** navegação, porque os botões estão fora do link.
+6. Dono, selo de status, filtros, os quatro estados de lista e os modais seguem intocados — nenhum hook, repositório ou página muda.
+
+## 5. Decisões Técnicas do Patch v6 (para `context.json.decisions` via Zeus)
+
+- **Tom de hover exato `#C2703D` (R35 deixa o tom ao plano):** é o marrom mais claro **já homologado neste módulo** — o link "ver vídeo" de `ExerciseList` usa `text-[#C2703D]` e o teste do projeto o descreve como "marrom visivelmente mais claro que os títulos #B7602B" (delta comprovado visível, mesma família de cor). Descartados: `#D97B41` (tom novo, sem precedente no produto) e tons mais escuros (a direção do padrão do dashboard é clarear — D30/R35); sublinhado como sinal já está descartado na spec (alternativas A e B, D30/T8).
+- **Cor e estados moram no `Link`, não no `h3`:** um único elemento dono de repouso/hover/foco; o `h3` fica só com tipografia e corte (D29 preservado). Descartados `group-hover` no `h3` (dois elementos para um estado, e o foco teria de ir no link de qualquer forma) e cor duplicada em `h3` + link (dois donos da mesma propriedade).
+- **`no-underline` explícito + asserção negativa:** o preflight do Tailwind já herda `text-decoration: none`, mas a classe positiva documenta a norma D30 e dá trava ao teste (nenhuma classe `underline`/`hover:underline`/`focus-visible:underline` no subárvore do título) — proteção contra "um dia alguém" reativar sublinhado.
+- **Foco por contorno Tailwind (`focus-visible:outline-*`) na cor do módulo, e não o anel `ring` dos botões:** contorno não desloca layout em texto inline, `outline-offset-2` separa o anel do texto e CA-P6-4 aceita contorno ou anel; aplicar o `ring` de `components/ui/button.tsx` em âncora de heading exigiria `rounded` e mudaria a silhueta do corte.
+- **Sem componente novo, sem story novo, sem prop nova:** um único consumidor e props inalteradas — `ProgramList.stories.tsx` só passa pela verificação de build (YAGNI; precedente do Patch v4, cabeçalho inline sem componente).
+- **Pares RED/GREEN com um commit por par:** precedente dos Patches v4 e v5 (pares `TASK-022/023`, `TASK-030/031`…`TASK-038/039`) — separar o par deixaria a baseline vermelha; `TASK-044` (cenário) e `TASK-045` (gate) são commits próprios (precedentes `TASK-028/029` e `TASK-040/041`).
+- **`truncate` permanece no `h3` e o link não ganha classe de `display`/`whitespace`:** o corte em uma linha e o alinhamento da linha não mudam (risco T7 da spec); o link é inline puro.
+- **Sem cenário novo para CA-P6-6:** a spec T6 limita o Cenário 52 a CA-P6-1…CA-P6-5; o gate de processo fica com a TASK-045 (`test-report.json`), como nos patches anteriores (Cenários 34 e 51 são o precedente de gate, mas aqui a spec é explícita na faixa coberta).
+
+## 6. Riscos e Mitigações do Patch v6
+
+- **Tela homologada muda visualmente (declarado):** o título ganha comportamento de link (cor no hover + foco visível) — mudança **aprovada pelo humano** (D30, 2026-10-01); o Argos avalia o diff como mudança aprovada, não regressão (spec T7).
+- **Corte de texto do título (`truncate`):** o link dentro do `h3` não pode quebrar o corte em uma linha nem mudar alinhamento — mitigado mantendo `truncate` no `h3` e o link inline sem classes de `display`/`whitespace`; coberto pelas asserções de texto existentes do teste do `ProgramList` e verificável na homologação visual (spec T7).
+- **Clique em ação navegando por engano:** mitigado por D31 — ações fora do link e linha não clicável por inteiro; CA-P6-3 trava o comportamento no teste (cada botão com `closest('a')` nulo).
+- **href sensível a detalhes de endereço:** travado por CA-P6-1 — href exato, por item, sem barra final, query ou destino diferente; a montagem é apenas `/milon/programs/` + `program.id`.
+- **Renderização do `Link` em teste de componente:** sem mock novo — precedente dos cards do dashboard (`__tests__/app/dashboard/page.test.tsx` assera href de `Link` renderizado) e `next/navigation` mockado globalmente em `__tests__/setup.ts` (spec T7).
+- **Testes existentes quebrarem ao envolver o texto em âncora:** `getByText`, o helper `itemOf` (`closest('li')`) e todos os cliques por `role=button` permanecem válidos — o texto passa a morar no `Link`, que segue dentro do mesmo `li`, e nenhum teste clica no título. Se algum cenário antigo depender do texto cru fora da âncora, o ajuste é **do Minos, somente no arquivo de teste** (nunca produção); os describes existentes permanecem e a TASK-045 reexecuta a suíte inteira (CA-P6-6).
+- **Storybook:** `ProgramList.stories.tsx` não muda de contrato; `npm run build-storybook` é critério das TASK-043 e TASK-045 (spec T6: nenhum outro arquivo muda).
+- **Cobertura cair com a extensão de teste:** mitigado pela TASK-045 (suite completa, coverage ≥ 80%, `test-report.json` regenerado — CA-P6-6).
+- **Dependências:** página de detalhe existente (Patch v4, D16/R18) — pré-requisito já entregue; nenhuma dependência nova de banco, de hook, de rota ou de outra feature (spec T7).
+
+## Cobertura Patch v6 → Tasks Novas (TASK-042 em diante)
+
+| Requisito / CA | Task(s) |
+|---|---|
+| R32 / CA-P6-1 (href exato por item) | TASK-042 (RED), TASK-043 (GREEN), TASK-044 (cenário) |
+| R33 / CA-P6-2 (navegação ao detalhe) | TASK-042 (asserção do href — passagem real no cenário de homologação), TASK-044 (cenário) |
+| R34 (h3 heading com link dentro) | TASK-042 (RED), TASK-043 (GREEN) |
+| R35 / CA-P6-4 (cor no hover + foco visível, sem sublinhado) | TASK-042 (RED), TASK-043 (GREEN), TASK-044 (cenário) |
+| R36 / CA-P6-3 (ações intactas e fora do link) | TASK-042 (RED), TASK-043 (GREEN), TASK-044 (cenário) |
+| R37 / CA-P6-5 (role/nome/foco acessíveis) | TASK-042 (RED), TASK-043 (GREEN), TASK-044 (cenário) |
+| T6 (Cenário 52 em `test-scenarios.md`) | TASK-044 |
+| CA-P6-6 (suite verde, coverage ≥ 80, `test-report.json`) | TASK-045 |
+| Documentação / fase 7 | fora do plano — Mnemósine (spec v6 sem handoff declarado) |
+
+## Pares RED/GREEN e agrupamento de commits
+
+| Par | RED (Minos) | GREEN (Hefesto) | Commit |
+|---|---|---|---|
+| Link no título do ProgramList | TASK-042 | TASK-043 | um commit para o par |
+| Cenário / gate | TASK-044 / TASK-045 | — | commits próprios (precedente v4/v5) |
+
+O par TASK-042/TASK-043 é commitado **junto**: separado, o RED deixa a baseline vermelha (mesma regra dos pares dos Patches v4 e v5).
+
+## DAG das tasks novas
+
+`TASK-042` (RED, Minos) → `TASK-043` (GREEN, Hefesto) → `TASK-044` (Cenário 52, Minos) → `TASK-045` (suite + gate CA-P6-6, Minos). **Acíclico**; TASK-042 sem dependências (o componente alvo já existe e está homologado); as **41 tasks anteriores permanecem `completed` e intocadas** (nenhuma edição em tasks antigas — só apêndice).
+
+## Handoffs pós-approve-review (fase 7 — Mnemósine; fora do diff de código)
+
+**Nenhum handoff de documentação declarado pelo Patch v6** (spec T1–T8): não há norma nova para o `AGENTS.md` nem item de backlog desta patch — D28–D32 descrevem o comportamento desta tela, não regra transversal. Documentação permanece na fase 7 como sempre, sem task aqui (o Cenário 52 e o gate CA-P6-6 são de Minos, não de docs).

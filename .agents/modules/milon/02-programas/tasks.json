@@ -841,7 +841,7 @@
                   },
                   {
                       "id":  "TASK-040",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "test-scenarios.md: cenários Dado/Quando/Então do Patch v5",
                       "description":  "Minos acrescenta à .agents/modules/milon/02-programas/test-scenarios.md os cenários do Patch v5 cobrindo CA-P5-1 a CA-P5-7, no mesmo formato Dado/Quando/Então dos cenários da v1 e dos Patches v3 e v4. Inclui explicitamente a reexecução do Cenário 5 (agora com o banner ACIMA da lista preservada) como CA-P5-1, a precedência dos 4 estados (CA-P5-2), o retry por origem com default ausente (CA-P5-3), o contrato completo do componente (CA-P5-4), a preservação da homologação CA-P3-13..16 (CA-P5-5), a exclusão da biblioteca fechando em falha (CA-P5-6) e a prova de herança (CA-P5-7). Não cria cenário para CA-P5-8 (handoff da fase 7 — norma do AGENTS.md) nem para CA-P5-9 (gate de processo, coberto na TASK-041).",
                       "assignee":  "minos",
@@ -861,7 +861,7 @@
                   },
                   {
                       "id":  "TASK-041",
-                      "status":  "pending",
+                      "status":  "completed",
                       "title":  "Suite final Minos + coverage + test-report + prova de herança (Patch v5)",
                       "description":  "Minos executa a suite completa (v1 + Patch v3 + Patch v4 + Patch v5): todos os testes de contrato, utils, hooks, componentes e páginas, incluindo o componente novo AsyncState. Coverage \u003e= 80%. Regenera test-report.json e test-scenarios.md na FEATURE_DIR, promove cenários de regressão para .agents/modules/milon/regression.md e executa npm run build-storybook sem erros. Prova de herança (CA-P5-7): busca pela cadeia \u0027Tentar novamente\u0027 em app/ e components/ retorna ocorrência somente em components/ui/AsyncState.tsx; busca por AsyncState em app/pluto/ e components/pluto/ retorna 0 (R30/D24). Gate do processo (CA-P5-9): test-report.failed == 0 e coverage \u003e= 80 antes da review do Argos.",
                       "assignee":  "minos",

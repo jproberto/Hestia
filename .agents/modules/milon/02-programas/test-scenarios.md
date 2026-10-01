@@ -6,7 +6,8 @@ Portão manual da feature (`SPEC_APPROVED` → `APPROVED`). Derivado exclusivame
 
 - **Execução:** subir o app (`npm run dev`), logar e abrir `/milon/programs`.
 - **Referência de teste:** cada cenário aponta o teste automatizado que o exercita
-  (suíte `npm test`, 647 testes, 0 falhas).
+  (suíte `npm test`, **781 testes / 88 arquivos, 0 falhas** — suite final da
+  TASK-041, v1 + Patch v3 + Patch v4 + Patch v5).
 - **Status:** os testes automatizados estão verdes; a coluna "Homologado" fica para
   o humano marcar ao executar (gate `approve-review`).
 - **Patch v3 (TASK-020):** a seção "Patch v3 — Navegação em abas (CA-P3-01…12)"
@@ -21,9 +22,19 @@ Portão manual da feature (`SPEC_APPROVED` → `APPROVED`). Derivado exclusivame
   — **só** títulos/prefixos, a seção de checklist e notas; **nenhum texto
   Dado/Quando/Então foi alterado**. Contagem resultante: **35 executáveis · 5
   bloqueados · 2 não testáveis manualmente** (detalhe no checklist abaixo).
-- **Patch v5 (em análise):** correção do **defeito do Cenário 5** (banner de erro
-  substitui a lista) com **estados centralizados** — banner acima + lista
-  visível, no padrão do Pluto.
+- **Patch v5 (TASK-040):** a seção "Patch v5 — Estados de tela centralizados
+  (AsyncState)" ao final do arquivo acrescenta os cenários Dado/Quando/Então do
+  patch de estados centralizados (**CA-P5-1…9**, Cenários 43–51) — os 42
+  cenários anteriores (22 v1 + 12 do Patch v3 + 8 do Patch v4) permanecem
+  intactos. É o patch que **corrige o defeito do Cenário 5**: o erro passa a
+  renderizar **acima** do conteúdo com a lista visível (CA-P5-1, Cenário 43),
+  precedência fixa dos 4 estados (CA-P5-2), retry por origem (CA-P5-3),
+  adoção nas 3 telas preservando CA-P3-13…16 (CA-P5-5), exclusão da biblioteca
+  fechando em falha (CA-P5-6) e prova de herança (CA-P5-7). **Classificação dos
+  9 novos:** 8 executáveis (43–49, 51) · **0 bloqueados pela feature #3** (o
+  patch não toca ativação/ciclo de vida) · 1 handoff da fase 7 (Cenário 50,
+  CA-P5-8) · +1 sub-bloco `[NÃO TESTÁVEL MANUAL]` (estado mockado
+  programa+erro do detalhe). Contagem do arquivo: **51 cenários** (42 + 9).
 
 ---
 
@@ -200,7 +211,8 @@ Observações para rodar agora:
   migração 0007 já aplicada) — independe da 0008.
 - **Cenário 34:** rodar `npm test` (sem banco — a suíte usa fakes) e conferir
   `test-report.json` (`failed = 0`, `coverage ≥ 80`). Referência atual do
-  arquivo: **706/706, coverage 85,32%**.
+  arquivo: **781/781 em 88 arquivos, coverage 84,48% lines** (suite final da
+  TASK-041 — v1 + Patches v3/v4/v5).
 
 ### (iii) PRÉ-CONDIÇÃO — absorvido por (ii)
 
@@ -759,6 +771,238 @@ Automatizado: `__tests__/app/milon/programs/page.test.tsx` → "CA-P3-19: salvar
 **Então** não há mensagem do tipo "Treinos em breve", nem seção de treinos, nem lista vazia de treinos — a tela contém só o cabeçalho do programa (conteúdo de treinos é da feature 3)
 
 Automatizado: `__tests__/app/milon/programs/[id]/page.test.tsx` → "nenhum dos quatro estados da página menciona treinos (CA-P3-20)".
+
+---
+
+## Patch v5 — Estados de tela centralizados (AsyncState) (CA-P5-1…9)
+
+Cenários Dado/Quando/Então do **Patch v5 de estados centralizados** (spec §S2
+decisões D18–D27, §S3 requisitos R22–R31, §S4 critérios CA-P5-1…9), acrescentados
+na TASK-040 sem alterar nada dos 22 cenários do ciclo v1, dos 12 do Patch v3 nem
+dos 8 do Patch v4 (Cenários 1–42 permanecem intactos). Mapeio 1:1 cada `CA-P5-x`
+para um cenário e para o teste automatizado que o exercita (nomes conferidos em
+disco).
+
+- **Execução:** subir o app (`npm run dev`), logar e abrir `/milon/programs`
+  (lista + rota de detalhe) e `/milon/exercises` (biblioteca). Para as origens
+  `carga`/`operacao`: DevTools → Network → **Offline**, mesmo protocolo dos
+  Cenários 36–38.
+- **Status:** conferência de disco de **2026-09-30** (Minos): `npx vitest run`
+  nos **8 arquivos do Patch v5** → **176 testes, 0 falhas**. Suíte completa e
+  regeneração de `test-report.json` executadas na **TASK-041 (CA-P5-9)**:
+  **781/781 em 88 arquivos · coverage 84,48% lines · 0 falhas** — gate verde
+  antes da review do Argos.
+- **Classificação (buckets do checklist acima):** os buckets da reexecução
+  2026-09-30 referem-se aos **Cenários 1–42**; a classificação dos **43–51** está
+  no quadro ao final desta introdução. **Nenhum cenário do Patch v5 depende da
+  feature #3.**
+- **Diferença em relação à TASK-040 (registrada):** o `description` da TASK-040
+  pedia só CA-P5-1…7; a solicitação humana desta task pediu explicitamente
+  também **CA-P5-8** (Cenário 50, handoff da fase 7) e **CA-P5-9** (Cenário 51,
+  gate de processo — precedente do Cenário 34/CA-P3-12). Os 7 obrigatórios
+  CA-P5-1…7 seguem um por critério, como manda o acceptanceCriteria.
+- **Reexecução do Cenário 5:** o **Cenário 5** da homologação (executado com
+  defeito — o banner substituía a lista) é **reexecutado pelo Cenário 43**,
+  agora com o banner **acima** e a lista visível.
+
+| # | Critério (spec §S4) | Decisão / req. | Automatizado em | Homologado |
+|---|---|---|---|---|
+| 43 | CA-P5-1 — banner ACIMA do conteúdo com a lista visível (Cenário 5 corrigido) | D19 · R24 · D21 | ver Cenário 43 | ☐ |
+| 44 | CA-P5-2 — precedência fixa: carregando → erro → vazio → no-results | D19 · R23 | ver Cenário 44 | ☐ |
+| 45 | CA-P5-3 — retry só em `carga`/origem ausente; `operacao`/`bloqueio` sem botão | D20 · R25 | ver Cenário 45 | ☐ |
+| 46 | CA-P5-4 — contrato completo coberto; textos customizados via props; sem "Fechar ✕" | D18 · D22 · R22 | ver Cenário 46 | ☐ |
+| 47 | CA-P5-5 — adoção preserva CA-P3-13/14/15/16 e os textos homologados | D21 · R26 | ver Cenário 47 | ☐ |
+| 48 | CA-P5-6 — exclusão da biblioteca fecha a confirmação em falha, banner sem retry | D25 · R28 · D23/R27 | ver Cenário 48 | ☐ |
+| 49 | CA-P5-7 — "Tentar novamente" só em `components/ui/AsyncState.tsx` | D21 · R30 · D24 | ver Cenário 49 | ☐ |
+| 50 | CA-P5-8 — norma no "Onde ponho X?" do AGENTS.md | D27 · R31 | ver Cenário 50 (handoff fase 7) | ☐ |
+| 51 | CA-P5-9 — suíte verde, coverage ≥ 80%, `test-report.json` regenerado | gate do processo | ver Cenário 51 | ☐ |
+
+**Classificação dos Cenários 43–51:** **8 executáveis** (43, 44, 45, 46, 47, 48,
+49, 51) · **0 `[BLOQUEADO — #3]`** (o patch não toca ativação, reativação nem
+ciclo de vida — nenhuma exigência de conteúdo real de treinos) · **1
+`[HANDOFF FASE 7]`** (50/CA-P5-8 — norma escrita pela Mnemósine, fora do diff de
+código) · **+1 sub-bloco `[NÃO TESTÁVEL MANUAL]`** (estado mockado
+"programa + erro" do detalhe dentro dos Cenários 43/44 — com o hook atual os
+dois nunca coexistem em tela real; coberto pelos automatizados, plan §6 risco 5).
+
+---
+
+### Cenário 43: Banner de erro ACIMA do conteúdo com a lista visível (CA-P5-1 · R24 · D19/D21)
+
+**Dado** que a lista de Programas já carregou com itens e a pessoa aciona uma
+ação que termina em **bloqueio de domínio** (guarda de ativação de um programa
+sem treinos — caminho do Cenário 5)
+**Quando** o bloqueio é apurado
+**Então** o modal de confirmação **fecha**, o banner com a mensagem aparece
+**acima** do conteúdo e a **lista de programas permanece visível e legível**
+(título, dono, status e ações legíveis abaixo do banner) — **sem** botão
+"Tentar novamente" (origem `bloqueio`) e sem substituição da lista pelo erro
+
+**Dado** a mesma lista e uma **exclusão confirmada que falha** (DevTools →
+Offline, mesmo protocolo do Cenário 36)
+**Quando** a falha de operação é tratada
+**Então** a confirmação **fecha**, o banner aparece **acima** da lista visível,
+**sem** retry (origem `operacao`), e o status dos itens não muda — o defeito do
+Cenário 5 (banner substituindo a lista) fica **corrigido**
+
+**Dado** a rota de detalhe `/milon/programs/<id>` no estado mockado
+"programa + erro" (cabeçalho carregado e falha de fetch ao mesmo tempo)
+**Quando** a página renderiza
+**Então** o banner aparece **acima** do cabeçalho, o cabeçalho permanece visível
+e o retry aciona a recarga — **`[NÃO TESTÁVEL MANUAL]`**: em tela real o hook
+atual nunca faz os dois coexistirem; asserção do contrato do componente (plan §6)
+
+Automatizado: `__tests__/app/milon/programs/page.test.tsx` → "CA-P5-1 (Cenário 5): bloqueio na ativação => modal fecha, banner ACIMA e a lista permanece visível, sem retry" + "CA-P5-1: falha de operação na exclusão => modal fecha, banner ACIMA e a lista permanece visível, sem retry"; `__tests__/components/milon/ProgramList.test.tsx` → "CA-P5-1: error + 'bloqueio' com itens => banner ACIMA, lista visível e sem retry" + "CA-P5-1: error + 'operacao' com itens => banner ACIMA, lista visível e sem retry"; `__tests__/components/ui/AsyncState.test.tsx` → "erro com children: banner ACIMA da região e o conteúdo permanece visível (R24 / CA-P5-1)"; `__tests__/components/milon/ExerciseList.test.tsx` → "CA-P5-1: error + 'operacao' com itens => banner ACIMA, lista visível e sem retry" + "CA-P5-1/CA-P5-3: error de carga com itens => banner com 'Tentar novamente' ACIMA e a lista visível"; `__tests__/app/milon/programs/[id]/page.test.tsx` → "R24/CA-P5-1: programa + erro => banner ACIMA do cabeçalho, cabeçalho visível e 'Tentar novamente' aciona retry".
+
+### Cenário 44: Precedência fixa dos 4 estados (CA-P5-2 · R23 · D19)
+
+**Dado** o componente centralizado em qualquer tela que o adota (Programas,
+biblioteca ou detalhe) com combinações de flags de estado
+**Quando** a tela renderiza
+**Então** a precedência é sempre **carregando → erro → vazio → no-results**:
+com `carregando` verdadeiro **só** o texto de carregamento aparece (sem banner,
+sem vazio, sem no-results, sem lista); havendo erro, o banner fica **acima** e o
+conteúdo permanece (**sem** mensagem de vazio nem de no-results quando não há
+conteúdo carregado); sem erro e sem registros, **vazio** (que **prevalece** sobre
+no-results quando as duas flags vêm juntas); sem erro, com registros escondidos
+por filtros ou busca, **no-results**; sem nenhuma flag, a região renderiza só o
+conteúdo
+
+Automatizado: `__tests__/components/ui/AsyncState.test.tsx` → describe "precedência fixa dos 4 estados - D19 / R23 / CA-P5-2" (7 casos: "loading verdadeiro mostra SOMENTE o loadingText: sem banner, sem vazio, sem no-results e sem children", "erro com children: banner ACIMA da região e o conteúdo permanece visível (R24 / CA-P5-1)", "erro SEM children mostra somente o banner - nunca mensagem de vazio nem de no-results sob erro (D19d)", "sem erro, empty e noResults simultâneos: o vazio prevalece sobre o no-results", "noResults só sem empty e sem erro: exibe título e texto de no-results, sem o vazio", "sem nenhuma flag e sem children a região fica vazia (nenhum estado renderizado)", "sem nenhuma flag com children: apenas o conteúdo é renderizado"); `__tests__/components/milon/ProgramList.test.tsx` → "precedência D19: loading verdadeiro vence erro e lista - só 'Carregando programas...'" + "precedência D19: empty prevalece sobre noResults quando não há erro"; `__tests__/components/milon/ExerciseList.test.tsx` → "precedência D19: loading verdadeiro vence erro - só 'Carregando exercícios...'"; `__tests__/app/milon/programs/[id]/page.test.tsx` → "precedência D19: carregando vence erro e cabeçalho - só o texto de carregamento" + "precedência D19: erro vence o vazio - program nulo + erro => banner com retry, nunca a faixa de não-encontrado".
+
+> **Manual:** loading, vazio e no-results são observáveis diretos (Cenários 1,
+> 15, 16, 24, 39); sob erro, usar o terminal de **bloqueio** (guarda) ou o
+> **Offline** dos Cenários 36–37. O sub-bloco "programa + erro" do detalhe é
+> `[NÃO TESTÁVEL MANUAL]` (ver Cenário 43).
+
+### Cenário 45: Retry só em `carga`/origem ausente — `operacao` e `bloqueio` sem botão (CA-P5-3 · R25 · D20)
+
+**Dado** o componente recebendo uma mensagem de erro com origem **`carga`**,
+com a prop `errorOrigin` **ausente** ou com ela **nula** (a rota de detalhe não
+informa origem — default exercido em tela real)
+**Quando** a pessoa lê o banner
+**Então** ele exibe "Tentar novamente" e o acionamento dispara o retry recebido
+(recarregando a lista ou o programa)
+
+**Dado** o mesmo componente com origem **`operacao`** ou **`bloqueio`**
+**Quando** a pessoa lê o banner
+**Então** a mensagem aparece **sem** o botão "Tentar novamente" — a decisão é do
+componente, não de cada tela, mas a regra herdada de R13/R14 não muda
+
+Automatizado: `__tests__/components/ui/AsyncState.test.tsx` → describe "retry derivado de errorOrigin - D20 / R25 / CA-P5-3" (5 casos: "origem 'carga': renderiza a mensagem e 'Tentar novamente', que dispara onRetry", "origem AUSENTE (prop não informada): tratada como 'carga' - com retry que dispara onRetry", "origem NULA (errorOrigin={null}): tratada como 'carga' - com retry que dispara onRetry", "origem 'operacao': exibe só a mensagem, SEM 'Tentar novamente'", "origem 'bloqueio': exibe só a mensagem, SEM 'Tentar novamente'"); `__tests__/components/milon/ProgramList.test.tsx` → "D20/CA-P5-3: errorOrigin NULO é tratado como carga - 'Tentar novamente' dispara onRetry" + os 4 casos do describe "origem da mensagem: retry exclusivo da carga (Patch v4, TASK-022 RED)"; `__tests__/components/milon/ExerciseList.test.tsx` → "CA-P5-3: error + 'carga' renderiza a mensagem e 'Tentar novamente', que dispara onRetry" + "D20/CA-P5-3: errorOrigin NULO é tratado como carga - 'Tentar novamente' dispara onRetry" + "CA-P5-3: error + 'operacao' renderiza a mensagem SEM o botão 'Tentar novamente'" + "CA-P5-3: error + 'bloqueio' renderiza a mensagem SEM o botão 'Tentar novamente'"; `__tests__/app/milon/programs/[id]/page.test.tsx` → "falha de fetch mostra banner com 'Tentar novamente' que aciona o retry (distinto do não-encontrado)" + "falha de fetch SEM conteúdo => somente o banner com 'Tentar novamente' (origem ausente ⇒ carga, default em tela real)".
+
+> **Manual:** `carga` com DevTools → Offline (protocolo do Cenário 37);
+> `bloqueio` pela guarda de ativação (sem rede); origem ausente abrindo a rota
+> de detalhe em Offline.
+
+### Cenário 46: Textos customizados via props e contrato completo do componente (CA-P5-4 · R22 · D18/D22)
+
+**Dado** o componente centralizado nas três telas que o adotam (Programas,
+biblioteca, detalhe)
+**Quando** a pessoa observa cada um dos 4 estados em cada tela
+**Então** o texto renderizado é **exatamente** o repassado por props e idêntico
+ao homologado — Programas: `Carregando programas...` · `Nenhum programa ainda.` +
+`Crie o primeiro programa para começar.` · `Nada encontrado para essa combinação.` +
+`Ajuste os filtros para ver mais programas.`; biblioteca: `Carregando exercícios...` ·
+`Nenhum exercício cadastrado ainda.` + `Crie o primeiro exercício da biblioteca para começar.` ·
+`Nada encontrado para essa combinação.` + `Ajuste os filtros ou crie o exercício na biblioteca.`;
+detalhe: `Carregando programa…` · `Programa não encontrado.` + `Este programa não existe ou foi removido. Volte para a lista e escolha outro programa.`
+— e o banner **nunca** tem botão de fechar (D22): o único botão possível é o
+retry, e só na origem `carga`
+
+> **Não testável manualmente como clique:** "nenhum ramo do contrato sem
+> asserção" (4 estados × 4 origens × presença/ausência de retry) é propriedade
+> da **suíte**, verificada por `npm test`/coverage (Cenário 51/CA-P5-9); a parte
+> observável manualmente são os **textos exatos** acima.
+
+Automatizado: `__tests__/components/ui/AsyncState.test.tsx` → describe "sem botão de fechar - D22 / CA-P5-4" (2 casos: "erro de carga tem exatamente UM botão na região, e ele é o retry" + "nenhum estado renderiza botão de fechar (só o retry existe, e só na carga)") e describe "textos repassados literalmente pelas props - CA-P5-4 / CA-P5-5" (4 casos: loading, empty, noResults e error); `__tests__/components/milon/ProgramList.test.tsx` → "CA-P5-5: texto de carregamento idêntico ao de hoje" + "CA-P5-5: textos de vazio idênticos aos de hoje" + "CA-P5-5: textos de no-results idênticos aos de hoje"; `__tests__/components/milon/ExerciseList.test.tsx` → "CA-P5-5: os textos de carregamento, vazio e no-results permanecem literais"; `__tests__/app/milon/programs/[id]/page.test.tsx` → "CA-P5-5/R26: textos do detalhe idênticos aos de hoje nos 4 estados e noResults nunca aparece".
+
+### Cenário 47: Adoção preserva a homologação CA-P3-13…16 (CA-P5-5 · R26 · D21)
+
+**Dado** que a adoção do componente centralizado foi aplicada nas três telas
+(ProgramList, ExerciseList e a rota de detalhe)
+**Quando** a pessoa reexecuta os Cenários 35, 36, 37 e 38 (CA-P3-13, CA-P3-14,
+CA-P3-15 e CA-P3-16) e as demais telas do Mílon
+**Então** tudo continua verde: bloqueio fecha a confirmação e mostra banner
+**sem** retry; falha de operação fecha a confirmação e preserva o status;
+falha de carga exibe "Tentar novamente" que recarrega a lista; nenhuma mensagem
+permanece atrás do modal; e os textos de carregamento, vazio e no-results de
+todas as telas permanecem **idênticos** aos já homologados — mudança de
+composição (banner acima), não de conteúdo
+
+Automatizado: `__tests__/app/milon/programs/page.test.tsx` → describe "Patch v4 - terminais da confirmação e navegação pós-salvar (TASK-024)" mantido verde ("CA-P3-13 + CA-P3-16: bloqueio da guarda na ativação fecha a confirmação e mostra banner sem retry", "CA-P3-14: falha de operação ao ativar/reativar/excluir fecha a confirmação e mostra banner sem retry", "CA-P3-15: erro de carga exibe 'Tentar novamente' e o acionamento recarrega a lista") + describe "Patch v5 - banner acima da lista na tela de Programas (TASK-034 RED)" ("CA-P5-5: falha de carga sem programas => somente o banner com retry, sem 'Nenhum programa ainda.'"); `__tests__/components/milon/ProgramList.test.tsx` → os 3 casos "CA-P5-5" (textos idênticos) + os 4 casos de origem do Patch v4; `__tests__/components/milon/ExerciseList.test.tsx` → "CA-P5-5: os textos de carregamento, vazio e no-results permanecem literais"; `__tests__/app/milon/programs/[id]/page.test.tsx` → "CA-P5-5/R26: textos do detalhe idênticos aos de hoje nos 4 estados e noResults nunca aparece".
+
+### Cenário 48: Biblioteca — exclusão fecha a confirmação e banner sem retry (CA-P5-6 · R28 · D25/D23)
+
+**Dado** que a pessoa confirma a exclusão de um exercício na biblioteca e a
+operação falha (DevTools → Offline)
+**Quando** a falha é tratada pela página
+**Então** o modal `DeleteExerciseConfirm` **fecha**, a mensagem aparece em
+banner **acima** da lista **sem** "Tentar novamente" (origem `operacao`) e o
+exercício permanece na lista — o achado latente (b) (mensagem atrás do backdrop
+`z-50`) fica corrigido
+
+**Dado** a mesma confirmação no terminal de sucesso
+**Quando** a exclusão é gravada
+**Então** a confirmação também fecha e a mensagem de erro anterior zera
+
+Automatizado: `__tests__/app/milon/exercises/page.test.tsx` → "CA-P5-6/S6(b): falha de exclusão FECHA a confirmação e mostra a mensagem no banner sem 'Tentar novamente'" + "terminal de sucesso: exclusão confirmada fecha a confirmação e zera o erro" + "CA-P5-6: origem 'operacao' crua do hook => banner ACIMA da lista visível, sem retry" + "CA-P3-15/CA-P5-5: origem 'carga' crua do hook => banner com 'Tentar novamente' que dispara retry" + "CA-P5-6/S6(b): 'Mantém a confirmação aberta' em app/milon/exercises/page.tsx => 0 ocorrências"; `__tests__/lib/milon/hooks/useExercises.test.ts` → describe "Mílon #2 - useExercises: origem da mensagem (Patch v5, TASK-038 RED)" ("rejeição do efeito de montagem grava errorOrigin 'carga' com a mensagem", "falha no fetchList (reload/retry) também grava origem 'carga'", "falha em remove grava origem 'operacao', preserva a lista e relança (S6(a))" + zeragem e save/saveAndNew); `__tests__/components/milon/ExerciseList.test.tsx` → "CA-P5-3: error + 'operacao' renderiza a mensagem SEM o botão 'Tentar novamente'".
+
+### Cenário 49: Prova de herança — "Tentar novamente" só no componente centralizado (CA-P5-7 · R30 · D21/D24)
+
+**Dado** o repositório na branch com a adoção aplicada
+**Quando** a pessoa busca pela cadeia **`Tentar novamente`** em `app/` e em
+`components/`
+**Então** a ocorrência aparece **somente** em `components/ui/AsyncState.tsx` —
+**zero** em `components/milon/ProgramList.tsx`, `components/milon/ExerciseList.tsx`,
+`app/milon/programs/[id]/page.tsx` e em qualquer outra tela — e a busca por
+`AsyncState` em `app/pluto/` e `components/pluto/` retorna **0** (Pluto intocado,
+D24/R30)
+
+Automatizado: `__tests__/components/milon/ExerciseList.test.tsx` → "CA-P5-7: 'Tentar novamente' em components/milon/ExerciseList.tsx => 0 ocorrências" + "CA-P5-7 (reafirmação): 'lib/milon' em components/ui/AsyncState.tsx => 0 ocorrências" + "D21/R26: ExerciseList compõe o AsyncState (import de '@/components/ui/AsyncState')"; `__tests__/app/milon/programs/[id]/page.test.tsx` → "CA-P5-7: 'Tentar novamente' em app/milon/programs/[id]/page.tsx => 0 ocorrências" + "D21/R26: a página compõe o AsyncState (import de '@/components/ui/AsyncState')" + "CA-P5-7 (reafirmação): 'lib/milon' em components/ui/AsyncState.tsx => 0 ocorrências". **Busca global** (a cadeia em `app/` + `components/`, a de `AsyncState` no Pluto e o zero do `ProgramList.tsx`) é reexecutada por Minos no gate da **TASK-041 (CA-P5-9)** — conferência de disco de 2026-09-30 já em verde: única ocorrência `components/ui/AsyncState.tsx:59`, zero em `app/pluto/` e `components/pluto/`.
+
+> **Execução manual:** é verificação de **código** (grep/IDE no repositório),
+> não fluxo de UI — mesmo formato do Cenário 32 (busca de textos antigos).
+
+### Cenário 50: [HANDOFF FASE 7 — Mnemósine] Norma no "Onde ponho X?" do AGENTS.md (CA-P5-8 · R31 · D27)
+
+**Dado** que a fase 7 (documentação) desta feature foi executada pela Mnemósine
+**Quando** a pessoa abre a seção **"Onde ponho X?"** do `AGENTS.md` e busca o
+texto normativo
+**Então** a norma de D27 está escrita: estados de tela de lista (carregando,
+erro, vazio, no-results) vão no componente centralizado
+`components/ui/AsyncState.tsx`; mensagens com origem usam a união de origens de
+`lib/shared`; retry é derivado de `errorOrigin` (`carga`/ausente com retry;
+`operacao`/`bloqueio` sem)
+
+**Status:** `[HANDOFF FASE 7]` — **não executável na homologação desta feature**:
+é entregável documental fora do diff de código (D27/R31, spec §S9), na mesma
+modalidade do registro D14/R12 do Patch v3 e do handoff do CA-P3-21 no Patch v4.
+Conferência de disco de 2026-09-30: `AGENTS.md` **sem** ocorrência de
+`AsyncState`/`errorOrigin` (esperado — a fase 7 ainda não rodou); perda do
+handoff é a pendência de processo declarada em spec §S8.
+
+Automatizado: — (gate documental por leitura + busca do texto no arquivo, como o
+Cenário 21; verificação repetida na review do Argos/fase 7).
+
+### Cenário 51: Portão — suíte verde, coverage ≥ 80% e `test-report.json` regenerado (CA-P5-9 · gate do processo)
+
+**Dado** que todas as tasks do patch v5 (TASK-030…039) foram implementadas
+**Quando** a suíte completa é executada com coverage
+**Então** nenhum teste existente quebra (baseline `117e968` mantida), os testes
+novos do Patch v5 passam, `test-report.json` é regenerado com `failed = 0` e
+coverage **≥ 80%** (lines/functions/branches/statements), junto com a prova de
+herança global do Cenário 49 — mantendo verde o gate antes da review do Argos
+
+Automatizado: suíte completa `npm test` + `npx vitest run --coverage` com os
+`--coverage.include` do protocolo do `test-report.json` + gate
+`.agents/modules/milon/02-programas/test-report.json` (regenerado na TASK-041,
+antes da review). **Resultado da TASK-041 (2026-09-30):** suíte **781/781 em
+88 arquivos, 0 falhas** (exit 0), coverage **84,48% lines / 84,48% statements /
+88,44% branches / 88,28% functions** (todos ≥ 80), `test-report.json`
+regenerado com `failed = 0`, `npm run build-storybook` **exit 0** e prova de
+herança do Cenário 49 reexecutada em verde (1 ocorrência — só
+`components/ui/AsyncState.tsx`).
 
 ---
 

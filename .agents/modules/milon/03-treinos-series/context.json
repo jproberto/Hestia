@@ -169,6 +169,21 @@
       "phase": "CODING",
       "timestamp": "2026-10-02T02:35:00.000Z",
       "action": "TASK-012 CONCLUÍDA — Hefesto entregou GREEN: WorkoutList.tsx + WorkoutModal.tsx + stories. Verificação: 22/22 alvo, 1009/1009 suite, tsc limpo, build-storybook OK. Próximo: commit TASK-011+TASK-012 via Caronte"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T02:40:00.000Z",
+      "action": "TASK-011+012 COMMIT — Caronte commitou 1cf990f (8 arquivos, baseline 1009/1009). Próximo: TASK-013 RED 5 componentes detalhe"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T02:45:00.000Z",
+      "action": "TASK-013 CONCLUÍDA — Minos entregou RED 5 testes detalhe (EntriesList, EntryCard, SeriesCard, PickerModal, ConfirmModal), todos Failed to resolve import. Suíte 1009/1009 + 5 failed. Próximo: TASK-014 GREEN"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T02:50:00.000Z",
+      "action": "TASK-014 CONCLUÍDA + FIX — Hefesto entregou GREEN 5 componentes + stories (Pointer Events, 80/83 inicial); Minos corrigiu 3 helpers EntriesList para getAllBy[0] (s3). Verificação: 1092/1092 suite, tsc limpo, storybook OK. Próximo: commit TASK-013+TASK-014 via Caronte"
     }
   ],
   "approvals": {

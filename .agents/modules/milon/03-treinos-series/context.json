@@ -184,6 +184,21 @@
       "phase": "CODING",
       "timestamp": "2026-10-02T02:50:00.000Z",
       "action": "TASK-014 CONCLUÍDA + FIX — Hefesto entregou GREEN 5 componentes + stories (Pointer Events, 80/83 inicial); Minos corrigiu 3 helpers EntriesList para getAllBy[0] (s3). Verificação: 1092/1092 suite, tsc limpo, storybook OK. Próximo: commit TASK-013+TASK-014 via Caronte"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T02:55:00.000Z",
+      "action": "TASK-013+014 COMMIT — Caronte commitou 985bf2e (17 arquivos, baseline 1092/1092 + storybook). Próximo: TASK-015 RED páginas"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T03:00:00.000Z",
+      "action": "TASK-015 CONCLUÍDA — Minos entregou RED páginas: page Programa atualizado (26 testes, 9 RED) + page treino nova (13 testes, rota inexistente). CA-P3-20 preservada. Suíte 1092 + 9 failed. Próximo: TASK-016 GREEN"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T03:10:00.000Z",
+      "action": "TASK-016 CONCLUÍDA + FIX — Hefesto entregou GREEN 2 páginas (Programa com treinos + treino detalhe); Minos flexibilizou matcher /preenchid/i linha 480. Verificação: 26/26 + 14/14 páginas, 1115/1115 suite, tsc/storybook OK. Próximo: commit TASK-015+TASK-016"
     }
   ],
   "approvals": {

@@ -125,7 +125,7 @@
     },
     {
       "id": "TASK-007",
-      "status": "pending",
+      "status": "completed",
       "title": "RED: testes dos hooks useProgramWorkouts e useWorkoutDetail",
       "description": "Minos cria __tests__/lib/milon/hooks/useProgramWorkouts.test.ts e __tests__/lib/milon/hooks/useWorkoutDetail.test.ts com vi.mock dos barrels db/workouts e db/exercises (padrão usePrograms/useExercises). useProgramWorkouts: carga monta subtitles por treino na ordem das entradas com deduplicação de músculos (ex.: Peito, Tríceps, Ombros -> 'Peito, Tríceps e Ombros'), treino sem exercícios -> subtítulo vazio; erro de carga -> errorMsg com errorOrigin 'carga' e retry recarrega; create/rename validam nome e RELANÇAM o erro sem tocar em errorMsg/errorOrigin (padrão save); sucesso de create/rename/remove recarrega e acende successNotice (3000 ms) e zera ao concluir; remove com MSG_TREINO_COM_EXERCICIOS -> errorMsg com errorOrigin 'bloqueio' sem chamar a recarga de sucesso; remove com falha de operação -> 'operacao'. useWorkoutDetail: cadeia de carga treino -> programa -> entradas -> séries por entrada (Promise.all) -> listExercisesAll -> nome do treino; erro de carga -> 'carga' com retry; treino inexistente -> workout null sem erro; addExercise com bloqueio D14 RELANÇA o erro (modal); saveExercise com anti-duplicata da #1 RELANÇA (modal); createExerciseAndAdd cria e adiciona; removeEntry/reorderEntries/setQuantity/setRest/updateSeries/applyToAll setam errorMsg com origem adequada ('bloqueio'/'operacao') e recarregam as entradas em sucesso; confirmLoadUnit chama update da série E setExerciseLoadUnitStandalone; programUsedExerciseIds reflete o conjunto do Programa (D14). Interfaces: Consome: barrel db/workouts (TASK-006), db/exercises (TASK-002), tipos (TASK-002). Interfaces: Produz: useProgramWorkouts e useWorkoutDetail com o retorno exato do §3 do plan.md (consumidos pelas páginas na TASK-015/016). Verificação: npm test -- __tests__/lib/milon/hooks/useProgramWorkouts.test.ts Expected: FAIL; npm test -- __tests__/lib/milon/hooks/useWorkoutDetail.test.ts Expected: FAIL.",
       "assignee": "minos",
@@ -143,7 +143,7 @@
     },
     {
       "id": "TASK-008",
-      "status": "pending",
+      "status": "completed",
       "title": "GREEN: hooks useProgramWorkouts e useWorkoutDetail",
       "description": "Hefesto cria lib/milon/hooks/useProgramWorkouts.ts e lib/milon/hooks/useWorkoutDetail.ts com o retorno exato do §3 do plan.md, no padrão promise-chain + flag cancelled do módulo, consumindo os standalones dos barrels db/workouts e db/exercises e as puras de workout-utils; subtitles derivados no useProgramWorkouts (entradas do Programa agrupadas por treino + listExercisesAll -> gerarSubtituloMusculares); erros de modal (create/rename/addExercise/saveExercise/createExerciseAndAdd) relançados sem tocar errorMsg; operações de lista/alvo de página alimentando errorMsg com origin 'carga'/'operacao'/'bloqueio' e successNotice de 3000 ms. Modify lib/milon/hooks/index.ts exportando os dois hooks. Interfaces: Consome: db/workouts (TASK-006), db/exercises (TASK-002), workout-utils (TASK-004), tipos (TASK-002). Interfaces: Produz: useProgramWorkouts(programId), useWorkoutDetail(workoutId) - consumidos pelas páginas (TASK-015/016). Verificação: npm test -- __tests__/lib/milon/hooks/useProgramWorkouts.test.ts Expected: PASS; npm test -- __tests__/lib/milon/hooks/useWorkoutDetail.test.ts Expected: PASS; npx tsc --noEmit Expected: PASS.",
       "assignee": "hefesto",

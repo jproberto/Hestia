@@ -119,6 +119,26 @@
       "phase": "CODING",
       "timestamp": "2026-10-02T00:45:00.000Z",
       "action": "TASK-005 CORRIGIDA — Minos corrigiu 2 bugs nos testes: (1) stubUpdateDb agora registra recorded.table no from() (igual ao stubListDb); (2) teste applySeriesToAll re-executável corrigido para expectativa consistente [[10,40],[10,40]] após mutação sequencial. Verificação: suíte completa 942/942 PASS, tsc limpo, lint 0 errors. Próximo: TASK-006 GREEN completo"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T01:00:00.000Z",
+      "action": "TASK-006 CONCLUÍDA — Hefesto entregou GREEN completo: workouts.ts, fakeWorkoutRepository.ts, interfaces.ts, db/workouts.ts, index.ts. Verificação: suíte completa 942/942 PASS, tsc limpo, lint 0 errors, regressão exercises verde. Commit 90709c5 (TASK-005 fix + TASK-006). Próximo: TASK-007 (Minos RED hooks useProgramWorkouts/useWorkoutDetail)"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T01:15:00.000Z",
+      "action": "TASK-007 CONCLUÍDA — Minos entregou RED: __tests__/lib/milon/hooks/useProgramWorkouts.test.ts (16 testes: subtítulos D15, carga 'carga'+retry, create/rename relançam validações, remove bloqueio D6, expiração 3000ms) + __tests__/lib/milon/hooks/useWorkoutDetail.test.ts (24 testes: cadeia de carga + D14 conjunto + soft-delete visível, erro 'carga'+retry, treino inexistente sem erro, addExercise/createExerciseAndAdd/saveExercise RELANÇAM, 6 ops de lista com 'operacao', reorder com 'bloqueio', confirmLoadUnit série+unidade). Verificação: ambos falham com 'Failed to resolve import' (módulos inexistentes); suíte completa 942/942 PASS + 2 failed (RED); nenhum arquivo de produção alterado. Próximo: TASK-008 (Hefesto GREEN hooks)"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T01:30:00.000Z",
+      "action": "TASK-008 BLOQUEADA — Hefesto entregou produção completa (useProgramWorkouts.ts, useWorkoutDetail.ts, index.ts) mas 1 teste da TASK-007 tem bug de setup: mock queue FIFO do vitest consome o resolve antes do reject no teste 'erro de carga → retry recarrega'. Produção pronta (981/982 PASS, tsc limpo, lint 0 errors). Próximo: Minos corrige o setup do teste useProgramWorkouts (mock queue FIFO)"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T01:45:00.000Z",
+      "action": "TASK-007 CORRIGIDA — Minos corrigiu setup do teste useProgramWorkouts (mock queue FIFO): removido prepararListas que pré-enfileirava mockResolvedValueOnce; substituído por mockRejectedValueOnce(falha).mockResolvedValue([w1]) + mocks explícitos das demais cargas (listEntriesByProgramStandalone, listExercisesAllStandalone). Verificação: suíte completa 982/982 PASS, lint 0 errors. Próximo: TASK-008 GREEN completo"
     }
   ],
   "approvals": {
@@ -149,6 +169,10 @@
     "TASK-004: GREEN workout-utils — 80/80 testes, tsc limpo, lint 0 errors, suíte 882/882 PASS",
     "TASK-005: RED testes repositório treinos — 2 arquivos (contract-workouts fakes-only + db/workouts stub), módulos inexistentes, suíte 882/882 PASS + 2 failed, zero produção alterada",
     "TASK-005 FIX: 2 bugs corrigidos nos testes (stubUpdateDb recorded.table + applySeriesToAll expectativa consistente) — suíte 942/942 PASS",
-    "TASK-006: GREEN repositório treinos — workouts.ts, fakeWorkoutRepository.ts, interfaces.ts, db/workouts.ts, index.ts — 942/942 testes PASS, tsc limpo, lint 0 errors, regressão exercises verde"
+    "TASK-006: GREEN repositório treinos — workouts.ts, fakeWorkoutRepository.ts, interfaces.ts, db/workouts.ts, index.ts — 942/942 testes PASS, tsc limpo, lint 0 errors, regressão exercises verde",
+    "TASK-006 COMMIT: commit 90709c5 (TASK-005 fix + TASK-006) — 10 arquivos, 2169 insertions, 4 deletions",
+    "TASK-007: RED testes hooks useProgramWorkouts/useWorkoutDetail — 2 arquivos (16+24 testes), módulos inexistentes, suíte 942/942 PASS + 2 failed, zero produção alterada",
+    "TASK-007 FIX: setup do teste useProgramWorkouts corrigido (mock queue FIFO) — suíte 982/982 PASS",
+    "TASK-008 BLOQUEADA — Hefesto entregou produção completa (useProgramWorkouts.ts, useWorkoutDetail.ts, index.ts) mas 1 teste da TASK-007 tem bug de setup: mock queue FIFO do vitest consome o resolve antes do reject no teste 'erro de carga → retry recarrega'. Produção pronta (981/982 PASS, tsc limpo, lint 0 errors). Próximo: Minos corrige o setup do teste useProgramWorkouts (mock queue FIFO)"
   ]
 }

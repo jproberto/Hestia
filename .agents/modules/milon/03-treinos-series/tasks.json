@@ -200,7 +200,7 @@
     },
     {
       "id": "TASK-011",
-      "status": "pending",
+      "status": "completed",
       "title": "RED: testes dos componentes WorkoutList e WorkoutModal",
       "description": "Minos cria __tests__/components/milon/WorkoutList.test.tsx e __tests__/components/milon/WorkoutModal.test.tsx (padrão dos testes de ProgramList/ProgramModal). WorkoutList: renderiza h2 'Treinos' com font-display; itens na ordem recebida (ordem de criação) com link para /milon/programs/{programId}/workouts/{workoutId}; subtítulo exibido quando não vazio e ausente quando vazio; loading mostra 'Carregando treinos…'; empty mostra emptyTitle/emptyText de nenhum treino; erro de carga exibe mensagem e botão 'Tentar novamente' quando errorOrigin 'carga' e NÃO exibe retry quando 'bloqueio'; readOnly oculta os botões Renomear/Excluir; callbacks onRename/onDelete disparam com o treino certo; nenhum botão de reordenar treinos. WorkoutModal: abre com defaultName pré-preenchido; submit vazio ou só espaços -> 'Informe o nome do treino.' e permanece aberto; submit colidindo com otherNames normalizado -> 'Já existe um treino com esse nome neste programa.'; colisão com nome diferente só por caixa/espaços -> bloqueia; erro relançado por onSave -> mensagem visível, modal permanece aberto e digitado preservado; saving desabilita os botões; cancelar fecha sem chamar onSave. Interfaces: Consome: tipos (TASK-002), mensagens de workout-utils (TASK-004), padrões AsyncState/Button. Interfaces: Produz: props WorkoutListProps/WorkoutModalProps exatas do §3 do plan.md (TASK-012). Verificação: npm test -- __tests__/components/milon/WorkoutList.test.tsx Expected: FAIL; npm test -- __tests__/components/milon/WorkoutModal.test.tsx Expected: FAIL.",
       "assignee": "minos",
@@ -218,7 +218,7 @@
     },
     {
       "id": "TASK-012",
-      "status": "pending",
+      "status": "completed",
       "title": "GREEN: componentes WorkoutList e WorkoutModal + stories",
       "description": "Hefesto cria components/milon/WorkoutList.tsx e components/milon/WorkoutModal.tsx com as props do §3 do plan.md (presentacionais, sem fetch; WorkoutList compõe AsyncState por dentro no padrão ProgramList, h2 e h3 com font-display, link no nome do treino, ações Renomear/Excluir ocultas quando readOnly; WorkoutModal valida no submit com normalizarNomeTreino/validarNomeTreino/validarNomeUnicoNoPrograma, nunca fecha no erro, preserva digitado, desabilita botões durante saving) e components/milon/WorkoutList.stories.tsx + components/milon/WorkoutModal.stories.tsx (estados: loading, empty, erro carga, bloqueio, readOnly, criar, renomear, erro de gravação). Interfaces: Consome: props declaradas na TASK-011, workout-utils (TASK-004), AsyncState, Button. Interfaces: Produz: componentes consumidos por app/milon/programs/[id]/page.tsx (TASK-016). Verificação: npm test -- __tests__/components/milon/WorkoutList.test.tsx Expected: PASS; npm test -- __tests__/components/milon/WorkoutModal.test.tsx Expected: PASS; npx tsc --noEmit Expected: PASS; npm run build-storybook Expected: PASS.",
       "assignee": "hefesto",

@@ -154,6 +154,21 @@
       "phase": "CODING",
       "timestamp": "2026-10-02T02:20:00.000Z",
       "action": "TASK-010 CONCLUÍDA — Hefesto entregou GREEN: lib/milon/hooks/usePrograms.ts sem UseProgramsOptions, guardas frescas via barrel db/workouts. Verificação: usePrograms.test.ts 52/52 PASS, suíte 987/987 PASS, buscas hasWorkoutWithExercise?: e UseProgramsOptions = 0, tsc limpo, page.tsx sem args. Próximo: commit TASK-009+TASK-010 via Caronte"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T02:25:00.000Z",
+      "action": "TASK-009+010 COMMIT — Caronte commitou a3c881a (teste reescrito + hook GREEN, 5 arquivos, baseline 987/987). Próximo: TASK-011 RED WorkoutList/WorkoutModal"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T02:30:00.000Z",
+      "action": "TASK-011 CONCLUÍDA — Minos entregou RED: WorkoutList.test.tsx (9 testes) + WorkoutModal.test.tsx (10 testes), ambos Failed to resolve import. Suíte 987/987 + 2 failed. Próximo: TASK-012 GREEN + TASK-013 RED em paralelo"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T02:35:00.000Z",
+      "action": "TASK-012 CONCLUÍDA — Hefesto entregou GREEN: WorkoutList.tsx + WorkoutModal.tsx + stories. Verificação: 22/22 alvo, 1009/1009 suite, tsc limpo, build-storybook OK. Próximo: commit TASK-011+TASK-012 via Caronte"
     }
   ],
   "approvals": {

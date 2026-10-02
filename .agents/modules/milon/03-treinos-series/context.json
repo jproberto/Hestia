@@ -94,6 +94,16 @@
       "phase": "CODING",
       "timestamp": "2026-10-01T23:30:00.000Z",
       "action": "TASK-002 CONCLUÍDA — Hefesto entregou GREEN: migração 0009 (workouts/workout_entries/workout_series + load_unit/deleted_at + RLS + auditoria milon-03), types.ts (LoadUnit + Exercise/ExerciseRow + Workout/WorkoutEntry/WorkoutSeries/WorkoutEntryView + Create/UpdateWorkoutInput), exercises.ts (soft delete + listExercisesAll/setExerciseLoadUnit + standalones), fakeExerciseRepository.ts (espelha), DeleteExerciseConfirm.tsx (comentário obsoleto removido), stories ExerciseList/ExerciseModal (loadUnit/deletedAt null). Verificação: suíte completa 802/802 passed, tsc limpo, lint 0 errors, busca 'proteção pertence à feature #3' → 0 ocorrências. Próximo: TASK-003 (Minos RED workout-utils)"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-01T23:45:00.000Z",
+      "action": "TASK-003 CONCLUÍDA — Minos entregou RED: __tests__/lib/milon/workout-utils.test.ts (116 testes em 17 describes). Verificação: npm test -- __tests__/lib/milon/workout-utils.test.ts → FAIL (módulo não encontrado); tsc aponta TS2307 Cannot find module '@/lib/milon/workout-utils'; nenhum arquivo de produção alterado. Próximo: TASK-004 (Hefesto GREEN workout-utils)"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-01T23:55:00.000Z",
+      "action": "TASK-004 CONCLUÍDA — Hefesto entregou GREEN: lib/milon/workout-utils.ts (9 constantes de mensagem, 14 funções puras). Verificação: npm test -- __tests__/lib/milon/workout-utils.test.ts → 80/80 PASS; tsc limpo; lint 0 errors; suíte completa 882/882 PASS. Próximo: TASK-005 (Minos RED repositório de treinos)"
     }
   ],
   "approvals": {
@@ -119,6 +129,8 @@
     "P1 Plan: migração 0009 reservada; aggregate treinos+entradas+séries em IWorkoutRepository; soft delete em exercises (deleted_at); drag & drop nativo (Pointer Events); subtítulo derivado em memória; guardas frescas em usePrograms; sem nova dependência",
     "P2 Tasks: 17 tasks (TASK-001 a TASK-017), ordem topológica TASK-001→TASK-017, ramificações paralelas 011/012 e 013/014 com 007-010, 9 Minos / 8 Hefesto, criteria com comandos exatos, substituições declaradas (proteção #3 → 0, hasWorkoutWithExercise → 0)",
     "TASK-001: RED testes Exercise (loadUnit/deletedAt + soft delete) — 7 arquivos, 12 falhas runtime + 58 erros TS, zero produção alterada",
-    "TASK-002: GREEN migração 0009 + tipos + soft delete — 802/802 testes, tsc limpo, lint 0 errors, substituição 'proteção #3' → 0 confirmada"
+    "TASK-002: GREEN migração 0009 + tipos + soft delete — 802/802 testes, tsc limpo, lint 0 errors, substituição 'proteção #3' → 0 confirmada",
+    "TASK-003: RED testes workout-utils — 116 testes, módulo inexistente, tsc TS2307, zero produção alterada",
+    "TASK-004: GREEN workout-utils — 80/80 testes, tsc limpo, lint 0 errors, suíte 882/882 PASS"
   ]
 }

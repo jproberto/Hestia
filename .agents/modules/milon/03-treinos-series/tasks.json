@@ -1,0 +1,360 @@
+{
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "status": "pending",
+      "title": "RED: contratos novos de Exercise (loadUnit/deletedAt + soft delete) nos testes existentes",
+      "description": "Minos atualiza os testes existentes para o contrato que a TASK-002 vai entregar (não toca em produção). Arquivos: __tests__/lib/milon/types.test.ts (literals de ExerciseRow ganham load_unit/deleted_at; literals de Exercise ganham loadUnit/deletedAt obrigatórios); __tests__/lib/milon/db/exercises.test.ts (listExercises deve encadear .is('deleted_at', null); deleteExercise deve gravar update de deleted_at em vez de .delete(); novas funções listExercisesAll sem filtro e setExerciseLoadUnit; standalones listExercisesAllStandalone/setExerciseLoadUnitStandalone); __tests__/lib/milon/repositories/contract-exercises.test.ts (seeds 'satisfies Exercise' com campos novos; fake lista só ativos em list, todos em listAll; delete vira soft; setExerciseLoadUnit persiste unidade); __tests__/lib/milon/hooks/useExercises.test.ts, __tests__/components/milon/ExerciseList.test.tsx, __tests__/components/milon/ExerciseModal.test.tsx, __tests__/app/milon/exercises/page.test.tsx (mocks/factories de Exercise com os campos novos). Interfaces: Consome: nenhum (só testes). Interfaces: Produz: contrato exato consumido pela TASK-002 - Exercise.loadUnit: LoadUnit | null, Exercise.deletedAt: string | null, ExerciseRow.load_unit: string | null, ExerciseRow.deleted_at: string | null, listExercisesAll(db), listExercisesAllStandalone(), setExerciseLoadUnit(db, id, unit), setExerciseLoadUnitStandalone(id, unit). Verificação: npm test -- __tests__/lib/milon/db/exercises.test.ts Expected: FAIL (funções/filtros inexistentes) e npx tsc --noEmit Expected: FAIL (campos novos inexistentes em lib/milon).",
+      "assignee": "minos",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/lib/milon/db/exercises.test.ts falha (Expected: FAIL) porque listExercises não filtra deleted_at e deleteExercise ainda faz hard delete",
+        "npx tsc --noEmit falha apontando load_unit/deleted_at/loadUnit/deletedAt ausentes nos testes (Expected: FAIL)",
+        "Os 7 arquivos de teste listados na descrição contêm asserções dos campos e funções novos com os nomes exatos do contrato",
+        "Nenhum arquivo de produção (lib/, app/, components/) foi alterado por esta task"
+      ],
+      "files": [
+        "__tests__/lib/milon/types.test.ts",
+        "__tests__/lib/milon/db/exercises.test.ts",
+        "__tests__/lib/milon/repositories/contract-exercises.test.ts",
+        "__tests__/lib/milon/hooks/useExercises.test.ts",
+        "__tests__/components/milon/ExerciseList.test.tsx",
+        "__tests__/components/milon/ExerciseModal.test.tsx",
+        "__tests__/app/milon/exercises/page.test.tsx"
+      ]
+    },
+    {
+      "id": "TASK-002",
+      "status": "pending",
+      "title": "GREEN: migração 0009 + tipos novos + soft delete da biblioteca de exercícios",
+      "description": "Hefesto entrega o contrato RED da TASK-001. (1) Create utils/migrations/migration-0009-milon-workouts.sql conforme §3 do plan.md: tabelas public.workouts (id UUID PK gen_random_uuid, program_id UUID NOT NULL FK programs RESTRICT, name TEXT NOT NULL, created_at, created_by; índice (program_id, created_at, id)), public.workout_entries (workout_id FK workouts RESTRICT, program_id FK programs RESTRICT, exercise_id FK exercises RESTRICT, position INTEGER NOT NULL, rest_seconds INTEGER NULL; UNIQUE (program_id, exercise_id); índice (workout_id, position)), public.workout_series (entry_id FK workout_entries CASCADE, position INTEGER NOT NULL, reps INTEGER NULL, duration_seconds INTEGER NULL, load NUMERIC NULL; índice (entry_id, position)); ALTER public.exercises ADD load_unit TEXT NULL CHECK IN ('kg','libra') e deleted_at TIMESTAMPTZ NULL; RLS com política 'Permitir tudo para autenticados' nas 3 tabelas novas; self-bootstrap de public.schema_migrations idêntico ao do 0008 (CI aplica por ordem lexicográfica e 0009 roda antes das migration-feature-*); auditoria spec_id='milon-03', spec_name='Treinos e séries planejadas', script_name='migration-0009-milon-workouts.sql', ON CONFLICT (script_name) DO NOTHING. (2) Modify lib/milon/types.ts: export type LoadUnit = 'kg' | 'libra'; ExerciseRow + load_unit/deleted_at; Exercise + loadUnit/deletedAt; WorkoutRow/Workout, WorkoutEntryRow/WorkoutEntry, WorkoutSeriesRow/WorkoutSeries, WorkoutEntryView, CreateWorkoutInput/UpdateWorkoutInput (campos exatos do §3 do plan.md). (3) Modify lib/milon/repositories/exercises.ts: listExercises filtra .is('deleted_at', null); assertNoDuplicate só conta ativos; deleteExercise grava deleted_at ISO em vez de .delete(); novas listExercisesAll/setExerciseLoadUnit + standalones; toDomain mapeia load_unit/deleted_at; create/update não tocam nos campos. (4) Modify lib/milon/repositories/fakes/fakeExerciseRepository.ts espelhando o mesmo comportamento. (5) Modify components/milon/DeleteExerciseConfirm.tsx só no comentário: substituir a frase 'proteção pertence à feature #3' por nota de que a proteção agora é o soft delete da biblioteca (nenhuma prop muda). Interfaces: Consome: contrato RED da TASK-001 (mesmos nomes). Interfaces: Produz: tipos e assinaturas acima para tasks 003+. Verificação: npm test -- __tests__/lib/milon/db/exercises.test.ts Expected: PASS; npx tsc --noEmit Expected: PASS; busca por 'proteção pertence à feature #3' em components/, lib/, app/, __tests__/ retorna 0.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-001"],
+      "acceptanceCriteria": [
+        "Arquivo utils/migrations/migration-0009-milon-workouts.sql existe, cria as 3 tabelas, adiciona load_unit (CHECK kg/libra) e deleted_at em exercises, habilita RLS e registra auditoria com spec_id='milon-03' e script_name='migration-0009-milon-workouts.sql'",
+        "O índice único (program_id, exercise_id) em public.workout_entries existe no SQL",
+        "lib/milon/types.ts exporta LoadUnit, Workout, WorkoutEntry, WorkoutSeries, WorkoutEntryView e Exercise/ExerciseRow com os campos novos",
+        "listExercises filtra deleted_at, deleteExercise grava deleted_at (soft delete) e listExercisesAll/setExerciseLoadUnit existem com standalones",
+        "Busca por 'proteção pertence à feature #3' retorna 0 em código vivo (components/, lib/, app/, __tests__/)",
+        "npm test -- __tests__/lib/milon/db/exercises.test.ts passa e npx tsc --noEmit passa sem erros"
+      ],
+      "files": [
+        "utils/migrations/migration-0009-milon-workouts.sql",
+        "lib/milon/types.ts",
+        "lib/milon/repositories/exercises.ts",
+        "lib/milon/repositories/fakes/fakeExerciseRepository.ts",
+        "components/milon/DeleteExerciseConfirm.tsx",
+        "lib/milon/db/exercises.ts",
+        "__tests__/lib/milon/db/exercises.test.ts",
+        "__tests__/lib/milon/repositories/contract-exercises.test.ts"
+      ]
+    },
+    {
+      "id": "TASK-003",
+      "status": "pending",
+      "title": "RED: testes das regras puras em lib/milon/workout-utils.ts",
+      "description": "Minos cria __tests__/lib/milon/workout-utils.test.ts cobrindo (com os nomes exatos do §3 do plan.md): normalizarNomeTreino; validarNomeTreino (vazio/só espaços -> MSG_NOME_TREINO_OBRIGATORIO 'Informe o nome do treino.'); nomesTreinoIguais; validarNomeUnicoNoPrograma (colisão normalizada -> MSG_NOME_TREINO_DUPLICADO 'Já existe um treino com esse nome neste programa.'); rotuloSequencial (0=A, 25=Z, 26=AA, 27=AB); sugerirNomeTreino (primeira posição livre; Programa só com A-Z -> 'Treino AA'; 'Treino A'+'Push' -> 'Treino B'; nenhuma livre -> string vazia); gerarSubtituloMusculares (1 -> 'Peito', 2 -> 'Peito e Ombros', 3+ -> 'Peito, Tríceps e Ombros', duplicatas únicas preservando ordem de primeira aparição, vazio -> ''); interpretarQuantidadeSeries (vazio/não numérico/negativo -> invalido; 0 -> quantidade 0; '5' -> 5); validarInteiroCampo com mensagens 'Use um número inteiro maior ou igual a zero para <rótulo>.' nos rótulos repetições/tempo/descanso e valor null para vazio; validarCarga (vazio -> null válido; 'abc' -> MSG_CARGA_NAO_NUMERICA 'Informe um valor numérico válido para a carga.'; '-1' -> MSG_CARGA_NEGATIVA 'A carga não pode ser negativa.'; '0' -> 0); hasSeriePreenchida; aplicarSerieOrigemEmTodas (copia reps/durationSeconds/load da origem para as demais séries e não altera descanso); converterCarga (fator exato 0.45359237 nos dois sentidos); formatarCargaComSecundaria (secundária com 1 casa decimal; unidade nula -> secundaria null); constantes MSG_TREINO_COM_EXERCICIOS, MSG_PROGRAMA_COM_TREINOS, MSG_EXERCICIO_JA_NO_PROGRAMA, MSG_QUANTIDADE_SERIES_INVALIDA, MSG_UNIDADE_OBRIGATORIA com os textos exatos do plan.md. Interfaces: Consome: tipos WorkoutSeries/LoadUnit da TASK-002. Interfaces: Produz: nomes exportados consumidos pela TASK-004. Verificação: npm test -- __tests__/lib/milon/workout-utils.test.ts Expected: FAIL (módulo não existe).",
+      "assignee": "minos",
+      "dependencies": ["TASK-002"],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/lib/milon/workout-utils.test.ts falha com erro de módulo não encontrado (Expected: FAIL)",
+        "O arquivo de teste cobre sugestão além de Z ('Treino AA'), subtítulo com deduplicação e vazio ≠ 0 na carga",
+        "As mensagens citadas no teste batem caractere a caractere com as mensagens exatas do plan.md",
+        "Nenhum arquivo de produção foi alterado por esta task"
+      ],
+      "files": ["__tests__/lib/milon/workout-utils.test.ts"]
+    },
+    {
+      "id": "TASK-004",
+      "status": "pending",
+      "title": "GREEN: lib/milon/workout-utils.ts com as regras puras do treino",
+      "description": "Hefesto cria lib/milon/workout-utils.ts implementando exatamente as funções e constantes descritas na TASK-003 (contrato textual do §3 do plan.md): constantes de mensagem, normalização/validação/unicidade de nome de treino, rotuloSequencial estilo planilha (A..Z, AA, AB...), sugerirNomeTreino, gerarSubtituloMusculares, interpretarQuantidadeSeries, validarInteiroCampo, validarCarga, hasSeriePreenchida, aplicarSerieOrigemEmTodas, converterCarga (fator 0.45359237), formatarCargaComSecundaria. Sem I/O, sem import de repositório - só tipos de lib/milon/types.ts. Interfaces: Consome: WorkoutSeries, LoadUnit de lib/milon/types.ts. Interfaces: Produz: todos os exports acima, consumidos por repositories/workouts (TASK-006), hooks (TASK-008) e componentes (TASK-012/014). Verificação: npm test -- __tests__/lib/milon/workout-utils.test.ts Expected: PASS; npx tsc --noEmit Expected: PASS.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-003"],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/lib/milon/workout-utils.test.ts passa (Expected: PASS)",
+        "npx tsc --noEmit passa sem erros",
+        "rotuloSequencial gera AA na posição 26 (sequência não para em Z)",
+        "aplicarSerieOrigemEmTodas copia apenas reps/durationSeconds/load e preserva position/id das séries",
+        "O módulo não importa nada de repositório, db ou @supabase"
+      ],
+      "files": ["lib/milon/workout-utils.ts", "__tests__/lib/milon/workout-utils.test.ts"]
+    },
+    {
+      "id": "TASK-005",
+      "status": "pending",
+      "title": "RED: testes do repositório de treinos (contract-workouts fakes-only + stub de db)",
+      "description": "Minos cria dois arquivos de teste. (a) __tests__/lib/milon/repositories/contract-workouts.test.ts (fakes-only, padrão contract-exercises/contract-programs) exercitando a fake de IWorkoutRepository: listWorkoutsByProgram na ordem de criação com desempate de id; createWorkout valida nome obrigatório e único no Programa com as mensagens de workout-utils; updateWorkoutName renomeia excluindo o próprio da checagem; deleteWorkout lança MSG_TREINO_COM_EXERCICIOS quando há entradas e não remove nada, remove quando não há; hasWorkouts e hasWorkoutWithExercise; addEntry posiciona max+1 e bloqueia D14 no mesmo treino e em treino diferente do mesmo Programa com MSG_EXERCICIO_JA_NO_PROGRAMA (permitindo em outro Programa); removeEntry apaga séries e entrada; reorderEntries rejeita conjunto de ids diferente do treino e persiste positions 1..n; setSeriesQuantity com 0 (remove todas), aumento (acrescenta vazias ao final) e redução (remove maiores positions); updateSeriesFields grava só os campos enviados; applySeriesToAll copia da origem para as demais; setEntryRestSeconds grava valor null e número. (b) __tests__/lib/milon/db/workouts.test.ts com stub de IDatabaseClient registrado (mesmo padrão de __tests__/lib/milon/db/exercises.test.ts) cobrindo as cadeias: listagem ordenada por created_at asc com id como desempate, filtro eq por program_id/workout_id, delete/série por entry_id e gravação de posição. Interfaces: Consome: workout-utils (TASK-004), tipos (TASK-002). Interfaces: Produz: IWorkoutRepository + fake + barrel db/workouts (TASK-006). Verificação: npm test -- __tests__/lib/milon/repositories/contract-workouts.test.ts Expected: FAIL e npm test -- __tests__/lib/milon/db/workouts.test.ts Expected: FAIL (módulos inexistentes).",
+      "assignee": "minos",
+      "dependencies": ["TASK-004"],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/lib/milon/repositories/contract-workouts.test.ts falha com módulo não encontrado (Expected: FAIL)",
+        "npm test -- __tests__/lib/milon/db/workouts.test.ts falha com módulo não encontrado (Expected: FAIL)",
+        "Os testes de contrato usam apenas a fake (fakes-only, decisão 57) e cobrem D14, guarda D6 de treino e unicidade de nome",
+        "Nenhum arquivo de produção foi alterado por esta task"
+      ],
+      "files": [
+        "__tests__/lib/milon/repositories/contract-workouts.test.ts",
+        "__tests__/lib/milon/db/workouts.test.ts"
+      ]
+    },
+    {
+      "id": "TASK-006",
+      "status": "pending",
+      "title": "GREEN: repositório de treinos (aggregate workouts/entries/series) + fake + barrel db",
+      "description": "Hefesto entrega os testes RED da TASK-005. Create lib/milon/repositories/workouts.ts com a IWorkoutRepository descrita no §3 do plan.md (todas as assinaturas: listWorkoutsByProgram, findWorkoutById, createWorkout, updateWorkoutName, deleteWorkout, hasWorkouts, hasWorkoutWithExercise, listEntriesByWorkout, listEntriesByProgram, addEntry, removeEntry, reorderEntries, setEntryRestSeconds, listSeriesByEntry, setSeriesQuantity, updateSeriesFields, applySeriesToAll) usando só IDatabaseClient (sem @supabase/*), validações por workout-utils e mensagens exatas; addEntry faz pré-checagem D14 via listEntriesByProgram e mapeia violação do índice único (23505) para MSG_EXERCICIO_JA_NO_PROGRAMA; deleteWorkout busca entradas e lança MSG_TREINO_COM_EXERCICIOS antes de qualquer remoção; removeEntry apaga séries primeiro e depois a entrada; séries carregadas por entrada em Promise.all com .eq (IQueryBuilder não tem in/count/transação). Create lib/milon/repositories/fakes/fakeWorkoutRepository.ts implementando a mesma interface com seed e as mesmas regras/mensagens. Modify lib/milon/repositories/interfaces.ts adicionando IWorkoutRepository. Create lib/milon/db/workouts.ts (export * sobre o repository, padrão db/exercises.ts). Modify lib/milon/repositories/index.ts re-exportando workouts. Interfaces: Consome: tipos (TASK-002), workout-utils (TASK-004), contrato RED (TASK-005). Interfaces: Produz: IWorkoutRepository, fakeWorkoutRepository, exports do barrel db/workouts - consumidos por usePrograms (TASK-010), useProgramWorkouts/useWorkoutDetail (TASK-007/008). Verificação: npm test -- __tests__/lib/milon/repositories/contract-workouts.test.ts Expected: PASS; npm test -- __tests__/lib/milon/db/workouts.test.ts Expected: PASS; regressão npm test -- __tests__/lib/milon/db/exercises.test.ts Expected: PASS; npx tsc --noEmit Expected: PASS.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-005"],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/lib/milon/repositories/contract-workouts.test.ts passa",
+        "npm test -- __tests__/lib/milon/db/workouts.test.ts passa",
+        "deleteWorkout lança MSG_TREINO_COM_EXERCICIOS quando há entradas e nada é removido",
+        "addEntry bloqueia o mesmo exercício em outro treino do mesmo Programa com MSG_EXERCICIO_JA_NO_PROGRAMA e permite em outro Programa",
+        "Nenhum import de @supabase/* em lib/milon/repositories/workouts.ts e npx tsc --noEmit passa",
+        "npm test -- __tests__/lib/milon/db/exercises.test.ts continua passando (regressão)"
+      ],
+      "files": [
+        "lib/milon/repositories/workouts.ts",
+        "lib/milon/repositories/fakes/fakeWorkoutRepository.ts",
+        "lib/milon/repositories/interfaces.ts",
+        "lib/milon/db/workouts.ts",
+        "lib/milon/repositories/index.ts",
+        "__tests__/lib/milon/repositories/contract-workouts.test.ts",
+        "__tests__/lib/milon/db/workouts.test.ts"
+      ]
+    },
+    {
+      "id": "TASK-007",
+      "status": "pending",
+      "title": "RED: testes dos hooks useProgramWorkouts e useWorkoutDetail",
+      "description": "Minos cria __tests__/lib/milon/hooks/useProgramWorkouts.test.ts e __tests__/lib/milon/hooks/useWorkoutDetail.test.ts com vi.mock dos barrels db/workouts e db/exercises (padrão usePrograms/useExercises). useProgramWorkouts: carga monta subtitles por treino na ordem das entradas com deduplicação de músculos (ex.: Peito, Tríceps, Ombros -> 'Peito, Tríceps e Ombros'), treino sem exercícios -> subtítulo vazio; erro de carga -> errorMsg com errorOrigin 'carga' e retry recarrega; create/rename validam nome e RELANÇAM o erro sem tocar em errorMsg/errorOrigin (padrão save); sucesso de create/rename/remove recarrega e acende successNotice (3000 ms) e zera ao concluir; remove com MSG_TREINO_COM_EXERCICIOS -> errorMsg com errorOrigin 'bloqueio' sem chamar a recarga de sucesso; remove com falha de operação -> 'operacao'. useWorkoutDetail: cadeia de carga treino -> programa -> entradas -> séries por entrada (Promise.all) -> listExercisesAll -> nome do treino; erro de carga -> 'carga' com retry; treino inexistente -> workout null sem erro; addExercise com bloqueio D14 RELANÇA o erro (modal); saveExercise com anti-duplicata da #1 RELANÇA (modal); createExerciseAndAdd cria e adiciona; removeEntry/reorderEntries/setQuantity/setRest/updateSeries/applyToAll setam errorMsg com origem adequada ('bloqueio'/'operacao') e recarregam as entradas em sucesso; confirmLoadUnit chama update da série E setExerciseLoadUnitStandalone; programUsedExerciseIds reflete o conjunto do Programa (D14). Interfaces: Consome: barrel db/workouts (TASK-006), db/exercises (TASK-002), tipos (TASK-002). Interfaces: Produz: useProgramWorkouts e useWorkoutDetail com o retorno exato do §3 do plan.md (consumidos pelas páginas na TASK-015/016). Verificação: npm test -- __tests__/lib/milon/hooks/useProgramWorkouts.test.ts Expected: FAIL; npm test -- __tests__/lib/milon/hooks/useWorkoutDetail.test.ts Expected: FAIL.",
+      "assignee": "minos",
+      "dependencies": ["TASK-006"],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/lib/milon/hooks/useProgramWorkouts.test.ts falha com módulo não encontrado (Expected: FAIL)",
+        "npm test -- __tests__/lib/milon/hooks/useWorkoutDetail.test.ts falha com módulo não encontrado (Expected: FAIL)",
+        "Os testes cobrem subtítulo derivado, erros relançados para modal (D14 e anti-duplicata) e banner de bloqueio na lista",
+        "Nenhum arquivo de produção foi alterado por esta task"
+      ],
+      "files": [
+        "__tests__/lib/milon/hooks/useProgramWorkouts.test.ts",
+        "__tests__/lib/milon/hooks/useWorkoutDetail.test.ts"
+      ]
+    },
+    {
+      "id": "TASK-008",
+      "status": "pending",
+      "title": "GREEN: hooks useProgramWorkouts e useWorkoutDetail",
+      "description": "Hefesto cria lib/milon/hooks/useProgramWorkouts.ts e lib/milon/hooks/useWorkoutDetail.ts com o retorno exato do §3 do plan.md, no padrão promise-chain + flag cancelled do módulo, consumindo os standalones dos barrels db/workouts e db/exercises e as puras de workout-utils; subtitles derivados no useProgramWorkouts (entradas do Programa agrupadas por treino + listExercisesAll -> gerarSubtituloMusculares); erros de modal (create/rename/addExercise/saveExercise/createExerciseAndAdd) relançados sem tocar errorMsg; operações de lista/alvo de página alimentando errorMsg com origin 'carga'/'operacao'/'bloqueio' e successNotice de 3000 ms. Modify lib/milon/hooks/index.ts exportando os dois hooks. Interfaces: Consome: db/workouts (TASK-006), db/exercises (TASK-002), workout-utils (TASK-004), tipos (TASK-002). Interfaces: Produz: useProgramWorkouts(programId), useWorkoutDetail(workoutId) - consumidos pelas páginas (TASK-015/016). Verificação: npm test -- __tests__/lib/milon/hooks/useProgramWorkouts.test.ts Expected: PASS; npm test -- __tests__/lib/milon/hooks/useWorkoutDetail.test.ts Expected: PASS; npx tsc --noEmit Expected: PASS.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-007"],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/lib/milon/hooks/useProgramWorkouts.test.ts passa",
+        "npm test -- __tests__/lib/milon/hooks/useWorkoutDetail.test.ts passa",
+        "create/rename/addExercise/saveExercise relançam erro sem alterar errorMsg (o modal pode exibir e permanecer aberto)",
+        "remove com MSG_TREINO_COM_EXERCICIOS resulta em errorMsg com errorOrigin 'bloqueio'",
+        "npx tsc --noEmit passa e lib/milon/hooks/index.ts exporta os dois hooks"
+      ],
+      "files": [
+        "lib/milon/hooks/useProgramWorkouts.ts",
+        "lib/milon/hooks/useWorkoutDetail.ts",
+        "lib/milon/hooks/index.ts",
+        "__tests__/lib/milon/hooks/useProgramWorkouts.test.ts",
+        "__tests__/lib/milon/hooks/useWorkoutDetail.test.ts"
+      ]
+    },
+    {
+      "id": "TASK-009",
+      "status": "pending",
+      "title": "RED: reescrever testes do usePrograms para guardas frescos sem opção",
+      "description": "Minos reescreve __tests__/lib/milon/hooks/usePrograms.test.ts para o contrato novo (sem usar a opção hasWorkoutWithExercise) e atualiza os comentários do cabeçalho do arquivo que mencionam a opção. Novos mocks: vi.mock de '@/lib/milon/db/workouts' controlando hasWorkoutWithExercise/hasWorkouts. Casos: ativar/reativar com hasWorkoutWithExercise(true) executa updateProgramStandalone('ativo') e aplica o efeito colateral de desativar o anterior do mesmo dono (bloco da #2 preservado); com hasWorkoutWithExercise(false) bloqueia com a mensagem existente 'Adicione pelo menos um treino com exercícios para ativar', origin 'bloqueio', sem chamar update; falha na consulta de hasWorkoutWithExercise -> origin 'operacao' e relança; excluir rascunho sem treinos -> deleteProgramStandalone chamado e lista recarregada; excluir com hasWorkouts(true) -> MSG_PROGRAMA_COM_TREINOS 'Este programa possui treinos. Esvazie-o antes de excluir.', origin 'bloqueio', deleteProgramStandalone NÃO chamado; falha na consulta de hasWorkouts -> origin 'operacao'; guarda de status (só rascunho) permanece. Interfaces: Consome: db/workouts da TASK-006 (nomenclatura a ser entregue na TASK-010). Interfaces: Produz: contrato usePrograms() sem parâmetros (TASK-010). Verificação: npm test -- __tests__/lib/milon/hooks/usePrograms.test.ts Expected: FAIL (o hook atual ainda depende da opção fixa e não consulta db/workouts).",
+      "assignee": "minos",
+      "dependencies": ["TASK-006"],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/lib/milon/hooks/usePrograms.test.ts falha (Expected: FAIL) enquanto o hook não consulta db/workouts",
+        "O arquivo não contém mais a chamada usePrograms({ hasWorkoutWithExercise: ... }) nem comentários da opção antiga",
+        "Os casos cobrem liberação com conteúdo real, bloqueio com a mensagem existente, exclusão bloqueada com MSG_PROGRAMA_COM_TREINOS e falha de consulta com origin 'operacao'",
+        "Nenhum arquivo de produção foi alterado por esta task"
+      ],
+      "files": ["__tests__/lib/milon/hooks/usePrograms.test.ts"]
+    },
+    {
+      "id": "TASK-010",
+      "status": "pending",
+      "title": "GREEN: usePrograms sem opção - guardas consultados no momento da ação (substituição)",
+      "description": "Hefesto modifica lib/milon/hooks/usePrograms.ts: remove a interface UseProgramsOptions e a opção hasWorkoutWithExercise (assinatura vira usePrograms(): UseProgramsReturn); em runActivation, antes de guardaAtivacao, consulta hasWorkoutWithExercise(program.id) do barrel '@/lib/milon/db/workouts' - falha -> errorMsg + errorOrigin 'operacao' + relança; com o valor fresco chama guardaAtivacao(valor) mantendo a mensagem existente e origem 'bloqueio'; em remove, após a checagem de status 'rascunho', consulta hasWorkouts(program.id) - true -> MSG_PROGRAMA_COM_TREINOS com origin 'bloqueio' e relança (o finally do confirm fecha o modal e a lista exibe o banner); false -> segue deleteProgramStandalone atual; falha da consulta -> origin 'operacao'. guardaAtivacao de lib/milon/program-utils.ts permanece com a mesma assinatura pura. Interfaces: Consome: hasWorkouts/hasWorkoutWithExercise de db/workouts (TASK-006); guardaAtivacao/aplicarEfeitoColateralAtivacao de program-utils. Interfaces: Produz: usePrograms() sem parâmetros - consumido por app/milon/programs/page.tsx sem mudança de chamada (já chama sem opções). Verificação: npm test -- __tests__/lib/milon/hooks/usePrograms.test.ts Expected: PASS; npx tsc --noEmit Expected: PASS; busca por 'hasWorkoutWithExercise?:' retorna 0 em lib/, app/, components/, __tests__/; busca por 'UseProgramsOptions' retorna 0 em lib/, app/, components/, __tests__/.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-009"],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/lib/milon/hooks/usePrograms.test.ts passa",
+        "Busca por 'hasWorkoutWithExercise?:' retorna 0 em código vivo (lib/, app/, components/, __tests__/)",
+        "Busca por 'UseProgramsOptions' retorna 0 em código vivo (lib/, app/, components/, __tests__/)",
+        "Ativar libera com hasWorkoutWithExercise true e bloqueia com a mensagem existente quando false",
+        "Excluir Programa com treinos resulta em MSG_PROGRAMA_COM_TREINOS com errorOrigin 'bloqueio' sem chamar deleteProgramStandalone",
+        "npx tsc --noEmit passa e app/milon/programs/page.tsx continua chamando usePrograms() sem argumentos"
+      ],
+      "files": [
+        "lib/milon/hooks/usePrograms.ts",
+        "__tests__/lib/milon/hooks/usePrograms.test.ts"
+      ]
+    },
+    {
+      "id": "TASK-011",
+      "status": "pending",
+      "title": "RED: testes dos componentes WorkoutList e WorkoutModal",
+      "description": "Minos cria __tests__/components/milon/WorkoutList.test.tsx e __tests__/components/milon/WorkoutModal.test.tsx (padrão dos testes de ProgramList/ProgramModal). WorkoutList: renderiza h2 'Treinos' com font-display; itens na ordem recebida (ordem de criação) com link para /milon/programs/{programId}/workouts/{workoutId}; subtítulo exibido quando não vazio e ausente quando vazio; loading mostra 'Carregando treinos…'; empty mostra emptyTitle/emptyText de nenhum treino; erro de carga exibe mensagem e botão 'Tentar novamente' quando errorOrigin 'carga' e NÃO exibe retry quando 'bloqueio'; readOnly oculta os botões Renomear/Excluir; callbacks onRename/onDelete disparam com o treino certo; nenhum botão de reordenar treinos. WorkoutModal: abre com defaultName pré-preenchido; submit vazio ou só espaços -> 'Informe o nome do treino.' e permanece aberto; submit colidindo com otherNames normalizado -> 'Já existe um treino com esse nome neste programa.'; colisão com nome diferente só por caixa/espaços -> bloqueia; erro relançado por onSave -> mensagem visível, modal permanece aberto e digitado preservado; saving desabilita os botões; cancelar fecha sem chamar onSave. Interfaces: Consome: tipos (TASK-002), mensagens de workout-utils (TASK-004), padrões AsyncState/Button. Interfaces: Produz: props WorkoutListProps/WorkoutModalProps exatas do §3 do plan.md (TASK-012). Verificação: npm test -- __tests__/components/milon/WorkoutList.test.tsx Expected: FAIL; npm test -- __tests__/components/milon/WorkoutModal.test.tsx Expected: FAIL.",
+      "assignee": "minos",
+      "dependencies": ["TASK-004"],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/components/milon/WorkoutList.test.tsx falha com módulo não encontrado (Expected: FAIL)",
+        "npm test -- __tests__/components/milon/WorkoutModal.test.tsx falha com módulo não encontrado (Expected: FAIL)",
+        "Os testes cobrem ordem de criação, subtítulo, readOnly, mensagens exatas de nome e modal que não fecha no erro",
+        "Nenhum arquivo de produção foi alterado por esta task"
+      ],
+      "files": [
+        "__tests__/components/milon/WorkoutList.test.tsx",
+        "__tests__/components/milon/WorkoutModal.test.tsx"
+      ]
+    },
+    {
+      "id": "TASK-012",
+      "status": "pending",
+      "title": "GREEN: componentes WorkoutList e WorkoutModal + stories",
+      "description": "Hefesto cria components/milon/WorkoutList.tsx e components/milon/WorkoutModal.tsx com as props do §3 do plan.md (presentacionais, sem fetch; WorkoutList compõe AsyncState por dentro no padrão ProgramList, h2 e h3 com font-display, link no nome do treino, ações Renomear/Excluir ocultas quando readOnly; WorkoutModal valida no submit com normalizarNomeTreino/validarNomeTreino/validarNomeUnicoNoPrograma, nunca fecha no erro, preserva digitado, desabilita botões durante saving) e components/milon/WorkoutList.stories.tsx + components/milon/WorkoutModal.stories.tsx (estados: loading, empty, erro carga, bloqueio, readOnly, criar, renomear, erro de gravação). Interfaces: Consome: props declaradas na TASK-011, workout-utils (TASK-004), AsyncState, Button. Interfaces: Produz: componentes consumidos por app/milon/programs/[id]/page.tsx (TASK-016). Verificação: npm test -- __tests__/components/milon/WorkoutList.test.tsx Expected: PASS; npm test -- __tests__/components/milon/WorkoutModal.test.tsx Expected: PASS; npx tsc --noEmit Expected: PASS; npm run build-storybook Expected: PASS.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-011"],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/components/milon/WorkoutList.test.tsx passa",
+        "npm test -- __tests__/components/milon/WorkoutModal.test.tsx passa",
+        "npx tsc --noEmit passa e npm run build-storybook completa sem erros",
+        "Os dois componentes possuem .stories.tsx ao lado com os estados listados",
+        "WorkoutList usa components/ui/AsyncState (não reimplementa estados) e WorkoutModal nunca fecha no erro"
+      ],
+      "files": [
+        "components/milon/WorkoutList.tsx",
+        "components/milon/WorkoutList.stories.tsx",
+        "components/milon/WorkoutModal.tsx",
+        "components/milon/WorkoutModal.stories.tsx",
+        "__tests__/components/milon/WorkoutList.test.tsx",
+        "__tests__/components/milon/WorkoutModal.test.tsx"
+      ]
+    },
+    {
+      "id": "TASK-013",
+      "status": "pending",
+      "title": "RED: testes dos componentes do detalhe do treino (5 componentes)",
+      "description": "Minos cria __tests__/components/milon/WorkoutEntriesList.test.tsx, __tests__/components/milon/ExerciseEntryCard.test.tsx, __tests__/components/milon/SeriesCard.test.tsx, __tests__/components/milon/ExercisePickerModal.test.tsx e __tests__/components/milon/WorkoutConfirmModal.test.tsx (padrão dos testes de componentes do módulo). WorkoutEntriesList: AsyncState com empty 'Nenhum exercício ainda.'; renderiza um ExerciseEntryCard por entrada na ordem de position; readOnly propaga e desliga o handle; callbacks onAdd/onReorder/onQuantityCommit/onRequestReduce/onRestCommit/onSeriesCommit/onApplyAll/onEditExercise/onRemoveEntry/onConfirmUnit disparam com os argumentos exatos; banner de erro com retry só quando errorOrigin 'carga'. ExerciseEntryCard: quantidade commita no blur/Enter; inválida (vazio/zero/não numérico na criação) mostra 'Informe a quantidade de séries (número inteiro maior ou igual a 1).' e NÃO dispara commit; aumento dispara onQuantityCommit; redução com série preenchida dispara onRequestReduce; redução/zerar sem preenchimento dispara onQuantityCommit direto; igual -> no-op; carga digitada com loadUnit null ativa o prompt 'Escolha a unidade da carga: kg ou libra.' e os botões kg/libra; com unidade -> onSeriesCommit direto; descanso commita como campo único; handle de arrastar visível; botões Editar/Excluir. SeriesCard: rótulo 'Série N'; validações de inteiro (mensagem 'Use um número inteiro maior ou igual a zero para repetições/tempo/descanso.') e de carga ('A carga não pode ser negativa.', valor não numérico com mensagem); vazio exibe placeholder '—' e zero exibe '0'; unidade secundária convertida menor e em cinza mais claro; botão 'Aplicar a todas' dispara onApplyAll. ExercisePickerModal: busca por nome e filtro de músculo; linhas tocáveis disparam onSelect; 'Cadastrar novo' dispara onCreateNew; error com MSG_EXERCICIO_JA_NO_PROGRAMA mantém o modal aberto sem retry; loading/fechar. WorkoutConfirmModal: variante 'remover-exercicio' lista o exercício e suas N séries com o que será perdido; variante 'reduzir-series' informa a redução de currentQuantity para newQuantity; cancelar não chama onConfirm; processing desabilita botões. Interfaces: Consome: tipos (TASK-002), workout-utils (TASK-004), props do §3 do plan.md. Interfaces: Produz: props exatas consumidas por WorkoutEntriesList e páginas (TASK-014/016). Verificação: os 5 comandos npm test -- <arquivo> Expected: FAIL.",
+      "assignee": "minos",
+      "dependencies": ["TASK-004"],
+      "acceptanceCriteria": [
+        "Os 5 comandos npm test -- __tests__/components/milon/<componente>.test.tsx falham com módulo não encontrado (Expected: FAIL)",
+        "Os testes cobrem as mensagens exatas (quantidade, inteiro, carga negativa, unidade) e a regra de confirmação por preenchimento",
+        "Nenhum arquivo de produção foi alterado por esta task"
+      ],
+      "files": [
+        "__tests__/components/milon/WorkoutEntriesList.test.tsx",
+        "__tests__/components/milon/ExerciseEntryCard.test.tsx",
+        "__tests__/components/milon/SeriesCard.test.tsx",
+        "__tests__/components/milon/ExercisePickerModal.test.tsx",
+        "__tests__/components/milon/WorkoutConfirmModal.test.tsx"
+      ]
+    },
+    {
+      "id": "TASK-014",
+      "status": "pending",
+      "title": "GREEN: componentes do detalhe do treino + stories (drag & drop por Pointer Events)",
+      "description": "Hefesto cria components/milon/WorkoutEntriesList.tsx, ExerciseEntryCard.tsx, SeriesCard.tsx, ExercisePickerModal.tsx e WorkoutConfirmModal.tsx com as props do §3 do plan.md e seus .stories.tsx. Detalhes de implementação: arrastar e soltar implementado com Pointer Events nativas (onPointerDown no handle, onPointerMove/onPointerUp, reordenação otimista na lista e onReorder com orderedIds no soltar) - zero dependências novas; validações locais por workout-utils com mensagem visível sem fechar nada; prompt de unidade (kg/libra) dentro do ExerciseEntryCard quando loadUnit é null e carga numérica é digitada; exibição de carga com placeholder '—' para vazio, 0 exibido como 0 e secundária convertida menor e em cinza mais claro via formatarCargaComSecundaria; ExercisePickerModal filtra com matchesExerciseQuery/normalizeExerciseText de lib/milon/utils.ts; WorkoutConfirmModal com as duas variantes e textos do §3 do plan.md; readOnly (Programa inativo) desliga todas as interações nos cards; títulos com font-display. Interfaces: Consome: props da TASK-013, workout-utils (TASK-004), utils de exercício (TASK-002 vigente), AsyncState/Button. Interfaces: Produz: componentes consumidos por WorkoutEntriesList (que compõe ExerciseEntryCard/SeriesCard) e pelas páginas (TASK-016). Verificação: os 5 comandos npm test -- <arquivo> Expected: PASS; npx tsc --noEmit Expected: PASS; npm run build-storybook Expected: PASS.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-013"],
+      "acceptanceCriteria": [
+        "Os 5 testes de componente passam (Expected: PASS)",
+        "O arrastar e soltar usa Pointer Events e não adiciona dependência nova ao package.json",
+        "npx tsc --noEmit passa e npm run build-storybook completa sem erros",
+        "Cada um dos 5 componentes possui .stories.tsx ao lado",
+        "readOnly oculta handle, campos e ações em todos os cards"
+      ],
+      "files": [
+        "components/milon/WorkoutEntriesList.tsx",
+        "components/milon/WorkoutEntriesList.stories.tsx",
+        "components/milon/ExerciseEntryCard.tsx",
+        "components/milon/ExerciseEntryCard.stories.tsx",
+        "components/milon/SeriesCard.tsx",
+        "components/milon/SeriesCard.stories.tsx",
+        "components/milon/ExercisePickerModal.tsx",
+        "components/milon/ExercisePickerModal.stories.tsx",
+        "components/milon/WorkoutConfirmModal.tsx",
+        "components/milon/WorkoutConfirmModal.stories.tsx",
+        "__tests__/components/milon/WorkoutEntriesList.test.tsx",
+        "__tests__/components/milon/ExerciseEntryCard.test.tsx",
+        "__tests__/components/milon/SeriesCard.test.tsx",
+        "__tests__/components/milon/ExercisePickerModal.test.tsx",
+        "__tests__/components/milon/WorkoutConfirmModal.test.tsx"
+      ]
+    },
+    {
+      "id": "TASK-015",
+      "status": "pending",
+      "title": "RED: testes das páginas (detalhe do Programa com treinos + nova página do treino)",
+      "description": "Minos atualiza __tests__/app/milon/programs/[id]/page.test.tsx e cria __tests__/app/milon/programs/[id]/workouts/[workoutId]/page.test.tsx (factories de mock com defaults + clickConnectedButton, padrão das páginas do módulo; vi.mock de useProgramDetail, useProgramWorkouts e dos componentes/barrels conforme a página usar). Página do Programa: mantém cabeçalho (título/dono/status) e a asserção CA-P3-20 de ausência de 'treinos em breve'; renderiza WorkoutList com os treinos do mock; botão 'Adicionar treino' abre o WorkoutModal com sugestão 'Treino A' em Programa vazio; Programa inativo NÃO exibe o botão de adicionar e WorkoutList recebe readOnly; renomear abre o modal em modo renomear; excluir treino com exercícios exibe MSG_TREINO_COM_EXERCICIOS como banner e mantém a lista. Página do treino: loading com AsyncState; erro de carga com 'Tentar novamente'; treino não encontrado -> estado vazio de não encontrado; lista de entradas com séries; 'Adicionar exercício' abre o ExercisePickerModal; seleção bloqueada D14 mantém o modal aberto com MSG_EXERCICIO_JA_NO_PROGRAMA; remover exercício com séries abre WorkoutConfirmModal e sem séries remove direto; reduzir série preenchida abre a confirmação; Programa inativo esconde adicionar/editar/remover; nenhuma aba nova (MilonLayout inalterado). Interfaces: Consome: hooks (TASK-008/010), componentes (TASK-012/014). Interfaces: Produz: comportamento esperado das páginas (TASK-016). Verificação: npm test -- '__tests__/app/milon/programs/[id]/page.test.tsx' Expected: FAIL; npm test -- '__tests__/app/milon/programs/[id]/workouts/[workoutId]/page.test.tsx' Expected: FAIL (rota nova inexistente).",
+      "assignee": "minos",
+      "dependencies": ["TASK-008", "TASK-010", "TASK-012", "TASK-014"],
+      "acceptanceCriteria": [
+        "npm test -- '__tests__/app/milon/programs/[id]/page.test.tsx' falha (Expected: FAIL) com a página ainda sem lista de treinos",
+        "npm test -- '__tests__/app/milon/programs/[id]/workouts/[workoutId]/page.test.tsx' falha com módulo/rota não encontrada (Expected: FAIL)",
+        "A asserção CA-P3-20 (queryByText treinos em breve não presente) permanece no teste da página do Programa",
+        "Nenhum arquivo de produção foi alterado por esta task"
+      ],
+      "files": [
+        "__tests__/app/milon/programs/[id]/page.test.tsx",
+        "__tests__/app/milon/programs/[id]/workouts/[workoutId]/page.test.tsx"
+      ]
+    },
+    {
+      "id": "TASK-016",
+      "status": "pending",
+      "title": "GREEN: páginas - detalhe do Programa com lista de treinos + página do detalhe do treino",
+      "description": "Hefesto entrega as páginas RED. Modify app/milon/programs/[id]/page.tsx: mantém MilonLayout/AsyncState/cabeçalho via useProgramDetail e adiciona useProgramWorkouts(id), botão 'Adicionar treino' (oculto quando program.status === 'inativo'), WorkoutList (readOnly = inativo), WorkoutModal (criar com sugerirNomeTreino sobre os nomes atuais; renomear com otherNames sem o próprio), exclusão direta via onDelete -> remove com banner 'bloqueio' quando MSG_TREINO_COM_EXERCICIOS. Create app/milon/programs/[id]/workouts/[workoutId]/page.tsx: MilonLayout pageTitle 'Treino', AsyncState externo (carregando/erro carga com retry/não encontrado), cabeçalho com o nome do treino, botão 'Adicionar exercício' (oculto em Programa inativo), WorkoutEntriesList ligada ao useWorkoutDetail, modais ExercisePickerModal (seleção + 'Cadastrar novo' abrindo ExerciseModal sem alteração de contrato), ExerciseModal (edição da biblioteca) e WorkoutConfirmModal (remover exercício com séries / reduzir série preenchida), muscleOptions derivado de exercises com normalizeExerciseText, banner da página com retry apenas para origem 'carga'. Interfaces: Consome: useProgramWorkouts/useWorkoutDetail (TASK-008), usePrograms já sem opção (TASK-010), WorkoutList/WorkoutModal (TASK-012), WorkoutEntriesList/ExercisePickerModal/WorkoutConfirmModal/ExerciseModal (TASK-014 + reuso). Interfaces: Produz: fluxo navegável completo (Programa -> treino) para a suíte final. Verificação: os 2 comandos de teste de página Expected: PASS; npx tsc --noEmit Expected: PASS; npm run build-storybook Expected: PASS.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-015"],
+      "acceptanceCriteria": [
+        "npm test -- '__tests__/app/milon/programs/[id]/page.test.tsx' passa",
+        "npm test -- '__tests__/app/milon/programs/[id]/workouts/[workoutId]/page.test.tsx' passa",
+        "npx tsc --noEmit passa e npm run build-storybook completa sem erros",
+        "A página do Programa usa components/ui/AsyncState e não exibe ação de adicionar quando o status é inativo",
+        "A nova rota app/milon/programs/[id]/workouts/[workoutId]/page.tsx existe e é a única página nova",
+        "Nenhum arquivo de navegação (MilonLayout/abas) foi alterado"
+      ],
+      "files": [
+        "app/milon/programs/[id]/page.tsx",
+        "app/milon/programs/[id]/workouts/[workoutId]/page.tsx",
+        "__tests__/app/milon/programs/[id]/page.test.tsx",
+        "__tests__/app/milon/programs/[id]/workouts/[workoutId]/page.test.tsx"
+      ]
+    },
+    {
+      "id": "TASK-017",
+      "status": "pending",
+      "title": "Suite final Minos + coverage ≥80% + test-report.json + test-scenarios.md + regression + build-storybook",
+      "description": "Minos executa a suíte completa (contratos, unitários, hooks, componentes, páginas), coverage ≥80%, gera .agents/modules/milon/03-treinos-series/test-report.json (failed=0) e .agents/modules/milon/03-treinos-series/test-scenarios.md com cenários Dado/Quando/Então cobrindo todos os critérios de aceite da spec §5, INCLUINDO os cenários pós-ativação repassados da feature #2 (guarda liberada com conteúdo mínimo - registrados em .agents/modules/milon/backlog.md e .agents/modules/milon/02-programas/test-scenarios.md, Cenários 8, 9, 10 e o de ativação com flag simulada). Promove cenários de regressão para .agents/modules/milon/regression.md. Executa npm run build-storybook sem erros. Reexecuta suite + coverage e atualiza test-report.json antes de encerrar (gate de review do Argos: failed=0 e coverage≥80 no guardian). Interfaces: Consome: todas as tasks TASK-001..TASK-016 concluídas. Interfaces: Produz: test-report.json, test-scenarios.md e regression.md para a fase de review. Verificação: npm test Expected: PASS com coverage ≥80; npm run build-storybook Expected: PASS; guardian: node .agents/scripts/guardian.js .agents/modules/milon/03-treinos-series REVIEW Expected: OK.",
+      "assignee": "minos",
+      "dependencies": [
+        "TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006",
+        "TASK-007", "TASK-008", "TASK-009", "TASK-010", "TASK-011", "TASK-012",
+        "TASK-013", "TASK-014", "TASK-015", "TASK-016"
+      ],
+      "acceptanceCriteria": [
+        "npm test passa com failed=0 e coverage ≥80% (lines/functions/branches/statements)",
+        "test-report.json gerado em .agents/modules/milon/03-treinos-series/ com summary.failed=0 e summary.coverage ≥80",
+        "test-scenarios.md gerado em .agents/modules/milon/03-treinos-series/ com cenários Dado/Quando/Então dos critérios de aceite da spec §5 e dos cenários pós-ativação repassados da #2",
+        "Cenários de regressão promovidos para .agents/modules/milon/regression.md",
+        "npm run build-storybook passa sem erros",
+        "node .agents/scripts/guardian.js .agents/modules/milon/03-treinos-series REVIEW imprime guardian OK"
+      ],
+      "files": [
+        ".agents/modules/milon/03-treinos-series/test-report.json",
+        ".agents/modules/milon/03-treinos-series/test-scenarios.md",
+        ".agents/modules/milon/regression.md"
+      ]
+    }
+  ]
+}

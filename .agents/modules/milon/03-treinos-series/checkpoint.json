@@ -1,11 +1,23 @@
 {
-  "currentPhase": "SPEC_DRAFT",
-  "validTransitions": ["SPEC_APPROVED"],
+  "currentPhase": "TASKS_READY",
+  "validTransitions": ["CODING", "PLAN_READY"],
   "phaseHistory": [
     {
       "phase": "SPEC_DRAFT",
       "timestamp": "2026-10-01T14:41:00.000Z"
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-10-01T22:30:00.000Z"
+    },
+    {
+      "phase": "PLAN_READY",
+      "timestamp": "2026-10-01T22:45:00.000Z"
+    },
+    {
+      "phase": "TASKS_READY",
+      "timestamp": "2026-10-01T22:45:00.000Z"
     }
   ],
-  "lastUpdated": "2026-10-01T14:41:00.000Z"
+  "lastUpdated": "2026-10-01T22:45:00.000Z"
 }

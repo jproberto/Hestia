@@ -3,17 +3,105 @@
   "module": "milon",
   "slug": "03-treinos-series",
   "objective": "Feature 3: Treinos + séries planejadas — Dentro de um Programa, cada treino tem N exercícios em ordem; cada exercício tem N séries com reps alvo, carga alvo e descanso (segundos). Edição do planejado permitida antes e durante a execução.",
-  "currentPhase": "SPEC_DRAFT",
+  "currentPhase": "TASKS_READY",
   "history": [
     {
       "phase": "SPEC_DRAFT",
       "timestamp": "2026-10-01T14:41:00.000Z",
       "action": "Feature directory created, initializing state"
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-01T15:05:00.000Z",
+      "action": "Etapa 1 (Intenção) respondida pelo humano: montagem atual no papel/planilha/de cabeça; dor principal = esforço inicial de estruturar ficha nova do zero (A/B/C com exercícios, ordem, séries, cargas, descansos); manutenção é secundária; troca de ficha a cada 2-3 meses = arquivar e criar do zero (não editar por cima); 2 usuários (casal), cada um com seu Programa (ela A/B, ele A/B/C); na academia cada um abre o próprio treino do dia (justifica ordem da feature #4). Etapa 2 (Jornada) iniciada — enviada pergunta única sobre o fluxo de montagem com 3 alternativas de UX (assistente guiado / uma tela por treino / tudo em uma tela)."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-01T15:35:00.000Z",
+      "action": "Etapa 2 (Jornada) respondida pelo humano: OPÇÃO B escolhida — 'o detalhamento do programa lista os treinos e tem uma opção para adicionar treino; o detalhamento do treino lista os exercícios e tem opções para adicionar, editar e excluir'. Contexto adicional: montagem no celular em casa, cada um monta o seu, tempo no papel ~30-45 min por ficha completa. Etapa 3 (Regras) iniciada — primeira pergunta: estrutura das séries (individuais vs bloco vs híbrido) com 3 alternativas, por impacto direto em schema/UI e no tempo de montagem."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-01T15:50:00.000Z",
+      "action": "Etapa 3 (Regras), pergunta 1 respondida pelo humano: ALTERNATIVA C — séries individuais (cada uma com reps/carga/descanso próprios) + atalho 'aplicar a todas'. Pergunta 3.2 enviada: campos obrigatórios e validações ao montar séries — 3 alternativas (A: defaults em tudo com salvamento livre, recomendada; B: reps+carga obrigatórios com descanso default e bloqueio visível; C: só nome do exercício obrigatório com campos opcionais), com trade-offs de velocidade no celular vs confiabilidade dos dados para #5/#6/#8. Pontos abertos registrados: regra do atalho 'aplicar a todas', exclusões/cascata, limites de N, carga vazia vs 0."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-01T18:57:00.000Z",
+      "action": "Etapa 3 (Regras), pergunta 3.2 respondida pelo humano: OPÇÃO A com detalhes — campo 'quantidade de séries' gera um mini card por série contendo: repetições OU tempo (isometria), peso (kg ou libra; na exibição o valor secundário aparece menor e em cinza mais claro) e tempo de descanso; só o exercício é obrigatório, demais campos livres (cada campo tem natureza diferente). Hipótese humana registrada (ainda a confirmar): 'descanso pode valer para todas as séries do exercício'. Pergunta 3.3 enviada: alcance do atalho 'aplicar a todas' + onde vive o descanso — 3 alternativas (A recomendada: descanso compartilhado no exercício + cópia one-shot de reps/peso da série preenchida; B: tudo por série com cópia one-shot completa; C: descanso compartilhado + atalho re-executável que sobrescreve). Pontos abertos restantes: cascata ao alterar/excluir (quantidade, exercício, treino), limites de N, carga vazia vs 0 (impacto volume #8), unidade kg/libra (onde se define), ordem/reordenação de exercícios."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-01T19:20:00.000Z",
+      "action": "Etapa 3 (Regras), pergunta 3.3 respondida pelo humano: OPÇÃO C — descanso compartilhado no nível do exercício (um único campo que vale para todas as séries) + atalho 'aplicar a todas' re-executável que sobrescreve reps/peso/descanso quando acionado de novo. Pergunta 3.4 enviada: regra de perda de dados em cascata (reduzir quantidade de séries já preenchidas, excluir exercício, excluir treino) — 3 alternativas (A recomendada: confirmação apenas quando há dados preenchidos em risco; B: nunca confiar, descarte direto sem confirmação; C: confirmação em toda ação destrutiva mesmo sem dados). Pontos abertos restantes: limites de N (séries/exercícios/treinos), carga vazia vs 0 (impacto volume #8), unidade kg/libra (onde se define), ordem/reordenação de exercícios."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-01T19:35:00.000Z",
+      "action": "Etapa 3 (Regras), pergunta 3.4 respondida pelo humano: OPÇÃO A — confirmação destrutiva apenas quando há dados preenchidos em risco (reduzir quantidade de séries já preenchidas, excluir exercício com séries preenchidas, excluir treino com dados); ações sobre estrutura vazia (ex: reduzir quantidade 5→3 em série recém-criada sem preenchimento, excluir exercício vazio) seguem sem confirmação. Pergunta 3.5 enviada: semântica de campo vazio vs 0 na carga/peso — direto da regra 'só o exercício é obrigatório' da 3.2, e decide como as métricas de volume das features #8 (volume = Σ carga×reps), #9 (evolução) e #15 (1RM) leem o dado — 3 alternativas (A recomendada: vazio ≠ 0 — vazio = sem informação, exibido como traço, métricas ignoram a série e sinalizam total parcial, 0 é valor legítimo digitado; B: vazio normaliza para 0 no salvamento — cálculos sempre fecham, mas inventa dado e distorce volume/evolução; C: exibição vazia mas cálculo conta 0 — híbrido que mente no número final). Pontos abertos restantes: limites de N (séries/exercícios/treinos), unidade kg/libra (onde se define), ordem/reordenação de exercícios."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-01T19:50:00.000Z",
+      "action": "Etapa 3 (Regras), pergunta 3.5 respondida (confirmação via contexto acumulado da delegação): vazio ≠ 0 — campo vazio = sem informação (exibição com traço, métricas ignoram a série e sinalizam total parcial); 0 é valor legítimo digitado. Pergunta 3.6 respondida: OPÇÃO B — reordenação por drag & drop com handle/ícone indicando onde segurar. Observação importante do humano registrada como REGRA: não existe um 'modo de edição' do treino — exercícios e séries sempre podem ser adicionados, excluídos ou editados, sem precisar ativar modo nenhum (vale como princípio de UX para toda a feature)."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-01T20:10:00.000Z",
+      "action": "Etapa 3 (Regras), pergunta 3.7 enviada combinando os 2 últimos pontos abertos em uma única pergunta-fechada (resposta com uma letra, letras misturadas aceitas): limites de N (séries por exercício, exercícios por treino, treinos por programa) + onde se define a unidade primária de carga kg/libra (a exibição secundária menor e em cinza mais claro já veio da 3.2) — 3 alternativas (A recomendada: limite de sanidade solto tipo 1-99 + unidade global única com secundária convertida; B: teto generoso com aviso amigável — ex.: 20/30/12, números ajustáveis — + unidade escolhida uma vez no perfil de cada usuário; C: só sanidade mínima + unidade por ficha, com risco de misturar unidades na evolução #9/#15). Se respondida, Etapa 3 (Regras) fecha — próximo passo seria a Etapa 4 (YAGNI/fora de escopo)."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-01T20:30:00.000Z",
+      "action": "Etapa 3 (Regras), pergunta 3.7 respondida com RESPOSTA CUSTOMIZADA (fora das 3 alternativas): (a) LIMITES DE N — 'sem limite além do próprio limite dos dados': nenhuma regra de negócio nem aviso de teto em séries/exercícios/treinos; única restrição é a capacidade natural do tipo do campo (interpretação humana registrada — refutar se incorreta). (b) UNIDADE kg/libra — selecionada POR EXERCÍCIO (não global por perfil, não por ficha), mantendo a exibição da unidade secundária em menor destaque (regra da 3.2). NOVO PONTO ABERTO registrado: onde a unidade mora — atributo do exercício na biblioteca (#1, hoje ExerciseRow NÃO tem campo de unidade: lib/milon/types.ts) ou da entrada do exercício dentro do treino (mesmo Supino em 2 treinos poderia ter unidades diferentes); impacta schema e consistência das métricas #9/#15. Etapa 3 (Regras) encerrada — Etapa 4 (YAGNI/fora de escopo) iniciada com pergunta única e 3 alternativas de pacote de exclusões (A recomendada: v1 só o planejado; B: v1 + duplicar treino/exercício; C: v1 + reordenação de treinos no programa)."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-01T21:40:00.000Z",
+      "action": "RESPOSTA FINAL DO HUMANO encerra o discovery: 'a2, b1, c' — (a2) a unidade de carga nasce vazia e é escolhida na primeira vez que a pessoa digita o peso; (b1) a quantidade de séries é digitada na hora e é obrigatória, enquanto reps/peso/descanso nascem vazios; (c) o nome do treino é obrigatório com sugestão automática em letras ('Treino A', 'Treino B', 'Treino C' etc). Pontos residuais fechados com formalização registrada na seção 7 da spec (nenhum ponto aberto): (i) morada da unidade = atributo do exercício na biblioteca compartilhada, derivada da decisão 3.7b ('por exercício, não global, não por ficha'); alternativa 'por entrada no treino' registrada como descartada com trade-offs; (ii) pacote de exclusões da Etapa 4 = alternativa A (v1 só o planejado, YAGNI — duplicar/reordenar treinos fora); (iii) sugestão de nome = primeira letra livre A-Z (formalização; alternativa 'letra por posição' descartada). spec.md escrito em .agents/modules/milon/03-treinos-series/spec.md (D1-D13, sem blocos de código, sem TBD/TODO) — DISCOVERY FINALIZADO, aguardando approve-spec do humano."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-01T22:15:00.000Z",
+      "action": "Alterações solicitadas pelo humano incorporadas à spec.md: (1) unicidade de exercício no Programa (D14); (2) sugestão de nome além de Z (AA, AB...); (3) nome de treino único no Programa; (4) regime de exclusão alterado — Programa com treinos bloqueado, treino com exercícios bloqueado, exercício com séries excluível com confirmação (D6 reescrita); (5) subtítulo do treino derivado dos grupos musculares (D15). context.json.history e decisions atualizados."
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-10-01T22:30:00.000Z",
+      "action": "Humano aprovou a spec.md — transição para SPEC_APPROVED, delegando à Atena para planejamento (plan.md + tasks.json)"
+    },
+    {
+      "phase": "PLAN_READY",
+      "timestamp": "2026-10-01T22:45:00.000Z",
+      "action": "Atena entregou plan.md (arquitetura, componentes, contratos, data flow, 21 decisões técnicas, migração 0009 reservada) e tasks.json (17 tasks, DAG acíclico, 9 Minos / 8 Hefesto, criteria testáveis, substituições declaradas) — transição para PLAN_READY → TASKS_READY"
+    },
+    {
+      "phase": "TASKS_READY",
+      "timestamp": "2026-10-01T22:45:00.000Z",
+      "action": "Tasks.json validado (JSON válido, 17 tasks, DAG acíclico, criteria não vazios, 0 placeholders) — pronto para CODING"
     }
   ],
   "approvals": {
-    "spec": "pending",
+    "spec": "approved",
     "review": "pending"
   },
-  "decisions": []
+  "decisions": [
+    "D1 Jornada (Opção B): detalhe do programa lista treinos + adicionar; detalhe do treino lista exercícios + adicionar/editar/excluir; nenhuma aba nova no módulo",
+    "D2/D5 Séries individuais por exercício + atalho 'aplicar a todas' re-executável que sobrescreve (respostas 3.1 e 3.3 C)",
+    "D3 Quantidade de séries digitada na hora é obrigatória (inteiro ≥1); reps/tempo, carga e descanso nascem vazios; só nome do exercício é obrigatório (3.2 A + resposta final b1)",
+    "D4 Descanso compartilhado no nível da entrada do exercício no treino — um único campo que vale para todas as séries (3.3 C)",
+    "D6 Exclusões: Programa com treinos = bloqueado; Treino com exercícios = bloqueado; Exercício com séries = excluível com confirmação; estrutura vazia exclui direto (alterado pelo humano 2026-10-01)",
+    "D7 Vazio ≠ 0 — vazio = sem informação (traço; métricas ignoram a série e sinalizam total parcial); 0 é valor legítimo digitado (3.5 A)",
+    "D8 Reordenação de exercícios por drag & drop com handle visível (3.6 B)",
+    "D9 Sem limite de N além da capacidade natural do campo — nenhum teto/aviso (3.7a, resposta customizada)",
+    "D10 Unidade por exercício (não global, não por perfil, não por ficha): nasce vazia, escolhida na primeira vez que se digita o peso; secundária convertida menor e em cinza mais claro; mora no exercício da biblioteca compartilhada (3.7b + a2 + formalização do ponto aberto)",
+    "D11 Nome do treino obrigatório + único no Programa + sugestão automática 'Treino A/B/C...AA/AB...' com primeira posição livre, prefill editável (resposta final c + ajustes humano)",
+    "D12 Princípio de UX: não existe modo de edição — tudo sempre editável (observação do humano na 3.6)",
+    "D13 YAGNI/Etapa 4: pacote A — v1 só o planejado; duplicar treino/exercício e reordenar treinos ficam fora",
+    "D14 Unicidade de exercício no Programa: mesmo exercício no máximo 1x por Programa (pedido humano 2026-10-01)",
+    "D15 Subtítulo do treino: string derivada dos grupos musculares, sem repetição, ordem dos exercícios, 'Peito, Tríceps e Ombros', atualizado automaticamente (pedido humano 2026-10-01)",
+    "Discovery finalizado e spec aprovada em 2026-10-01 — delegando à Atena",
+    "P1 Plan: migração 0009 reservada; aggregate treinos+entradas+séries em IWorkoutRepository; soft delete em exercises (deleted_at); drag & drop nativo (Pointer Events); subtítulo derivado em memória; guardas frescas em usePrograms; sem nova dependência",
+    "P2 Tasks: 17 tasks (TASK-001 a TASK-017), ordem topológica TASK-001→TASK-017, ramificações paralelas 011/012 e 013/014 com 007-010, 9 Minos / 8 Hefesto, criteria com comandos exatos, substituições declaradas (proteção #3 → 0, hasWorkoutWithExercise → 0)"
+  ]
 }

@@ -1,6 +1,6 @@
 {
-  "currentPhase": "TASKS_READY",
-  "validTransitions": ["CODING", "PLAN_READY"],
+  "currentPhase": "CODING",
+  "validTransitions": ["TESTING", "TASKS_READY"],
   "phaseHistory": [
     {
       "phase": "SPEC_DRAFT",
@@ -17,7 +17,11 @@
     {
       "phase": "TASKS_READY",
       "timestamp": "2026-10-01T22:45:00.000Z"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-01T22:50:00.000Z"
     }
   ],
-  "lastUpdated": "2026-10-01T22:45:00.000Z"
+  "lastUpdated": "2026-10-01T22:50:00.000Z"
 }

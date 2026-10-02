@@ -14,7 +14,8 @@ export interface DeleteExerciseConfirmProps {
 /**
  * Confirmação de exclusão de exercício (Mílon #1).
  * Presentacional via props: informa nome e músculo do alvo antes de apagar.
- * Exclusão simples, sem proteção de histórico (proteção pertence à feature #3).
+ * Exclusão com soft delete (deleted_at): a proteção de histórico é o soft
+ * delete da biblioteca entregue na Mílon #3 — a linha nunca é removida.
  */
 export default function DeleteExerciseConfirm({
   open,

@@ -7,6 +7,7 @@ import type {
   Exercise,
   ExerciseRow,
   CreateExerciseInput,
+  LoadUnit,
   UpdateExerciseInput,
 } from "../types";
 
@@ -19,6 +20,8 @@ function toDomain(row: ExerciseRow): Exercise {
     name: row.name,
     muscle: row.muscle,
     videoLink: row.video_link,
+    loadUnit: (row.load_unit as LoadUnit | null) ?? null,
+    deletedAt: row.deleted_at,
     createdAt: row.created_at,
     created_by: row.created_by,
   };
@@ -32,18 +35,31 @@ async function assertNoDuplicate(
 ): Promise<void> {
   const { data, error } = await db
     .from<ExerciseRow>("exercises")
-    .select("id,name,muscle");
+    .select("id,name,muscle,deleted_at");
   if (error) throw error;
   const candidate = { name: name.trim(), muscle: muscle.trim() };
   const clash = (data || []).some(
     (row) =>
       row.id !== ignoreId &&
+      row.deleted_at == null &&
       isSameExercise(row, candidate),
   );
   if (clash) throw new Error(EXERCISE_DUPLICATE_MESSAGE);
 }
 
 export async function listExercises(db: IDatabaseClient): Promise<Exercise[]> {
+  const { data, error } = await db
+    .from<ExerciseRow>("exercises")
+    .select("*")
+    .is("deleted_at", null)
+    .order("muscle", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+  return (data || []).map(toDomain);
+}
+
+export async function listExercisesAll(db: IDatabaseClient): Promise<Exercise[]> {
   const { data, error } = await db
     .from<ExerciseRow>("exercises")
     .select("*")
@@ -104,13 +120,32 @@ export async function deleteExercise(
   db: IDatabaseClient,
   id: string,
 ): Promise<void> {
-  const { error } = await db.from<ExerciseRow>("exercises").delete().eq("id", id);
+  const { error } = await db
+    .from<ExerciseRow>("exercises")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function setExerciseLoadUnit(
+  db: IDatabaseClient,
+  id: string,
+  unit: LoadUnit,
+): Promise<void> {
+  const { error } = await db
+    .from<ExerciseRow>("exercises")
+    .update({ load_unit: unit })
+    .eq("id", id);
   if (error) throw error;
 }
 
 // Standalones p/ hooks (criam o próprio client, singleton por aba).
 export async function listExercisesStandalone(): Promise<Exercise[]> {
   return listExercises(createBrowserDatabaseClient());
+}
+
+export async function listExercisesAllStandalone(): Promise<Exercise[]> {
+  return listExercisesAll(createBrowserDatabaseClient());
 }
 
 export async function createExerciseStandalone(
@@ -129,4 +164,11 @@ export async function updateExerciseStandalone(
 
 export async function deleteExerciseStandalone(id: string): Promise<void> {
   return deleteExercise(createBrowserDatabaseClient(), id);
+}
+
+export async function setExerciseLoadUnitStandalone(
+  id: string,
+  unit: LoadUnit,
+): Promise<void> {
+  return setExerciseLoadUnit(createBrowserDatabaseClient(), id, unit);
 }

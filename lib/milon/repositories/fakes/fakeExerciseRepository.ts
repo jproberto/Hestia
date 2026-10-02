@@ -6,6 +6,7 @@ import type { IExerciseRepository } from "../interfaces";
 import type {
   Exercise,
   CreateExerciseInput,
+  LoadUnit,
   UpdateExerciseInput,
 } from "../../types";
 
@@ -23,16 +24,31 @@ export class FakeExerciseRepository implements IExerciseRepository {
   }
 
   async list(): Promise<Exercise[]> {
+    return [...this.exercises.values()]
+      .filter((item) => item.deletedAt == null)
+      .sort(compareExercisesByMuscleThenName);
+  }
+
+  async listAll(): Promise<Exercise[]> {
     return [...this.exercises.values()].sort(
       compareExercisesByMuscleThenName,
     );
+  }
+
+  async setExerciseLoadUnit(id: string, unit: LoadUnit): Promise<void> {
+    const current = this.exercises.get(id);
+    if (!current) throw new Error("Exercício não encontrado.");
+    this.exercises.set(id, { ...current, loadUnit: unit });
   }
 
   async create(input: CreateExerciseInput, email: string): Promise<Exercise> {
     const name = input.name.trim();
     const muscle = input.muscle.trim();
     for (const existing of this.exercises.values()) {
-      if (isSameExercise(existing, { name, muscle })) {
+      if (
+        existing.deletedAt == null &&
+        isSameExercise(existing, { name, muscle })
+      ) {
         throw new Error(EXERCISE_DUPLICATE_MESSAGE);
       }
     }
@@ -41,6 +57,8 @@ export class FakeExerciseRepository implements IExerciseRepository {
       name,
       muscle,
       videoLink: input.videoLink ?? null,
+      loadUnit: null,
+      deletedAt: null,
       createdAt: new Date().toISOString(),
       created_by: email,
     };
@@ -56,6 +74,7 @@ export class FakeExerciseRepository implements IExerciseRepository {
     for (const existing of this.exercises.values()) {
       if (
         existing.id !== id &&
+        existing.deletedAt == null &&
         isSameExercise(existing, { name, muscle })
       ) {
         throw new Error(EXERCISE_DUPLICATE_MESSAGE);
@@ -72,7 +91,12 @@ export class FakeExerciseRepository implements IExerciseRepository {
   }
 
   async remove(id: string): Promise<void> {
-    this.exercises.delete(id);
+    const current = this.exercises.get(id);
+    if (!current) return;
+    this.exercises.set(id, {
+      ...current,
+      deletedAt: new Date().toISOString(),
+    });
   }
 }
 

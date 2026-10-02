@@ -7,15 +7,21 @@ export interface ExerciseRow {
   name: string;
   muscle: string;
   video_link: string | null;
+  load_unit: string | null;
+  deleted_at: string | null;
   created_at: string;
   created_by: string;
 }
+
+export type LoadUnit = 'kg' | 'libra';
 
 export interface Exercise {
   id: string;
   name: string;
   muscle: string;
   videoLink: string | null;
+  loadUnit: LoadUnit | null;
+  deletedAt: string | null;
   createdAt: string;
   created_by: string;
 }
@@ -65,6 +71,80 @@ export interface CreateProgramInput {
 export interface UpdateProgramInput {
   title?: string;
   status?: ProgramStatus;
+}
+
+export interface WorkoutRow {
+  id: string;
+  program_id: string;
+  name: string;
+  created_at: string;
+  created_by: string;
+}
+
+export interface Workout {
+  id: string;
+  programId: string;
+  name: string;
+  createdAt: string;
+  created_by: string;
+}
+
+export interface WorkoutEntryRow {
+  id: string;
+  workout_id: string;
+  program_id: string;
+  exercise_id: string;
+  position: number;
+  rest_seconds: number | null;
+  created_at: string;
+  created_by: string;
+}
+
+export interface WorkoutEntry {
+  id: string;
+  workoutId: string;
+  programId: string;
+  exerciseId: string;
+  position: number;
+  restSeconds: number | null;
+  createdAt: string;
+  created_by: string;
+}
+
+export interface WorkoutSeriesRow {
+  id: string;
+  entry_id: string;
+  position: number;
+  reps: number | null;
+  duration_seconds: number | null;
+  load: number | null;
+  created_at: string;
+  created_by: string;
+}
+
+export interface WorkoutSeries {
+  id: string;
+  entryId: string;
+  position: number;
+  reps: number | null;
+  durationSeconds: number | null;
+  load: number | null;
+  createdAt: string;
+  created_by: string;
+}
+
+export interface WorkoutEntryView {
+  entry: WorkoutEntry;
+  exercise: Exercise;
+  series: WorkoutSeries[];
+}
+
+export interface CreateWorkoutInput {
+  name: string;
+}
+
+export interface UpdateWorkoutInput {
+  name: string;
 }
 
 // ----------------------------------------------------------------------------

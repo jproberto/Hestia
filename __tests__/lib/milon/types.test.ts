@@ -6,6 +6,7 @@ import type {
   Exercise,
   CreateExerciseInput,
   UpdateExerciseInput,
+  LoadUnit,
 } from "@/lib/milon/types";
 
 function loadMigrationSql(): string {
@@ -91,6 +92,8 @@ describe("Milon TASK-001 — types da biblioteca de exercícios", () => {
       name: "Supino reto",
       muscle: "peito",
       video_link: null,
+      load_unit: null,
+      deleted_at: null,
       created_at: "2026-09-12T00:00:00.000Z",
       created_by: "a@example.com",
     };
@@ -99,17 +102,72 @@ describe("Milon TASK-001 — types da biblioteca de exercícios", () => {
     expect(withLink.video_link).toContain("https://");
   });
 
+  it("ExerciseRow expõe load_unit e deleted_at anuláveis (contrato da #3)", () => {
+    const ativo: ExerciseRow = {
+      id: "00000000-0000-4000-8000-000000000001",
+      name: "Supino reto",
+      muscle: "peito",
+      video_link: null,
+      load_unit: "kg",
+      deleted_at: null,
+      created_at: "2026-09-12T00:00:00.000Z",
+      created_by: "a@example.com",
+    };
+    // Ativo: sem data de exclusão. Soft delete preenche deleted_at sem remover a linha.
+    expect(ativo.deleted_at).toBeNull();
+    expect(ativo.load_unit).toBe("kg");
+
+    const excluido: ExerciseRow = {
+      ...ativo,
+      load_unit: null,
+      deleted_at: "2026-10-01T12:00:00.000Z",
+    };
+    expect(excluido.deleted_at).toBe("2026-10-01T12:00:00.000Z");
+    expect(excluido.load_unit).toBeNull();
+    // Unidade nasce vazia: é escolhida só na primeira digitação de peso (D10).
+    const recemCriado: ExerciseRow = { ...ativo, load_unit: null };
+    expect(recemCriado.load_unit).toBeNull();
+  });
+
   it("Exercise expõe os mesmos dados com link e data em camelCase", () => {
     const exercise: Exercise = {
       id: "00000000-0000-4000-8000-000000000001",
       name: "Supino reto",
       muscle: "peito",
       videoLink: null,
+      loadUnit: null,
+      deletedAt: null,
       createdAt: "2026-09-12T00:00:00.000Z",
       created_by: "a@example.com",
     };
     expect(exercise.videoLink).toBeNull();
     expect(exercise.createdAt).toContain("2026");
+  });
+
+  it("Exercise carrega loadUnit e deletedAt obrigatórios no domínio", () => {
+    const ativo: Exercise = {
+      id: "00000000-0000-4000-8000-000000000001",
+      name: "Supino reto",
+      muscle: "peito",
+      videoLink: null,
+      loadUnit: "libra",
+      deletedAt: null,
+      createdAt: "2026-09-12T00:00:00.000Z",
+      created_by: "a@example.com",
+    };
+    expect(ativo.loadUnit).toBe("libra");
+    expect(ativo.deletedAt).toBeNull();
+
+    const excluido: Exercise = { ...ativo, loadUnit: null, deletedAt: "2026-10-01T12:00:00.000Z" };
+    expect(excluido.loadUnit).toBeNull();
+    expect(excluido.deletedAt).toBe("2026-10-01T12:00:00.000Z");
+  });
+
+  it("LoadUnit aceita apenas kg e libra (unidade por exercício, D10)", () => {
+    const unidades: LoadUnit[] = ["kg", "libra"];
+    expect(unidades).toEqual(["kg", "libra"]);
+    const semUnidade: LoadUnit | null = null;
+    expect(semUnidade).toBeNull();
   });
 
   it("CreateExerciseInput exige nome+músculo com link opcional", () => {

@@ -12,6 +12,8 @@ function makeExercise(overrides: Partial<Exercise> = {}): Exercise {
     name: "Supino reto",
     muscle: "Peito",
     videoLink: "https://video.exemplo/supino",
+    loadUnit: null,
+    deletedAt: null,
     createdAt: "2026-09-12T00:00:00Z",
     created_by: "a@hestia.com",
     ...overrides,
@@ -101,6 +103,35 @@ describe("ExerciseModal", () => {
       "salvar",
     );
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
+  it("salvar não envia loadUnit/deletedAt (unidade e exclusão ficam fora do form)", async () => {
+    const onSave = vi.fn(
+      async (_fields: ExerciseModalFields, _action: "salvar" | "salvar-e-outro") => {},
+    );
+    const onClose = vi.fn();
+    render(
+      <ExerciseModal
+        {...defaultProps({
+          editingExercise: makeExercise({ loadUnit: "kg", deletedAt: null }),
+          onSave,
+          onClose,
+        })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^salvar$/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+
+    const payload = onSave.mock.calls[0][0];
+    // A edição da biblioteca não ressuscita exercício excluído nem redefine a unidade.
+    expect(payload).not.toHaveProperty("loadUnit");
+    expect(payload).not.toHaveProperty("deletedAt");
+    expect(payload).toEqual({
+      name: "Supino reto",
+      muscle: "Peito",
+      videoLink: "https://video.exemplo/supino",
+    });
   });
 
   it("Salvar-e-outro mantém aberto com músculo mantido, nome e link limpos e foco no primeiro campo", async () => {

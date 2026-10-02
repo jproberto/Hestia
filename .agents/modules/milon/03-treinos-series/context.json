@@ -104,6 +104,21 @@
       "phase": "CODING",
       "timestamp": "2026-10-01T23:55:00.000Z",
       "action": "TASK-004 CONCLUÍDA — Hefesto entregou GREEN: lib/milon/workout-utils.ts (9 constantes de mensagem, 14 funções puras). Verificação: npm test -- __tests__/lib/milon/workout-utils.test.ts → 80/80 PASS; tsc limpo; lint 0 errors; suíte completa 882/882 PASS. Próximo: TASK-005 (Minos RED repositório de treinos)"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T00:10:00.000Z",
+      "action": "TASK-005 CONCLUÍDA — Minos entregou RED: __tests__/lib/milon/repositories/contract-workouts.test.ts (fakes-only, 17 operações) + __tests__/lib/milon/db/workouts.test.ts (stub IDatabaseClient). Verificação: ambos falham com 'Failed to resolve import' (módulos inexistentes); suíte completa 882/882 PASS + 2 failed (RED); nenhum arquivo de produção alterado. Próximo: TASK-006 (Hefesto GREEN repositório de treinos)"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T00:30:00.000Z",
+      "action": "TASK-006 BLOQUEADA — Hefesto entregou produção completa (workouts.ts, fakeWorkoutRepository.ts, interfaces.ts, db/workouts.ts, index.ts) mas 2 testes da TASK-005 têm bugs: (1) stubUpdateDb não registra recorded.table no from() → falha em reorderEntries; (2) teste re-executável de applySeriesToAll tem expectativa inconsistente com a regra de sobrescrita. Produção pronta (58/60 GREEN, tsc limpo, regressão exercises verde). Próximo: Minos corrige os 2 testes da TASK-005"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T00:45:00.000Z",
+      "action": "TASK-005 CORRIGIDA — Minos corrigiu 2 bugs nos testes: (1) stubUpdateDb agora registra recorded.table no from() (igual ao stubListDb); (2) teste applySeriesToAll re-executável corrigido para expectativa consistente [[10,40],[10,40]] após mutação sequencial. Verificação: suíte completa 942/942 PASS, tsc limpo, lint 0 errors. Próximo: TASK-006 GREEN completo"
     }
   ],
   "approvals": {
@@ -131,6 +146,9 @@
     "TASK-001: RED testes Exercise (loadUnit/deletedAt + soft delete) — 7 arquivos, 12 falhas runtime + 58 erros TS, zero produção alterada",
     "TASK-002: GREEN migração 0009 + tipos + soft delete — 802/802 testes, tsc limpo, lint 0 errors, substituição 'proteção #3' → 0 confirmada",
     "TASK-003: RED testes workout-utils — 116 testes, módulo inexistente, tsc TS2307, zero produção alterada",
-    "TASK-004: GREEN workout-utils — 80/80 testes, tsc limpo, lint 0 errors, suíte 882/882 PASS"
+    "TASK-004: GREEN workout-utils — 80/80 testes, tsc limpo, lint 0 errors, suíte 882/882 PASS",
+    "TASK-005: RED testes repositório treinos — 2 arquivos (contract-workouts fakes-only + db/workouts stub), módulos inexistentes, suíte 882/882 PASS + 2 failed, zero produção alterada",
+    "TASK-005 FIX: 2 bugs corrigidos nos testes (stubUpdateDb recorded.table + applySeriesToAll expectativa consistente) — suíte 942/942 PASS",
+    "TASK-006: GREEN repositório treinos — workouts.ts, fakeWorkoutRepository.ts, interfaces.ts, db/workouts.ts, index.ts — 942/942 testes PASS, tsc limpo, lint 0 errors, regressão exercises verde"
   ]
 }

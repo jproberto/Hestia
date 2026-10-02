@@ -139,6 +139,21 @@
       "phase": "CODING",
       "timestamp": "2026-10-02T01:45:00.000Z",
       "action": "TASK-007 CORRIGIDA — Minos corrigiu setup do teste useProgramWorkouts (mock queue FIFO): removido prepararListas que pré-enfileirava mockResolvedValueOnce; substituído por mockRejectedValueOnce(falha).mockResolvedValue([w1]) + mocks explícitos das demais cargas (listEntriesByProgramStandalone, listExercisesAllStandalone). Verificação: suíte completa 982/982 PASS, lint 0 errors. Próximo: TASK-008 GREEN completo"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T02:00:00.000Z",
+      "action": "TASK-008 CONCLUÍDA — Hefesto entregou GREEN completo: useProgramWorkouts.ts, useWorkoutDetail.ts, index.ts. Verificação: suíte completa 982/982 PASS, tsc limpo, lint 0 errors. Commit 069149e (TASK-007 fix + TASK-008). Próximo: TASK-009 (Minos RED usePrograms sem opção hasWorkoutWithExercise)"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T02:15:00.000Z",
+      "action": "TASK-009 CONCLUÍDA — Minos reescreveu __tests__/lib/milon/hooks/usePrograms.test.ts para o contrato novo (sem opção hasWorkoutWithExercise). Verificação: npm test -- __tests__/lib/milon/hooks/usePrograms.test.ts → 20 failed/32 passed (Expected: FAIL); suíte completa 967/987 PASS + 20 failed; nenhum arquivo de produção alterado. Próximo: TASK-010 (Hefesto GREEN usePrograms sem opção)"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T02:20:00.000Z",
+      "action": "TASK-010 CONCLUÍDA — Hefesto entregou GREEN: lib/milon/hooks/usePrograms.ts sem UseProgramsOptions, guardas frescas via barrel db/workouts. Verificação: usePrograms.test.ts 52/52 PASS, suíte 987/987 PASS, buscas hasWorkoutWithExercise?: e UseProgramsOptions = 0, tsc limpo, page.tsx sem args. Próximo: commit TASK-009+TASK-010 via Caronte"
     }
   ],
   "approvals": {
@@ -173,6 +188,9 @@
     "TASK-006 COMMIT: commit 90709c5 (TASK-005 fix + TASK-006) — 10 arquivos, 2169 insertions, 4 deletions",
     "TASK-007: RED testes hooks useProgramWorkouts/useWorkoutDetail — 2 arquivos (16+24 testes), módulos inexistentes, suíte 942/942 PASS + 2 failed, zero produção alterada",
     "TASK-007 FIX: setup do teste useProgramWorkouts corrigido (mock queue FIFO) — suíte 982/982 PASS",
-    "TASK-008 BLOQUEADA — Hefesto entregou produção completa (useProgramWorkouts.ts, useWorkoutDetail.ts, index.ts) mas 1 teste da TASK-007 tem bug de setup: mock queue FIFO do vitest consome o resolve antes do reject no teste 'erro de carga → retry recarrega'. Produção pronta (981/982 PASS, tsc limpo, lint 0 errors). Próximo: Minos corrige o setup do teste useProgramWorkouts (mock queue FIFO)"
+    "TASK-008: GREEN hooks useProgramWorkouts/useWorkoutDetail — useProgramWorkouts.ts, useWorkoutDetail.ts, index.ts — 982/982 testes PASS, tsc limpo, lint 0 errors",
+    "TASK-008 COMMIT: commit 069149e (TASK-007 fix + TASK-008) — 8 arquivos, 2347 insertions, 4 deletions",
+    "TASK-009: RED testes usePrograms sem opção hasWorkoutWithExercise — __tests__/lib/milon/hooks/usePrograms.test.ts reescrito, 20 failed/32 passed, suíte 967/987 PASS + 20 failed, zero produção alterada",
+    "TASK-010: GREEN usePrograms sem opção — guardas frescas hasWorkouts/hasWorkoutWithExercise, buscas substituição = 0, 52/52 + 987/987 PASS"
   ]
 }

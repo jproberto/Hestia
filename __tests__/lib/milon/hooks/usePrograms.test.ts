@@ -1,41 +1,52 @@
 /**
- * Contrato RED — Mílon #2 (TASK-006): `lib/milon/hooks/usePrograms.ts`.
+ * Contrato RED — Mílon #3 (TASK-009): `lib/milon/hooks/usePrograms.ts`.
  *
- * Fonte da verdade: `.agents/modules/milon/02-programas/spec.md` (§3 Regras de
- * Negócio + §5 Critérios de Aceite) + `plan.md` §3 (contrato textual do hook) +
- * `tasks.json` TASK-006 (acceptanceCriteria — fonte da cobertura dos 7 pontos).
+ * Fonte da verdade: `.agents/modules/milon/03-treinos-series/spec.md`
+ * (§3 "Guarda de ativação (integração #2→#3)" + D6 "exclusão de Programa com
+ * treinos") + `plan.md` §2 (guardas frescos) e §3 (contrato do hook
+ * `usePrograms` — Modify) + `tasks.json` TASK-009 (acceptanceCriteria) e
+ * TASK-010 (consumo do barrel `db/workouts`).
  *
- * Escrito ANTES da implementação (outside-in): falha porque
- * `@/lib/milon/hooks/usePrograms` ainda não existe. Hefesto fará GREEN apenas
- * com o contrato descrito no plano — sem inventar APIs.
+ * CONTRATO NOVO — guardas frescos, hook SEM argumentos: a chamada é sempre
+ * `usePrograms()`. `runActivation` consulta
+ * `hasWorkoutWithExercise(program.id)` do barrel `@/lib/milon/db/workouts` NO
+ * MOMENTO da ativação e `remove` consulta `hasWorkouts(program.id)` NO MOMENTO
+ * da exclusão (plan.md §2: "consultas frescas executadas no momento da ação").
  *
- * Padrão espelhado de `__tests__/lib/milon/hooks/useExercises.test.ts`:
- * promise-chain + flag cancelled no hook, mock do barrel `db/*`, `waitFor`
- * para o carregamento e `act` para as operações.
+ * STATUS: RED esperado (TASK-010/Hefesto torna verde, sem mexer neste arquivo):
+ * o hook atual NÃO consulta o barrel `db/workouts`, então os casos de liberação,
+ * de falha da consulta e de exclusão bloqueada falham pelo motivo exato exigido
+ * pelo acceptanceCriteria 1 (comportamento ausente), nunca por sintaxe.
+ *
+ * Padrão espelhado de `__tests__/lib/milon/hooks/useProgramWorkouts.test.ts` e
+ * `useExercises.test.ts`: `vi.mock` dos barrels `db/*` cobrindo TODOS os
+ * exports, promise-chain + flag `cancelled` no hook, `waitFor` para o
+ * carregamento e `executar` (act tolerante a relançamento) para as operações.
  *
  * CONVENÇÕES ESCOLHIDAS POR MINOS (não fixadas literalmente pela spec —
  * reportadas como divergências a Zeus; ajustar aqui se o contrato for outro):
  * 1. Estado espelha `useExercises`: `programs`, `filteredPrograms`,
  *    `ownerFilter`/`setOwnerFilter`, `statusFilters`/`toggleStatusFilter`;
- *    mensagens usam `errorMsg` (literal do acceptanceCriteria da TASK-006,
- *    também usado no módulo Pluto).
- * 2. `ownerFilter: string` — "" = família inteira (spec §3: "limpar o filtro
+ *    mensagens usam `errorMsg` + `errorOrigin` (canal de origem da #2/Patch v4).
+ * 2. `ownerFilter: string` — "" = família inteira (#2 spec §3: "limpar o filtro
  *    de dono volta a ver a família inteira"); padrão ao montar = `getUserEmail()`
  *    do client (mock global em `__tests__/setup.ts` → "teste@hestia.com").
- * 3. `hasWorkoutWithExercise` entra como opção do hook
- *    (`usePrograms({ hasWorkoutWithExercise })`, default false): o plan.md diz
- *    "flag passada pelo hook" e a página (TASK-010) não a recebe.
- * 4. `activate/reactivate/remove` recebem o `Program` completo (precisam de
+ * 3. `activate/reactivate/remove` recebem o `Program` completo (precisam de
  *    status/dono para a guarda, para a regra "só rascunho" e para o efeito
  *    colateral) e são as operações EXECUTORAS — a confirmação as chama.
- * 5. Confirmação: estado `confirmAction` (literal do critério) com
+ * 4. Confirmação: estado `confirmAction` (literal do critério) com
  *    `{ action, program }` + `requestConfirm` / `cancelConfirm` / `confirm`
  *    (nomes das funções não são fixados pela spec; o estado é).
- * 6. Critério 4 exige o efeito colateral "via `aplicarEfeitoColateralAtivacao`"
- *    — o teste espya a util (implementação real preservada via importOriginal)
- *    além de observar a lista resultante.
- * 7. Mensagem de bloqueio de `remove` não é fixada pela spec: exige-se apenas
- *    `errorMsg` não nulo + repository não chamado + lista intacta.
+ * 5. Critério 4 da #2 exige o efeito colateral "via
+ *    `aplicarEfeitoColateralAtivacao`" — o teste espya a util (implementação
+ *    real preservada via importOriginal) além de observar a lista resultante.
+ * 6. Mensagem de bloqueio de `remove` por status não é fixada pela spec: exige-
+ *    se apenas `errorMsg` não nulo + repository não chamado + lista intacta.
+ * 7. Guardas: os testes configuram as DUAS formas exportadas pelo barrel
+ *    (`hasWorkoutWithExercise(db, programId)` e a `...Standalone(programId)`,
+ *    idem `hasWorkouts`) porque a nomenclatura consumida pelo hook é a da
+ *    TASK-010 (exports entregues na TASK-006); as asserções aceitam qualquer
+ *    uma das formas — o critério é a consulta fresca no momento da ação.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
@@ -47,9 +58,16 @@ import {
   updateProgramStandalone,
   deleteProgramStandalone,
 } from "@/lib/milon/db/programs";
+import {
+  hasWorkouts,
+  hasWorkoutsStandalone,
+  hasWorkoutWithExercise,
+  hasWorkoutWithExerciseStandalone,
+} from "@/lib/milon/db/workouts";
 import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
 import type { IDatabaseClient } from "@/lib/shared/database";
 import { aplicarEfeitoColateralAtivacao } from "@/lib/milon/program-utils";
+import { MSG_PROGRAMA_COM_TREINOS } from "@/lib/milon/workout-utils";
 import type { Program } from "@/lib/milon/types";
 
 // Barrel `db/programs` mockado no padrão dos testes de hook do projeto.
@@ -61,6 +79,48 @@ vi.mock("@/lib/milon/db/programs", () => ({
   createProgramStandalone: vi.fn(),
   updateProgramStandalone: vi.fn(),
   deleteProgramStandalone: vi.fn(),
+}));
+
+// Barrel `db/workouts` mockado no padrão de `useProgramWorkouts.test.ts`: o
+// factory cobre TODOS os exports (forma com `db` + standalones), porque a
+// nomenclatura exata consumida por `usePrograms` é a da TASK-010 — os dois
+// nomes são configurados e as asserções aceitam qualquer uma das formas.
+// Fonte: `lib/milon/db/workouts.ts` (re-export de `repositories/workouts.ts`).
+vi.mock("@/lib/milon/db/workouts", () => ({
+  listWorkoutsByProgram: vi.fn(),
+  findWorkoutById: vi.fn(),
+  createWorkout: vi.fn(),
+  updateWorkoutName: vi.fn(),
+  deleteWorkout: vi.fn(),
+  hasWorkouts: vi.fn(),
+  hasWorkoutWithExercise: vi.fn(),
+  listEntriesByWorkout: vi.fn(),
+  listEntriesByProgram: vi.fn(),
+  addEntry: vi.fn(),
+  removeEntry: vi.fn(),
+  reorderEntries: vi.fn(),
+  setEntryRestSeconds: vi.fn(),
+  listSeriesByEntry: vi.fn(),
+  setSeriesQuantity: vi.fn(),
+  updateSeriesFields: vi.fn(),
+  applySeriesToAll: vi.fn(),
+  listWorkoutsByProgramStandalone: vi.fn(),
+  findWorkoutByIdStandalone: vi.fn(),
+  createWorkoutStandalone: vi.fn(),
+  updateWorkoutNameStandalone: vi.fn(),
+  deleteWorkoutStandalone: vi.fn(),
+  hasWorkoutsStandalone: vi.fn(),
+  hasWorkoutWithExerciseStandalone: vi.fn(),
+  listEntriesByWorkoutStandalone: vi.fn(),
+  listEntriesByProgramStandalone: vi.fn(),
+  addEntryStandalone: vi.fn(),
+  removeEntryStandalone: vi.fn(),
+  reorderEntriesStandalone: vi.fn(),
+  setEntryRestSecondsStandalone: vi.fn(),
+  listSeriesByEntryStandalone: vi.fn(),
+  setSeriesQuantityStandalone: vi.fn(),
+  updateSeriesFieldsStandalone: vi.fn(),
+  applySeriesToAllStandalone: vi.fn(),
 }));
 
 // Espia o efeito colateral exigido pelo acceptanceCriteria 4 mantendo a
@@ -132,6 +192,123 @@ async function executar(operacao: () => unknown): Promise<void> {
 }
 
 /**
+ * Igual a `executar`, mas DEVOLVE o erro relançado — usado nos casos em que o
+ * contrato exige relançamento (plan.md §3: falha da consulta da guarda de
+ * ativação e bloqueio de exclusão com `MSG_PROGRAMA_COM_TREINOS`).
+ */
+async function executarECapturar(operacao: () => unknown): Promise<unknown> {
+  let thrown: unknown;
+  await act(async () => {
+    try {
+      await operacao();
+    } catch (err: unknown) {
+      thrown = err;
+    }
+  });
+  return thrown;
+}
+
+// ---------------------------------------------------------------------------
+// Guardas frescos do barrel `db/workouts` (TASK-009 → TASK-010)
+// plan.md §3: `runActivation` consulta `hasWorkoutWithExercise(program.id)` e
+// `remove` consulta `hasWorkouts(program.id)` NO MOMENTO DA AÇÃO. O barrel
+// expõe a forma com `db` (repositório) e a standalone (`...Standalone(id)`):
+// os dois nomes são configurados juntos e as leituras aceitam qualquer forma,
+// porque a nomenclatura consumida pelo hook é a da TASK-010.
+// ---------------------------------------------------------------------------
+const guardaComDb = vi.mocked(hasWorkoutWithExercise);
+const guardaStandalone = vi.mocked(hasWorkoutWithExerciseStandalone);
+const treinosComDb = vi.mocked(hasWorkouts);
+const treinosStandalone = vi.mocked(hasWorkoutsStandalone);
+
+function quandoGuardaDeAtivacao(valor: boolean): void {
+  guardaComDb.mockResolvedValue(valor);
+  guardaStandalone.mockResolvedValue(valor);
+}
+
+function quandoFalhaGuardaDeAtivacao(erro: Error): void {
+  guardaComDb.mockRejectedValue(erro);
+  guardaStandalone.mockRejectedValue(erro);
+}
+
+function quandoHaTreinos(valor: boolean): void {
+  treinosComDb.mockResolvedValue(valor);
+  treinosStandalone.mockResolvedValue(valor);
+}
+
+function quandoFalhaConsultaTreinos(erro: Error): void {
+  treinosComDb.mockRejectedValue(erro);
+  treinosStandalone.mockRejectedValue(erro);
+}
+
+/** Zera calls + implementações SÓ dos 4 mocks de guarda. */
+function resetarGuardas(): void {
+  guardaComDb.mockReset();
+  guardaStandalone.mockReset();
+  treinosComDb.mockReset();
+  treinosStandalone.mockReset();
+}
+
+/** A guarda de ativação foi consultada (em qualquer das formas) para o id? */
+function guardaConsultadaPara(programId: string): boolean {
+  if (guardaStandalone.mock.calls.some(([id]) => id === programId)) return true;
+  return guardaComDb.mock.calls.some((args) =>
+    (args as unknown[]).includes(programId),
+  );
+}
+
+/** `hasWorkouts` foi consultado (em qualquer das formas) para o id? */
+function treinosConsultadosPara(programId: string): boolean {
+  if (treinosStandalone.mock.calls.some(([id]) => id === programId)) return true;
+  return treinosComDb.mock.calls.some((args) =>
+    (args as unknown[]).includes(programId),
+  );
+}
+
+function expectGuardaConsultada(programId: string): void {
+  expect(
+    guardaConsultadaPara(programId),
+    `a guarda de ativação deveria ser consultada fresca para o programa ${programId}`,
+  ).toBe(true);
+}
+
+function expectGuardaNaoConsultada(): void {
+  expect(guardaStandalone).not.toHaveBeenCalled();
+  expect(guardaComDb).not.toHaveBeenCalled();
+}
+
+function expectTreinosConsultados(programId: string): void {
+  expect(
+    treinosConsultadosPara(programId),
+    `hasWorkouts deveria ser consultado fresco para o programa ${programId}`,
+  ).toBe(true);
+}
+
+function expectTreinosNaoConsultados(): void {
+  expect(treinosStandalone).not.toHaveBeenCalled();
+  expect(treinosComDb).not.toHaveBeenCalled();
+}
+
+/**
+ * Zera calls/implementações SÓ dos mocks deste arquivo (o client global de
+ * setup.ts é preservado — `getUserEmail` continua respondendo; o spy do
+ * `program-utils` perde só as chamadas) e instala o PADRÃO dos guardas frescos
+ * = "sem conteúdo" — espelha a #2, em que a ativação nascia bloqueada e a
+ * exclusão de rascunho era liberada. Cada caso sobrescreve quando precisar do
+ * outro valor.
+ */
+function prepararMocks(): void {
+  vi.clearAllMocks();
+  vi.mocked(listProgramsStandalone).mockReset();
+  vi.mocked(createProgramStandalone).mockReset();
+  vi.mocked(updateProgramStandalone).mockReset();
+  vi.mocked(deleteProgramStandalone).mockReset();
+  resetarGuardas();
+  quandoGuardaDeAtivacao(false);
+  quandoHaTreinos(false);
+}
+
+/**
  * `id:status` da lista COMPLETA (`programs`, não `filteredPrograms`).
  * §4 ("preserva o ativo de outro dono") é propriedade da lista da família:
  * ler a lista filtrada esconderia `p-outro` porque o `ownerFilter` padrão é o
@@ -143,15 +320,9 @@ function statusesDaLista(result: { current: { programs: Program[] } }): string[]
 
 // ---------------------------------------------------------------------------
 
-describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
+describe("Mílon #3 — usePrograms com guardas frescos (contrato RED, TASK-009)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    // Zera queues/implementações SÓ dos mocks deste teste (o client global de
-    // setup.ts é preservado — getUserEmail continua respondendo).
-    vi.mocked(listProgramsStandalone).mockReset();
-    vi.mocked(createProgramStandalone).mockReset();
-    vi.mocked(updateProgramStandalone).mockReset();
-    vi.mocked(deleteProgramStandalone).mockReset();
+    prepararMocks();
   });
 
   // -------------------------------------------------------------------------
@@ -315,34 +486,43 @@ describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 3. Guarda de ativação (feature 2: hasWorkoutWithExercise = false)
+  // 3. Guarda de ativação — consulta fresca = false (bloqueio)
   // -------------------------------------------------------------------------
-  describe("3. Guarda de ativação bloqueada (feature 2)", () => {
-    it("activate bloqueia com a mensagem exata e não chama o repository", async () => {
+  describe("3. Guarda de ativação: consulta fresca = false bloqueia", () => {
+    it("activate consulta a guarda no momento da ação, bloqueia com a mensagem exata e não chama o repository", async () => {
       const rascunho = programa({ id: "p-r", status: "rascunho" });
       mockList([rascunho]);
+      quandoGuardaDeAtivacao(false);
 
       const { result } = renderHook(() => usePrograms());
       await waitFor(() => expect(result.current.loading).toBe(false));
+      // Frescor (plan.md §2): a montagem não consulta — o valor vem da ação.
+      expectGuardaNaoConsultada();
 
       await executar(() => result.current.activate(rascunho));
 
+      expectGuardaConsultada("p-r");
       expect(result.current.errorMsg).toBe(GUARDA);
+      expect(result.current.errorOrigin).toBe("bloqueio");
       expect(updateProgramStandalone).not.toHaveBeenCalled();
       expect(result.current.programs[0].status).toBe("rascunho");
       expect(listProgramsStandalone).toHaveBeenCalledTimes(1);
     });
 
-    it("reactivate bloqueia com a mensagem exata e não chama o repository", async () => {
+    it("reactivate consulta a guarda no momento da ação, bloqueia com a mensagem exata e não chama o repository", async () => {
       const inativo = programa({ id: "p-i", status: "inativo" });
       mockList([inativo]);
+      quandoGuardaDeAtivacao(false);
 
       const { result } = renderHook(() => usePrograms());
       await waitFor(() => expect(result.current.loading).toBe(false));
+      expectGuardaNaoConsultada();
 
       await executar(() => result.current.reactivate(inativo));
 
+      expectGuardaConsultada("p-i");
       expect(result.current.errorMsg).toBe(GUARDA);
+      expect(result.current.errorOrigin).toBe("bloqueio");
       expect(updateProgramStandalone).not.toHaveBeenCalled();
       expect(result.current.programs[0].status).toBe("inativo");
       expect(listProgramsStandalone).toHaveBeenCalledTimes(1);
@@ -351,6 +531,7 @@ describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
     it("guarda também bloqueia quando o pedido vem pelo fluxo de confirmação", async () => {
       const rascunho = programa({ id: "p-r", status: "rascunho" });
       mockList([rascunho]);
+      quandoGuardaDeAtivacao(false);
 
       const { result } = renderHook(() => usePrograms());
       await waitFor(() => expect(result.current.loading).toBe(false));
@@ -358,19 +539,24 @@ describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
       act(() => {
         result.current.requestConfirm("ativar", rascunho);
       });
+      // A consulta fresca acontece na ação (confirm), não em requestConfirm.
+      expectGuardaNaoConsultada();
       await executar(() => result.current.confirm());
 
+      expectGuardaConsultada("p-r");
       expect(result.current.errorMsg).toBe(GUARDA);
+      expect(result.current.errorOrigin).toBe("bloqueio");
       expect(updateProgramStandalone).not.toHaveBeenCalled();
       expect(result.current.programs[0].status).toBe("rascunho");
+      expect(result.current.confirmAction).toBeNull();
     });
   });
 
   // -------------------------------------------------------------------------
-  // 4. Ativação/reativação liberadas (flag true) + efeito colateral
+  // 4. Ativação/reativação liberadas (consulta fresca = true) + efeito colateral
   // -------------------------------------------------------------------------
-  describe("4. Ativação/reativação com hasWorkoutWithExercise = true", () => {
-    it("activate chama repository, desativa o anterior do mesmo dono e preserva o ativo de outro dono", async () => {
+  describe("4. Ativação/reativação com guarda fresca = true", () => {
+    it("activate consulta a guarda, chama repository, desativa o anterior do mesmo dono e preserva o ativo de outro dono", async () => {
       const pRascunho = programa({ id: "p-novo", status: "rascunho", createdAt: "2026-09-25T00:00:00.000Z" });
       const pAtivo = programa({ id: "p-ativo", status: "ativo", createdAt: "2026-09-10T00:00:00.000Z" });
       const pOutro = programa({ id: "p-outro", status: "ativo", owner: OUTRO, createdAt: "2026-09-01T00:00:00.000Z" });
@@ -381,12 +567,15 @@ describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
       ];
       mockList([pRascunho, pAtivo, pOutro], depois);
       vi.mocked(updateProgramStandalone).mockResolvedValue({ ...pRascunho, status: "ativo" });
+      quandoGuardaDeAtivacao(true);
 
-      const { result } = renderHook(() => usePrograms({ hasWorkoutWithExercise: true }));
+      const { result } = renderHook(() => usePrograms());
       await waitFor(() => expect(result.current.loading).toBe(false));
+      expectGuardaNaoConsultada();
 
       await executar(() => result.current.activate(pRascunho));
 
+      expectGuardaConsultada("p-novo");
       expect(updateProgramStandalone).toHaveBeenCalledWith("p-novo", { status: "ativo" });
       await waitFor(() => {
         expect(statusesDaLista(result)).toEqual([
@@ -396,14 +585,15 @@ describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
         ]);
       });
       expect(result.current.errorMsg).toBeNull();
-      // Efeito colateral aplicado via program-utils (critério 4, literal).
+      expect(result.current.errorOrigin).toBeNull();
+      // Efeito colateral aplicado via program-utils (critério 4 da #2, literal).
       expect(vi.mocked(aplicarEfeitoColateralAtivacao)).toHaveBeenCalledWith(
         expect.any(Array),
         EMAIL,
       );
     });
 
-    it("reactivate chama repository, desativa o anterior do mesmo dono e preserva o ativo de outro dono", async () => {
+    it("reactivate consulta a guarda, chama repository, desativa o anterior do mesmo dono e preserva o ativo de outro dono", async () => {
       const pInativo = programa({ id: "p-inativo", status: "inativo", createdAt: "2026-09-25T00:00:00.000Z" });
       const pAtivo = programa({ id: "p-ativo", status: "ativo", createdAt: "2026-09-10T00:00:00.000Z" });
       const pOutro = programa({ id: "p-outro", status: "ativo", owner: OUTRO, createdAt: "2026-09-01T00:00:00.000Z" });
@@ -414,12 +604,15 @@ describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
       ];
       mockList([pInativo, pAtivo, pOutro], depois);
       vi.mocked(updateProgramStandalone).mockResolvedValue({ ...pInativo, status: "ativo" });
+      quandoGuardaDeAtivacao(true);
 
-      const { result } = renderHook(() => usePrograms({ hasWorkoutWithExercise: true }));
+      const { result } = renderHook(() => usePrograms());
       await waitFor(() => expect(result.current.loading).toBe(false));
+      expectGuardaNaoConsultada();
 
       await executar(() => result.current.reactivate(pInativo));
 
+      expectGuardaConsultada("p-inativo");
       expect(updateProgramStandalone).toHaveBeenCalledWith("p-inativo", { status: "ativo" });
       await waitFor(() => {
         expect(statusesDaLista(result)).toEqual([
@@ -429,37 +622,69 @@ describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
         ]);
       });
       expect(result.current.errorMsg).toBeNull();
+      expect(result.current.errorOrigin).toBeNull();
       expect(vi.mocked(aplicarEfeitoColateralAtivacao)).toHaveBeenCalledWith(
         expect.any(Array),
         EMAIL,
       );
     });
+
+    it.each([
+      ["activate", "rascunho"],
+      ["reactivate", "inativo"],
+    ] as const)(
+      "falha na consulta da guarda em %s vira origem 'operacao', não chama o repository e é relançada",
+      async (metodo, status) => {
+        const alvo = programa({ id: "p-alvo", status });
+        mockList([alvo]);
+        quandoFalhaGuardaDeAtivacao(new Error("falha na consulta da guarda"));
+
+        const { result } = renderHook(() => usePrograms());
+        await waitFor(() => expect(result.current.loading).toBe(false));
+
+        const erro = await executarECapturar(() => result.current[metodo](alvo));
+
+        expectGuardaConsultada("p-alvo");
+        expect(erro).toBeInstanceOf(Error);
+        expect((erro as Error).message).toBe("falha na consulta da guarda");
+        expect(result.current.errorMsg).toBe("falha na consulta da guarda");
+        expect(result.current.errorOrigin).toBe("operacao");
+        expect(updateProgramStandalone).not.toHaveBeenCalled();
+        expect(statusesDaLista(result)).toEqual([`p-alvo:${status}`]);
+        expect(listProgramsStandalone).toHaveBeenCalledTimes(1);
+      },
+    );
   });
 
   // -------------------------------------------------------------------------
-  // 5. remove só permite status === 'rascunho'
+  // 5. remove: só status 'rascunho' + guarda fresca de treinos (D6)
   // -------------------------------------------------------------------------
-  describe("5. remove só permite rascunho", () => {
-    it("remove de rascunho chama repository e some da lista", async () => {
+  describe("5. remove: só rascunho + consulta fresca de treinos", () => {
+    it("remove de rascunho consulta hasWorkouts no momento da ação, chama repository e recarrega a lista", async () => {
       const rascunho = programa({ id: "p-r", status: "rascunho", createdAt: "2026-09-20T00:00:00.000Z" });
       const restante = programa({ id: "p-a", status: "ativo", createdAt: "2026-09-10T00:00:00.000Z" });
       mockList([rascunho, restante], [restante]);
       vi.mocked(deleteProgramStandalone).mockResolvedValue(undefined);
+      quandoHaTreinos(false);
 
       const { result } = renderHook(() => usePrograms());
       await waitFor(() => expect(result.current.loading).toBe(false));
+      // Frescor (plan.md §2): a montagem não consulta.
+      expectTreinosNaoConsultados();
 
       await executar(() => result.current.remove(rascunho));
 
+      expectTreinosConsultados("p-r");
       expect(deleteProgramStandalone).toHaveBeenCalledWith("p-r");
       await waitFor(() =>
         expect(result.current.programs.map((p) => p.id)).toEqual(["p-a"]),
       );
       expect(result.current.errorMsg).toBeNull();
+      expect(result.current.errorOrigin).toBeNull();
     });
 
     it.each(["ativo", "inativo"] as const)(
-      "remove bloqueado em status '%s': sem repository, com aviso e lista intacta",
+      "remove bloqueado em status '%s': sem consulta de treinos, sem repository, com aviso e lista intacta",
       async (status) => {
         const bloqueado = programa({ id: "p-x", status });
         mockList([bloqueado]);
@@ -469,13 +694,78 @@ describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
 
         await executar(() => result.current.remove(bloqueado));
 
+        // plan.md §3: a checagem de status vem ANTES da consulta de treinos.
+        expectTreinosNaoConsultados();
         expect(deleteProgramStandalone).not.toHaveBeenCalled();
         expect(result.current.errorMsg).not.toBeNull();
+        expect(result.current.errorOrigin).toBe("bloqueio");
         expect(result.current.programs).toHaveLength(1);
         expect(result.current.programs[0].status).toBe(status);
         expect(listProgramsStandalone).toHaveBeenCalledTimes(1);
       },
     );
+
+    it("excluir rascunho COM treinos bloqueia com MSG_PROGRAMA_COM_TREINOS, origem 'bloqueio' e sem delete", async () => {
+      const rascunho = programa({ id: "p-r", status: "rascunho" });
+      mockList([rascunho]);
+      quandoHaTreinos(true);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expectTreinosNaoConsultados();
+
+      const erro = await executarECapturar(() => result.current.remove(rascunho));
+
+      expectTreinosConsultados("p-r");
+      // Literal de MSG_PROGRAMA_COM_TREINOS (D6 do spec §3, valor já travado
+      // em __tests__/lib/milon/workout-utils.test.ts).
+      expect(result.current.errorMsg).toBe(MSG_PROGRAMA_COM_TREINOS);
+      expect((erro as Error).message).toBe(MSG_PROGRAMA_COM_TREINOS);
+      expect(result.current.errorOrigin).toBe("bloqueio");
+      expect(deleteProgramStandalone).not.toHaveBeenCalled();
+      expect(result.current.programs.map((p) => p.id)).toEqual(["p-r"]);
+      expect(listProgramsStandalone).toHaveBeenCalledTimes(1);
+    });
+
+    it("bloqueio de exclusão vindo da confirmação fecha o modal e mantém a lista (D6)", async () => {
+      const rascunho = programa({ id: "p-r", status: "rascunho" });
+      mockList([rascunho]);
+      quandoHaTreinos(true);
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      act(() => {
+        result.current.requestConfirm("excluir", rascunho);
+      });
+      const erro = await executarECapturar(() => result.current.confirm());
+
+      expectTreinosConsultados("p-r");
+      expect((erro as Error).message).toBe(MSG_PROGRAMA_COM_TREINOS);
+      expect(result.current.confirmAction).toBeNull();
+      expect(result.current.errorMsg).toBe(MSG_PROGRAMA_COM_TREINOS);
+      expect(result.current.errorOrigin).toBe("bloqueio");
+      expect(deleteProgramStandalone).not.toHaveBeenCalled();
+      expect(result.current.programs.map((p) => p.id)).toEqual(["p-r"]);
+    });
+
+    it("falha na consulta de hasWorkouts vira origem 'operacao' sem chamar o delete", async () => {
+      const rascunho = programa({ id: "p-r", status: "rascunho" });
+      mockList([rascunho]);
+      quandoFalhaConsultaTreinos(new Error("falha na consulta de treinos"));
+
+      const { result } = renderHook(() => usePrograms());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() => result.current.remove(rascunho));
+
+      expectTreinosConsultados("p-r");
+      expect(result.current.errorMsg).toBe("falha na consulta de treinos");
+      expect(result.current.errorOrigin).toBe("operacao");
+      expect(deleteProgramStandalone).not.toHaveBeenCalled();
+      expect(result.current.programs.map((p) => p.id)).toEqual(["p-r"]);
+      expect(listProgramsStandalone).toHaveBeenCalledTimes(1);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -553,8 +843,9 @@ describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
       const depois: Program[] = [{ ...rascunho, status: "ativo" }];
       mockList([rascunho], depois);
       vi.mocked(updateProgramStandalone).mockResolvedValue({ ...rascunho, status: "ativo" });
+      quandoGuardaDeAtivacao(true);
 
-      const { result } = renderHook(() => usePrograms({ hasWorkoutWithExercise: true }));
+      const { result } = renderHook(() => usePrograms());
       await waitFor(() => expect(result.current.loading).toBe(false));
 
       act(() => {
@@ -620,8 +911,9 @@ describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
       vi.mocked(updateProgramStandalone).mockRejectedValue(
         new Error("Erro ao atualizar programa"),
       );
+      quandoGuardaDeAtivacao(true);
 
-      const { result } = renderHook(() => usePrograms({ hasWorkoutWithExercise: true }));
+      const { result } = renderHook(() => usePrograms());
       await waitFor(() => expect(result.current.loading).toBe(false));
 
       await executar(() => result.current.activate(rascunho));
@@ -923,8 +1215,9 @@ describe("Mílon #2 — usePrograms (contrato RED, TASK-006)", () => {
     const inativo = programa({ id: "p-i", status: "inativo" });
     mockList([inativo], [{ ...inativo, status: "ativo" }]);
     vi.mocked(updateProgramStandalone).mockResolvedValue({ ...inativo, status: "ativo" });
+    quandoGuardaDeAtivacao(true);
 
-    const { result } = renderHook(() => usePrograms({ hasWorkoutWithExercise: true }));
+    const { result } = renderHook(() => usePrograms());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     act(() => {
@@ -975,11 +1268,7 @@ const MENSAGEM_EXCLUSAO = "Somente programas em rascunho podem ser excluídos";
 
 describe("Mílon #2 — usePrograms: origem da mensagem (Patch v4, TASK-022 RED)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(listProgramsStandalone).mockReset();
-    vi.mocked(createProgramStandalone).mockReset();
-    vi.mocked(updateProgramStandalone).mockReset();
-    vi.mocked(deleteProgramStandalone).mockReset();
+    prepararMocks();
   });
 
   // -------------------------------------------------------------------------
@@ -1014,12 +1303,14 @@ describe("Mílon #2 — usePrograms: origem da mensagem (Patch v4, TASK-022 RED)
     it("guarda de ativação bloqueando grava origem 'bloqueio' sem chamar o repositório", async () => {
       const rascunho = programa({ id: "p-r", status: "rascunho" });
       mockList([rascunho]);
+      quandoGuardaDeAtivacao(false);
 
       const { result } = renderHook(() => usePrograms());
       await waitFor(() => expect(result.current.loading).toBe(false));
 
       await executar(() => result.current.activate(rascunho));
 
+      expectGuardaConsultada("p-r");
       expect(result.current.errorMsg).toBe(GUARDA);
       expect(origemDe(result)).toBe("bloqueio");
       expect(updateProgramStandalone).not.toHaveBeenCalled();
@@ -1029,12 +1320,14 @@ describe("Mílon #2 — usePrograms: origem da mensagem (Patch v4, TASK-022 RED)
     it("guarda de reativação bloqueando grava origem 'bloqueio' sem chamar o repositório", async () => {
       const inativo = programa({ id: "p-i", status: "inativo" });
       mockList([inativo]);
+      quandoGuardaDeAtivacao(false);
 
       const { result } = renderHook(() => usePrograms());
       await waitFor(() => expect(result.current.loading).toBe(false));
 
       await executar(() => result.current.reactivate(inativo));
 
+      expectGuardaConsultada("p-i");
       expect(result.current.errorMsg).toBe(GUARDA);
       expect(origemDe(result)).toBe("bloqueio");
       expect(updateProgramStandalone).not.toHaveBeenCalled();
@@ -1052,8 +1345,9 @@ describe("Mílon #2 — usePrograms: origem da mensagem (Patch v4, TASK-022 RED)
         vi.mocked(updateProgramStandalone).mockRejectedValue(
           new Error("Erro ao atualizar programa"),
         );
+        quandoGuardaDeAtivacao(true);
 
-        const { result } = renderHook(() => usePrograms({ hasWorkoutWithExercise: true }));
+        const { result } = renderHook(() => usePrograms());
         await waitFor(() => expect(result.current.loading).toBe(false));
 
         await executar(() => result.current[metodo](alvo));
@@ -1074,6 +1368,8 @@ describe("Mílon #2 — usePrograms: origem da mensagem (Patch v4, TASK-022 RED)
 
       await executar(() => result.current.remove(ativo));
 
+      // Status guardado ANTES da consulta de treinos (plan.md §3).
+      expectTreinosNaoConsultados();
       expect(result.current.errorMsg).toBe(MENSAGEM_EXCLUSAO);
       expect(origemDe(result)).toBe("bloqueio");
       expect(deleteProgramStandalone).not.toHaveBeenCalled();
@@ -1086,6 +1382,7 @@ describe("Mílon #2 — usePrograms: origem da mensagem (Patch v4, TASK-022 RED)
       vi.mocked(deleteProgramStandalone).mockRejectedValue(
         new Error("Erro ao excluir programa"),
       );
+      quandoHaTreinos(false);
 
       const { result } = renderHook(() => usePrograms());
       await waitFor(() => expect(result.current.loading).toBe(false));
@@ -1125,8 +1422,9 @@ describe("Mílon #2 — usePrograms: origem da mensagem (Patch v4, TASK-022 RED)
       vi.mocked(updateProgramStandalone)
         .mockRejectedValueOnce(new Error("Erro ao atualizar programa"))
         .mockResolvedValue({ ...rascunho, status: "ativo" });
+      quandoGuardaDeAtivacao(true);
 
-      const { result } = renderHook(() => usePrograms({ hasWorkoutWithExercise: true }));
+      const { result } = renderHook(() => usePrograms());
       await waitFor(() => expect(result.current.loading).toBe(false));
 
       await executar(() => result.current.activate(rascunho));
@@ -1139,25 +1437,26 @@ describe("Mílon #2 — usePrograms: origem da mensagem (Patch v4, TASK-022 RED)
       expect(result.current.programs[0].status).toBe("ativo");
     });
 
-    it("ativação liberada após bloqueio da guarda zera os dois campos", async () => {
+    it("ativação liberada após bloqueio da guarda zera os dois campos (valor fresco por ação)", async () => {
       const rascunho = programa({ id: "p-r", status: "rascunho" });
       mockList([rascunho], [{ ...rascunho, status: "ativo" }]);
       vi.mocked(updateProgramStandalone).mockResolvedValue({ ...rascunho, status: "ativo" });
+      quandoGuardaDeAtivacao(false);
 
-      const { result, rerender } = renderHook(
-        ({ guarda }: { guarda: boolean }) =>
-          usePrograms({ hasWorkoutWithExercise: guarda }),
-        { initialProps: { guarda: false } },
-      );
+      const { result } = renderHook(() => usePrograms());
       await waitFor(() => expect(result.current.loading).toBe(false));
 
       await executar(() => result.current.activate(rascunho));
       expect(result.current.errorMsg).toBe(GUARDA);
       expect(origemDe(result)).toBe("bloqueio");
+      expect(updateProgramStandalone).not.toHaveBeenCalled();
 
-      rerender({ guarda: true });
+      // O dado fresco muda entre uma ação e outra — sem remontar o hook.
+      quandoGuardaDeAtivacao(true);
       await executar(() => result.current.activate(rascunho));
 
+      expectGuardaConsultada("p-r");
+      expect(updateProgramStandalone).toHaveBeenCalledTimes(1);
       expect(result.current.errorMsg).toBeNull();
       expect(origemDe(result)).toBeNull();
       expect(result.current.programs[0].status).toBe("ativo");

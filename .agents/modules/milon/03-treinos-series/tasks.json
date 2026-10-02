@@ -165,7 +165,7 @@
     },
     {
       "id": "TASK-009",
-      "status": "pending",
+      "status": "completed",
       "title": "RED: reescrever testes do usePrograms para guardas frescos sem opção",
       "description": "Minos reescreve __tests__/lib/milon/hooks/usePrograms.test.ts para o contrato novo (sem usar a opção hasWorkoutWithExercise) e atualiza os comentários do cabeçalho do arquivo que mencionam a opção. Novos mocks: vi.mock de '@/lib/milon/db/workouts' controlando hasWorkoutWithExercise/hasWorkouts. Casos: ativar/reativar com hasWorkoutWithExercise(true) executa updateProgramStandalone('ativo') e aplica o efeito colateral de desativar o anterior do mesmo dono (bloco da #2 preservado); com hasWorkoutWithExercise(false) bloqueia com a mensagem existente 'Adicione pelo menos um treino com exercícios para ativar', origin 'bloqueio', sem chamar update; falha na consulta de hasWorkoutWithExercise -> origin 'operacao' e relança; excluir rascunho sem treinos -> deleteProgramStandalone chamado e lista recarregada; excluir com hasWorkouts(true) -> MSG_PROGRAMA_COM_TREINOS 'Este programa possui treinos. Esvazie-o antes de excluir.', origin 'bloqueio', deleteProgramStandalone NÃO chamado; falha na consulta de hasWorkouts -> origin 'operacao'; guarda de status (só rascunho) permanece. Interfaces: Consome: db/workouts da TASK-006 (nomenclatura a ser entregue na TASK-010). Interfaces: Produz: contrato usePrograms() sem parâmetros (TASK-010). Verificação: npm test -- __tests__/lib/milon/hooks/usePrograms.test.ts Expected: FAIL (o hook atual ainda depende da opção fixa e não consulta db/workouts).",
       "assignee": "minos",
@@ -180,7 +180,7 @@
     },
     {
       "id": "TASK-010",
-      "status": "pending",
+      "status": "completed",
       "title": "GREEN: usePrograms sem opção - guardas consultados no momento da ação (substituição)",
       "description": "Hefesto modifica lib/milon/hooks/usePrograms.ts: remove a interface UseProgramsOptions e a opção hasWorkoutWithExercise (assinatura vira usePrograms(): UseProgramsReturn); em runActivation, antes de guardaAtivacao, consulta hasWorkoutWithExercise(program.id) do barrel '@/lib/milon/db/workouts' - falha -> errorMsg + errorOrigin 'operacao' + relança; com o valor fresco chama guardaAtivacao(valor) mantendo a mensagem existente e origem 'bloqueio'; em remove, após a checagem de status 'rascunho', consulta hasWorkouts(program.id) - true -> MSG_PROGRAMA_COM_TREINOS com origin 'bloqueio' e relança (o finally do confirm fecha o modal e a lista exibe o banner); false -> segue deleteProgramStandalone atual; falha da consulta -> origin 'operacao'. guardaAtivacao de lib/milon/program-utils.ts permanece com a mesma assinatura pura. Interfaces: Consome: hasWorkouts/hasWorkoutWithExercise de db/workouts (TASK-006); guardaAtivacao/aplicarEfeitoColateralAtivacao de program-utils. Interfaces: Produz: usePrograms() sem parâmetros - consumido por app/milon/programs/page.tsx sem mudança de chamada (já chama sem opções). Verificação: npm test -- __tests__/lib/milon/hooks/usePrograms.test.ts Expected: PASS; npx tsc --noEmit Expected: PASS; busca por 'hasWorkoutWithExercise?:' retorna 0 em lib/, app/, components/, __tests__/; busca por 'UseProgramsOptions' retorna 0 em lib/, app/, components/, __tests__/.",
       "assignee": "hefesto",

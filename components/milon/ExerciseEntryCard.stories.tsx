@@ -85,7 +85,7 @@ export const SemSeries: Story = {
   },
 };
 
-export const PromptUnidade: Story = {
+export const SemUnidade: Story = {
   args: {
     ...base,
     entryView: {
@@ -104,7 +104,6 @@ export const PromptUnidade: Story = {
         },
       ],
     },
-    unitPromptValue: 45,
   },
 };
 

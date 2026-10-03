@@ -374,7 +374,8 @@ describe("WorkoutPage /milon/programs/[id]/workouts/[workoutId] (TASK-015 — RE
     expect(within(seletor).getByText("Rosca direta")).toBeInTheDocument();
 
     // muscleOptions derivado de `exercises` na própria página (plan §3).
-    const filtro = screen.getByLabelText(
+    // Scope ao modal (seletor) pois agora há dois filtros (lista + modal).
+    const filtro = within(seletor).getByLabelText(
       /filtrar por músculo/i,
     ) as HTMLSelectElement;
     expect(

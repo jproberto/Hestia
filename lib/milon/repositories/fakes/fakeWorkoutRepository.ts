@@ -6,7 +6,7 @@ import type {
   UpdateSeriesFieldsInput,
 } from "../interfaces";
 import {
-  MSG_EXERCICIO_JA_NO_PROGRAMA,
+  MSG_EXERCICIO_JA_NO_TREINO,
   MSG_TREINO_COM_EXERCICIOS,
   normalizarNomeTreino,
   validarNomeTreino,
@@ -152,12 +152,11 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
     exerciseId: string,
     email: string,
   ): Promise<WorkoutEntry> {
-    const doPrograma = await this.listEntriesByProgram(programId);
-    if (doPrograma.some((e) => e.exerciseId === exerciseId)) {
-      throw new Error(MSG_EXERCICIO_JA_NO_PROGRAMA);
+    const doTreino = await this.listEntriesByWorkout(workoutId);
+    if (doTreino.some((e) => e.exerciseId === exerciseId)) {
+      throw new Error(MSG_EXERCICIO_JA_NO_TREINO);
     }
 
-    const doTreino = await this.listEntriesByWorkout(workoutId);
     const position =
       doTreino.reduce((max, e) => Math.max(max, e.position), 0) + 1;
 

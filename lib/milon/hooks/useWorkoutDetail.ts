@@ -24,7 +24,7 @@ import {
 } from "@/lib/milon/db/exercises";
 import { findProgramByIdStandalone } from "@/lib/milon/db/programs";
 import {
-  MSG_EXERCICIO_JA_NO_PROGRAMA,
+  MSG_EXERCICIO_JA_NO_TREINO,
   MSG_PROGRAMA_COM_TREINOS,
   MSG_TREINO_COM_EXERCICIOS,
 } from "@/lib/milon/workout-utils";
@@ -58,7 +58,7 @@ export interface UseWorkoutDetailReturn {
   program: Program | null;
   entries: WorkoutEntryView[];
   exercises: Exercise[];
-  programUsedExerciseIds: string[];
+  workoutUsedExerciseIds: string[];
   loading: boolean;
   errorMsg: string | null;
   errorOrigin: ErrorOrigin | null;
@@ -103,7 +103,7 @@ function toErrorOrigin(message: string): ErrorOrigin {
   if (
     message === ORDEM_GUARDA_MESSAGE ||
     message === MSG_TREINO_COM_EXERCICIOS ||
-    message === MSG_EXERCICIO_JA_NO_PROGRAMA ||
+    message === MSG_EXERCICIO_JA_NO_TREINO ||
     message === MSG_PROGRAMA_COM_TREINOS
   ) {
     return "bloqueio";
@@ -116,13 +116,13 @@ interface LoadedDetail {
   program: Program | null;
   views: WorkoutEntryView[];
   exercises: Exercise[];
-  usedIds: string[];
+  workoutUsedIds: string[];
 }
 
 async function carregarCadeia(workoutId: string): Promise<LoadedDetail> {
   const workout = await findWorkoutByIdStandalone(workoutId);
   if (!workout) {
-    return { workout: null, program: null, views: [], exercises: [], usedIds: [] };
+    return { workout: null, program: null, views: [], exercises: [], workoutUsedIds: [] };
   }
   const program = await findProgramByIdStandalone(workout.programId);
   const allEntries =
@@ -161,15 +161,16 @@ async function carregarCadeia(workoutId: string): Promise<LoadedDetail> {
     );
     views.push({ entry, exercise, series });
   }
+  // workoutUsedIds: exercícios já presentes NESTE treino (para D14 por treino)
   const seen = new Set<string>();
-  const usedIds: string[] = [];
-  for (const entry of allEntries) {
+  const workoutUsedIds: string[] = [];
+  for (const entry of mine) {
     if (!seen.has(entry.exerciseId)) {
       seen.add(entry.exerciseId);
-      usedIds.push(entry.exerciseId);
+      workoutUsedIds.push(entry.exerciseId);
     }
   }
-  return { workout, program: program ?? null, views, exercises, usedIds };
+  return { workout, program: program ?? null, views, exercises, workoutUsedIds };
 }
 
 // Detalhe do treino (padrão do módulo: promise-chain + flag cancelled no
@@ -181,7 +182,7 @@ export function useWorkoutDetail(workoutId: string): UseWorkoutDetailReturn {
   const [program, setProgram] = useState<Program | null>(null);
   const [entries, setEntries] = useState<WorkoutEntryView[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [programUsedExerciseIds, setProgramUsedExerciseIds] = useState<
+  const [workoutUsedExerciseIds, setWorkoutUsedExerciseIds] = useState<
     string[]
   >([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -209,7 +210,7 @@ export function useWorkoutDetail(workoutId: string): UseWorkoutDetailReturn {
     setProgram(loaded.program);
     setEntries(loaded.views);
     setExercises(loaded.exercises);
-    setProgramUsedExerciseIds(loaded.usedIds);
+    setWorkoutUsedExerciseIds(loaded.workoutUsedIds);
   }, []);
 
   useEffect(() => {
@@ -473,7 +474,7 @@ export function useWorkoutDetail(workoutId: string): UseWorkoutDetailReturn {
     program,
     entries,
     exercises,
-    programUsedExerciseIds,
+    workoutUsedExerciseIds,
     loading,
     errorMsg,
     errorOrigin,

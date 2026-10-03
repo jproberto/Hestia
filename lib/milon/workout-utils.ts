@@ -11,6 +11,9 @@ export const MSG_PROGRAMA_COM_TREINOS =
 export const MSG_EXERCICIO_JA_NO_PROGRAMA =
   "Este exercício já está em um treino deste programa. Escolha outro exercício.";
 
+export const MSG_EXERCICIO_JA_NO_TREINO =
+  "Este exercício já está neste treino. Escolha outro exercício.";
+
 export const MSG_NOME_TREINO_OBRIGATORIO = "Informe o nome do treino.";
 
 export const MSG_NOME_TREINO_DUPLICADO =

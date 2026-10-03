@@ -31,7 +31,6 @@ function serie(overrides: Partial<WorkoutSeries> = {}): WorkoutSeries {
 const base = {
   loadUnit: "kg" as const,
   readOnly: false,
-  pendingUnit: false,
   onCommit: fn(),
   onApplyAll: fn(),
   onChooseUnit: fn(),
@@ -51,16 +50,6 @@ export const Vazia: Story = {
 
 export const CargaZero: Story = {
   args: { ...base, series: serie({ load: 0 }), index: 0 },
-};
-
-export const PromptUnidade: Story = {
-  args: {
-    ...base,
-    series: serie({ load: null }),
-    loadUnit: null,
-    pendingUnit: true,
-    index: 0,
-  },
 };
 
 export const SomenteLeitura: Story = {

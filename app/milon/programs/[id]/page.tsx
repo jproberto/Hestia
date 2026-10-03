@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { MilonLayout } from "@/components/milon/MilonLayout";
 import { AsyncState } from "@/components/ui/AsyncState";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ function toMessage(err: unknown, fallback: string): string {
 
 export default function ProgramDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = resolveId(params?.id as string | string[] | undefined);
   const { program, loading, error, retry } = useProgramDetail(id);
   const {
@@ -75,7 +76,9 @@ export default function ProgramDetailPage() {
         if (editingWorkout) {
           await rename(editingWorkout.id, { name });
         } else {
-          await create({ name });
+          const createdWorkout = await create({ name });
+          // Redireciona para o detalhamento do treino criado
+          router.push(`/milon/programs/${id}/workouts/${createdWorkout.id}`);
         }
         setModalOpen(false);
         setEditingWorkout(null);
@@ -89,7 +92,7 @@ export default function ProgramDetailPage() {
         setSaving(false);
       }
     },
-    [editingWorkout, create, rename],
+    [editingWorkout, create, rename, router, id],
   );
 
   const handleDelete = useCallback(

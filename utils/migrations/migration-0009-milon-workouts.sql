@@ -55,13 +55,13 @@ DROP POLICY IF EXISTS "Permitir tudo para autenticados" ON public.workout_series
 CREATE POLICY "Permitir tudo para autenticados" ON public.workout_series
     FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
--- 6. Indices: busca por Programa com ordenacao de criacao + unicidade D14 + posicoes
+-- 5. Indices: busca por Programa com ordenacao de criacao + unicidade D14 (por Programa) + posicoes
 CREATE INDEX IF NOT EXISTS idx_workouts_program_created ON public.workouts (program_id, created_at, id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_workout_entries_program_exercise ON public.workout_entries (program_id, exercise_id);
 CREATE INDEX IF NOT EXISTS idx_workout_entries_workout_position ON public.workout_entries (workout_id, position);
 CREATE INDEX IF NOT EXISTS idx_workout_series_entry_position ON public.workout_series (entry_id, position);
 
--- 7. Self-bootstrap idempotente de public.schema_migrations
+-- 6. Self-bootstrap idempotente de public.schema_migrations
 -- (o CI aplica por ordem lexicografica: migration-0009-* roda antes das
 -- migration-feature-* que criam schema_migrations; sem este bloco o INSERT
 -- abaixo falha com ON_ERROR_STOP=1. Definicao de colunas identica a 0008;
@@ -80,7 +80,7 @@ DROP POLICY IF EXISTS "Permitir tudo para autenticados" ON public.schema_migrati
 CREATE POLICY "Permitir tudo para autenticados" ON public.schema_migrations
     FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
--- 8. Registro de Auditoria de Migracao em schema_migrations
+-- 7. Registro de Auditoria de Migracao em schema_migrations
 INSERT INTO public.schema_migrations (spec_id, spec_name, script_name, executed_by)
 VALUES (
   'milon-03',

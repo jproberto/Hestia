@@ -23,8 +23,8 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 | # | Feature | Descrição | Status | Specs | Planos |
 |---|---|---|---|---|---|
 | 1 | **Biblioteca de exercícios** | Cadastro rápido inline ao montar o treino: seleciona existente ou cria na hora com nome + músculo + link de vídeo. Vira biblioteca reutilizável nos próximos treinos. Sem tela pesada de cadastro separado no MVP. | Concluído | [.agents/modules/milon/01-biblioteca-exercicios/spec.md](.agents/modules/milon/01-biblioteca-exercicios/spec.md) | [.agents/modules/milon/01-biblioteca-exercicios/plan.md](.agents/modules/milon/01-biblioteca-exercicios/plan.md) |
-| 2 | **Programas (conjunto A/B/C por dono)** | Agrupa os treinos vigentes de cada usuário (ex: A, B, C). Cada Programa tem um dono mas é visível para os dois. Arquivar preserva histórico; criar novo Programa não apaga o antigo. É o que permite trocar de ficha sem perder o passado. | | | |
-| 3 | **Treinos + séries planejadas** | Dentro de um Programa, cada treino tem N exercícios em ordem; cada exercício tem N séries com reps alvo, carga alvo e descanso (segundos). Edição do planejado permitida antes e durante a execução. | | | |
+| 2 | **Programas (conjunto A/B/C por dono)** | Agrupa os treinos vigentes de cada usuário (ex: A, B, C). Cada Programa tem um dono mas é visível para os dois. Arquivar preserva histórico; criar novo Programa não apaga o antigo. É o que permite trocar de ficha sem perder o passado. | Concluído | [.agents/modules/milon/02-programas/spec.md](.agents/modules/milon/02-programas/spec.md) | [.agents/modules/milon/02-programas/plan.md](.agents/modules/milon/02-programas/plan.md) |
+| 3 | **Treinos + séries planejadas** | Dentro de um Programa, cada treino tem N exercícios em ordem; cada exercício tem N séries com reps alvo, carga alvo e descanso (segundos). Edição do planejado permitida antes e durante a execução. | Em homologação | [.agents/modules/milon/03-treinos-series/spec.md](.agents/modules/milon/03-treinos-series/spec.md) | [.agents/modules/milon/03-treinos-series/plan.md](.agents/modules/milon/03-treinos-series/plan.md) |
 
 ### Bloco 2 — Treino do dia (coração do MVP)
 
@@ -34,12 +34,13 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 | 5 | **Execução série a série + edição no fluxo** | Lista exercícios com séries (reps, peso, descanso). Toque no quadradinho marca a série como feita; carga/reps/descanso editáveis na hora com 1-2 toques (mão suada, celular na mão). Registra `iniciado_em` na primeira marcação. | | | |
 | 6 | **Timer de descanso auto + PWA push** | Ao marcar uma série como feita, o timer do descanso daquela série inicia sozinho. Notificação push via PWA avisa o fim mesmo com tela apagada/app em segundo plano. MVP inclui o PWA mínimo para isso funcionar. | | | |
 | 7 | **Encerrar treino com confirmação** | Botão "Encerrar treino" com confirmação que lista o que falta (exercícios/séries pendentes). Ao confirmar, registra o treino com `encerrado_em`. Permite encerrar parcial (falta vira dado, não bloqueio). | | | |
+| 8 | **Layout responsivo para telas pequenas (celular)** | Garantir que telas de montagem/execução caibam na viewport do celular, com listas roláveis internas, ações sempre visíveis e sem estouro. | | | |
 
 ### Bloco 3 — Histórico mínimo
 
 | # | Feature | Descrição | Status | Specs | Planos |
 |---|---|---|---|---|---|
-| 8 | **Histórico + resumo simples** | Lista de treinos realizados (data, treino, duração calculada de `iniciado_em`→`encerrado_em`, volume total = Σ carga×reps). Sem calendário chique nem gráficos no MVP — só lista + resumo por treino. | | | |
+| 9 | **Histórico + resumo simples** | Lista de treinos realizados (data, treino, duração calculada de `iniciado_em`→`encerrado_em`, volume total = Σ carga×reps). Sem calendário chique nem gráficos no MVP — só lista + resumo por treino. | | | |
 
 ---
 
@@ -47,10 +48,10 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 | # | Feature | Descrição | Status | Specs | Planos |
 |---|---|---|---|---|---|
-| 9 | **Evolução por exercício (carga, reps, volume)** | Para cada exercício, ver a progressão de carga, repetições e volume ao longo das execuções. Base para responder "estou progredindo?". | | | |
-| 10 | **Calendário de frequência** | Visão mensal/semanal de quais dias treinaram, para acompanhar consistência. | | | |
-| 11 | **Medidas corporais + histórico** | Registro de peso e medidas (com campos personalizáveis), com histórico e comparação simples ao longo do tempo. Segunda prioridade após evolução de desempenho. | | | |
-| 12 | **Substituição de exercício na hora** | Trocar um exercício durante a execução (ex: máquina ocupada) mantendo o planejado original intacto no histórico. Ficou fora do MVP por YAGNI; reavaliar na V2. | | | |
+| 10 | **Evolução por exercício (carga, reps, volume)** | Para cada exercício, ver a progressão de carga, repetições e volume ao longo das execuções. Base para responder "estou progredindo?". | | | |
+| 11 | **Calendário de frequência** | Visão mensal/semanal de quais dias treinaram, para acompanhar consistência. | | | |
+| 12 | **Medidas corporais + histórico** | Registro de peso e medidas (com campos personalizáveis), com histórico e comparação simples ao longo do tempo. Segunda prioridade após evolução de desempenho. | | | |
+| 13 | **Substituição de exercício na hora** | Trocar um exercício durante a execução (ex: máquina ocupada) mantendo o planejado original intacto no histórico. Ficou fora do MVP por YAGNI; reavaliar na V2. | | | |
 
 ---
 
@@ -58,10 +59,10 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 | # | Feature | Descrição | Status | Specs | Planos |
 |---|---|---|---|---|---|
-| 13 | **Dashboard do módulo** | Estatísticas de frequência/consistência, sequência de treinos (streak), tempo total, volume acumulado e médio. Agrega dados que MVP/V2 já coletam. | | | |
-| 14 | **PRs (recordes pessoais)** | Detecção e celebração de recordes por exercício (maior carga, maior volume, mais reps). | | | |
-| 15 | **1RM estimado + gráficos de evolução** | Cálculo de 1RM estimado por série/exercício e gráficos de carga/reps/volume/1RM ao longo do tempo. | | | |
-| 16 | **Gráficos de evolução corporal** | Curvas de peso/medidas ao longo do tempo a partir dos dados da V2. | | | |
+| 14 | **Dashboard do módulo** | Estatísticas de frequência/consistência, sequência de treinos (streak), tempo total, volume acumulado e médio. Agrega dados que MVP/V2 já coletam. | | | |
+| 15 | **PRs (recordes pessoais)** | Detecção e celebração de recordes por exercício (maior carga, maior volume, mais reps). | | | |
+| 16 | **1RM estimado + gráficos de evolução** | Cálculo de 1RM estimado por série/exercício e gráficos de carga/reps/volume/1RM ao longo do tempo. | | | |
+| 17 | **Gráficos de evolução corporal** | Curvas de peso/medidas ao longo do tempo a partir dos dados da V2. | | | |
 
 ---
 

@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import type { LoadUnit, WorkoutEntryView } from "@/lib/milon/types";
 import {
   MSG_QUANTIDADE_SERIES_INVALIDA,
-  MSG_UNIDADE_OBRIGATORIA,
   hasSeriePreenchida,
   interpretarQuantidadeSeries,
   validarInteiroCampo,
@@ -17,8 +16,10 @@ import SeriesCard, { type SerieField } from "./SeriesCard";
 export interface ExerciseEntryCardProps {
   entryView: WorkoutEntryView;
   readOnly: boolean;
-  unitPromptValue: number | null;
+  /** @deprecated Ignorado — a unidade é definida pelo toggle kg/lb do SeriesCard. Mantido para compatibilidade. */
+  unitPromptValue?: number | null;
   saving: boolean;
+  isDragging?: boolean;
   onQuantityCommit: (quantity: number) => void;
   onRequestReduce: (newQuantity: number) => void;
   onRestCommit: (seconds: number | null) => void;
@@ -34,18 +35,21 @@ export interface ExerciseEntryCardProps {
 }
 
 /**
- * Card do exercício no treino (Mílon #3).
+ * Card do exercício no treino (Mílon #3, CA-25).
  * Quantidade e descanso são campos não-controlados (key + defaultValue, o
  * commit lê o valor atual no blur/Enter): aumento commita direto, redução com
  * série preenchida pede confirmação via onRequestReduce; descanso é campo
- * único (D4). Primeira carga com loadUnit null ativa o prompt de unidade
- * (D10). readOnly (Programa inativo) oculta handle, campos e ações.
+ * único (D4). Unidade da carga (D10) via toggle kg/lb do SeriesCard
+ * (fonte de verdade, default kg) — sem prompt separado. readOnly
+ * (Programa inativo) oculta handle, campos e ações.
+ * isDragging: quando true, o card fica invisível (o ghost card é mostrado em seu lugar)
+ * e os demais cards animam suavemente para preencher o espaço.
  */
 export default function ExerciseEntryCard({
   entryView,
   readOnly,
-  unitPromptValue,
   saving,
+  isDragging = false,
   onQuantityCommit,
   onRequestReduce,
   onRestCommit,
@@ -59,11 +63,6 @@ export default function ExerciseEntryCard({
 
   const [quantityError, setQuantityError] = useState<string | null>(null);
   const [restError, setRestError] = useState<string | null>(null);
-  const [localPendingUnit, setLocalPendingUnit] = useState<number | null>(null);
-
-  const showUnitPrompt =
-    exercise.loadUnit === null &&
-    (unitPromptValue !== null || localPendingUnit !== null);
 
   function commitQuantity(valorBruto: string): void {
     const total = series.length;
@@ -110,22 +109,17 @@ export default function ExerciseEntryCard({
     field: SerieField,
     value: number | null,
   ): void {
-    if (
-      field === "load" &&
-      value !== null &&
-      exercise.loadUnit === null &&
-      !showUnitPrompt
-    ) {
-      setLocalPendingUnit(value);
-      return;
-    }
+    // Carga commita direto; unidade via toggle kg/lb do SeriesCard (D10).
     onSeriesCommit(seriesId, field, value);
   }
 
   return (
     <li
       data-entry-id={entry.id}
-      className="rounded-lg border bg-card text-card-foreground shadow-sm px-3 py-2 flex flex-col gap-2"
+      className={`rounded-lg border bg-card text-card-foreground shadow-sm px-3 py-2 flex flex-col gap-2 transition-all duration-300 ease-out ${
+        isDragging ? "opacity-0 pointer-events-none" : "opacity-100"
+      }`}
+      style={{ minHeight: isDragging ? "200px" : undefined }}
     >
       <div className="flex items-center gap-2">
         {readOnly ? null : (
@@ -222,35 +216,7 @@ export default function ExerciseEntryCard({
         </div>
       )}
 
-      {showUnitPrompt && !readOnly ? (
-        <div className="flex flex-col gap-2 rounded-md border border-amber-200 bg-amber-50 p-2 dark:border-amber-900 dark:bg-amber-950/30">
-          <p className="text-xs text-amber-900 dark:text-amber-100">
-            {MSG_UNIDADE_OBRIGATORIA}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={saving}
-              onClick={() => onChooseUnit("kg")}
-            >
-              kg
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={saving}
-              onClick={() => onChooseUnit("libra")}
-            >
-              libra
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
         {series.map((serie, idx) => (
           <SeriesCard
             key={serie.id}
@@ -258,7 +224,6 @@ export default function ExerciseEntryCard({
             index={idx}
             loadUnit={exercise.loadUnit}
             readOnly={readOnly}
-            pendingUnit={false}
             onCommit={(field, value) =>
               handleSeriesCommit(serie.id, field, value)
             }

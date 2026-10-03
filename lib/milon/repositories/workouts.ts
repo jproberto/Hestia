@@ -6,7 +6,7 @@ import type { IDatabaseClient } from "@/lib/shared/database";
 import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
 import type { UpdateSeriesFieldsInput } from "./interfaces";
 import {
-  MSG_EXERCICIO_JA_NO_PROGRAMA,
+  MSG_EXERCICIO_JA_NO_TREINO,
   MSG_TREINO_COM_EXERCICIOS,
   normalizarNomeTreino,
   validarNomeTreino,
@@ -224,12 +224,11 @@ export async function addEntry(
   exerciseId: string,
   email: string,
 ): Promise<WorkoutEntry> {
-  const doPrograma = await listEntriesByProgram(db, programId);
-  if (doPrograma.some((e) => e.exerciseId === exerciseId)) {
-    throw new Error(MSG_EXERCICIO_JA_NO_PROGRAMA);
+  const doTreino = await listEntriesByWorkout(db, workoutId);
+  if (doTreino.some((e) => e.exerciseId === exerciseId)) {
+    throw new Error(MSG_EXERCICIO_JA_NO_TREINO);
   }
 
-  const doTreino = await listEntriesByWorkout(db, workoutId);
   const position =
     doTreino.reduce((max, e) => Math.max(max, e.position), 0) + 1;
 
@@ -253,7 +252,7 @@ export async function addEntry(
     return toEntryDomain(data);
   } catch (error) {
     if (isUniqueViolation(error))
-      throw new Error(MSG_EXERCICIO_JA_NO_PROGRAMA);
+      throw new Error(MSG_EXERCICIO_JA_NO_TREINO);
     throw error;
   }
 }

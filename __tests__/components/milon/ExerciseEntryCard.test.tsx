@@ -25,9 +25,10 @@ import type { Exercise, LoadUnit, WorkoutEntryView, WorkoutSeries } from "@/lib/
  *     onRequestReduce (confirmação) e onQuantityCommit (direto) — é a regra
  *     de confirmação por preenchimento (spec §5 / D6);
  *     igual ao total → no-op.
- * - Carga: com loadUnit null a primeira digitada ativa o prompt exato
- *   MSG_UNIDADE_OBRIGATORIA com os botões "kg" e "libra" e NÃO commita;
- *   com unidade já escolhida commita direto; carga vazia commita null.
+ * - Carga: commita direto via onSeriesCommit mesmo com loadUnit null;
+ *   unidade via toggle inline kg/lb do SeriesCard (default kg, D10);
+ *   sem prompt âmbar MSG_UNIDADE_OBRIGATORIA na UI;
+ *   carga vazia commita null.
  * - readOnly (Programa inativo): oculta handle, campos e ações (TASK-014 AC5).
  * - Mensagens escritas caractere a caractere conforme plan.md §3.
  */
@@ -335,8 +336,8 @@ describe("ExerciseEntryCard", () => {
     );
   });
 
-  describe("carga e escolha da unidade (D10)", () => {
-    it("primeira carga digitada com loadUnit null ativa o prompt exato com kg/libra e NÃO commita", () => {
+  describe("carga e escolha da unidade (D10 — toggle inline, sem prompt)", () => {
+    it("primeira carga digitada com loadUnit null commita direto (sem prompt âmbar)", () => {
       const onSeriesCommit = vi.fn();
       const onChooseUnit = vi.fn();
       render(
@@ -353,18 +354,16 @@ describe("ExerciseEntryCard", () => {
       fireEvent.change(campoCarga, { target: { value: "45" } });
       fireEvent.blur(campoCarga);
 
-      expect(MSG_UNIDADE_OBRIGATORIA).toBe("Escolha a unidade da carga: kg ou libra.");
-      expect(screen.getByText(MSG_UNIDADE_OBRIGATORIA)).toBeInTheDocument();
+      expect(onSeriesCommit).toHaveBeenCalledWith("s1", "load", 45);
+      expect(onChooseUnit).not.toHaveBeenCalled();
+      // Sem prompt âmbar na UI — unidade via toggle inline do SeriesCard.
+      expect(screen.queryByText(MSG_UNIDADE_OBRIGATORIA)).not.toBeInTheDocument();
+      // Toggle inline kg/lb visível (default kg quando loadUnit null).
       expect(screen.getByRole("button", { name: /^kg$/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /^libra$/i })).toBeInTheDocument();
-      expect(onSeriesCommit).not.toHaveBeenCalled();
-
-      fireEvent.click(screen.getByRole("button", { name: /^kg$/i }));
-      expect(onChooseUnit).toHaveBeenCalledTimes(1);
-      expect(onChooseUnit).toHaveBeenCalledWith("kg");
+      expect(screen.getByRole("button", { name: /^lb$/i })).toBeInTheDocument();
     });
 
-    it("unitPromptValue exibe o prompt de unidade mesmo antes de digitar", () => {
+    it("unitPromptValue (deprecated) é ignorado — não exibe prompt", () => {
       render(
         <ExerciseEntryCard
           {...base({
@@ -374,9 +373,29 @@ describe("ExerciseEntryCard", () => {
         />,
       );
 
-      expect(screen.getByText(MSG_UNIDADE_OBRIGATORIA)).toBeInTheDocument();
+      expect(screen.queryByText(MSG_UNIDADE_OBRIGATORIA)).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: /^kg$/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /^libra$/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^lb$/i })).toBeInTheDocument();
+    });
+
+    it("toggle inline de unidade dispara onChooseUnit", () => {
+      const onChooseUnit = vi.fn();
+      render(
+        <ExerciseEntryCard
+          {...base({
+            entryView: makeView([makeSeries("s1")], { loadUnit: null }),
+            onChooseUnit,
+          })}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: /^lb$/i }));
+      expect(onChooseUnit).toHaveBeenCalledTimes(1);
+      expect(onChooseUnit).toHaveBeenCalledWith("libra");
+
+      fireEvent.click(screen.getByRole("button", { name: /^kg$/i }));
+      expect(onChooseUnit).toHaveBeenCalledTimes(2);
+      expect(onChooseUnit).toHaveBeenLastCalledWith("kg");
     });
 
     it("com unidade já escolhida a carga commita direto (sem prompt)", () => {

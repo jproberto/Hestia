@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import ProgramDetailPage from "@/app/milon/programs/[id]/page";
 import { useProgramDetail } from "@/lib/milon/hooks/useProgramDetail";
 import { useProgramWorkouts } from "@/lib/milon/hooks/useProgramWorkouts";
+import { useRouter } from "next/navigation";
 import { MSG_TREINO_COM_EXERCICIOS } from "@/lib/milon/workout-utils";
 import type { Program, ProgramErrorOrigin, Workout } from "@/lib/milon/types";
 
@@ -620,7 +621,7 @@ describe("TASK-015 — detalhe do Programa compõe a lista de treinos (RED)", ()
     expect(screen.queryByText("Nenhum treino ainda.")).not.toBeInTheDocument();
   });
 
-  it("'Adicionar treino' em Programa vazio abre o modal com sugestão 'Treino A' e grava via hook", async () => {
+it("'Adicionar treino' em Programa vazio abre o modal com sugestão 'Treino A' e grava via hook", async () => {
     setupHook({ program: makeProgram() });
     const state = setupWorkouts({ workouts: [] });
 
@@ -635,6 +636,38 @@ describe("TASK-015 — detalhe do Programa compõe a lista de treinos (RED)", ()
     await clickConnectedButton(/^salvar$/i);
     await waitFor(() =>
       expect(state.create).toHaveBeenCalledWith({ name: "Treino A" }),
+    );
+  });
+
+  it("criar treino redireciona para a página de detalhamento do treino criado", async () => {
+    setupHook({ program: makeProgram() });
+    const createdWorkout = makeWorkout({ id: "wout-new", name: "Treino A" });
+    const state = setupWorkouts({
+      workouts: [],
+      create: vi.fn(async () => createdWorkout),
+    });
+    const mockPush = vi.fn();
+    // Sobrescreve o mock do useRouter para capturar o push
+    vi.mocked(useRouter).mockReturnValue({
+      push: mockPush,
+      replace: vi.fn(),
+      refresh: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+      prefetch: vi.fn(),
+    });
+
+    render(<ProgramDetailPage />);
+    await clickConnectedButton(/adicionar treino/i);
+    await clickConnectedButton(/^salvar$/i);
+
+    await waitFor(() =>
+      expect(state.create).toHaveBeenCalledWith({ name: "Treino A" }),
+    );
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(
+        "/milon/programs/prog-1/workouts/wout-new",
+      ),
     );
   });
 

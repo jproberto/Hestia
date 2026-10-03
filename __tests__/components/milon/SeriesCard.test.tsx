@@ -1,22 +1,21 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import SeriesCard from "@/components/milon/SeriesCard";
 import {
   MSG_CARGA_NEGATIVA,
   MSG_CARGA_NAO_NUMERICA,
-  MSG_UNIDADE_OBRIGATORIA,
   formatarCargaComSecundaria,
 } from "@/lib/milon/workout-utils";
 import type { LoadUnit, WorkoutSeries } from "@/lib/milon/types";
 
 /**
- * Contrato (plan.md §3 "SeriesCard (props)" + tasks.json TASK-013 +
+ * Contrato (plan.md §3 "SeriesCard (props)" + tasks.json TASK-013/TASK-022 +
  * spec §3 "Séries do exercício" / D7 / D10 / norma D27):
  * - props: series, index (rótulo "Série 1", "Série 2", …), loadUnit, readOnly,
- *   pendingUnit (prompt de unidade no lugar do valor), onCommit(field, value),
- *   onApplyAll(), onChooseUnit(unit).
- * - Campos: "Repetições" e "Tempo (s)" (inteiro ≥ 0 ou vazio) e "Carga"
- *   (número ≥ 0 ou vazio).
+ *   onCommit(field, value), onApplyAll(), onChooseUnit(unit).
+ * - Campos: "Repetições" e "Tempo (s)" em campo único com toggle
+ *   (CA-26) + "Carga" (número ≥ 0 ou vazio), com toggle de unidade kg/lb
+ *   abaixo da carga (pré-selecionado kg) que dispara onChooseUnit.
  * - Validação local (validarInteiroCampo/validarCarga) com mensagem visível e
  *   SEM commitar: rótulos exatos "repetições" e "tempo";
  *   carga negativa → "A carga não pode ser negativa.";
@@ -35,7 +34,6 @@ interface SeriesCardProps {
   index: number;
   loadUnit: LoadUnit | null;
   readOnly: boolean;
-  pendingUnit: boolean;
   onCommit: (field: SerieField, value: number | null) => void;
   onApplyAll: () => void;
   onChooseUnit: (unit: LoadUnit) => void;
@@ -64,7 +62,6 @@ function base(overrides: Partial<SeriesCardProps> = {}): SeriesCardProps {
     index: 0,
     loadUnit: "kg",
     readOnly: false,
-    pendingUnit: false,
     onCommit: vi.fn(),
     onApplyAll: vi.fn(),
     onChooseUnit: vi.fn(),
@@ -145,6 +142,8 @@ describe("SeriesCard", () => {
       const onCommit = vi.fn();
       render(<SeriesCard {...base({ onCommit })} />);
 
+      // Alternar para modo tempo (o campo único reps/tempo tem toggle)
+      fireEvent.click(screen.getByRole("button", { name: /alternar para tempo/i }));
       digitarEComapitar(/tempo/i, "45");
       expect(onCommit).toHaveBeenCalledWith("durationSeconds", 45);
 
@@ -259,19 +258,25 @@ describe("SeriesCard", () => {
     });
   });
 
-  describe("prompt de unidade (D10)", () => {
-    it("pendingUnit mostra o prompt exato com kg/libra e dispara onChooseUnit", () => {
-      const onChooseUnit = vi.fn();
-      render(
-        <SeriesCard
-          {...base({ pendingUnit: true, loadUnit: null, onChooseUnit })}
-        />,
-      );
+  
 
-      expect(MSG_UNIDADE_OBRIGATORIA).toBe("Escolha a unidade da carga: kg ou libra.");
-      expect(screen.getByText(MSG_UNIDADE_OBRIGATORIA)).toBeInTheDocument();
+  describe("toggle de unidade kg/lb abaixo da carga (CA-26)", () => {
+    it("clicar em lb dispara onChooseUnit('libra')", () => {
+      const onChooseUnit = vi.fn();
+      render(<SeriesCard {...base({ onChooseUnit })} />);
+
+      fireEvent.click(screen.getByRole("button", { name: /^lb$/i }));
+
+      expect(onChooseUnit).toHaveBeenCalledTimes(1);
+      expect(onChooseUnit).toHaveBeenCalledWith("libra");
+    });
+
+    it("clicar em kg dispara onChooseUnit('kg')", () => {
+      const onChooseUnit = vi.fn();
+      render(<SeriesCard {...base({ onChooseUnit })} />);
 
       fireEvent.click(screen.getByRole("button", { name: /^kg$/i }));
+
       expect(onChooseUnit).toHaveBeenCalledTimes(1);
       expect(onChooseUnit).toHaveBeenCalledWith("kg");
     });

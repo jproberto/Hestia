@@ -258,12 +258,14 @@ describe("WorkoutEntriesList", () => {
       );
 
       expect(screen.getByText(MSG_VAZIO)).toBeVisible();
-      expect(screen.getByText(/adicion/i)).toBeInTheDocument();
+      // Agora há dois botões "Adicionar exercício" (sticky header + rodapé)
+      const botoesAdicionar = screen.getAllByRole("button", { name: /adicionar exercício/i });
+      expect(botoesAdicionar.length).toBeGreaterThanOrEqual(1);
       expect(
         screen.queryByRole("button", { name: /tentar novamente/i }),
       ).not.toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole("button", { name: /adicionar exercício/i }));
+      fireEvent.click(botoesAdicionar[0]);
       expect(onAdd).toHaveBeenCalledTimes(1);
     });
 
@@ -516,7 +518,7 @@ describe("WorkoutEntriesList", () => {
       expect(chamadaContemTodos(onRemoveEntry, ["entry-2"])).toBe(true);
     });
 
-    it("escolher a unidade da carga dispara onConfirmUnit com a unidade e o valor digitado", () => {
+    it("carga com loadUnit null commita direto e o toggle inline dispara onConfirmUnit (sem prompt âmbar)", () => {
       const onConfirmUnit = vi.fn();
       const onSeriesCommit = vi.fn();
       render(<WorkoutEntriesList {...base({ onConfirmUnit, onSeriesCommit })} />);
@@ -527,17 +529,24 @@ describe("WorkoutEntriesList", () => {
       fireEvent.change(campoCarga, { target: { value: "45" } });
       fireEvent.blur(campoCarga);
 
+      // Carga commita direto (sem prompt âmbar na UI).
       expect(
-        screen.getByText("Escolha a unidade da carga: kg ou libra."),
-      ).toBeInTheDocument();
-      // Ainda não commita: espera a escolha da unidade.
-      expect(onSeriesCommit).not.toHaveBeenCalled();
+        within(card).queryByText("Escolha a unidade da carga: kg ou libra."),
+      ).not.toBeInTheDocument();
+      expect(onSeriesCommit).toHaveBeenCalled();
+      expect(
+        chamadaContemTodos(onSeriesCommit, ["entry-2", "load", 45]),
+      ).toBe(true);
 
-      fireEvent.click(screen.getByRole("button", { name: /^kg$/i }));
+      // Toggle inline kg/lb dispara onConfirmUnit com a unidade escolhida.
+      // O card tem 2 séries (2 pares kg/lb) — usa o primeiro par.
+      const botoesLb = within(card).getAllByRole("button", { name: /^lb$/i });
+      fireEvent.click(botoesLb[0]);
       expect(onConfirmUnit).toHaveBeenCalledTimes(1);
       // O plan.md §3 não fixa a lista de argumentos de onConfirmUnit (só o
-      // nome); o que é inegociável é que a unidade escolhida chegue ao callback.
-      expect(chamadaContemTodos(onConfirmUnit, ["kg"])).toBe(true);
+      // nome); o que é inegociável é que a unidade escolhida e a entrada
+      // cheguem ao callback.
+      expect(chamadaContemTodos(onConfirmUnit, ["entry-2", "libra"])).toBe(true);
     });
   });
 });

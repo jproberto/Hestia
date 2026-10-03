@@ -3,7 +3,7 @@
   "module": "milon",
   "slug": "03-treinos-series",
   "objective": "Feature 3: Treinos + séries planejadas — Dentro de um Programa, cada treino tem N exercícios em ordem; cada exercício tem N séries com reps alvo, carga alvo e descanso (segundos). Edição do planejado permitida antes e durante a execução.",
-  "currentPhase": "CODING",
+  "currentPhase": "TESTING",
   "history": [
     {
       "phase": "SPEC_DRAFT",
@@ -199,11 +199,61 @@
       "phase": "CODING",
       "timestamp": "2026-10-02T03:10:00.000Z",
       "action": "TASK-016 CONCLUÍDA + FIX — Hefesto entregou GREEN 2 páginas (Programa com treinos + treino detalhe); Minos flexibilizou matcher /preenchid/i linha 480. Verificação: 26/26 + 14/14 páginas, 1115/1115 suite, tsc/storybook OK. Próximo: commit TASK-015+TASK-016"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T03:20:00.000Z",
+      "action": "TASK-015+016 COMMIT — Caronte commitou 445f9b6 (6 arquivos, 1115/1115 + rota nova). Próximo: TASK-017 suite final Minos"
+    },
+    {
+      "phase": "TESTING",
+      "timestamp": "2026-10-02T03:30:00.000Z",
+      "action": "TASK-017 CONCLUÍDA — Minos executou suite final: 1115/1115 PASS, coverage 85% (≥80%), test-report.json (failed=0, coverage=85), test-scenarios.md (52 cenários CA-01..CA-42 + CA-P2-01..CA-P2-10), regression.md (41 REG), build-storybook OK, guardian REVIEW OK. Próximo: REVIEW (Argos)"
+    },
+    {
+      "phase": "REVIEW",
+      "timestamp": "2026-10-02T03:35:00.000Z",
+      "action": "REVIEW CONCLUÍDA — Argos avaliou diff vs spec+plan+padrões: APPROVED (arquitetura, contratos, testes, padrões, requisitos todos pass). 0 blockers. 3 recomendações não-bloqueantes. Próximo: aguardar approve-review humano"
+    },
+    {
+      "phase": "APPROVED",
+      "timestamp": "2026-10-02T03:40:00.000Z",
+      "action": "Argos APROVOU — review-report.json status=approved, 0 blockers. Aguardando approve-review humano para COMMITTED"
+    },
+{
+      "phase": "TESTING",
+      "timestamp": "2026-10-02T04:00:00.000Z",
+      "action": "TASK-025 CONCLUÍDA — Minos executou suite final pós-correções: 1116/1116 PASS, coverage 85% (≥80%), test-report.json (failed=0, coverage=85), test-scenarios.md reordenado em fluxo lógico + 5 cenários end-to-end, regression.md atualizado, build-storybook OK. Próximo: REVIEW (Argos)"
+    },
+    {
+      "phase": "REVIEW",
+      "timestamp": "2026-10-02T04:05:00.000Z",
+      "action": "REVIEW CONCLUÍDA — Argos avaliou diff vs spec+plan+padrões: REPROVADO (2 critical + 1 important blockers). Critical: React Hooks violation ExercisePickerModal.tsx, build falha vitest.config.ts. Important: divergência D14 spec vs test-scenarios (unicidade por Programa vs por treino). Próximo: CODING para correções"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-10-02T04:10:00.000Z",
+      "action": "Argos REPROVOU — 2 critical + 1 important blockers. Próximo: correções críticas (hooks ExercisePickerModal, vitest.config.ts, divergência D14)"
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-02T04:15:00.000Z",
+      "action": "Correção D14 solicitada pelo humano: unicidade de exercício por TREINO (não por Programa) — mesmo exercício pode estar em treinos diferentes do mesmo Programa; bloqueado apenas no mesmo treino. spec.md atualizado (seção 3.1 e D14 na seção 7). context.json.history e decisions atualizados."
+    },
+    {
+      "phase": "REVIEW",
+      "timestamp": "2026-10-02T22:05:00.000Z",
+      "action": "REVIEW CONCLUÍDA — Argos avaliou diff vs spec+plan+padrões: APPROVED (arquitetura, contratos, testes, padrões, requisitos todos pass). 0 blockers. 3 recomendações não-bloqueantes. Próximo: aguardar approve-review humano"
+    },
+    {
+      "phase": "APPROVED",
+      "timestamp": "2026-10-02T22:10:00.000Z",
+      "action": "Argos APROVOU — review-report.json status=approved, 0 blockers. Aguardando approve-review humano para COMMITTED"
     }
   ],
   "approvals": {
     "spec": "approved",
-    "review": "pending"
+    "review": "approved"
   },
   "decisions": [
     "D1 Jornada (Opção B): detalhe do programa lista treinos + adicionar; detalhe do treino lista exercícios + adicionar/editar/excluir; nenhuma aba nova no módulo",
@@ -218,7 +268,7 @@
     "D11 Nome do treino obrigatório + único no Programa + sugestão automática 'Treino A/B/C...AA/AB...' com primeira posição livre, prefill editável (resposta final c + ajustes humano)",
     "D12 Princípio de UX: não existe modo de edição — tudo sempre editável (observação do humano na 3.6)",
     "D13 YAGNI/Etapa 4: pacote A — v1 só o planejado; duplicar treino/exercício e reordenar treinos ficam fora",
-    "D14 Unicidade de exercício no Programa: mesmo exercício no máximo 1x por Programa (pedido humano 2026-10-01)",
+    "D14 Unicidade de exercício no treino: mesmo exercício no máximo 1x por treino (corrigido pelo humano 2026-10-02); pode repetir em treinos diferentes do mesmo Programa",
     "D15 Subtítulo do treino: string derivada dos grupos musculares, sem repetição, ordem dos exercícios, 'Peito, Tríceps e Ombros', atualizado automaticamente (pedido humano 2026-10-01)",
     "Discovery finalizado e spec aprovada em 2026-10-01 — delegando à Atena",
     "P1 Plan: migração 0009 reservada; aggregate treinos+entradas+séries em IWorkoutRepository; soft delete em exercises (deleted_at); drag & drop nativo (Pointer Events); subtítulo derivado em memória; guardas frescas em usePrograms; sem nova dependência",
@@ -236,6 +286,13 @@
     "TASK-008: GREEN hooks useProgramWorkouts/useWorkoutDetail — useProgramWorkouts.ts, useWorkoutDetail.ts, index.ts — 982/982 testes PASS, tsc limpo, lint 0 errors",
     "TASK-008 COMMIT: commit 069149e (TASK-007 fix + TASK-008) — 8 arquivos, 2347 insertions, 4 deletions",
     "TASK-009: RED testes usePrograms sem opção hasWorkoutWithExercise — __tests__/lib/milon/hooks/usePrograms.test.ts reescrito, 20 failed/32 passed, suíte 967/987 PASS + 20 failed, zero produção alterada",
-    "TASK-010: GREEN usePrograms sem opção — guardas frescas hasWorkouts/hasWorkoutWithExercise, buscas substituição = 0, 52/52 + 987/987 PASS"
+    "TASK-010: GREEN usePrograms sem opção — guardas frescas hasWorkouts/hasWorkoutWithExercise, buscas substituição = 0, 52/52 + 987/987 PASS",
+    "D14 CORREÇÃO: unicidade de exercício por TREINO (não por Programa) — mesmo exercício pode estar em treinos diferentes do mesmo Programa; bloqueado apenas no mesmo treino",
+    "D16 NOVA: navegação pós-criar treino redireciona para detalhamento do treino",
+    "D17 NOVA: lista de exercícios no detalhamento do treino com filtro, busca e scroll virtual",
+    "D18 NOVA: drag & drop com ghost card (opacidade reduzida) + animação de reordenação",
+    "D19 NOVA: card de séries compacto — 4 por linha, campo único reps/tempo (toggle), toggle unidade kg/lb abaixo da carga pré-selecionado kg",
+    "D20 NOVA: botão voltar do treino para o programa (além da aba Programas)",
+    "D21 NOVA: cenários de teste reordenados em fluxo lógico sequencial (criar treino → adicionar exercício → adicionar séries → ativar programa)"
   ]
 }

@@ -4,7 +4,7 @@ import { createFakeWorkoutRepository } from "@/lib/milon/repositories/fakes/fake
 import type { Workout, WorkoutEntry, WorkoutSeries } from "@/lib/milon/types";
 import {
   MSG_TREINO_COM_EXERCICIOS,
-  MSG_EXERCICIO_JA_NO_PROGRAMA,
+  MSG_EXERCICIO_JA_NO_TREINO,
   MSG_NOME_TREINO_OBRIGATORIO,
   MSG_NOME_TREINO_DUPLICADO,
 } from "@/lib/milon/workout-utils";
@@ -414,7 +414,7 @@ function defineWorkoutRepositoryContract(
         expect(added.position).toBe(1);
       });
 
-      it("D14: bloqueia o mesmo exercício NO MESMO treino com MSG_EXERCICIO_JA_NO_PROGRAMA", async () => {
+      it("D14: bloqueia o mesmo exercício NO MESMO treino com MSG_EXERCICIO_JA_NO_TREINO", async () => {
         const seeded = build({
           workouts: [makeWorkout("w-1", PROGRAM_A, "Push", "2026-10-01T09:00:00.000Z")],
           entries: [makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1)],
@@ -422,11 +422,11 @@ function defineWorkoutRepositoryContract(
 
         await expect(
           seeded.addEntry("w-1", PROGRAM_A, "ex-1", EMAIL),
-        ).rejects.toThrow(MSG_EXERCICIO_JA_NO_PROGRAMA);
+        ).rejects.toThrow(MSG_EXERCICIO_JA_NO_TREINO);
         expect(await seeded.listEntriesByWorkout("w-1")).toHaveLength(1);
       });
 
-      it("D14: bloqueia o mesmo exercício em TREINO DIFERENTE do mesmo Programa", async () => {
+      it("D14: permite o mesmo exercício em TREINO DIFERENTE do mesmo Programa", async () => {
         const seeded = build({
           workouts: [
             makeWorkout("w-1", PROGRAM_A, "Push", "2026-10-01T09:00:00.000Z"),
@@ -435,12 +435,11 @@ function defineWorkoutRepositoryContract(
           entries: [makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1)],
         });
 
-        await expect(
-          seeded.addEntry("w-2", PROGRAM_A, "ex-1", EMAIL),
-        ).rejects.toThrow(MSG_EXERCICIO_JA_NO_PROGRAMA);
-        // Nada criado no treino alvo.
-        expect(await seeded.listEntriesByWorkout("w-2")).toEqual([]);
-        expect(await seeded.listEntriesByProgram(PROGRAM_A)).toHaveLength(1);
+        const added = await seeded.addEntry("w-2", PROGRAM_A, "ex-1", EMAIL);
+
+        expect(added.position).toBe(1);
+        expect(await seeded.listEntriesByWorkout("w-2")).toHaveLength(1);
+        expect(await seeded.listEntriesByProgram(PROGRAM_A)).toHaveLength(2);
       });
 
       it("D14: permite o mesmo exercício em OUTRO Programa", async () => {

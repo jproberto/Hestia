@@ -333,7 +333,7 @@
     },
     {
       "id": "TASK-017",
-      "status": "pending",
+      "status": "completed",
       "title": "Suite final Minos + coverage ≥80% + test-report.json + test-scenarios.md + regression + build-storybook",
       "description": "Minos executa a suíte completa (contratos, unitários, hooks, componentes, páginas), coverage ≥80%, gera .agents/modules/milon/03-treinos-series/test-report.json (failed=0) e .agents/modules/milon/03-treinos-series/test-scenarios.md com cenários Dado/Quando/Então cobrindo todos os critérios de aceite da spec §5, INCLUINDO os cenários pós-ativação repassados da feature #2 (guarda liberada com conteúdo mínimo - registrados em .agents/modules/milon/backlog.md e .agents/modules/milon/02-programas/test-scenarios.md, Cenários 8, 9, 10 e o de ativação com flag simulada). Promove cenários de regressão para .agents/modules/milon/regression.md. Executa npm run build-storybook sem erros. Reexecuta suite + coverage e atualiza test-report.json antes de encerrar (gate de review do Argos: failed=0 e coverage≥80 no guardian). Interfaces: Consome: todas as tasks TASK-001..TASK-016 concluídas. Interfaces: Produz: test-report.json, test-scenarios.md e regression.md para a fase de review. Verificação: npm test Expected: PASS com coverage ≥80; npm run build-storybook Expected: PASS; guardian: node .agents/scripts/guardian.js .agents/modules/milon/03-treinos-series REVIEW Expected: OK.",
       "assignee": "minos",
@@ -349,6 +349,240 @@
         "Cenários de regressão promovidos para .agents/modules/milon/regression.md",
         "npm run build-storybook passa sem erros",
         "node .agents/scripts/guardian.js .agents/modules/milon/03-treinos-series REVIEW imprime guardian OK"
+      ],
+      "files": [
+        ".agents/modules/milon/03-treinos-series/test-report.json",
+        ".agents/modules/milon/03-treinos-series/test-scenarios.md",
+        ".agents/modules/milon/regression.md"
+      ]
+    },
+    {
+      "id": "TASK-018",
+      "status": "completed",
+      "title": "FIX: navegação pós-criar treino redireciona para detalhamento",
+      "description": "Ao criar um treino na página do Programa, redirecionar para /milon/programs/[id]/workouts/[workoutId] (igual ao comportamento de Programa). Atualmente fica na lista.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-016"],
+      "acceptanceCriteria": [
+        "Criar treino na página do Programa redireciona para página de detalhamento do treino criado",
+        "Teste de página atualizado para verificar redirecionamento"
+      ],
+      "files": [
+        "app/milon/programs/[id]/page.tsx",
+        "__tests__/app/milon/programs/[id]/page.test.tsx"
+      ]
+    },
+    {
+      "id": "TASK-019",
+      "status": "completed",
+      "title": "FIX: lista de exercícios no detalhamento do treino com filtro, busca e scroll",
+      "description": "CA-19: Em WorkoutEntriesList/ExercisePickerModal, adicionar campo de busca, filtro por músculo e scroll virtual (ou paginação) para lista longa de exercícios. Botão 'Cadastrar novo' deve ficar sempre visível.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-014"],
+      "acceptanceCriteria": [
+        "Campo de busca por nome de exercício",
+        "Filtro por grupo muscular",
+        "Scroll virtual ou paginação para listas longas",
+        "Botão 'Cadastrar novo' sempre acessível (sticky ou no topo)"
+      ],
+      "files": [
+        "components/milon/WorkoutEntriesList.tsx",
+        "components/milon/ExercisePickerModal.tsx",
+        "__tests__/components/milon/WorkoutEntriesList.test.tsx",
+        "__tests__/components/milon/ExercisePickerModal.test.tsx"
+      ]
+    },
+    {
+      "id": "TASK-020",
+      "status": "completed",
+      "title": "FIX: regra D14 — unicidade por TREINO (não por Programa)",
+      "description": "CA-21: Corrigir regra D14 — exercício repetido bloqueado apenas no MESMO treino. Em treinos DIFERENTES do mesmo Programa, exercício pode ser adicionado. Atualizar IWorkoutRepository.addEntry, fakeWorkoutRepository, validação D14.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-006"],
+      "acceptanceCriteria": [
+        "Adicionar exercício já existente em OUTRO treino do mesmo Programa → permitido",
+        "Adicionar exercício já existente no MESMO treino → bloqueado com MSG_EXERCICIO_JA_NO_TREINO",
+        "Índice único (program_id, exercise_id) removido/alterado para (workout_id, exercise_id)",
+        "Migração para alterar índice único se necessário"
+      ],
+      "files": [
+        "utils/migrations/migration-0010-milon-exercise-unique-per-workout.sql",
+        "lib/milon/repositories/workouts.ts",
+        "lib/milon/repositories/fakes/fakeWorkoutRepository.ts",
+        "lib/milon/workout-utils.ts",
+        "__tests__/lib/milon/repositories/contract-workouts.test.ts",
+        "__tests__/lib/milon/db/workouts.test.ts"
+      ]
+    },
+    {
+      "id": "TASK-021",
+      "status": "completed",
+      "title": "FIX: drag & drop com ghost card + animação",
+      "description": "CA-25: Implementar ghost card com opacidade reduzida durante arraste, mostrar placeholder de drop, animação suave de reordenação dos demais cards. Usar Pointer Events nativas.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-014"],
+      "acceptanceCriteria": [
+        "Ghost card com opacidade reduzida durante arraste",
+        "Placeholder visual indicando posição de drop",
+        "Animação suave dos cards ao reorganizar",
+        "Funciona em mobile (touch) e desktop"
+      ],
+      "files": [
+        "components/milon/WorkoutEntriesList.tsx",
+        "components/milon/ExerciseEntryCard.tsx",
+        "__tests__/components/milon/WorkoutEntriesList.test.tsx"
+      ]
+    },
+    {
+      "id": "TASK-022",
+      "status": "completed",
+      "title": "FIX: card de séries compacto — 4/linha, campo único reps/tempo, toggle unidade",
+      "description": "CA-26: Redesenhar SeriesCard — layout compacto 4 por linha (grid), campo único reps/tempo (toggle), toggle unidade kg/lb abaixo da carga pré-selecionado kg, card menor.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-014"],
+      "acceptanceCriteria": [
+        "Grid 4 colunas para séries (responsivo: 1 col mobile, 2 tablet, 4 desktop)",
+        "Campo único reps/tempo com toggle (ícone ou label)",
+        "Toggle unidade kg/lb abaixo do campo carga, pré-selecionado kg",
+        "Card visualmente menor, aproveitando largura"
+      ],
+      "files": [
+        "components/milon/SeriesCard.tsx",
+        "components/milon/ExerciseEntryCard.tsx",
+        "lib/milon/workout-utils.ts",
+        "__tests__/components/milon/SeriesCard.test.tsx",
+        "__tests__/components/milon/ExerciseEntryCard.test.tsx"
+      ]
+    },
+    {
+      "id": "TASK-023",
+      "status": "completed",
+      "title": "FIX: botão voltar do treino para o programa",
+      "description": "Adicionar botão/ação para voltar do detalhamento do treino para o detalhamento do programa (além da aba Programas). Pode ser no cabeçalho da página do treino.",
+      "assignee": "hefesto",
+      "dependencies": ["TASK-016"],
+      "acceptanceCriteria": [
+        "Botão 'Voltar ao programa' ou link no cabeçalho da página do treino",
+        "Navega para /milon/programs/[id]",
+        "Acessível em mobile e desktop"
+      ],
+      "files": [
+        "app/milon/programs/[id]/workouts/[workoutId]/page.tsx",
+        "__tests__/app/milon/programs/[id]/workouts/[workoutId]/page.test.tsx"
+      ]
+    },
+    {
+      "id": "TASK-024",
+      "status": "completed",
+      "title": "FIX: reordenar cenários de teste em fluxo lógico sequencial",
+      "description": "Reorganizar test-scenarios.md em fluxo lógico: criar treino → adicionar exercício → adicionar séries → ativar programa. Corrigir CA-08,10,12,14,15,23 que referenciam passos ainda não executados.",
+      "assignee": "minos",
+      "dependencies": ["TASK-017"],
+      "acceptanceCriteria": [
+        "test-scenarios.md reordenado em fluxo: criar treino → adicionar exercício → adicionar séries → ativar programa",
+        "CA-08,10,12,14,15,23 movidos para posição correta no fluxo",
+        "Novos cenários para cobrir fluxo completo de montagem"
+      ],
+      "files": [
+        ".agents/modules/milon/03-treinos-series/test-scenarios.md",
+        ".agents/modules/milon/03-treinos-series/test-report.json"
+      ]
+    },
+    {
+      "id": "TASK-025",
+      "status": "completed",
+      "title": "Suite final + coverage ≥80% + test-report.json + test-scenarios.md atualizados + regression + build-storybook (pós-correções)",
+      "description": "Executar suíte completa pós-correções, coverage ≥80%, regenerar test-report.json (failed=0), test-scenarios.md atualizado com fluxo lógico, regression.md, build-storybook OK, guardian REVIEW OK.",
+      "assignee": "minos",
+      "dependencies": [
+        "TASK-018", "TASK-019", "TASK-020", "TASK-021", "TASK-022", "TASK-023", "TASK-024"
+      ],
+      "acceptanceCriteria": [
+        "npm test passa com failed=0 e coverage ≥80%",
+        "test-report.json atualizado com failed=0 e coverage ≥80",
+        "test-scenarios.md com fluxo lógico sequencial + cenários pós-ativação #2",
+        "regression.md atualizado",
+        "npm run build-storybook passa",
+        "guardian REVIEW OK"
+      ],
+      "files": [
+        ".agents/modules/milon/03-treinos-series/test-report.json",
+        ".agents/modules/milon/03-treinos-series/test-scenarios.md",
+        ".agents/modules/milon/regression.md"
+      ]
+    },
+    {
+      "id": "TASK-026",
+      "status": "completed",
+      "title": "FIX CRITICAL: React Hooks violation em ExercisePickerModal.tsx",
+      "description": "Argos CRITICAL: early return `if (!open) return null;` antes dos hooks (useMemo, useState) viola Rules of Hooks. Mover early return para depois dos hooks ou usar conditional rendering no JSX.",
+      "assignee": "hefesto",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "ExercisePickerModal.tsx sem early return antes dos hooks",
+        "Hooks chamados incondicionalmente no topo do componente",
+        "npm run lint passa sem erros de hooks",
+        "Comportamento visual mantido (modal fechado não renderiza conteúdo)"
+      ],
+      "files": [
+        "components/milon/ExercisePickerModal.tsx",
+        "__tests__/components/milon/ExercisePickerModal.test.tsx"
+      ]
+    },
+    {
+      "id": "TASK-027",
+      "status": "completed",
+      "title": "FIX CRITICAL: vitest.config.ts reportDir inválido para v8",
+      "description": "Argos CRITICAL: `reportDir: \"coverage\"` dentro de `coverage` com `provider: \"v8\"` — TypeScript error: `reportDir` não existe em `CoverageV8Options`. Remover ou mover para nível correto.",
+      "assignee": "hefesto",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "vitest.config.ts sem erro TypeScript em coverage.reportDir",
+        "npm run build passa sem erros TypeScript",
+        "Coverage report ainda gerado corretamente"
+      ],
+      "files": [
+        "vitest.config.ts"
+      ]
+    },
+    {
+      "id": "TASK-028",
+      "status": "pending",
+      "title": "DECISÃO HUMANA: D14 unicidade de exercício — por Programa (spec) ou por treino (test-scenarios CA-19)",
+      "description": "Argos IMPORTANT: Spec D14 diz unicidade por Programa (não pode repetir em nenhum treino do Programa). Test-scenarios CA-19 diz pode repetir em treinos diferentes do mesmo Programa. Implementação atual (migration 0009, workouts.ts) enforça por Programa. Precisa decisão humana para alinhar spec/test-scenarios/impl/migration.",
+      "assignee": "hera",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Decisão humana registrada: unicidade por Programa OU por treino",
+        "Se por treino: migration-0011 para alterar índice único para (workout_id, exercise_id), atualizar workouts.ts/fake, test-scenarios alinhado",
+        "Se por Programa: test-scenarios CA-19 corrigido para bloquear em treinos diferentes do mesmo Programa"
+      ],
+      "files": [
+        ".agents/modules/milon/03-treinos-series/spec.md",
+        ".agents/modules/milon/03-treinos-series/test-scenarios.md",
+        "utils/migrations/migration-0011-milon-exercise-unique-per-workout.sql (se por treino)",
+        "lib/milon/repositories/workouts.ts",
+        "lib/milon/repositories/fakes/fakeWorkoutRepository.ts"
+      ]
+    },
+    {
+      "id": "TASK-029",
+      "status": "pending",
+      "title": "Suite final + coverage ≥80% + test-report.json + test-scenarios.md + regression + build-storybook (pós-correções críticas)",
+      "description": "Executar suíte completa pós-correções críticas, coverage ≥80%, regenerar test-report.json (failed=0), test-scenarios.md alinhado com decisão D14, regression.md, build-storybook OK, guardian REVIEW OK.",
+      "assignee": "minos",
+      "dependencies": [
+        "TASK-026", "TASK-027", "TASK-028"
+      ],
+      "acceptanceCriteria": [
+        "npm test passa com failed=0 e coverage ≥80%",
+        "test-report.json atualizado com failed=0 e coverage ≥80",
+        "test-scenarios.md alinhado com decisão D14",
+        "regression.md atualizado",
+        "npm run build-storybook passa",
+        "npm run lint passa (0 errors)",
+        "npm run build passa",
+        "guardian REVIEW OK"
       ],
       "files": [
         ".agents/modules/milon/03-treinos-series/test-report.json",

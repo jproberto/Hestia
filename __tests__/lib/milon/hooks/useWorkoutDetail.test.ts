@@ -20,7 +20,7 @@
  * `executar` (act tolerante a relançamento) para as operações de lista.
  *
  * CONTRATO CONSUMIDO (plan.md §3 — retornos e regras):
- * - retorno: `{ workout, program, entries, exercises, programUsedExerciseIds,
+ * - retorno: `{ workout, program, entries, exercises, workoutUsedExerciseIds,
  *   loading, errorMsg, errorOrigin, successNotice, retry, addExercise,
  *   removeEntry, reorderEntries, setQuantity, setRest, updateSeries,
  *   applyToAll, saveExercise, createExerciseAndAdd, confirmLoadUnit }`;
@@ -407,13 +407,11 @@ describe("Mílon #3 — useWorkoutDetail (contrato RED, TASK-007)", () => {
         "s-3",
       ]);
 
-      // Conjunto D14: entradas de TODO o Programa (todos os treinos),
-      // exercícios únicos preservando a ordem de primeira aparição —
-      // comparado como conjunto para não amarrar a ordem de entrega.
-      expect([...result.current.programUsedExerciseIds].sort()).toEqual([
+      // Conjunto D14: exercícios já presentes NESTE treino (para D14 por treino)
+      // — comparado como conjunto para não amarrar a ordem de entrega.
+      expect([...result.current.workoutUsedExerciseIds].sort()).toEqual([
         "ex-1",
         "ex-2",
-        "ex-3",
       ]);
 
       // Exercício soft-deleted usado no treino permanece visível (histórico).

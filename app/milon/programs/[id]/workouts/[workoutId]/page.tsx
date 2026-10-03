@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { MilonLayout } from "@/components/milon/MilonLayout";
 import { AsyncState } from "@/components/ui/AsyncState";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import WorkoutConfirmModal, {
   type WorkoutConfirmVariant,
 } from "@/components/milon/WorkoutConfirmModal";
 import { useWorkoutDetail } from "@/lib/milon/hooks/useWorkoutDetail";
+import { setExerciseLoadUnitStandalone } from "@/lib/milon/db/exercises";
 import {
   compareExercisesByMuscleThenName,
   normalizeExerciseText,
@@ -57,6 +58,7 @@ interface ConfirmState {
 
 export default function WorkoutDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = resolveParam(params?.id as string | string[] | undefined);
   const workoutId = resolveParam(
     params?.workoutId as string | string[] | undefined,
@@ -81,7 +83,6 @@ export default function WorkoutDetailPage() {
     applyToAll,
     saveExercise,
     createExerciseAndAdd,
-    confirmLoadUnit,
   } = useWorkoutDetail(workoutId);
 
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -100,30 +101,69 @@ export default function WorkoutDetailPage() {
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [confirmProcessing, setConfirmProcessing] = useState(false);
 
-  const pendingUnitRef = useRef<
-    Record<string, { seriesId: string; value: number }>
-  >({});
+  // Toggle kg/lb otimista (sem reload): a troca visual acontece na hora via
+  // estado local do SeriesCard + override por exercício aqui na página; a
+  // persistência roda em background sem refetch cheio (sem setLoading/retry).
+  const [unitOverrides, setUnitOverrides] = useState<Record<string, LoadUnit>>(
+    {},
+  );
+  const [unitError, setUnitError] = useState<string | null>(null);
 
   const readOnly = program?.status === "inativo";
   const programId = program?.id ?? id;
 
+  // Entradas/exercícios com a unidade otimista aplicada: todos os cards do
+  // mesmo exercício passam a exibir a nova unidade (principal + secundária
+  // convertida) na hora, sem remontar inputs (keys por carga intactas).
+  const entriesWithUnit = useMemo(
+    () =>
+      unitOverrides && Object.keys(unitOverrides).length === 0
+        ? entries
+        : entries.map((view) => {
+            const override = unitOverrides[view.exercise.id];
+            if (!override || view.exercise.loadUnit === override) return view;
+            return {
+              ...view,
+              exercise: { ...view.exercise, loadUnit: override },
+            };
+          }),
+    [entries, unitOverrides],
+  );
+
+  const exercisesWithUnit = useMemo(
+    () =>
+      unitOverrides && Object.keys(unitOverrides).length === 0
+        ? exercises
+        : exercises.map((exercise) => {
+            const override = unitOverrides[exercise.id];
+            if (!override || exercise.loadUnit === override) return exercise;
+            return { ...exercise, loadUnit: override };
+          }),
+    [exercises, unitOverrides],
+  );
+
   const muscleOptions = useMemo(
-    () => deriveMuscleOptions(exercises),
-    [exercises],
+    () => deriveMuscleOptions(exercisesWithUnit),
+    [exercisesWithUnit],
   );
 
   const pickerExercises = useMemo(
     () =>
-      [...exercises]
+      [...exercisesWithUnit]
         .filter((exercise) => exercise.deletedAt === null)
         .sort(compareExercisesByMuscleThenName),
-    [exercises],
+    [exercisesWithUnit],
   );
 
   const findView = useCallback(
-    (entryId: string) => entries.find((view) => view.entry.id === entryId),
-    [entries],
+    (entryId: string) =>
+      entriesWithUnit.find((view) => view.entry.id === entryId),
+    [entriesWithUnit],
   );
+
+  const handleBackToProgram = useCallback(() => {
+    router.push(`/milon/programs/${programId}`);
+  }, [router, programId]);
 
   const openPicker = useCallback(() => {
     setPickerError(null);
@@ -279,15 +319,13 @@ export default function WorkoutDetailPage() {
 
   const handleSeriesCommit = useCallback(
     (entryId: string, seriesId: string, field: SerieField, value: number | null) => {
-      const view = findView(entryId);
-      if (field === "load" && value !== null && view?.exercise.loadUnit === null) {
-        pendingUnitRef.current[entryId] = { seriesId, value };
-      }
+      void entryId;
+      // Carga commita direto; unidade via toggle kg/lb (handleConfirmUnit).
       void updateSeries(seriesId, field, value).catch(() => {
         // O erro fica visível na página via hook (banner).
       });
     },
-    [findView, updateSeries],
+    [updateSeries],
   );
 
   const handleApplyAll = useCallback(
@@ -301,21 +339,35 @@ export default function WorkoutDetailPage() {
 
   const handleConfirmUnit = useCallback(
     (entryId: string, unit: LoadUnit) => {
+      // Toggle kg/lb instantâneo (como o toggle Repetições/Tempo): atualiza
+      // o visual na hora via override otimista + estado local do SeriesCard
+      // e persiste em background sem refetch cheio (sem setLoading/retry, sem
+      // remontar a lista). Só a unidade é persistida (D10); a carga segue
+      // intacta (D7: vazio ≠ 0). Falha reverte o override e comunica via
+      // banner local (origem operacao: sem retry, norma D27/R31).
       const view = findView(entryId);
       if (!view) return;
-      const pending = pendingUnitRef.current[entryId];
-      const seriesId = pending?.seriesId ?? view.series[0]?.id;
-      const value = pending?.value ?? view.series[0]?.load ?? 0;
-      if (!seriesId) return;
-      void confirmLoadUnit(view.exercise.id, unit, seriesId, value)
-        .then(() => {
-          delete pendingUnitRef.current[entryId];
-        })
-        .catch(() => {
-          // O erro fica visível na página via hook (banner).
-        });
+      const exerciseId = view.exercise.id;
+      const previous: LoadUnit | null = view.exercise.loadUnit;
+      if (previous === unit) return;
+      setUnitOverrides((prev) => ({ ...prev, [exerciseId]: unit }));
+      setUnitError(null);
+      void setExerciseLoadUnitStandalone(exerciseId, unit).catch(
+        (err: unknown) => {
+          setUnitOverrides((prev) => {
+            const next = { ...prev };
+            if (previous === null) {
+              delete next[exerciseId];
+            } else {
+              next[exerciseId] = previous;
+            }
+            return next;
+          });
+          setUnitError(toMessage(err, "Não foi possível salvar a unidade."));
+        },
+      );
     },
-    [findView, confirmLoadUnit],
+    [findView],
   );
 
   const handleReorder = useCallback(
@@ -367,9 +419,20 @@ export default function WorkoutDetailPage() {
               aria-label="Cabeçalho do treino"
               className="rounded-lg border bg-card p-6 shadow-sm flex flex-col gap-2"
             >
-              <h2 className="font-display text-2xl leading-snug text-[#B7602B] tracking-wider">
-                {workout.name}
-              </h2>
+              <div className="flex items-center justify-between gap-4">
+                <h2 className="font-display text-2xl leading-snug text-[#B7602B] tracking-wider flex-1">
+                  {workout.name}
+                </h2>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleBackToProgram}
+                  aria-label="Voltar ao programa"
+                >
+                  Voltar ao programa
+                </Button>
+              </div>
             </section>
 
             {successNotice ? (
@@ -378,19 +441,20 @@ export default function WorkoutDetailPage() {
               </div>
             ) : null}
 
-            {readOnly ? null : (
-              <div className="flex justify-end">
-                <Button type="button" onClick={openPicker}>
-                  Adicionar exercício
-                </Button>
+            {unitError ? (
+              <div
+                role="alert"
+                className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-700 dark:text-rose-300 font-medium"
+              >
+                {unitError}
               </div>
-            )}
+            ) : null}
 
             <WorkoutEntriesList
-              entries={entries}
+              entries={entriesWithUnit}
               programId={programId}
               readOnly={readOnly ?? false}
-              empty={entries.length === 0}
+              empty={entriesWithUnit.length === 0}
               errorMsg={errorMsg}
               errorOrigin={errorOrigin}
               onAdd={openPicker}

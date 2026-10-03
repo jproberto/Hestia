@@ -10,15 +10,16 @@ const path = require("path");
 const TRANSITIONS = {
   SPEC_DRAFT: ["SPEC_APPROVED"],
   SPEC_APPROVED: ["PLAN_READY", "SPEC_DRAFT"],
-  PLAN_READY: ["TASKS_READY", "SPEC_APPROVED"],
-  TASKS_READY: ["CODING", "PLAN_READY"],
+  PLAN_READY: ["PLAN_APPROVED", "SPEC_APPROVED"],
+  PLAN_APPROVED: ["TASKS_READY", "PLAN_READY", "SPEC_DRAFT"],
+  TASKS_READY: ["CODING", "PLAN_APPROVED", "PLAN_READY"],
   CODING: ["TESTING", "TASKS_READY"],
   TESTING: ["REVIEW", "CODING"],
-  REVIEW: ["APPROVED", "CODING", "TASKS_READY", "PLAN_READY", "SPEC_DRAFT"],
-  APPROVED: ["COMMITTED", "CODING", "TASKS_READY", "PLAN_READY", "SPEC_DRAFT"],
-  COMMITTED: ["MERGED", "CODING", "TASKS_READY", "PLAN_READY", "SPEC_DRAFT"],
-  MERGED: ["VERIFIED", "CODING", "TASKS_READY", "PLAN_READY", "SPEC_DRAFT"],
-  VERIFIED: ["RELEASED", "CODING", "TASKS_READY", "PLAN_READY", "SPEC_DRAFT"],
+  REVIEW: ["APPROVED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
+  APPROVED: ["COMMITTED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
+  COMMITTED: ["MERGED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
+  MERGED: ["VERIFIED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
+  VERIFIED: ["RELEASED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
   RELEASED: [],
 };
 
@@ -58,6 +59,13 @@ if (next === "SPEC_APPROVED") {
   if (CODE_FENCE.test(spec)) fail("spec.md contém bloco de código — proibição absoluta (hera.md)");
   if (/\b(TBD|TODO)\b/.test(spec)) fail("spec.md contém TBD/TODO");
 }
+if (next === "PLAN_APPROVED") {
+  if (!ctx || ctx.approvals?.plan !== "approved") fail("checkpoint 2 pendente: approvals.plan !== approved (approve-plan)");
+  const plan = read(path.join(dir, "plan.md"));
+  if (!plan) fail("plan.md ausente");
+  if (/^```(ts|tsx|js|jsx|sql|py)\s*$/m.test(plan)) fail("plan.md contém código de implementação — só contratos textuais");
+  if (/\b(TBD|TODO)\b/.test(plan)) fail("plan.md contém TBD/TODO");
+}
 if (next === "TASKS_READY") {
   const tasks = readJSON(path.join(dir, "tasks.json"));
   if (!tasks || !Array.isArray(tasks.tasks) || tasks.tasks.length < 3) fail("tasks.json inválido: exige ≥3 tasks");
@@ -66,7 +74,8 @@ if (next === "TASKS_READY") {
       fail(`task inválida: ${t.id || "?"}`);
   }
   const plan = read(path.join(dir, "plan.md"));
-  if (plan && /^```(ts|tsx|js|jsx|sql|py)\s*$/m.test(plan)) fail("plan.md contém código de implementação — só contratos textuais");
+  if (!plan) fail("plan.md ausente (exigido para TASKS_READY)");
+  if (/^```(ts|tsx|js|jsx|sql|py)\s*$/m.test(plan)) fail("plan.md contém código de implementação — só contratos textuais");
 }
 if (next === "REVIEW") {
   const rep = readJSON(path.join(dir, "test-report.json"));
@@ -75,7 +84,7 @@ if (next === "REVIEW") {
   if ((rep.summary?.coverage ?? 0) < 80) fail(`coverage ${rep.summary?.coverage} < 80`);
 }
 if (next === "APPROVED") {
-  if (!ctx || ctx.approvals?.review !== "approved") fail("checkpoint 2 pendente: approvals.review !== approved");
+  if (!ctx || ctx.approvals?.review !== "approved") fail("checkpoint 3 pendente: approvals.review !== approved");
   const rev = readJSON(path.join(dir, "review-report.json"));
   if (!rev) fail("review-report.json ausente");
   if (rev.status === "blocked") fail("review-report blocked — devolva para fase exata");

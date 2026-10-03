@@ -1,6 +1,6 @@
 {
-  "currentPhase": "COMMITTED",
-  "validTransitions": ["MERGED", "CODING", "TASKS_READY", "PLAN_READY", "SPEC_DRAFT"],
+  "currentPhase": "RELEASED",
+  "validTransitions": [],
   "phaseHistory": [
     {
       "phase": "SPEC_DRAFT",
@@ -133,7 +133,19 @@
     {
       "phase": "COMMITTED",
       "timestamp": "2026-10-03T00:01:00.000Z"
+    },
+    {
+      "phase": "MERGED",
+      "timestamp": "2026-10-03T16:11:24.000Z"
+    },
+    {
+      "phase": "VERIFIED",
+      "timestamp": "2026-10-03T16:18:00.000Z"
+    },
+    {
+      "phase": "RELEASED",
+      "timestamp": "2026-10-03T16:20:00.000Z"
     }
   ],
-  "lastUpdated": "2026-10-03T00:01:00.000Z"
+  "lastUpdated": "2026-10-03T16:20:00.000Z"
 }

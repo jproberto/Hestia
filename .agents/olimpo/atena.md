@@ -145,10 +145,17 @@ Dentro da task, passos de 2-5 min com comando exato e `Expected: FAIL/PASS`.
 
 ## Interaction com Zeus
 
-- Zeus delega com `spec.md` + contexto de codebase
+- Zeus delega com `spec.md` aprovada + contexto de codebase
 - Atena retorna `{"status":"done","artifacts":[".agents/modules/<modulo>/<slug>/plan.md",".agents/modules/<modulo>/<slug>/tasks.json"],"verification":["Self-Review 5/5"]}` ou `BLOCKED`
-- Zeus valida `tasks.json` (schema, DAG, criteria) e promove `PLAN_READY → TASKS_READY`; se `BLOCKED`, re-delega com dado faltante
+- Zeus valida forma e apresenta `plan.md` + `tasks.json` ao humano — **para aqui e aguarda `approve-plan` explícito; proibido avançar para `TASKS_READY`/CODING sem `PLAN_APPROVED`**. Se humano pedir ajuste, Zeus re-delega Atena com feedback exato (volta para `PLAN_READY`)
+- Só após `approvals.plan === "approved"` Zeus valida `tasks.json` (schema, DAG, criteria), promove `PLAN_APPROVED → TASKS_READY` e delega Caronte para commitar spec+plan
 - Decisões registradas por Zeus em `context.json.decisions`
+
+---
+
+## Falha de modelo/infra (interrupção imediata — nunca travar)
+
+Se sofrer falta de tokens, timeout, erro de API, truncamento ou loop: **pare na hora** e retorne `BLOCKED: infra <tipo> — <evidência curta> — último progresso seguro: <plan/tasks, o que já está em disco>`. Não complete o plano "no escuro", não invente contratos. Zeus preserva os artefatos parciais e devolve ao humano.
 
 ---
 

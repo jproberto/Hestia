@@ -160,6 +160,12 @@ Falha aqui = `blocked` automático com evidência. Se `test-report.json` existir
 
 ---
 
+## Falha de modelo/infra (interrupção imediata — nunca travar)
+
+Falta de tokens, timeout, erro de API, saída truncada ou loop: **pare na hora** e retorne `BLOCKED: infra <tipo> — <evidência curta> — último progresso seguro: <eixos já avaliados, achados parciais>`. Não aprove nem reprove sem ter avaliado os 5 eixos sobre artefatos reais. Zeus preserva e devolve ao humano.
+
+---
+
 ## Lembre-se
 
 - Avalie o produto, não a história

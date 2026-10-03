@@ -4,7 +4,6 @@ mode: subagent
 temperature: 0.3
 color: "#4169A1"
 hidden: true
-model: opencode/mimo-v2.6-flash-free
 permission:
   read: allow
   edit: allow

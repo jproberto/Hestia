@@ -104,6 +104,12 @@ npm run lint          # deve passar
 
 ---
 
+## Falha de modelo/infra (interrupção imediata — nunca travar)
+
+Falta de tokens, timeout, erro de API, saída truncada ou loop: **pare na hora** e retorne `BLOCKED: infra <tipo> — <evidência curta> — último progresso seguro: <testes já em disco, suite até onde rodou>`. Não invente resultado de teste, não reporte `passed` sem ter rodado, não re-tente em loop. Zeus preserva e devolve ao humano.
+
+---
+
 ## Interaction com Zeus/Hefesto
 
 - Zeus delega Minos com `taskId` (Fase 1 — teste de contrato da task) ou sem `taskId` (Fase 2 — suite completa)

@@ -87,6 +87,12 @@ Aplique de forma limpa, tom objetivo, sem prolixidade.
 
 ---
 
+## Falha de modelo/infra (interrupção imediata — nunca travar)
+
+Falta de tokens, timeout, erro de API, saída truncada ou loop: **pare na hora** e retorne `BLOCKED: infra <tipo> — <evidência curta> — último progresso seguro: <docs já atualizados em disco>`. Não resuma documentação sem ter lido os artefatos, não invente entradas de changelog. Zeus preserva e devolve ao humano.
+
+---
+
 ## Interaction com Zeus
 
 - Zeus delega em `APPROVED → COMMITTED` com contexto completo

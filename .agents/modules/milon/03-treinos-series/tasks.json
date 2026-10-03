@@ -547,7 +547,7 @@
     },
     {
       "id": "TASK-028",
-      "status": "pending",
+      "status": "completed",
       "title": "DECISÃO HUMANA: D14 unicidade de exercício — por Programa (spec) ou por treino (test-scenarios CA-19)",
       "description": "Argos IMPORTANT: Spec D14 diz unicidade por Programa (não pode repetir em nenhum treino do Programa). Test-scenarios CA-19 diz pode repetir em treinos diferentes do mesmo Programa. Implementação atual (migration 0009, workouts.ts) enforça por Programa. Precisa decisão humana para alinhar spec/test-scenarios/impl/migration.",
       "assignee": "hera",
@@ -567,7 +567,7 @@
     },
     {
       "id": "TASK-029",
-      "status": "pending",
+      "status": "completed",
       "title": "Suite final + coverage ≥80% + test-report.json + test-scenarios.md + regression + build-storybook (pós-correções críticas)",
       "description": "Executar suíte completa pós-correções críticas, coverage ≥80%, regenerar test-report.json (failed=0), test-scenarios.md alinhado com decisão D14, regression.md, build-storybook OK, guardian REVIEW OK.",
       "assignee": "minos",

@@ -13,6 +13,7 @@ Héstia é uma ferramenta pessoal para controle de finanças e planejamento orç
 * **Checklist de Contas a Pagar/Receber:** Lista recorrente de compromissos financeiros com indicação visual de urgência e validação de orçamento por categoria (`/pluto/transactions`, cards de checklist).
 * **Biblioteca de Exercícios (Mílon):** Cadastro compartilhado do casal (nome + músculo + link de vídeo opcional) com filtro por músculo, busca por texto, lotes com mostrar mais e modal único criar/editar (`/milon/exercises`).
 * **Programas (Mílon):** Agrupa treinos por programa com dono, ciclo de vida `rascunho`/`ativo`/`inativo` (somente um ativo por dono, ativação com confirmação e guarda), filtros por dono/status, página de detalhe e navegação em abas entre Exercícios e Programas (`/milon/programs`).
+* **Treinos + séries planejadas (Mílon):** Dentro de um Programa, treinos com nome obrigatório/único e sugestão automática (`Treino A…Z, AA, AB…`), subtítulo derivado dos músculos e ordem de criação; no treino, exercícios reordenáveis por arrastar e soltar com séries planejadas (quantidade obrigatória, reps/tempo/carga/descanso nascendo vazios, vazio ≠ 0, unidade kg/libra por exercício, "aplicar a todas"); ativação do programa liberada com conteúdo mínimo (`/milon/programs/[id]`, `/milon/programs/[id]/workouts/[workoutId]`).
 
 ### Funcionalidades Recentes (0.7.0)
 

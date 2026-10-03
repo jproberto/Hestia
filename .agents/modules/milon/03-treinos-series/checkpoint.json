@@ -1,6 +1,6 @@
 {
-  "currentPhase": "REVIEW",
-  "validTransitions": ["APPROVED", "CODING", "TASKS_READY", "PLAN_READY", "SPEC_DRAFT"],
+  "currentPhase": "COMMITTED",
+  "validTransitions": ["MERGED", "CODING", "TASKS_READY", "PLAN_READY", "SPEC_DRAFT"],
   "phaseHistory": [
     {
       "phase": "SPEC_DRAFT",
@@ -125,7 +125,15 @@
     {
       "phase": "APPROVED",
       "timestamp": "2026-10-02T23:00:00.000Z"
+    },
+    {
+      "phase": "APPROVED",
+      "timestamp": "2026-10-03T00:00:00.000Z"
+    },
+    {
+      "phase": "COMMITTED",
+      "timestamp": "2026-10-03T00:01:00.000Z"
     }
   ],
-  "lastUpdated": "2026-10-02T23:00:00.000Z"
+  "lastUpdated": "2026-10-03T00:01:00.000Z"
 }

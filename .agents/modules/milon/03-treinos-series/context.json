@@ -249,6 +249,16 @@
       "phase": "APPROVED",
       "timestamp": "2026-10-02T22:10:00.000Z",
       "action": "Argos APROVOU — review-report.json status=approved, 0 blockers. Aguardando approve-review humano para COMMITTED"
+    },
+    {
+      "phase": "APPROVED",
+      "timestamp": "2026-10-03T00:00:00.000Z",
+      "action": "Humano aprovou testes manuais e autorizou encerramento (approve-review). Argos final: approved, 3 minors documentais. Próximo: COMMITTED via Mnemósine + Caronte"
+    },
+    {
+      "phase": "COMMITTED",
+      "timestamp": "2026-10-03T00:01:00.000Z",
+      "action": "Transição para COMMITTED — delegando Mnemósine (docs + higiene plan D14) e Caronte (commit docs + push + PR)"
     }
   ],
   "approvals": {

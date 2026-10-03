@@ -259,6 +259,26 @@
       "phase": "COMMITTED",
       "timestamp": "2026-10-03T00:01:00.000Z",
       "action": "Transição para COMMITTED — delegando Mnemósine (docs + higiene plan D14) e Caronte (commit docs + push + PR)"
+    },
+    {
+      "phase": "COMMITTED",
+      "timestamp": "2026-10-03T16:05:00.000Z",
+      "action": "Caronte publicou: commits c90abb8 (docs + higiene D14) + 34faeeb (diff.patch), push -u, PR #30 criado e mergeado (9c14730, --auto --merge)"
+    },
+    {
+      "phase": "MERGED",
+      "timestamp": "2026-10-03T16:11:24.000Z",
+      "action": "PR #30 MERGED em develop (9c14730)"
+    },
+    {
+      "phase": "VERIFIED",
+      "timestamp": "2026-10-03T16:18:00.000Z",
+      "action": "CI pós-merge na develop verde (run 37135934641 success) — develop verde"
+    },
+    {
+      "phase": "RELEASED",
+      "timestamp": "2026-10-03T16:20:00.000Z",
+      "action": "RELEASED terminal: develop local em 9c14730 (= origin/develop), FEATURE_DIR mantida como histórico permanente. Backlog item 3 virado para Concluído no working tree (não commitado — develop protegida; veículo: próximo feature/*). Ambiente livre para próxima feature."
     }
   ],
   "approvals": {

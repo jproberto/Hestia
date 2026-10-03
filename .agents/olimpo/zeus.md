@@ -82,8 +82,8 @@ Fluxo feliz: SPEC_DRAFT → SPEC_APPROVED → PLAN_READY → TASKS_READY → COD
 Retornos: TESTING → CODING (falhas/gaps de Minos)
           REVIEW → CODING | TASKS_READY | PLAN_READY | SPEC_DRAFT (blockers de Argos conforme categoria)
           APPROVED → CODING | TASKS_READY | PLAN_READY | SPEC_DRAFT (rejeição humana no checkpoint 2)
-          MERGED → CODING | TASKS_READY | PLAN_READY | SPEC_DRAFT (CI do PR vermelho, conforme categoria)
-          VERIFIED → CODING | TASKS_READY | PLAN_READY | SPEC_DRAFT (CI pós-merge vermelho, conforme categoria)
+           MERGED → CODING | TASKS_READY | PLAN_READY | SPEC_DRAFT (humano avalia CI do PR e avisa; Zeus volta para fase exata pela categoria)
+           VERIFIED → CODING | TASKS_READY | PLAN_READY | SPEC_DRAFT (humano avalia CI pós-merge e avisa; Zeus volta para fase exata pela categoria)
           CODING/TASKS_READY/PLAN_READY → fase anterior (artefato inválido detectado por Zeus)
 ```
 
@@ -272,10 +272,10 @@ Se especialista retornar `BLOCKED`, Zeus lê o gap, fornece o dado ou escala par
 - **TESTING**: `minos` suite completa → `test-report.json` + `test-scenarios.md` em `FEATURE_DIR`
 - **REVIEW**: Zeus gera `diff.patch` (`bash: git diff develop...HEAD > FEATURE_DIR/diff.patch`) → `argos` → `review-report.json` em `FEATURE_DIR` (`approved|blocked`); se `blocked` → devolve para fase exata (hefesto/minos/atena/hera)
 - **APPROVED**: humano testa cenários de `FEATURE_DIR/test-scenarios.md` → aprova → `COMMITTED`
-- **COMMITTED**: `mnemosine` docs → `caronte` `docs:` → `caronte` push + PR + `gh pr merge --auto --merge` (publicar)
-- **MERGED**: Caronte acompanha PR até `MERGED` (`gh pr view`); CI do PR vermelho → volta para fase exata pela categoria e republica
-- **VERIFIED**: Caronte acompanha CI pós-merge na `develop` até `success` (`gh run list --branch develop`); vermelho → `BLOCKED: develop CI red`, corrige antes de liberar
-- **RELEASED** (terminal): Caronte `git checkout develop` + `pull`, confirma SHA + working tree limpo → atualiza `backlog.md` (`Concluído`), mantém `FEATURE_DIR` como histórico permanente, libera o ambiente
+- **COMMITTED**: `mnemosine` docs → `caronte` `docs:` → `caronte` push quando aprovado (publicar). **PARA AQUI: a partir do push, o humano abre/acompanha o PR, mergeia no GitHub, avalia o CI e avisa Zeus. Caronte nunca cria PR, nunca mergeia, nunca arma auto-merge**
+- **MERGED**: humano mergeia o PR no GitHub e avisa Zeus (transição registrada por Zeus); CI do PR vermelho → humano avalia, Zeus volta para fase exata pela categoria e republica
+- **VERIFIED**: humano avalia o CI pós-merge na `develop` e avisa Zeus; verde → segue; vermelho → `BLOCKED: develop CI red`, corrige antes de liberar
+- **RELEASED** (terminal): humano sincroniza o ambiente (`git checkout develop` + `pull`); Zeus confirma SHA + working tree limpo → atualiza `backlog.md` (`Concluído`), mantém `FEATURE_DIR` como histórico permanente, libera o ambiente
 
 ---
 

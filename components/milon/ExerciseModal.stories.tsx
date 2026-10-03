@@ -16,6 +16,8 @@ const editingExercise: Exercise = {
   name: "Supino reto",
   muscle: "Peito",
   videoLink: "https://video.exemplo/supino",
+  loadUnit: null,
+  deletedAt: null,
   createdAt: "2026-09-12T00:00:00Z",
   created_by: "a@hestia.com",
 };

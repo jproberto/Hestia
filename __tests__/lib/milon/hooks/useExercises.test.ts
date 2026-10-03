@@ -24,6 +24,8 @@ function makeExercise(overrides: Partial<Exercise> & { id: string }): Exercise {
     name: "Supino reto",
     muscle: "peito",
     videoLink: null,
+    loadUnit: null,
+    deletedAt: null,
     createdAt: "2026-09-12T00:00:00.000Z",
     created_by: EMAIL,
     ...overrides,
@@ -371,6 +373,34 @@ describe("useExercises (TASK-005)", () => {
     expect(result.current.exercises).toHaveLength(2);
     expect(result.current.muscleFilter).toBe("peito");
     expect(result.current.visibleExercises.map((e) => e.id)).toEqual(["ex-1"]);
+  });
+
+  it("mantém loadUnit e deletedAt nos exercícios carregados (contrato da #3)", async () => {
+    mockList([
+      makeExercise({
+        id: "ex-1",
+        name: "Supino reto",
+        muscle: "peito",
+        loadUnit: "kg",
+        deletedAt: null,
+      }),
+      makeExercise({
+        id: "ex-2",
+        name: "Agachamento",
+        muscle: "perna",
+        loadUnit: null,
+        deletedAt: "2026-10-01T12:00:00.000Z",
+      }),
+    ]);
+    const { result } = renderHook(() => useExercises());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const porId = (id: string) => result.current.exercises.find((e) => e.id === id);
+    // O hook não pode descartar nem normalizar os campos novos do domínio.
+    expect(porId("ex-1")?.loadUnit).toBe("kg");
+    expect(porId("ex-1")?.deletedAt).toBeNull();
+    expect(porId("ex-2")?.loadUnit).toBeNull();
+    expect(porId("ex-2")?.deletedAt).toBe("2026-10-01T12:00:00.000Z");
   });
 
   it("hooks/index exporta useExercises como caminho oficial", () => {

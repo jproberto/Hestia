@@ -8,6 +8,11 @@ import type {
   Program,
   CreateProgramInput,
   UpdateProgramInput,
+  Workout,
+  WorkoutEntry,
+  WorkoutSeries,
+  CreateWorkoutInput,
+  UpdateWorkoutInput,
 } from "../types";
 
 export interface IExerciseRepository {
@@ -31,4 +36,52 @@ export interface IProgramRepository {
   update(id: string, input: UpdateProgramInput): Promise<Program>;
   delete(id: string): Promise<void>;
   findActiveByOwner(owner: string): Promise<Program | null>;
+}
+
+export interface UpdateSeriesFieldsInput {
+  reps?: number | null;
+  durationSeconds?: number | null;
+  load?: number | null;
+}
+
+export interface IWorkoutRepository {
+  listWorkoutsByProgram(programId: string): Promise<Workout[]>;
+  findWorkoutById(workoutId: string): Promise<Workout | null>;
+  createWorkout(
+    programId: string,
+    input: CreateWorkoutInput,
+    email: string,
+  ): Promise<Workout>;
+  updateWorkoutName(
+    workoutId: string,
+    input: UpdateWorkoutInput,
+  ): Promise<Workout>;
+  deleteWorkout(workoutId: string): Promise<void>;
+  hasWorkouts(programId: string): Promise<boolean>;
+  hasWorkoutWithExercise(programId: string): Promise<boolean>;
+  listEntriesByWorkout(workoutId: string): Promise<WorkoutEntry[]>;
+  listEntriesByProgram(programId: string): Promise<WorkoutEntry[]>;
+  addEntry(
+    workoutId: string,
+    programId: string,
+    exerciseId: string,
+    email: string,
+  ): Promise<WorkoutEntry>;
+  removeEntry(entryId: string): Promise<void>;
+  reorderEntries(workoutId: string, orderedEntryIds: string[]): Promise<void>;
+  setEntryRestSeconds(entryId: string, seconds: number | null): Promise<void>;
+  listSeriesByEntry(entryId: string): Promise<WorkoutSeries[]>;
+  setSeriesQuantity(
+    entryId: string,
+    quantity: number,
+    email: string,
+  ): Promise<WorkoutSeries[]>;
+  updateSeriesFields(
+    seriesId: string,
+    fields: UpdateSeriesFieldsInput,
+  ): Promise<WorkoutSeries>;
+  applySeriesToAll(
+    entryId: string,
+    originSeriesId: string,
+  ): Promise<WorkoutSeries[]>;
 }

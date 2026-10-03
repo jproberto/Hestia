@@ -29,6 +29,8 @@ function makeExercise(overrides: Partial<Exercise> = {}): Exercise {
     name: "Supino reto",
     muscle: "Peito",
     videoLink: null,
+    loadUnit: null,
+    deletedAt: null,
     createdAt: "2026-09-12T00:00:00Z",
     created_by: "a@hestia.com",
     ...overrides,
@@ -295,6 +297,37 @@ describe("ExercisesPage /milon/exercises - Biblioteca de exercícios (CA-P3-02 /
         "ex-1",
       );
     });
+  });
+
+  it("salvar não envia loadUnit/deletedAt ao hook (unidade e exclusão fora do form)", async () => {
+    const item = makeExercise({
+      id: "ex-1",
+      name: "Supino reto",
+      muscle: "Peito",
+      loadUnit: "kg",
+      deletedAt: null,
+    });
+    const save = vi.fn(async (_fields: unknown, _id?: unknown) => makeExercise());
+    setupHook({
+      exercises: [item],
+      filteredExercises: [item],
+      visibleExercises: [item],
+      muscleOptions: ["Peito"],
+      save,
+    });
+
+    render(<ExercisesPage />);
+
+    await clickConnectedButton(/editar supino reto/i);
+    await clickConnectedButton(/^salvar$/i);
+
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    const [payload, id] = save.mock.calls[0];
+    // A página não repassa campos de soft delete/unidade para o form de edição.
+    expect(id).toBe("ex-1");
+    expect(payload).toEqual({ name: "Supino reto", muscle: "Peito", videoLink: null });
+    expect(payload).not.toHaveProperty("loadUnit");
+    expect(payload).not.toHaveProperty("deletedAt");
   });
 
   it("excluir pede confirmação com nome e músculo antes de sumir da lista", async () => {

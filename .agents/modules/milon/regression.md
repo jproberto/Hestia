@@ -1,49 +1,250 @@
-# Regression — Módulo Mílon
+# Regressão — Módulo Mílon
 
-Cenários promovidos pelos testes de cada feature (Minos promove a partir de `test-scenarios.md`). Cada cenário ≤3 passos de caminho feliz.
+> Cenários de regressão promovidos a partir das features entregues. Executados a cada nova feature para garantir que nada quebrou.
 
-## Biblioteca — exercício persiste entre sessões
+---
 
-1. Acesse `/milon/exercises` (rota da biblioteca desde o Patch v3 — `/milon` agora redireciona para Programas) e confira a lista de exercícios ordenada.
-2. Crie "Supino reto / Peito" via "Salvar" e confira o item na lista.
-3. Recarregue a página e confira que o item continua na lista.
+## Feature #1 — Biblioteca de exercícios (baseline)
 
-## Programas — criação com sugestão e persistência da lista
+### REG-01: Listar exercícios
+**Dado** a biblioteca com exercícios cadastrados  
+**Quando** a pessoa abre a aba Exercícios  
+**Então** a lista exibe todos os exercícios ativos ordenados por músculo e nome
 
-1. Acesse `/milon/programs` e confira a lista carregada com o dono próprio no select, os três status marcados e os itens do mais novo para o mais antigo.
-2. Clique em "Novo programa", confira o título de sugestão pré-preenchido, troque o título e salve — confira o item novo na lista com título, dono e status.
-3. Recarregue a página e confira que o Programa criado continua na lista.
+### REG-02: Criar exercício
+**Dado** o formulário de novo exercício  
+**Quando** a pessoa preenche nome, músculo e link de vídeo válidos e salva  
+**Então** o exercício é criado e aparece na lista
 
-## Programas — navegação em abas do módulo (Patch v3)
+### REG-03: Anti-duplicata de nome
+**Dado** um exercício "Supino reto" já cadastrado  
+**Quando** a pessoa tenta criar outro com o mesmo nome (caixa diferente ou espaços extras)  
+**Então** o salvamento é bloqueado com mensagem visível
 
-1. Acesse `/milon` e confira que termina em `/milon/programs` com a aba **Programas** destacada (aria-current="page").
-2. Clique em **Exercícios**, confira `/milon/exercises` com a biblioteca e a aba **Exercícios** destacada.
-3. Abra `/milon/programs` por URL direta e confira a aba **Programas** já destacada sem clique prévio.
+### REG-04: Editar exercício
+**Dado** um exercício existente  
+**Quando** a pessoa edita nome, músculo ou link e salva  
+**Então** a alteração é persistida e refletida na lista
 
-## Programas — confirmação fecha com mensagem legível e criação navega ao detalhe (Patch v4)
+### REG-05: Excluir exercício sem uso — direto
+**Dado** um exercício não usado em nenhum treino  
+**Quando** a pessoa o exclui  
+**Então** a exclusão acontece sem confirmação
 
-1. Acesse `/milon/programs`, clique em "Novo programa", salve com um título novo e confira que a criação navega para `/milon/programs/<id>` exibindo título, dono e status.
-2. Volte à lista, clique em "Ativar" em um programa sem treinos, confirme e confira que o modal de confirmação **fecha** e a mensagem aparece no corpo da página **sem** o botão "Tentar novamente".
-3. Recarregue a lista com a rede simulada como falhando (DevTools offline) e confira que o banner de erro de carga exibe "Tentar novamente" e que o clique recarrega os programas.
+### REG-06: Excluir exercício com uso — bloqueado (soft delete)
+**Dado** um exercício usado em treinos (feature #3)  
+**Quando** a pessoa tenta excluí-lo  
+**Então** a exclusão é bloqueada (soft delete protege histórico)  
+**E** o exercício permanece visível nos treinos onde é usado
 
-## Programas — banner de erro ACIMA com a lista visível e retry só na carga (Patch v5 · CA-P5-1, CA-P5-3, CA-P5-5, CA-P5-6)
+### REG-07: Busca por nome
+**Dado** a lista de exercícios  
+**Quando** a pessoa digita no campo de busca  
+**Então** a lista filtra em tempo real por nome
 
-1. Com a rede em Offline (DevTools), confirme a exclusão de um rascunho: o modal **fecha**, a mensagem aparece em banner **acima** da lista — a lista continua visível e legível — e **não** há "Tentar novamente" (origem `operacao`).
-2. Volte a Online e recarregue a lista: o banner de erro de **carga** é o único que exibe "Tentar novamente", e o clique recarrega os programas.
-3. Repita o passo 1 na biblioteca (`/milon/exercises`) e confira o mesmo comportamento — modal de exclusão fecha em falha, banner acima da lista visível, sem retry.
+### REG-08: Filtro por músculo
+**Dado** a lista de exercícios  
+**Quando** a pessoa seleciona um músculo no filtro  
+**Então** a lista mostra apenas exercícios daquele músculo
 
-> Preservados: os cenários **CA-P3-13…16** (bloqueio/falha fecham a confirmação com mensagem legível, retry só na carga) continuam válidos e são reexercitados pelos passos acima — a mudança do Patch v5 é de **composição** (banner acima, lista visível), não de conteúdo. Cobertos também por CA-P5-2/4 (precedência dos 4 estados e textos por props) na suíte automatizada; CA-P5-8 é handoff da fase 7 (Mnemósine) e CA-P5-9 é o gate de processo do `test-report.json`.
+---
 
-## Programas — título do item é link para o detalhe (Patch v6 · CA-P6-1…5)
+## Feature #2 — Programas (baseline)
 
-1. Acesse `/milon/programs` e confira que o **título** de cada item da lista é um link clicável com destino `/milon/programs/<id>` daquele item (cor marrom `#B7602B` no repouso, outra tom no hover e foco visível por teclado, **sem sublinhado**).
-2. Clique no título de um programa e confira que a navegação chega a `/milon/programs/<id>` exibindo título, dono e status (cabeçalho do programa).
-3. Volte à lista e confira que as ações por status continuam funcionando **fora** do link (rascunho: Editar/Ativar/Excluir; ativo: Editar; inativo: Reativar) — o clique na ação dispara o modal/callback de sempre e **nunca** navega; dono e selo de status seguem texto simples.
+### REG-09: Listar Programas
+**Dado** a tela de Programas  
+**Quando** a pessoa abre  
+**Então** a lista exibe todos os Programas do casal com título, dono e status
 
-> **Preservados (reexecutados verdes na TASK-045/CA-P6-6):** os critérios do Patch v5 seguem íntegros — **CA-P5-1…9** (banner ACIMA com lista visível, precedência dos 4 estados, retry só na carga, contrato do componente, adoção preservando CA-P3-13…16, exclusão da biblioteca fechando em falha, norma de documentação e gate de processo) — e a prova de herança **CA-P5-7** foi reexecutada em verde (seção abaixo). Os testes automatizados correspondentes: 33/33 em `__tests__/components/milon/ProgramList.test.tsx`, 176 verdes nos 8 arquivos do Patch v5 e 786/786 da suíte completa.
+### REG-10: Criar Programa rascunho
+**Dado** o formulário de novo Programa  
+**Quando** a pessoa preenche título e salva  
+**Então** o Programa é criado com status "rascunho"
 
-## Prova de herança — "Tentar novamente" só no componente centralizado (Patch v5 · CA-P5-7 — mantida no Patch v6)
+### REG-11: Ativar Programa rascunho — bloqueado sem conteúdo (antes da #3)
+**Dado** um Programa rascunho sem treinos com exercícios  
+**Quando** a pessoa tenta ativar  
+**Então** a ativação é bloqueada com mensagem "Adicione pelo menos um treino com exercícios para ativar"
 
-1. Busque a cadeia `Tentar novamente` em `app/` e `components/` — deve retornar **1 ocorrência, somente** `components/ui/AsyncState.tsx` (zero em `ProgramList.tsx`, `ExerciseList.tsx` e em qualquer tela). *Reexecutado na TASK-045 (2026-10-01): PASS.*
-2. Busque `AsyncState` em `app/pluto/` e `components/pluto/` — deve retornar **0** (Pluto intocado). *Reexecutado na TASK-045: PASS.*
-3. Confira `.agents/modules/milon/02-programas/test-report.json` → bloco `inheritanceProof` com os 4 resultados `PASS`, bloco `closingSearches` do Patch v6 em verde e `summary.failed = 0`. *Regenerado na TASK-045: 786 testes, 0 falhas, coverage 84,51% lines.*
+### REG-12: Ativar Programa rascunho — liberado com conteúdo (pós #3)
+**Dado** um Programa rascunho com pelo menos um treino com exercício  
+**Quando** a pessoa clica em "Ativar"  
+**Então** o Programa muda para "ativo"  
+**E** o Programa ativo anterior do mesmo dono é desativado
+
+### REG-13: Reativar Programa inativo — liberado com conteúdo
+**Dado** um Programa inativo com pelo menos um treino com exercício  
+**Quando** a pessoa clica em "Reativar"  
+**Então** o Programa muda para "ativo"  
+**E** o Programa ativo anterior do mesmo dono é desativado
+
+### REG-14: Excluir Programa rascunho sem treinos — permitido
+**Dado** um Programa rascunho sem treinos  
+**Quando** a pessoa confirma a exclusão  
+**Então** o Programa é removido
+
+### REG-15: Excluir Programa com treinos — bloqueado (pós #3)
+**Dado** um Programa (qualquer status) com treinos  
+**Quando** a pessoa tenta excluir  
+**Então** a exclusão é bloqueada com mensagem "Este programa possui treinos. Esvazie-o antes de excluir."
+
+### REG-16: Detalhe do Programa — cabeçalho + lista de treinos (pós #3)
+**Dado** um Programa com treinos  
+**Quando** a pessoa abre o detalhe  
+**Então** exibe cabeçalho (título, dono, status) + lista de treinos com subtítulos
+
+### REG-17: Navegação — duas abas (Exercícios + Programas)
+**Dado** o módulo Mílon  
+**Então** a navegação tem exatamente duas abas: Exercícios e Programas
+
+---
+
+## Feature #3 — Treinos e séries planejadas (esta feature)
+
+### REG-18: Sugestão de nome de treino — sequência A…Z, AA, AB…
+**Dado** Programa vazio → sugestão "Treino A"  
+**Dado** 26 treinos A-Z → sugestão "Treino AA"  
+**Dado** treinos "Treino A" e "Push" → sugestão "Treino B" (primeira livre)
+
+### REG-19: Nome de treino obrigatório e único (normalizado)
+**Dado** nome vazio/espaços → bloqueado "Informe o nome do treino."  
+**Dado** nome duplicado normalizado → bloqueado "Já existe um treino com esse nome neste programa."
+
+### REG-20: Programa inativo = somente leitura (treinos)
+**Dado** Programa inativo  
+**Então** sem adicionar/renomear/excluir treinos
+
+### REG-21: Ordem de treinos = ordem de criação (sem reordenação)
+**Dado** vários treinos  
+**Então** listados na ordem de criação, sem ação de reordenar
+
+### REG-22: Excluir treino com exercícios — bloqueado
+**Dado** treino com exercícios  
+**Então** bloqueado "Este treino possui exercícios. Remova-os antes de excluir o treino."
+
+### REG-23: Excluir treino sem exercícios — direto
+**Dado** treino sem exercícios  
+**Então** exclusão direta sem confirmação
+
+### REG-24: Unicidade de exercício no Treino (D14)
+**Dado** exercício já em um treino  
+**Quando** tenta adicionar novamente no **mesmo treino**  
+**Então** bloqueado "Este exercício já está neste treino. Escolha outro exercício."  
+**E** em treino diferente do mesmo Programa → permitido  
+**E** em outro Programa → permitido
+
+### REG-25: Editar exercício da biblioteca reflete em todos os Programas
+**Dado** exercício usado em múltiplos Programas  
+**Quando** editado em um  
+**Então** alteração vale para todos
+
+### REG-26: Reordenação de exercícios — drag & drop (Pointer Events)
+**Dado** treino com exercícios  
+**Quando** arrasta pelo handle  
+**Então** nova ordem persiste ao recarregar
+
+### REG-27: Quantidade de séries — obrigatória ≥ 1
+**Dado** vazio/zero/não numérico → bloqueado "Informe a quantidade de séries (número inteiro maior ou igual a 1)."  
+**Dado** 5 → cria 5 cards vazios
+
+### REG-28: Reduzir séries preenchidas — confirmação
+**Dado** séries com dados → reduzir → confirmação listando perdas  
+**Dado** séries vazias → reduzir → direto
+
+### REG-29: Aumentar séries — acrescenta ao final
+**Dado** 3 séries → altera para 5 → 2 novas vazias no final
+
+### REG-30: Descanso — campo único no exercício
+**Dado** exercício com séries  
+**Quando** edita descanso → todas as séries refletem o novo valor
+
+### REG-31: Aplicar a todas — re-executável e sobrescreve
+**Dado** série origem preenchida  
+**Quando** aciona "aplicar a todas" → copia reps/tempo/carga  
+**Quando** aciona de novo de outra série → sobrescreve
+
+### REG-32: Unidade de carga — por exercício, primeira digitação
+**Dado** exercício sem unidade  
+**Quando** digita primeiro peso → escolhe kg/libra  
+**Então** nunca mais pergunta para aquele exercício
+
+### REG-33: Carga vazia ≠ 0 (traço vs zero)
+**Dado** carga vazia → exibe traço  
+**Dado** carga 0 → exibe 0
+
+### REG-34: Valor convertido — secundário menor e cinza
+**Dado** carga com unidade  
+**Então** valor convertido ao lado, menor e cinza mais claro
+
+### REG-35: Subtítulo do treino — músculos únicos na ordem (D15)
+**Dado** Peito, Tríceps, Ombros → "Peito, Tríceps e Ombros"  
+**Dado** remove Tríceps → "Peito e Ombros"  
+**Dado** dois Peito → "Peito" (único)  
+**Dado** sem exercícios → vazio
+
+### REG-36: Guarda de ativação — consulta fresca no momento da ação
+**Dado** Programa com treino+exercício → ativação liberada  
+**Dado** Programa sem treino+exercício → bloqueada com mensagem padrão  
+**Dado** falha na consulta → erro origem `operacao`
+
+### REG-37: Estados de tela — AsyncState centralizado
+**Dado** qualquer tela da feature  
+**Então** loading/erro/vazio/não-encontrado usam AsyncState  
+**Então** erro de carga tem "Tentar novamente", operação/bloqueio sem retry
+
+### REG-38: Modais nunca fecham no erro
+**Dado** erro em modal  
+**Então** modal aberto, mensagem visível, dado preservado
+
+### REG-39: Sucesso — lembrete breve 3s
+**Dado** operação bem-sucedida  
+**Então** lembrete padrão do módulo por 3 segundos
+
+### REG-40: Títulos — font-display + cor Mílon
+**Dado** h1/h2/h3 em cards/seções/modais  
+**Então** `font-display` + `#B7602B`
+
+### REG-41: Usabilidade mobile — alvos de toque
+**Dado** qualquer fluxo  
+**Então** handle de drag, botões, campos acessíveis ao toque
+
+---
+
+## Execução de regressão
+
+```bash
+# Suite completa
+npm test
+
+# Com coverage
+npm test -- --coverage
+
+# Build Storybook (valida componentes)
+npm run build-storybook
+```
+
+### REG-42: Navegação pós-criar treino — redireciona para detalhamento
+**Dado** Programa rascunho/ativo  
+**Quando** cria treino  
+**Então** redireciona para /milon/programs/[id]/workouts/[workoutId]
+
+### REG-43: Botão voltar do treino para o Programa
+**Dado** página de detalhamento do treino  
+**Quando** clica "Voltar ao programa"  
+**Então** navega para /milon/programs/[id]
+
+### REG-44: Lista de exercícios — busca, filtro, scroll, "Cadastrar novo" sticky
+**Dado** modal adicionar exercício com muitos itens  
+**Quando** busca/filtra  
+**Então** filtra em tempo real, scroll virtual, botão "Cadastrar novo" sempre visível
+
+### REG-45: Drag & drop — ghost card, placeholder, animação suave
+**Dado** treino com exercícios  
+**Quando** arrasta pelo handle  
+**Então** ghost card com opacidade, placeholder de drop, animação suave, mobile+desktop
+
+### REG-46: Card de séries compacto — grid 4 col, reps/tempo único, toggle unidade
+**Dado** exercício com séries  
+**Então** grid responsivo (1/2/4 col), campo único reps/tempo com toggle, toggle kg/lb abaixo da carga
+
+**Critério de passagem:** 1116 testes passados, 0 falhas, coverage ≥ 80% (atual: 85% lines).

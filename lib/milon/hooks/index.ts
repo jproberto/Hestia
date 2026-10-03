@@ -4,3 +4,12 @@ export type { UseExercisesReturn, SaveExerciseInput } from "./useExercises";
 export * from "./usePrograms";
 export { useProgramDetail } from "./useProgramDetail";
 export type { UseProgramDetailReturn } from "./useProgramDetail";
+export { useProgramWorkouts } from "./useProgramWorkouts";
+export type { UseProgramWorkoutsReturn } from "./useProgramWorkouts";
+export { useWorkoutDetail } from "./useWorkoutDetail";
+export type {
+  UseWorkoutDetailReturn,
+  WorkoutSeriesField,
+  SaveWorkoutExerciseInput,
+  CreateWorkoutExerciseInput,
+} from "./useWorkoutDetail";

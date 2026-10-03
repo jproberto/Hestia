@@ -9,11 +9,16 @@ import {
   deleteProgramStandalone,
 } from "@/lib/milon/db/programs";
 import {
+  hasWorkoutsStandalone,
+  hasWorkoutWithExerciseStandalone,
+} from "@/lib/milon/db/workouts";
+import {
   aplicarEfeitoColateralAtivacao,
   guardaAtivacao,
   normalizarTitulo,
   validarTitulo,
 } from "@/lib/milon/program-utils";
+import { MSG_PROGRAMA_COM_TREINOS } from "@/lib/milon/workout-utils";
 import type { Program, ProgramErrorOrigin, ProgramStatus } from "@/lib/milon/types";
 
 export type ProgramConfirmAction = "ativar" | "reativar" | "excluir";
@@ -21,10 +26,6 @@ export type ProgramConfirmAction = "ativar" | "reativar" | "excluir";
 export interface ProgramConfirmState {
   action: ProgramConfirmAction;
   program: Program;
-}
-
-export interface UseProgramsOptions {
-  hasWorkoutWithExercise?: boolean;
 }
 
 export interface SaveProgramInput {
@@ -59,9 +60,8 @@ function toErrorMessage(err: unknown, fallback: string): string {
 }
 
 // Fetch+estado no padrão do projeto (promise-chain + flag cancelled no mount;
-// operações via barrels `db/programs` + puras de `program-utils.ts`).
-export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn {
-  const { hasWorkoutWithExercise = false } = options;
+// operações via barrels `db/programs` + `db/workouts` + puras de `program-utils.ts`).
+export function usePrograms(): UseProgramsReturn {
   const db = useMemo(() => createBrowserDatabaseClient(), []);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [ownerFilter, setOwnerFilterState] = useState<string>("");
@@ -209,7 +209,16 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
 
   const runActivation = useCallback(
     async (program: Program): Promise<void> => {
-      const bloqueio = guardaAtivacao(hasWorkoutWithExercise);
+      let temConteudo: boolean;
+      try {
+        temConteudo = await hasWorkoutWithExerciseStandalone(program.id);
+      } catch (err: unknown) {
+        const message = toErrorMessage(err, "Erro ao verificar treinos do programa");
+        setErrorMsg(message);
+        setErrorOrigin("operacao");
+        throw err instanceof Error ? err : new Error(message);
+      }
+      const bloqueio = guardaAtivacao(temConteudo);
       if (bloqueio) {
         setErrorMsg(bloqueio);
         setErrorOrigin("bloqueio");
@@ -236,7 +245,7 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
         throw err instanceof Error ? err : new Error(message);
       }
     },
-    [hasWorkoutWithExercise],
+    [],
   );
 
   const activate = useCallback(
@@ -255,6 +264,20 @@ export function usePrograms(options: UseProgramsOptions = {}): UseProgramsReturn
       setErrorMsg(message);
       setErrorOrigin("bloqueio");
       throw new Error(message);
+    }
+    let comTreinos: boolean;
+    try {
+      comTreinos = await hasWorkoutsStandalone(program.id);
+    } catch (err: unknown) {
+      const message = toErrorMessage(err, "Erro ao verificar treinos do programa");
+      setErrorMsg(message);
+      setErrorOrigin("operacao");
+      throw err instanceof Error ? err : new Error(message);
+    }
+    if (comTreinos) {
+      setErrorMsg(MSG_PROGRAMA_COM_TREINOS);
+      setErrorOrigin("bloqueio");
+      throw new Error(MSG_PROGRAMA_COM_TREINOS);
     }
     setErrorMsg(null);
     setErrorOrigin(null);

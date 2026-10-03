@@ -11,6 +11,8 @@ function makeExercise(overrides: Partial<Exercise> = {}): Exercise {
     name: "Supino reto",
     muscle: "Peito",
     videoLink: "https://video.exemplo/supino",
+    loadUnit: null,
+    deletedAt: null,
     createdAt: "2026-09-12T00:00:00Z",
     created_by: "a@hestia.com",
     ...overrides,
@@ -149,6 +151,23 @@ describe("ExerciseList", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /excluir supino reto/i }));
     expect(onDelete).toHaveBeenCalledWith(item);
+  });
+
+  it("repassa loadUnit e deletedAt inteiros às ações de editar e excluir", () => {
+    const item = makeExercise({ loadUnit: "kg", deletedAt: null });
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    render(<ExerciseList {...defaultProps({ visibleItems: [item], onEdit, onDelete })} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /editar supino reto/i }));
+    expect(onEdit).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "ex-1", loadUnit: "kg", deletedAt: null }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /excluir supino reto/i }));
+    expect(onDelete).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "ex-1", loadUnit: "kg", deletedAt: null }),
+    );
   });
 
   describe("adendo UX v2 — lista compacta, link marrom claro, Ordenar por", () => {

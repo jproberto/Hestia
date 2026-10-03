@@ -1,20 +1,33 @@
 import fs from "node:fs";
 import path from "node:path";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import ProgramDetailPage from "@/app/milon/programs/[id]/page";
 import { useProgramDetail } from "@/lib/milon/hooks/useProgramDetail";
-import type { Program } from "@/lib/milon/types";
+import { useProgramWorkouts } from "@/lib/milon/hooks/useProgramWorkouts";
+import { useRouter } from "next/navigation";
+import { MSG_TREINO_COM_EXERCICIOS } from "@/lib/milon/workout-utils";
+import type { Program, ProgramErrorOrigin, Workout } from "@/lib/milon/types";
 
 /**
  * Contrato — tasks.json TASK-026 (acceptanceCriteria verbatim) +
  * spec.md Patch v4 §Q3/Q4 (R18, R19, CA-P3-17, CA-P3-20) +
- * plan.md "Aditivo - Patch v4" §3 "Página de detalhe" + §5 decisões 4/6:
+ * plan.md "Aditivo - Patch v4" §3 "Página de detalhe" + §5 decisões 4/6 +
+ * plan.md §3 "Página do Programa" (TASK-015, lista de treinos — ver bloco
+ * TASK-015 abaixo):
  *
  * - CA-P3-17: quem acessa `/milon/programs/<id>` de um programa existente
- *   vê título, dono e status daquele programa — e nenhum texto de treinos;
- * - CA-P3-20: nenhum placeholder de treinos ("Treinos em breve", seção ou
- *   lista vazia) — busca case-insensitive por "treino" no render ⇒ 0;
+ *   vê título, dono e status daquele programa;
+ * - CA-P3-20: nenhum placeholder de treinos ("Treinos em breve") — a
+ *   asserção `queryByText(/treinos em breve/i) não presente` permanece
+ *   cobrindo os 4 estados (TASK-015 AC3, verbatim);
  * - R19: id desconhecido ⇒ estado "Programa não encontrado." com explicação,
  *   DISTINTO do estado de falha de fetch (sem "Tentar novamente") e sem
  *   programa errado nem tela em branco;
@@ -30,9 +43,6 @@ import type { Program } from "@/lib/milon/types";
  * Estados mutuamente exclusivos do contrato (plan §3): carregando
  * ("Carregando programa…"), falha de fetch (banner + "Tentar novamente"),
  * id desconhecido ("Programa não encontrado.") e cabeçalho do programa.
- *
- * RED (Expected: FAIL): `app/milon/programs/[id]/page.tsx` e
- * `lib/milon/hooks/useProgramDetail.ts` ainda não existem (TASK-027).
  */
 
 // Hook dedicado mockado no padrão das páginas do módulo (leaf module — o
@@ -62,6 +72,72 @@ vi.mock("next/navigation", () => ({
 }));
 
 const mockedUseProgramDetail = useProgramDetail as Mock;
+
+// ---------------------------------------------------------------------------
+// TASK-015 (Mílon #3) — a página do Programa passa a compor a lista de treinos
+// via useProgramWorkouts (plan.md §3 "Página do Programa"):
+//   useProgramWorkouts(id) + botão "Adicionar treino" (oculto em Programa
+//   inativo) + WorkoutList (readOnly = inativo) + WorkoutModal (criar com
+//   sugerirNomeTreino; renomear com otherNames sem o próprio) + exclusão
+//   direta onDelete -> remove (sem confirmação) com banner `bloqueio`.
+// RED (Expected: FAIL) hoje: a página ainda não importa o hook nem o
+// WorkoutList — o motivo esperado é a ausência dos botões/itens novos.
+// ---------------------------------------------------------------------------
+vi.mock("@/lib/milon/hooks/useProgramWorkouts", () => ({
+  useProgramWorkouts: vi.fn(),
+}));
+
+const mockedUseProgramWorkouts = useProgramWorkouts as Mock;
+
+function makeWorkout(overrides: Partial<Workout> = {}): Workout {
+  return {
+    id: "wout-1",
+    programId: "prog-1",
+    name: "Treino A",
+    createdAt: "2026-10-01T00:00:00Z",
+    created_by: DONO,
+    ...overrides,
+  };
+}
+
+/** Retorno exato do useProgramWorkouts (plan.md §3) com defaults de sucesso. */
+function defaultWorkoutsState() {
+  return {
+    workouts: [] as Workout[],
+    subtitles: {} as Record<string, string>,
+    loading: false,
+    errorMsg: null as string | null,
+    errorOrigin: null as ProgramErrorOrigin | null,
+    successNotice: null as string | null,
+    retry: vi.fn(async () => {}),
+    create: vi.fn(async () => makeWorkout()),
+    rename: vi.fn(async () => {}),
+    remove: vi.fn(async () => {}),
+  };
+}
+
+function setupWorkouts(overrides: Record<string, unknown> = {}) {
+  const state = { ...defaultWorkoutsState(), ...overrides };
+  mockedUseProgramWorkouts.mockReturnValue(state);
+  return state;
+}
+
+/**
+ * Clique em botão que só existe depois da composição pós-fetch (padrão
+ * `clickConnectedButton` das páginas do módulo): espera o alvo conectado ao
+ * documento antes do click — falha legível quando a página ainda não monta a
+ * ação. `ordinal` resolve botões homônimos (1º item da lista).
+ */
+async function clickConnectedButton(
+  name: RegExp,
+  ordinal = 0,
+): Promise<void> {
+  await waitFor(() => {
+    const alvos = screen.getAllByRole("button", { name });
+    expect(alvos[ordinal]?.isConnected).toBe(true);
+  });
+  fireEvent.click(screen.getAllByRole("button", { name })[ordinal]);
+}
 
 const DONO = "ana@hestia.lan";
 
@@ -99,6 +175,9 @@ describe("ProgramDetailPage /milon/programs/[id] (TASK-026 — CA-P3-17 / CA-P3-
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
+    // Defaults do useProgramWorkouts em todo render (hooks mockados no
+    // padrão das páginas do módulo): lista vazia, sem erro, sem sucesso.
+    setupWorkouts();
   });
 
   it("cabeçalho exibe título, dono e status do programa buscado pelo id da rota (CA-P3-17)", () => {
@@ -184,7 +263,7 @@ describe("ProgramDetailPage /milon/programs/[id] (TASK-026 — CA-P3-17 / CA-P3-
     expect(exercicios).not.toHaveAttribute("aria-current", "page");
   });
 
-  it("nenhum dos quatro estados da página menciona treinos (CA-P3-20)", () => {
+  it("nenhum dos quatro estados da página exibe o placeholder de treinos 'Treinos em breve' (CA-P3-20)", () => {
     const cenarios: Array<{
       program: Program | null;
       loading: boolean;
@@ -201,12 +280,13 @@ describe("ProgramDetailPage /milon/programs/[id] (TASK-026 — CA-P3-17 / CA-P3-
       setupHook(cenario);
       render(<ProgramDetailPage />);
 
-      // Busca case-insensitive por "treino" no texto renderizado ⇒ 0 ocorrências
-      // (cobre "Treinos em breve", seção de treinos e lista vazia de treinos).
-      const texto = (document.body.textContent ?? "").toLowerCase();
-      expect(texto).not.toContain("treino");
+      // CA-P3-20 (tasks.json TASK-015 AC3, verbatim): a asserção de
+      // ausência do placeholder de treinos permanece em todos os estados.
       expect(screen.queryByText(/treinos em breve/i)).not.toBeInTheDocument();
-      expect(screen.queryByRole("heading", { name: /treino/i })).not.toBeInTheDocument();
+      // O placeholder abrangente "em breve" também não aparece em outro texto.
+      expect(
+        (document.body.textContent ?? "").toLowerCase(),
+      ).not.toContain("em breve");
     }
   });
 });
@@ -269,6 +349,7 @@ describe("Patch v5 — rota de detalhe compõe o AsyncState (TASK-036 RED)", () 
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
+    setupWorkouts(); // defaults do useProgramWorkouts em todo render
   });
 
   it("R24/CA-P5-1: programa + erro => banner ACIMA do cabeçalho, cabeçalho visível e 'Tentar novamente' aciona retry", () => {
@@ -443,5 +524,271 @@ describe("TASK-037 — critérios de substituição (buscas por placeholder → 
 
   it("CA-P5-7 (reafirmação): 'lib/milon' em components/ui/AsyncState.tsx => 0 ocorrências", () => {
     expect(asyncStateSource().split("lib/milon").length - 1).toBe(0);
+  });
+});
+
+// ===========================================================================
+// TASK-015 — a página do Programa compõe a lista de treinos (RED)
+// ===========================================================================
+//
+// Contrato — tasks.json TASK-015 (description + acceptanceCriteria verbatim)
+// + plan.md §3 "Página do Programa" + §4 "Detalhe do Programa (lista de
+// treinos)":
+//
+// - a página mantém o cabeçalho existente e passa também a compor
+//   `useProgramWorkouts(id)` + `WorkoutList` (subtítulos derivados repassados);
+// - botão "Adicionar treino" (OCULTO quando program.status === 'inativo')
+//   abre `WorkoutModal` em modo criar com `defaultName` vindo de
+//   `sugerirNomeTreino` (Programa vazio ⇒ "Treino A"; "Treino A" + "Push" ⇒
+//   "Treino B" — primeira posição livre);
+// - renomear abre o MESMO modal em modo renomear com o nome atual do item e
+//   `otherNames` sem o próprio treino (renomear sem alterar o texto é aceito);
+// - excluir é ação direta do item da lista → `remove(workout)` SEM modal de
+//   confirmação (plan §4: "Excluir é ação direta do item");
+// - `MSG_TREINO_COM_EXERCICIOS` vindo do hook (origem `bloqueio`) vira banner
+//   DENTRO da lista e a lista permanece visível (R: mensagem visível sem
+//   fechar a tela de onde partiu a ação — sem "Tentar novamente");
+// - `WorkoutList.readOnly` = status `inativo` (sem Renomear/Excluir);
+// - CA-P3-20 permanece no teste do bloco TASK-026 (AC3).
+//
+// Expected: FAIL (RED) HOJE: a página ainda não importa o hook
+// `useProgramWorkouts` nem o `WorkoutList` — o motivo esperado é a ausência
+// dos botões/itens/seção novos (não falha de sintaxe nem de mock).
+
+describe("TASK-015 — detalhe do Programa compõe a lista de treinos (RED)", () => {
+  it("renderiza a seção 'Treinos' com os treinos do mock, subtítulo e link de detalhe de cada um", () => {
+    setupHook({ program: makeProgram() });
+    setupWorkouts({
+      workouts: [
+        makeWorkout({ id: "wout-1", name: "Treino A" }),
+        makeWorkout({
+          id: "wout-2",
+          name: "Push",
+          createdAt: "2026-10-01T01:00:00Z",
+        }),
+      ],
+      subtitles: { "wout-1": "Peito, Tríceps e Ombros" },
+    });
+
+    render(<ProgramDetailPage />);
+
+    const titulo = screen.getByRole("heading", { level: 2, name: "Treinos" });
+    expect(titulo.className).toMatch(/font-display/);
+    const secao = titulo.closest("section");
+    expect(secao?.getAttribute("aria-label")).toBe("Treinos");
+
+    // Ordem de criação preservada e href por treino (plan §3 WorkoutList).
+    const links = screen
+      .getAllByRole("link")
+      .filter((link) =>
+        (link.getAttribute("href") ?? "").includes("/workouts/"),
+      );
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      "/milon/programs/prog-1/workouts/wout-1",
+      "/milon/programs/prog-1/workouts/wout-2",
+    ]);
+
+    // Subtítulo derivado repassado ao WorkoutList (plan §4 — derivado no hook).
+    expect(screen.getByText("Peito, Tríceps e Ombros")).toBeInTheDocument();
+    // O cabeçalho do programa continua no lugar (nada é substituído).
+    expect(
+      screen.getByRole("heading", { name: /ficha verão 2026/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("Programa sem treinos mostra o estado vazio da lista com a orientação de adicionar", () => {
+    setupHook({ program: makeProgram() });
+    setupWorkouts({ workouts: [] });
+
+    render(<ProgramDetailPage />);
+
+    expect(screen.getByText("Nenhum treino ainda.")).toBeInTheDocument();
+    expect(
+      screen.getByText(/adicione o primeiro treino/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /tentar novamente/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lista em carregamento usa o estado do WorkoutList ('Carregando treinos…')", () => {
+    setupHook({ program: makeProgram() });
+    setupWorkouts({ loading: true });
+
+    render(<ProgramDetailPage />);
+
+    expect(screen.getByText(/carregando treinos/i)).toBeInTheDocument();
+    expect(screen.queryByText("Nenhum treino ainda.")).not.toBeInTheDocument();
+  });
+
+it("'Adicionar treino' em Programa vazio abre o modal com sugestão 'Treino A' e grava via hook", async () => {
+    setupHook({ program: makeProgram() });
+    const state = setupWorkouts({ workouts: [] });
+
+    render(<ProgramDetailPage />);
+    await clickConnectedButton(/adicionar treino/i);
+
+    expect(
+      screen.getByRole("heading", { name: "Novo treino" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Nome")).toHaveValue("Treino A");
+
+    await clickConnectedButton(/^salvar$/i);
+    await waitFor(() =>
+      expect(state.create).toHaveBeenCalledWith({ name: "Treino A" }),
+    );
+  });
+
+  it("criar treino redireciona para a página de detalhamento do treino criado", async () => {
+    setupHook({ program: makeProgram() });
+    const createdWorkout = makeWorkout({ id: "wout-new", name: "Treino A" });
+    const state = setupWorkouts({
+      workouts: [],
+      create: vi.fn(async () => createdWorkout),
+    });
+    const mockPush = vi.fn();
+    // Sobrescreve o mock do useRouter para capturar o push
+    vi.mocked(useRouter).mockReturnValue({
+      push: mockPush,
+      replace: vi.fn(),
+      refresh: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+      prefetch: vi.fn(),
+    });
+
+    render(<ProgramDetailPage />);
+    await clickConnectedButton(/adicionar treino/i);
+    await clickConnectedButton(/^salvar$/i);
+
+    await waitFor(() =>
+      expect(state.create).toHaveBeenCalledWith({ name: "Treino A" }),
+    );
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(
+        "/milon/programs/prog-1/workouts/wout-new",
+      ),
+    );
+  });
+
+  it("a sugestão usa a primeira posição livre: com 'Treino A' e 'Push' o modal abre com 'Treino B'", async () => {
+    setupHook({ program: makeProgram() });
+    setupWorkouts({
+      workouts: [
+        makeWorkout({ id: "wout-1", name: "Treino A" }),
+        makeWorkout({
+          id: "wout-2",
+          name: "Push",
+          createdAt: "2026-10-01T01:00:00Z",
+        }),
+      ],
+    });
+
+    render(<ProgramDetailPage />);
+    await clickConnectedButton(/adicionar treino/i);
+
+    expect(screen.getByLabelText("Nome")).toHaveValue("Treino B");
+    expect(screen.getByRole("heading", { name: "Novo treino" })).toBeInTheDocument();
+  });
+
+  it("Programa inativo: sem 'Adicionar treino' e a lista fica somente leitura (sem Renomear/Excluir)", () => {
+    setupHook({ program: makeProgram({ status: "inativo" }) });
+    setupWorkouts({ workouts: [makeWorkout({ id: "wout-1", name: "Treino A" })] });
+
+    render(<ProgramDetailPage />);
+
+    expect(
+      screen.queryByRole("button", { name: /adicionar treino/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /renomear/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /excluir/i }),
+    ).not.toBeInTheDocument();
+    // Somente leitura esconde as AÇÕES, não o conteúdo (regra da #2).
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Treino A" }),
+    ).toBeInTheDocument();
+  });
+
+  it("renomear abre o modal em modo renomear com o nome atual e grava sem colidir com o próprio nome", async () => {
+    setupHook({ program: makeProgram() });
+    const state = setupWorkouts({
+      workouts: [
+        makeWorkout({ id: "wout-1", name: "Treino A" }),
+        makeWorkout({
+          id: "wout-2",
+          name: "Push",
+          createdAt: "2026-10-01T01:00:00Z",
+        }),
+      ],
+    });
+
+    render(<ProgramDetailPage />);
+    // Ordem de criação: ordinal 0 é o botão Renomear do 1º item ("Treino A").
+    await clickConnectedButton(/renomear/i, 0);
+
+    expect(
+      screen.getByRole("heading", { name: "Renomear treino" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Nome")).toHaveValue("Treino A");
+
+    await clickConnectedButton(/^salvar$/i);
+    await waitFor(() =>
+      expect(state.rename).toHaveBeenCalledWith("wout-1", {
+        name: "Treino A",
+      }),
+    );
+  });
+
+  it("'Excluir' na linha do treino chama remove do hook com o treino clicado (ação direta, sem confirmação)", async () => {
+    setupHook({ program: makeProgram() });
+    const state = setupWorkouts({
+      workouts: [
+        makeWorkout({ id: "wout-1", name: "Treino A" }),
+        makeWorkout({
+          id: "wout-2",
+          name: "Push",
+          createdAt: "2026-10-01T01:00:00Z",
+        }),
+      ],
+    });
+
+    render(<ProgramDetailPage />);
+    await clickConnectedButton(/excluir/i, 0);
+
+    await waitFor(() =>
+      expect(state.remove).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "wout-1", name: "Treino A" }),
+      ),
+    );
+    // D6: a exclusão de treino aqui é ação direta — nenhum modal de
+    // confirmação é aberto antes do remove (nenhuma sobreposição na tela).
+    expect(document.querySelector(".fixed.inset-0")).toBeNull();
+  });
+
+  it("MSG_TREINO_COM_EXERCICIOS (origem bloqueio) vira banner da lista e a lista permanece visível", () => {
+    setupHook({ program: makeProgram() });
+    setupWorkouts({
+      workouts: [makeWorkout({ id: "wout-1", name: "Treino A" })],
+      errorMsg: MSG_TREINO_COM_EXERCICIOS,
+      errorOrigin: "bloqueio",
+    });
+
+    render(<ProgramDetailPage />);
+
+    expect(screen.getByText(MSG_TREINO_COM_EXERCICIOS)).toBeInTheDocument();
+    // Origem `bloqueio` => sem retry (D27/R31: retry só em carga/ausente).
+    expect(
+      screen.queryByRole("button", { name: /tentar novamente/i }),
+    ).not.toBeInTheDocument();
+    // A tela de onde partiu a ação permanece: o conteúdo continua montado.
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Treino A" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Treinos" }),
+    ).toBeInTheDocument();
   });
 });

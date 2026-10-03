@@ -168,6 +168,8 @@ function defineExerciseRepositoryContract(
           name: "Supino reto",
           muscle: "peito",
           videoLink: null,
+          loadUnit: null,
+          deletedAt: null,
           createdAt: "2026-09-12T00:00:00.000Z",
           created_by: EMAIL,
         } satisfies Exercise,
@@ -176,6 +178,8 @@ function defineExerciseRepositoryContract(
           name: "Agachamento",
           muscle: "perna",
           videoLink: null,
+          loadUnit: null,
+          deletedAt: null,
           createdAt: "2026-09-12T00:00:00.000Z",
           created_by: EMAIL,
         } satisfies Exercise,
@@ -185,6 +189,102 @@ function defineExerciseRepositoryContract(
     });
   });
 }
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-001 (Mílon #3) — soft delete + unidade de carga.
+// Fonte: plan.md §3 "Repositório de exercícios" e "Fake do repositório"
+// ("espelha soft delete + filtros novos") + tasks.json TASK-001/002.
+//
+// A fake ganha dois comportamentos espelhados do repository real:
+//   - `list()` devolve SÓ os ativos; `listAll()` devolve todos (inclui os
+//     soft-deletados, para renderização de contexto de treino);
+//   - `remove()` passa a ser SOFT DELETE (grava `deletedAt`, não apaga);
+//   - `setExerciseLoadUnit(id, unit)` persiste a unidade por exercício (D10);
+//   - a anti-duplicata considera apenas linhas não excluídas.
+// Testada na classe concreta (createFakeExerciseRepository) — não exige
+// mudança na interface IExerciseRepository.
+// ---------------------------------------------------------------------------
+describe("fake em memória: soft delete e unidade de carga (contrato TASK-001)", () => {
+  const EMAIL = "contrato@hestia.lan";
+
+  function ativo(id: string, name: string, muscle: string): Exercise {
+    return {
+      id,
+      name,
+      muscle,
+      videoLink: null,
+      loadUnit: null,
+      deletedAt: null,
+      createdAt: "2026-09-12T00:00:00.000Z",
+      created_by: EMAIL,
+    } satisfies Exercise;
+  }
+
+  it("list() devolve só os ativos e listAll() devolve todos", async () => {
+    const fake = createFakeExerciseRepository([
+      ativo("seed-1", "Supino reto", "peito"),
+      { ...ativo("seed-2", "Agachamento", "perna"), deletedAt: "2026-10-01T12:00:00.000Z" },
+    ]);
+
+    expect((await fake.list()).map((e) => e.id)).toEqual(["seed-1"]);
+    expect((await fake.listAll()).map((e) => e.id)).toEqual(["seed-1", "seed-2"]);
+  });
+
+  it("remove() vira soft delete: sai da listagem mas permanece em listAll()", async () => {
+    const fake = createFakeExerciseRepository([ativo("ex-1", "Supino reto", "peito")]);
+
+    await fake.remove("ex-1");
+
+    expect(await fake.list()).toEqual([]);
+    const preservado = await fake.listAll();
+    expect(preservado).toHaveLength(1);
+    expect(preservado[0].id).toBe("ex-1");
+    expect(preservado[0].deletedAt).not.toBeNull();
+    expect(typeof preservado[0].deletedAt).toBe("string");
+  });
+
+  it("remove() de id inexistente não quebra list() nem listAll()", async () => {
+    const fake = createFakeExerciseRepository([ativo("ex-1", "Supino reto", "peito")]);
+
+    await fake.remove("id-que-nao-existe");
+
+    expect(await fake.list()).toHaveLength(1);
+    expect(await fake.listAll()).toHaveLength(1);
+  });
+
+  it("recria nome removido: a anti-duplicata só conta ativos", async () => {
+    const fake = createFakeExerciseRepository();
+    const created = await fake.create({ name: "Supino reto", muscle: "peito" }, EMAIL);
+    await fake.remove(created.id);
+
+    // Sem soft delete considerando todos, esta criação seria bloqueada como duplicado.
+    const recriado = await fake.create({ name: "supino reto", muscle: "PEITO" }, EMAIL);
+    expect(recriado.id).not.toBe(created.id);
+    expect(await fake.list()).toHaveLength(1);
+    expect(await fake.listAll()).toHaveLength(2);
+  });
+
+  it("setExerciseLoadUnit persiste a unidade no exercício", async () => {
+    const fake = createFakeExerciseRepository([ativo("ex-1", "Supino reto", "peito")]);
+
+    await fake.setExerciseLoadUnit("ex-1", "kg");
+
+    const [exercicio] = await fake.list();
+    expect(exercicio.loadUnit).toBe("kg");
+    // A escolha é do casal: o mesmo registro visto por listAll também muda.
+    expect((await fake.listAll())[0].loadUnit).toBe("kg");
+  });
+
+  it("setExerciseLoadUnit aceita libra e não mexe em deletedAt", async () => {
+    const fake = createFakeExerciseRepository([ativo("ex-1", "Supino reto", "peito")]);
+
+    await fake.setExerciseLoadUnit("ex-1", "libra");
+
+    const exercicio = (await fake.list())[0];
+    expect(exercicio.loadUnit).toBe("libra");
+    expect(exercicio.deletedAt).toBeNull();
+  });
+});
 
 defineExerciseRepositoryContract(
   "fake em memória",

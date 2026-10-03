@@ -4,7 +4,6 @@ mode: subagent
 temperature: 0.1
 color: "#B7410E"
 hidden: true
-model: opencode/muse-spark-1.3-contributor-free
 permission:
   read: allow
   edit: allow

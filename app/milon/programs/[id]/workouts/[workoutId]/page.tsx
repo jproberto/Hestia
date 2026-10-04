@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { MilonLayout } from "@/components/milon/MilonLayout";
 import { WorkoutDetailSection } from "@/components/milon/WorkoutDetailSection";
 
 function resolveParam(raw: string | string[] | undefined): string {
@@ -16,9 +17,11 @@ export default function WorkoutDetailPage() {
   );
 
   return (
-    <WorkoutDetailSection
-      workoutId={workoutId}
-      backTarget={{ kind: "program", programId: id }}
-    />
+    <MilonLayout pageTitle="Treino">
+      <WorkoutDetailSection
+        workoutId={workoutId}
+        backTarget={{ kind: "program", programId: id }}
+      />
+    </MilonLayout>
   );
 }

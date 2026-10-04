@@ -155,3 +155,61 @@ describe("TASK-002 — manutenção como wrapper fino (fonte)", () => {
     expect(workoutPageSource().split("Tentar novamente").length - 1).toBe(0);
   });
 });
+
+/**
+ * Contrato layout-único (causa raiz: wrapper da manutenção não tinha
+ * layout próprio — dependia do MilonLayout interno da seção, que agora
+ * é pura; sem layout na página a rota da manutenção ficaria sem
+ * banner/abas após a extração).
+ *
+ * Contrato novo: 1 MilonLayout por rota, seção sem layout. O wrapper da
+ * manutenção envolve com MilonLayout próprio; a seção entra pura por
+ * dentro (sem nav próprio).
+ *
+ * Expected: FAIL até Hefesto implementar (wrapper ainda sem layout).
+ */
+describe("WorkoutPage wrapper com layout próprio (contrato layout-único — RED)", () => {
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    mockUseParams.mockReturnValue({ id: "prog-1", workoutId: "wout-1" });
+  });
+
+  it("envolve a seção com o layout do módulo (mascote Mílon visível)", () => {
+    render(<WorkoutPage />);
+
+    expect(screen.getByText("Mílon")).toBeInTheDocument();
+  });
+
+  it("renderiza exatamente 1 navegação do módulo (layout único, sem duplicata da seção)", () => {
+    render(<WorkoutPage />);
+
+    const navs = screen.getAllByRole("navigation", {
+      name: "Navegação do módulo Mílon",
+    });
+    expect(navs).toHaveLength(1);
+    expect(MockedSection).toHaveBeenCalled();
+  });
+
+  it("mantém o contrato do wrapper: repassa workoutId + backTarget programa mesmo com layout próprio", () => {
+    render(<WorkoutPage />);
+
+    expect(renderedProps().workoutId).toBe("wout-1");
+    expect(renderedProps().backTarget).toEqual({
+      kind: "program",
+      programId: "prog-1",
+    });
+  });
+});
+
+describe("TASK-004 — wrapper da manutenção com MilonLayout (fonte, contrato layout-único — RED)", () => {
+  it("a página envolve com MilonLayout próprio (import direto)", () => {
+    expect(workoutPageSource()).toMatch(
+      /from\s+["']@\/components\/milon\/MilonLayout["']/,
+    );
+  });
+
+  it("o wrapper declara MilonLayout com título (1 layout por rota)", () => {
+    expect(workoutPageSource()).toMatch(/<MilonLayout/);
+  });
+});

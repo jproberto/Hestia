@@ -688,3 +688,67 @@ describe("TASK-003 — página today como composição pura (fonte)", () => {
     expect(todayPageSource()).not.toContain("@supabase");
   });
 });
+
+/** Fonte da seção (raiz = 4 níveis acima de __tests__/app/milon/today). */
+function sectionSourceFromToday(): string {
+  return fs.readFileSync(
+    path.resolve(__dirname, "../../../../components/milon/WorkoutDetailSection.tsx"),
+    "utf8",
+  );
+}
+
+/**
+ * Contrato layout-único (causa raiz: `WorkoutDetailSection.tsx:417`
+ * renderizava `<MilonLayout pageTitle={title}>` (default "Treino")
+ * enquanto esta página também envolvia com
+ * `<MilonLayout pageTitle="Treino do Dia">` → banner + abas duplicados
+ * e título "Treino" após "Treino do Dia").
+ *
+ * Contrato novo: 1 MilonLayout por rota, seção sem layout. Esta página
+ * é a ÚNICA dona do layout da rota /milon/today (pageTitle
+ * "Treino do Dia"); a seção entra pura por dentro.
+ *
+ * Nota de isolamento: `WorkoutDetailSection` segue mockada neste arquivo
+ * (o interior da seção é travado em `WorkoutDetailSection.test.tsx`);
+ * o RED aqui vem do contrato de fonte cruzado (seção ainda com layout
+ * na produção) + das travas de layout único abaixo, que Hefesto fará
+ * GREEN esvaziando o layout da seção sem tocar nesta página.
+ *
+ * Expected: FAIL até Hefesto implementar (produção ainda com layout duplo).
+ */
+describe("Treino do Dia — layout único (contrato layout-único — RED)", () => {
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    mockUsePathname.mockReturnValue("/milon/today");
+  });
+
+  it("renderiza exatamente 1 navegação do módulo (sem duplicata da seção)", () => {
+    conteudoComTreinos();
+
+    render(<TodayPage />);
+
+    const navs = screen.getAllByRole("navigation", {
+      name: "Navegação do módulo Mílon",
+    });
+    expect(navs).toHaveLength(1);
+  });
+
+  it("título de página 'Treino do Dia' aparece exatamente uma vez como heading", () => {
+    conteudoComTreinos();
+
+    render(<TodayPage />);
+
+    expect(
+      screen.getAllByRole("heading", { name: "Treino do Dia" }),
+    ).toHaveLength(1);
+  });
+
+  it("a página declara exatamente 1 <MilonLayout (dona única do layout da rota)", () => {
+    expect(todayPageSource().split("<MilonLayout").length - 1).toBe(1);
+  });
+
+  it("a seção não traz layout próprio (0 ocorrências de MilonLayout na seção — sem duplicata)", () => {
+    expect(sectionSourceFromToday().split("MilonLayout").length - 1).toBe(0);
+  });
+});

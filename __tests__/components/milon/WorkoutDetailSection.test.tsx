@@ -446,3 +446,90 @@ describe("TASK-002 — seção como dona única do detalhe (fonte)", () => {
     expect(src).toMatch(/=\s*null/);
   });
 });
+
+/**
+ * Contrato layout-único (pós-04-treino-do-dia, causa raiz: layout duplo):
+ * `WorkoutDetailSection.tsx:417` renderizava
+ * `<MilonLayout pageTitle={title}>` enquanto `app/milon/today/page.tsx:29`
+ * também envolvia com `<MilonLayout pageTitle="Treino do Dia">` →
+ * banner + abas duplicados e título "Treino" após "Treino do Dia".
+ *
+ * Contrato novo: 1 MilonLayout por rota, seção SEM layout. A seção é pura
+ * (só AsyncState + conteúdo); o layout mora nas páginas (today + wrapper
+ * da manutenção). `title` vira apenas fallback interno se necessário —
+ * nunca `pageTitle` de layout.
+ *
+ * Expected: FAIL até Hefesto implementar (produção ainda com layout duplo).
+ */
+describe("WorkoutDetailSection pura sem layout (contrato layout-único — RED)", () => {
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("não renderiza navegação do módulo (layout mora nas páginas)", () => {
+    conteudoComUmaEntrada();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    expect(
+      screen.queryByRole("navigation", {
+        name: "Navegação do módulo Mílon",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("não renderiza mascote/título do módulo nem header de página (só conteúdo do treino)", () => {
+    conteudoComUmaEntrada();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backNone} />,
+    );
+
+    expect(screen.queryByText("Mílon")).not.toBeInTheDocument();
+    // Conteúdo próprio permanece: cabeçalho do treino + entradas.
+    expect(
+      screen.getByRole("heading", { name: "Treino A" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Exercícios do treino" }),
+    ).toBeInTheDocument();
+  });
+
+  it("com backTarget none não há duplicata de título de página (regressão today: Treino após Treino do Dia)", () => {
+    conteudoComUmaEntrada();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backNone} />,
+    );
+
+    // A seção pura não cria header de página; o único h1 da rota deve vir
+    // da página (MilonLayout pageTitle). Aqui: nenhum header de layout.
+    expect(
+      screen.queryByRole("navigation", {
+        name: "Navegação do módulo Mílon",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Treino do Dia" }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("TASK-004 — seção sem MilonLayout (fonte, contrato layout-único — RED)", () => {
+  it("'MilonLayout' em components/milon/WorkoutDetailSection.tsx => 0 ocorrências (layout mora nas páginas)", () => {
+    expect(sectionSource().split("MilonLayout").length - 1).toBe(0);
+  });
+
+  it("a seção não importa o layout do módulo", () => {
+    expect(sectionSource()).not.toMatch(
+      /from\s+["']@\/components\/milon\/MilonLayout["']/,
+    );
+  });
+
+  it("'ModuleLayout' em components/milon/WorkoutDetailSection.tsx => 0 ocorrências (nem direto nem via MilonLayout)", () => {
+    expect(sectionSource().split("ModuleLayout").length - 1).toBe(0);
+  });
+});

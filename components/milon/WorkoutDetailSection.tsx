@@ -2,7 +2,6 @@
 
 import { Fragment, useCallback, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { MilonLayout } from "@/components/milon/MilonLayout";
 import { AsyncState } from "@/components/ui/AsyncState";
 import { Button } from "@/components/ui/button";
 import WorkoutEntriesList from "@/components/milon/WorkoutEntriesList";
@@ -68,7 +67,6 @@ interface ConfirmState {
 export function WorkoutDetailSection({
   workoutId,
   backTarget,
-  title = "Treino",
   headerActions = null,
   entryFooter = null,
   footer = null,
@@ -414,8 +412,7 @@ export function WorkoutDetailSection({
   }, [confirmProcessing]);
 
   return (
-    <MilonLayout pageTitle={title}>
-      <AsyncState
+    <AsyncState
         loading={loading}
         error={errorMsg}
         errorOrigin={errorOrigin}
@@ -538,8 +535,7 @@ export function WorkoutDetailSection({
             {footer ?? null}
           </div>
         ) : null}
-      </AsyncState>
-    </MilonLayout>
+    </AsyncState>
   );
 }
 

@@ -6,11 +6,17 @@ import { redirect } from "next/navigation";
 import MilonRootPage from "@/app/milon/page";
 
 /**
- * Contrato — TASK-012 + TASK-017 (spec.md Patch v3 §P2 D9/D11, §P3 R3,
- * §P4 CA-P3-01): a raiz do módulo `/milon` vira ponto neutro que redireciona
- * para a aba padrão `/milon/programs`; a biblioteca não aparece nesse caminho
- * (ela migrou para `/milon/exercises`, coberta pelo espelho em
+ * Contrato — Mílon #4 Treino do Dia (TASK-003, mudança aprovada na
+ * spec §6): a raiz do módulo `/milon` vira ponto neutro que redireciona
+ * para a aba padrão `/milon/today` (antes `/milon/programs`); a biblioteca
+ * e os Programas não aparecem nesse caminho direto (a biblioteca migrou
+ * para `/milon/exercises`, coberta pelo espelho em
  * `__tests__/app/milon/exercises/page.test.tsx`).
+ *
+ * Reescrito a partir do contrato TASK-012/TASK-017 (destino antigo):
+ * as expectativas de destino foram substituídas — Expected: FAIL até
+ * Hefesto trocar o redirect (nenhum arquivo de produção alterado por
+ * este teste).
  *
  * O mock de `next/navigation` reproduz a semântica do `redirect` real do
  * Next: registra a chamada e lança (NEXT_REDIRECT) — por isso o render é
@@ -26,8 +32,8 @@ import MilonRootPage from "@/app/milon/page";
  *   - mock que lança   -> 5 invocações
  *   - mock silencioso  -> 1 invocação
  * Ou seja, a QUANTIDADE de invocações é artefato do renderer/jsdom, não da
- * página — não pode ser parte do contrato. O que CA-P3-01 exige é que a rota
- * dispare `redirect("/milon/programs")` (pelo menos uma vez) e que nenhuma
+ * página — não pode ser parte do contrato. O que a spec exige é que a rota
+ * dispare `redirect("/milon/today")` (pelo menos uma vez) e que nenhuma
  * chamada vá para outro destino; é exatamente o que se assegura abaixo.
  * Poder de detecção preservado: sem `redirect(...)` na página o spy fica com
  * 0 chamadas e as duas primeiras asserções falham; com destino trocado, a
@@ -55,19 +61,19 @@ function renderRootRoute() {
   }
 }
 
-describe("Rota raiz /milon — redirect server-side para /milon/programs (CA-P3-01)", () => {
+describe("Rota raiz /milon — redirect server-side para /milon/today (Mílon #4, TASK-003)", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
-  it("acessar /milon chama redirect('/milon/programs')", () => {
+  it("acessar /milon chama redirect('/milon/today')", () => {
     renderRootRoute();
 
     expect(mockedRedirect).toHaveBeenCalled();
-    expect(mockedRedirect).toHaveBeenCalledWith("/milon/programs");
-    // Destino único: nenhuma invocação para fora de /milon/programs.
-    expect(mockedRedirect.mock.calls.every((args) => args[0] === "/milon/programs")).toBe(true);
+    expect(mockedRedirect).toHaveBeenCalledWith("/milon/today");
+    // Destino único: nenhuma invocação para fora de /milon/today.
+    expect(mockedRedirect.mock.calls.every((args) => args[0] === "/milon/today")).toBe(true);
   });
 
   it("a biblioteca não aparece no caminho da raiz (sem 'Novo exercício' nem título)", () => {
@@ -75,6 +81,13 @@ describe("Rota raiz /milon — redirect server-side para /milon/programs (CA-P3-
 
     expect(screen.queryByText(/biblioteca de exercícios/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /novo exercício/i })).not.toBeInTheDocument();
+  });
+
+  it("os Programas não aparecem no caminho direto da raiz (só o redirect)", () => {
+    renderRootRoute();
+
+    expect(screen.queryByText(/ficha verão/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /novo programa/i })).not.toBeInTheDocument();
   });
 });
 
@@ -94,5 +107,15 @@ describe("TASK-012 — contrato estático de app/milon/page.tsx (server componen
     expect(source).not.toContain("useExercises");
     expect(source).not.toContain("ExerciseList");
     expect(source).not.toContain("ExerciseModal");
+  });
+});
+
+describe("TASK-003 — raiz redireciona para o Treino do Dia (fonte)", () => {
+  it("a fonte redireciona para /milon/today", () => {
+    expect(rootPageSource()).toContain("/milon/today");
+  });
+
+  it("busca por /milon/programs em app/milon/page.tsx retorna 0 em código vivo", () => {
+    expect(rootPageSource().split("/milon/programs").length - 1).toBe(0);
   });
 });

@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation";
 
 /**
- * Raiz do módulo Mílon (Patch v3 P2 D9/D11, P3 R3, CA-P3-01).
- * Ponto neutro: redireciona para a aba padrão `/milon/programs`.
- * A biblioteca vive em `/milon/exercises`.
+ * Raiz do módulo Mílon (Mílon #4 Treino do Dia).
+ * Ponto neutro: redireciona para a aba padrão `/milon/today`.
  */
 export default function MilonPage() {
-  redirect("/milon/programs");
+  redirect("/milon/today");
   return null;
 }

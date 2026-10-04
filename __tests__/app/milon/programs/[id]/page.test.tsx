@@ -31,8 +31,10 @@ import type { Program, ProgramErrorOrigin, Workout } from "@/lib/milon/types";
  * - R19: id desconhecido ⇒ estado "Programa não encontrado." com explicação,
  *   DISTINTO do estado de falha de fetch (sem "Tentar novamente") e sem
  *   programa errado nem tela em branco;
- * - R18: render dentro de MilonLayout com exatamente as duas abas e a aba
- *   "Programas" com `aria-current='page'` (regra de prefixo do Patch v3:
+ * - R18 (atualizado Mílon #4 spec §2/§6, mudança aprovada — não regressão):
+ *   render dentro de MilonLayout com exatamente as três abas ordenadas
+ *   (Treino do Dia → Programas → Exercícios) e a aba "Programas" com
+ *   `aria-current='page'` (regra de prefixo do Patch v3:
  *   pathname `/milon/programs/<id>`.startsWith('/milon/programs/'));
  * - título do programa no token `font-display` (AGENTS.md: título de
  *   conteúdo h1/h2/h3 usa o token central);
@@ -246,7 +248,7 @@ describe("ProgramDetailPage /milon/programs/[id] (TASK-026 — CA-P3-17 / CA-P3-
     expect(screen.queryByText(/carregando programa/i)).not.toBeInTheDocument();
   });
 
-  it("renderiza dentro de MilonLayout com exatamente as duas abas e 'Programas' ativa (R18)", () => {
+  it("renderiza dentro de MilonLayout com exatamente as três abas ordenadas e 'Programas' ativa (R18 + Mílon #4 spec §2/§6)", () => {
     setupHook({ program: makeProgram() });
 
     render(<ProgramDetailPage />);
@@ -255,11 +257,23 @@ describe("ProgramDetailPage /milon/programs/[id] (TASK-026 — CA-P3-17 / CA-P3-
       name: "Navegação do módulo Mílon",
     });
     const links = within(nav).getAllByRole("link");
-    expect(links).toHaveLength(2);
+    expect(links).toHaveLength(3);
+    expect(links.map((link) => link.textContent)).toEqual([
+      "Treino do Dia",
+      "Programas",
+      "Exercícios",
+    ]);
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      "/milon/today",
+      "/milon/programs",
+      "/milon/exercises",
+    ]);
 
+    const treinoDoDia = within(nav).getByRole("link", { name: "Treino do Dia" });
     const programas = within(nav).getByRole("link", { name: "Programas" });
     const exercicios = within(nav).getByRole("link", { name: "Exercícios" });
     expect(programas).toHaveAttribute("aria-current", "page");
+    expect(treinoDoDia).not.toHaveAttribute("aria-current", "page");
     expect(exercicios).not.toHaveAttribute("aria-current", "page");
   });
 

@@ -13,7 +13,11 @@ import ExerciseModal, {
 import WorkoutConfirmModal, {
   type WorkoutConfirmVariant,
 } from "@/components/milon/WorkoutConfirmModal";
+import SeriesEditModal, {
+  type SeriesEditFields,
+} from "@/components/milon/SeriesEditModal";
 import { useWorkoutDetail } from "@/lib/milon/hooks/useWorkoutDetail";
+import { useWorkoutExecution } from "@/lib/milon/hooks/useWorkoutExecution";
 import { setExerciseLoadUnitStandalone } from "@/lib/milon/db/exercises";
 import {
   compareExercisesByMuscleThenName,
@@ -24,8 +28,9 @@ import type {
   LoadUnit,
   WorkoutEntry,
   WorkoutEntryView,
+  WorkoutSeries,
 } from "@/lib/milon/types";
-import type { SerieField } from "@/components/milon/SeriesCard";
+import type { SerieField, SeriesExecutionProps } from "@/components/milon/SeriesCard";
 
 export type WorkoutDetailBackTarget =
   | { kind: "program"; programId: string }
@@ -38,6 +43,13 @@ export interface WorkoutDetailSectionProps {
   headerActions?: ReactNode | null;
   entryFooter?: ((view: WorkoutEntryView) => ReactNode) | ReactNode | null;
   footer?: ReactNode | null;
+  /**
+   * Execução série a série (Mílon #5, opt-in, default desligado): quando
+   * ligada compõe `useWorkoutExecution`, monta o pacote de execução e
+   * hospeda o SeriesEditModal + a confirmação de limpeza. Desligada, o
+   * comportamento é idêntico ao atual (manutenção intacta por construção).
+   */
+  executionEnabled?: boolean;
 }
 
 function toMessage(err: unknown, fallback: string): string {
@@ -64,12 +76,171 @@ interface ConfirmState {
   newQuantity: number;
 }
 
+interface EditingTarget {
+  entry: WorkoutEntry;
+  serie: WorkoutSeries;
+  loadUnit: LoadUnit | null;
+}
+
+interface ExecutionListContext {
+  executionPackage: SeriesExecutionProps | undefined;
+  execErrorMsg: string | null;
+  execSuccessNotice: string | null;
+  clearConfirmOpen: boolean;
+  clearProcessing: boolean;
+  confirmClear: () => void;
+  cancelClear: () => void;
+  editing: EditingTarget | null;
+  editorSaving: boolean;
+  editorError: string | null;
+  closeEditor: () => void;
+  saveEditor: (fields: SeriesEditFields) => Promise<void>;
+}
+
+/**
+ * Dono da execução série a série (Mílon #5). Montado SOMENTE quando a flag
+ * `executionEnabled` está ligada — por isso o hook de execução nunca é
+ * chamado na manutenção (sem hooks condicionais no corpo da seção). Detém o
+ * estado do editor, monta o pacote a partir de `doneSeriesIds` e expõe tudo
+ * via render prop para o corpo da seção compor lista + modal + confirmação.
+ */
+function ExecutionHost({
+  workoutId,
+  entries,
+  onTemplateChanged,
+  children,
+}: {
+  workoutId: string;
+  entries: WorkoutEntryView[];
+  onTemplateChanged: () => void;
+  children: (ctx: ExecutionListContext) => ReactNode;
+}) {
+  const exec = useWorkoutExecution(workoutId);
+  const [editing, setEditing] = useState<EditingTarget | null>(null);
+  const [editorSaving, setEditorSaving] = useState(false);
+  const [editorError, setEditorError] = useState<string | null>(null);
+  const [clearProcessing, setClearProcessing] = useState(false);
+  // Releitura da execução após cada alternância (o hook real já se atualiza
+  // sozinho; o sinal garante a composição com o estado mais recente, ex.: a
+  // confirmação de limpeza da última série desmarcada).
+  const [, bumpExecution] = useState(0);
+
+  function findTarget(seriesId: string): EditingTarget | null {
+    for (const view of entries) {
+      const serie = view.series.find((item) => item.id === seriesId);
+      if (serie) {
+        return { entry: view.entry, serie, loadUnit: view.exercise.loadUnit };
+      }
+    }
+    return null;
+  }
+
+  async function handleToggle(seriesId: string): Promise<void> {
+    const target = findTarget(seriesId);
+    if (!target) return;
+    try {
+      await exec.toggleSeries(target.entry, target.serie);
+    } catch {
+      // O banner já foi alimentado pelo hook (origem operacao) e o estado
+      // anterior é mantido; aqui só se evita rejeição não tratada.
+    } finally {
+      // Releitura do estado da execução após a alternância: o hook real já
+      // se atualiza sozinho, e o sinal garante a composição atualizada (ex.:
+      // a confirmação de limpeza da última desmarcada).
+      bumpExecution((tick) => tick + 1);
+    }
+  }
+
+  function handleOpenEditor(seriesId: string): void {
+    const target = findTarget(seriesId);
+    if (!target) return;
+    setEditorError(null);
+    setEditing(target);
+  }
+
+  function closeEditor(): void {
+    if (!editorSaving) {
+      setEditing(null);
+      setEditorError(null);
+    }
+  }
+
+  async function saveEditor(fields: SeriesEditFields): Promise<void> {
+    const target = editing;
+    if (!target) return;
+    setEditorSaving(true);
+    setEditorError(null);
+    try {
+      // Comportamento único (D4): origem + seguintes, feito preservado —
+      // decisão do hook, sem indicador de cópia.
+      await exec.saveSeriesExecution(target.entry, target.serie, fields);
+      setEditing(null);
+      setEditorError(null);
+      onTemplateChanged();
+    } catch (err: unknown) {
+      // Modal nunca fecha no erro: registra local, exibe via prop e relança
+      // para o modal preservar o digitado.
+      const message = toMessage(err, "Erro ao salvar série");
+      setEditorError(message);
+      throw err instanceof Error ? err : new Error(message);
+    } finally {
+      setEditorSaving(false);
+    }
+  }
+
+  function confirmClear(): void {
+    setClearProcessing(true);
+    void exec.confirmClearExecution().then(
+      () => setClearProcessing(false),
+      () => setClearProcessing(false),
+    );
+  }
+
+  function cancelClear(): void {
+    if (!clearProcessing) exec.cancelClearExecution();
+  }
+
+  const doneBySeriesId: Record<string, boolean> = {};
+  for (const id of exec.doneSeriesIds) doneBySeriesId[id] = true;
+
+  // Com o editor aberto o modal em tela cheia cobre a lista; o pacote é
+  // suspenso para que nenhum marcador concorra com o formulário.
+  const executionPackage: SeriesExecutionProps | undefined =
+    editing !== null
+      ? undefined
+      : {
+          doneBySeriesId,
+          onToggle: handleToggle,
+          onOpenEditor: handleOpenEditor,
+        };
+
+  return (
+    <>
+      {children({
+        executionPackage,
+        execErrorMsg: exec.errorMsg,
+        execSuccessNotice: exec.successNotice,
+        clearConfirmOpen: exec.clearConfirmOpen,
+        clearProcessing,
+        confirmClear,
+        cancelClear,
+        editing,
+        editorSaving,
+        editorError,
+        closeEditor,
+        saveEditor,
+      })}
+    </>
+  );
+}
+
 export function WorkoutDetailSection({
   workoutId,
   backTarget,
   headerActions = null,
   entryFooter = null,
   footer = null,
+  executionEnabled = false,
 }: WorkoutDetailSectionProps) {
   const router = useRouter();
 
@@ -463,25 +634,95 @@ export function WorkoutDetailSection({
               </div>
             ) : null}
 
-            <WorkoutEntriesList
-              entries={entriesWithUnit}
-              programId={programId}
-              readOnly={readOnly ?? false}
-              empty={entriesWithUnit.length === 0}
-              errorMsg={errorMsg}
-              errorOrigin={errorOrigin}
-              onAdd={openPicker}
-              onRetry={() => void retry()}
-              onReorder={handleReorder}
-              onQuantityCommit={handleQuantityCommit}
-              onRequestReduce={handleRequestReduce}
-              onRestCommit={handleRestCommit}
-              onSeriesCommit={handleSeriesCommit}
-              onApplyAll={handleApplyAll}
-              onEditExercise={handleEditExercise}
-              onRemoveEntry={handleRemoveEntry}
-              onConfirmUnit={handleConfirmUnit}
-            />
+            {executionEnabled ? (
+              <ExecutionHost
+                workoutId={workoutId}
+                entries={entriesWithUnit}
+                onTemplateChanged={() => void retry()}
+              >
+                {(ctx) => (
+                  <>
+                    {ctx.execSuccessNotice ? (
+                      <div className="rounded border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                        {ctx.execSuccessNotice}
+                      </div>
+                    ) : null}
+
+                    {ctx.execErrorMsg ? (
+                      <div
+                        role="alert"
+                        className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-700 dark:text-rose-300 font-medium"
+                      >
+                        {ctx.execErrorMsg}
+                      </div>
+                    ) : null}
+
+                    <WorkoutEntriesList
+                      entries={entriesWithUnit}
+                      programId={programId}
+                      readOnly={readOnly ?? false}
+                      empty={entriesWithUnit.length === 0}
+                      errorMsg={errorMsg}
+                      errorOrigin={errorOrigin}
+                      onAdd={openPicker}
+                      onRetry={() => void retry()}
+                      onReorder={handleReorder}
+                      onQuantityCommit={handleQuantityCommit}
+                      onRequestReduce={handleRequestReduce}
+                      onRestCommit={handleRestCommit}
+                      onSeriesCommit={handleSeriesCommit}
+                      onApplyAll={handleApplyAll}
+                      onEditExercise={handleEditExercise}
+                      onRemoveEntry={handleRemoveEntry}
+                      onConfirmUnit={handleConfirmUnit}
+                      execution={ctx.executionPackage}
+                    />
+
+                    <SeriesEditModal
+                      open={ctx.editing !== null}
+                      series={ctx.editing?.serie ?? null}
+                      loadUnit={ctx.editing?.loadUnit ?? null}
+                      saving={ctx.editorSaving}
+                      error={ctx.editorError}
+                      onClose={ctx.closeEditor}
+                      onSave={ctx.saveEditor}
+                    />
+
+                    <WorkoutConfirmModal
+                      open={ctx.clearConfirmOpen}
+                      variant="limpar-execucao"
+                      exerciseName=""
+                      seriesCount={0}
+                      currentQuantity={0}
+                      newQuantity={0}
+                      processing={ctx.clearProcessing}
+                      onConfirm={ctx.confirmClear}
+                      onCancel={ctx.cancelClear}
+                    />
+                  </>
+                )}
+              </ExecutionHost>
+            ) : (
+              <WorkoutEntriesList
+                entries={entriesWithUnit}
+                programId={programId}
+                readOnly={readOnly ?? false}
+                empty={entriesWithUnit.length === 0}
+                errorMsg={errorMsg}
+                errorOrigin={errorOrigin}
+                onAdd={openPicker}
+                onRetry={() => void retry()}
+                onReorder={handleReorder}
+                onQuantityCommit={handleQuantityCommit}
+                onRequestReduce={handleRequestReduce}
+                onRestCommit={handleRestCommit}
+                onSeriesCommit={handleSeriesCommit}
+                onApplyAll={handleApplyAll}
+                onEditExercise={handleEditExercise}
+                onRemoveEntry={handleRemoveEntry}
+                onConfirmUnit={handleConfirmUnit}
+              />
+            )}
 
             {entryFooter
               ? entriesWithUnit.map((view) => (

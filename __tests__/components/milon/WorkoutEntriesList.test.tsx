@@ -549,6 +549,81 @@ describe("WorkoutEntriesList", () => {
       expect(chamadaContemTodos(onConfirmUnit, ["entry-2", "libra"])).toBe(true);
     });
   });
+
+  /**
+   * Contrato RED — Mílon #5 Execução série a série (TASK-005):
+   * repasse do pacote de execução.
+   *
+   * Fonte: plan.md §2 (WorkoutEntriesList repassa o pacote para cada
+   * ExerciseEntryCard; sem ele renderiza idêntico a hoje) + §3 (aceita o
+   * pacote como prop opcional e o repassa sem interpretar) + tasks.json
+   * TASK-005.
+   *
+   * CONTRATO FIXADO AQUI (mesmo da SeriesCard): prop opcional
+   * `execution?: { doneBySeriesId: Record<string, boolean>;
+   * onToggle: (seriesId: string) => void;
+   * onOpenEditor: (seriesId: string) => void }`.
+   *
+   * Expected: FAIL nos blocos com pacote (prop ainda não existe — nenhum
+   * marcador renderiza); o bloco sem pacote passa como trava de regressão.
+   * Hefesto fará GREEN na TASK-006.
+   */
+  describe("repasse do pacote de execução (Mílon #5 — RED)", () => {
+    interface SeriesExecutionProps {
+      doneBySeriesId: Record<string, boolean>;
+      onToggle: (seriesId: string) => void;
+      onOpenEditor: (seriesId: string) => void;
+    }
+
+    function exec(
+      overrides: Partial<SeriesExecutionProps> = {},
+    ): SeriesExecutionProps {
+      return {
+        doneBySeriesId: {},
+        onToggle: vi.fn(),
+        onOpenEditor: vi.fn(),
+        ...overrides,
+      };
+    }
+
+    it("sem pacote renderiza idêntico a hoje (sem marcadores)", () => {
+      render(<WorkoutEntriesList {...base()} />);
+
+      expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+      expect(screen.getByText("Supino reto")).toBeInTheDocument();
+    });
+
+    it("com pacote cada série exibe marcador", () => {
+      render(
+        <WorkoutEntriesList
+          {...( {
+            ...base(),
+            execution: exec(),
+          } as unknown as WorkoutEntriesListProps )}
+        />,
+      );
+
+      // 2 entradas × 2 séries = 4 marcadores.
+      expect(screen.getAllByRole("checkbox")).toHaveLength(4);
+    });
+
+    it("com pacote o toque curto chega ao onToggle com o id da série", () => {
+      const onToggle = vi.fn();
+      render(
+        <WorkoutEntriesList
+          {...( {
+            ...base(),
+            execution: exec({ onToggle }),
+          } as unknown as WorkoutEntriesListProps )}
+        />,
+      );
+
+      fireEvent.click(screen.getAllByRole("checkbox")[2]);
+
+      expect(onToggle).toHaveBeenCalledTimes(1);
+      expect(onToggle).toHaveBeenCalledWith("s3");
+    });
+  });
 });
 
 /** Ids das entradas na ordem em que os cards estão no DOM (pós-otimismo). */

@@ -11,6 +11,7 @@ import {
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { WorkoutDetailSection } from "@/components/milon/WorkoutDetailSection";
 import { useWorkoutDetail } from "@/lib/milon/hooks/useWorkoutDetail";
+import { useWorkoutExecution } from "@/lib/milon/hooks/useWorkoutExecution";
 import { MSG_EXERCICIO_JA_NO_TREINO } from "@/lib/milon/workout-utils";
 import type {
   Exercise,
@@ -67,6 +68,12 @@ vi.mock("@/lib/milon/hooks/useWorkoutDetail", () => ({
   useWorkoutDetail: vi.fn(),
 }));
 
+// Hook de execução (Mílon #5, TASK-003/TASK-004): mockado para o modo
+// execução da seção — consumido só quando `executionEnabled` está ligada.
+vi.mock("@/lib/milon/hooks/useWorkoutExecution", () => ({
+  useWorkoutExecution: vi.fn(),
+}));
+
 // next/navigation mockado por arquivo (seção usa roteador só p/ voltar ao
 // programa; MilonLayout usa o pathname p/ marcar a aba ativa).
 const mockPush = vi.hoisted(() => vi.fn());
@@ -89,6 +96,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const mockedUseWorkoutDetail = useWorkoutDetail as Mock;
+const mockedUseWorkoutExecution = useWorkoutExecution as Mock;
 
 const DONO = "ana@hestia.lan";
 
@@ -531,5 +539,244 @@ describe("TASK-004 — seção sem MilonLayout (fonte, contrato layout-único �
 
   it("'ModuleLayout' em components/milon/WorkoutDetailSection.tsx => 0 ocorrências (nem direto nem via MilonLayout)", () => {
     expect(sectionSource().split("ModuleLayout").length - 1).toBe(0);
+  });
+});
+
+/**
+ * Contrato RED — Mílon #5 Execução série a série (TASK-005):
+ * flag `executionEnabled` da seção.
+ *
+ * Fonte: spec §3 (toque curto marca/desmarca; longo abre o modal; salvar
+ * replica para a série e as seguintes; última desmarcada abre a pergunta
+ * "nenhuma série marcada, deseja limpar essa execução"; confirmar limpa o
+ * início; cancelar mantém desmarcada com início preservado) + plan.md §2
+ * (flag opcional executionEnabled com padrão desligado; quando ligada
+ * compõe o hook novo, monta o pacote de execução, hospeda o
+ * SeriesEditModal e a confirmação de limpeza; quando desligada
+ * comportamento idêntico ao atual) + §3 (flag executionEnabled default
+ * desligado; pacote SeriesExecutionProps; modal e confirmação) + §4 (data
+ * flow) + tasks.json TASK-005.
+ *
+ * CONTRATO FIXADO AQUI: `WorkoutDetailSectionProps` ganha
+ * `executionEnabled?: boolean` (default desligado). Quando ligada, a seção
+ * chama `useWorkoutExecution(workoutId)` e repassa o pacote montado a
+ * partir de `doneSeriesIds`; hospeda o SeriesEditModal (estado do editor)
+ * e a confirmação de limpeza (clearConfirmOpen/confirm/cancel).
+ *
+ * Expected: FAIL nos blocos com flag (prop ainda não existe — hook nunca
+ * chamado, sem marcadores/modal/pergunta); o bloco sem flag passa como
+ * trava de regressão. Hefesto fará GREEN na TASK-006.
+ */
+describe("modo execução da seção (Mílon #5 — RED)", () => {
+  /** Estado default do hook de execução (contrato da TASK-003/TASK-004). */
+  function setupExecHook(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  function comFlag(props: Record<string, unknown> = {}) {
+    return {
+      workoutId: "wout-1",
+      backTarget: backNone,
+      ...( { executionEnabled: true } as Record<string, unknown> ),
+      ...props,
+    };
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExecHook();
+  });
+
+  it("sem flag: comportamento idêntico ao atual (slots nulos, sem marcadores, hook de execução nunca chamado)", () => {
+    conteudoComUmaEntrada();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backNone} />,
+    );
+
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.getByText("Série 1")).toBeInTheDocument();
+    expect(mockedUseWorkoutExecution).not.toHaveBeenCalled();
+  });
+
+  it("com flag: compõe o hook novo com o workoutId", () => {
+    conteudoComUmaEntrada();
+
+    render(
+      <WorkoutDetailSection
+        {...(comFlag() as unknown as Parameters<typeof WorkoutDetailSection>[0])}
+      />,
+    );
+
+    expect(mockedUseWorkoutExecution).toHaveBeenCalledWith("wout-1");
+  });
+
+  it("com flag: monta marcadores a partir de doneSeriesIds", () => {
+    conteudoComUmaEntrada();
+    setupExecHook({ doneSeriesIds: ["ser-1"], markedCount: 1 });
+
+    render(
+      <WorkoutDetailSection
+        {...(comFlag() as unknown as Parameters<typeof WorkoutDetailSection>[0])}
+      />,
+    );
+
+    const marcadores = screen.getAllByRole("checkbox");
+    expect(marcadores).toHaveLength(2);
+    expect(marcadores[0]).toBeChecked();
+    expect(marcadores[1]).not.toBeChecked();
+  });
+
+  it("com flag: hospeda o modal de edição (título com font-display, sem opção de cópia)", async () => {
+    conteudoComUmaEntrada();
+    const state = setupExecHook({ doneSeriesIds: ["ser-1"], markedCount: 1 });
+
+    render(
+      <WorkoutDetailSection
+        {...(comFlag() as unknown as Parameters<typeof WorkoutDetailSection>[0])}
+      />,
+    );
+
+    // Toque longo na primeira série abre o editor (500ms, sem alternar).
+    vi.useFakeTimers();
+    try {
+      fireEvent.pointerDown(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+      vi.advanceTimersByTime(500);
+      fireEvent.pointerUp(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: /série/i }),
+      ).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByRole("heading", { name: /série/i }).className,
+    ).toMatch(/font-display/);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(state.toggleSeries).not.toHaveBeenCalled();
+  });
+
+  it("com flag: última desmarcada abre a pergunta com a série já desmarcada (sem excluir)", async () => {
+    conteudoComUmaEntrada();
+    const state = setupExecHook({
+      doneSeriesIds: ["ser-1"],
+      markedCount: 1,
+      toggleSeries: vi.fn(async () => {
+        // Hook remove a realizada e abre a confirmação sem excluir.
+        mockedUseWorkoutExecution.mockReturnValue({
+          ...setupExecHook(),
+          doneSeriesIds: [],
+          markedCount: 0,
+          clearConfirmOpen: true,
+        });
+      }),
+    });
+
+    render(
+      <WorkoutDetailSection
+        {...(comFlag() as unknown as Parameters<typeof WorkoutDetailSection>[0])}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    await waitFor(() => expect(state.toggleSeries).toHaveBeenCalled());
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/nenhuma série marcada, deseja limpar essa execução/i),
+      ).toBeInTheDocument(),
+    );
+    // A série clicada já aparece desmarcada antes de qualquer pergunta.
+    expect(screen.getAllByRole("checkbox")[0]).not.toBeChecked();
+  });
+
+  it("com flag: confirmar limpa a execução e cancelar mantém início com zero marcadas", async () => {
+    conteudoComUmaEntrada();
+    const state = setupExecHook({
+      doneSeriesIds: [],
+      markedCount: 0,
+      clearConfirmOpen: true,
+    });
+
+    render(
+      <WorkoutDetailSection
+        {...(comFlag() as unknown as Parameters<typeof WorkoutDetailSection>[0])}
+      />,
+    );
+
+    expect(
+      screen.getByText(/nenhuma série marcada, deseja limpar essa execução/i),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /limpar/i }));
+    await waitFor(() =>
+      expect(state.confirmClearExecution).toHaveBeenCalledTimes(1),
+    );
+  });
+
+  it("com flag: salvar replica origem mais seguintes com feito preservado (via hook)", async () => {
+    conteudoComUmaEntrada();
+    const state = setupExecHook({ doneSeriesIds: ["ser-2"], markedCount: 1 });
+
+    render(
+      <WorkoutDetailSection
+        {...(comFlag() as unknown as Parameters<typeof WorkoutDetailSection>[0])}
+      />,
+    );
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.pointerDown(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+      vi.advanceTimersByTime(500);
+      fireEvent.pointerUp(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /salvar/i }),
+      ).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /salvar/i }));
+
+    await waitFor(() =>
+      expect(state.saveSeriesExecution).toHaveBeenCalledTimes(1),
+    );
+    const chamada = state.saveSeriesExecution.mock.calls[0];
+    // Entrada + série de origem identificadas; sem indicador de cópia.
+    expect(JSON.stringify(chamada)).toMatch(/ent-1/);
+    expect(JSON.stringify(chamada)).toMatch(/ser-1/);
+    expect(JSON.stringify(chamada)).not.toMatch(/copiar|copy|applyToAll/);
   });
 });

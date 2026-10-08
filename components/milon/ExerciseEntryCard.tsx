@@ -11,7 +11,7 @@ import {
   interpretarQuantidadeSeries,
   validarInteiroCampo,
 } from "@/lib/milon/workout-utils";
-import SeriesCard, { type SerieField } from "./SeriesCard";
+import SeriesCard, { type SerieField, type SeriesExecutionProps } from "./SeriesCard";
 
 export interface ExerciseEntryCardProps {
   entryView: WorkoutEntryView;
@@ -32,6 +32,8 @@ export interface ExerciseEntryCardProps {
   onEditExercise: () => void;
   onRemoveEntry: () => void;
   onChooseUnit: (unit: LoadUnit) => void;
+  /** Pacote de execução (Mílon #5, opt-in): repassado sem interpretar. */
+  execution?: SeriesExecutionProps;
 }
 
 /**
@@ -58,8 +60,14 @@ export default function ExerciseEntryCard({
   onEditExercise,
   onRemoveEntry,
   onChooseUnit,
+  execution,
 }: ExerciseEntryCardProps) {
   const { entry, exercise, series } = entryView;
+
+  // Em execução (Mílon #5) o card é só leitura+marcação: o chrome de
+  // manutenção (reordenar, quantidade, descanso, editar/excluir exercício)
+  // fica oculto e cada série expõe marcador + edição via pacote.
+  const showMaintenance = !readOnly && !execution;
 
   const [quantityError, setQuantityError] = useState<string | null>(null);
   const [restError, setRestError] = useState<string | null>(null);
@@ -122,7 +130,7 @@ export default function ExerciseEntryCard({
       style={{ minHeight: isDragging ? "200px" : undefined }}
     >
       <div className="flex items-center gap-2">
-        {readOnly ? null : (
+        {showMaintenance ? (
           <button
             type="button"
             aria-label="Arrastar para reordenar"
@@ -132,11 +140,11 @@ export default function ExerciseEntryCard({
           >
             <span aria-hidden="true">⠿</span>
           </button>
-        )}
+        ) : null}
         <h3 className="font-display text-sm leading-snug tracking-wider truncate flex-1">
           {exercise.name}
         </h3>
-        {readOnly ? null : (
+        {showMaintenance ? (
           <div className="flex items-center gap-1 shrink-0">
             <Button
               type="button"
@@ -157,10 +165,10 @@ export default function ExerciseEntryCard({
               Excluir
             </Button>
           </div>
-        )}
+        ) : null}
       </div>
 
-      {readOnly ? null : (
+      {showMaintenance ? (
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={`${entry.id}-qtd`} className="text-xs font-semibold">
             Séries
@@ -184,9 +192,9 @@ export default function ExerciseEntryCard({
             </p>
           ) : null}
         </div>
-      )}
+      ) : null}
 
-      {readOnly ? null : (
+      {showMaintenance ? (
         <div className="flex flex-col gap-1.5">
           <Label
             htmlFor={`${entry.id}-descanso`}
@@ -214,7 +222,7 @@ export default function ExerciseEntryCard({
             </p>
           ) : null}
         </div>
-      )}
+      ) : null}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
         {series.map((serie, idx) => (
@@ -229,6 +237,7 @@ export default function ExerciseEntryCard({
             }
             onApplyAll={() => onApplyAll(serie.id)}
             onChooseUnit={onChooseUnit}
+            execution={execution}
           />
         ))}
       </div>

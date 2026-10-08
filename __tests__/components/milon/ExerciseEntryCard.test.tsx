@@ -463,4 +463,99 @@ describe("ExerciseEntryCard", () => {
       ).toBeInTheDocument();
     });
   });
+
+  /**
+   * Contrato RED — Mílon #5 Execução série a série (TASK-005):
+   * repasse do pacote de execução.
+   *
+   * Fonte: plan.md §2 (ExerciseEntryCard repassa o pacote para cada
+   * SeriesCard; sem ele renderiza idêntico a hoje) + §3 (ExerciseEntryCard
+   * e WorkoutEntriesList aceitam o pacote como prop opcional e o repassam
+   * sem interpretar) + tasks.json TASK-005.
+   *
+   * CONTRATO FIXADO AQUI (mesmo da SeriesCard): prop opcional
+   * `execution?: { doneBySeriesId: Record<string, boolean>;
+   * onToggle: (seriesId: string) => void;
+   * onOpenEditor: (seriesId: string) => void }`, repassada sem interpretar.
+   *
+   * Expected: FAIL nos blocos com pacote (prop ainda não existe — nenhum
+   * marcador renderiza); o bloco sem pacote passa como trava de regressão.
+   * Hefesto fará GREEN na TASK-006.
+   */
+  describe("repasse do pacote de execução (Mílon #5 — RED)", () => {
+    interface SeriesExecutionProps {
+      doneBySeriesId: Record<string, boolean>;
+      onToggle: (seriesId: string) => void;
+      onOpenEditor: (seriesId: string) => void;
+    }
+
+    function exec(
+      overrides: Partial<SeriesExecutionProps> = {},
+    ): SeriesExecutionProps {
+      return {
+        doneBySeriesId: {},
+        onToggle: vi.fn(),
+        onOpenEditor: vi.fn(),
+        ...overrides,
+      };
+    }
+
+    it("sem pacote renderiza idêntico a hoje (sem marcadores)", () => {
+      render(<ExerciseEntryCard {...base()} />);
+
+      expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+      expect(screen.getByText("Série 1")).toBeInTheDocument();
+      expect(screen.getByText("Série 2")).toBeInTheDocument();
+    });
+
+    it("com pacote cada série exibe marcador com o feito do mapa", () => {
+      render(
+        <ExerciseEntryCard
+          {...( {
+            ...base(),
+            execution: exec({ doneBySeriesId: { s1: true } }),
+          } as unknown as ExerciseEntryCardProps )}
+        />,
+      );
+
+      const marcadores = screen.getAllByRole("checkbox");
+      expect(marcadores).toHaveLength(2);
+      expect(marcadores[0]).toBeChecked();
+      expect(marcadores[1]).not.toBeChecked();
+    });
+
+    it("com pacote o toque curto repassa a alternância com o id da série", () => {
+      const onToggle = vi.fn();
+      render(
+        <ExerciseEntryCard
+          {...( {
+            ...base(),
+            execution: exec({ onToggle }),
+          } as unknown as ExerciseEntryCardProps )}
+        />,
+      );
+
+      fireEvent.click(screen.getAllByRole("checkbox")[1]);
+
+      expect(onToggle).toHaveBeenCalledTimes(1);
+      expect(onToggle).toHaveBeenCalledWith("s2");
+    });
+
+    it("com pacote o botão de editar repassa a abertura do editor", () => {
+      const onOpenEditor = vi.fn();
+      render(
+        <ExerciseEntryCard
+          {...( {
+            ...base(),
+            execution: exec({ onOpenEditor }),
+          } as unknown as ExerciseEntryCardProps )}
+        />,
+      );
+
+      fireEvent.click(screen.getAllByRole("button", { name: /editar/i })[0]);
+
+      expect(onOpenEditor).toHaveBeenCalledTimes(1);
+      expect(onOpenEditor).toHaveBeenCalledWith("s1");
+    });
+  });
 });

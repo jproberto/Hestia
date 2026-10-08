@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,17 @@ import {
 
 export type SerieField = "reps" | "durationSeconds" | "load";
 
+/**
+ * Pacote de execução série a série (Mílon #5): feito por id da série do
+ * template + alternância por toque curto + abertura do editor por toque
+ * longo. Repassado sem interpretação por ExerciseEntryCard/WorkoutEntriesList.
+ */
+export interface SeriesExecutionProps {
+  doneBySeriesId: Record<string, boolean>;
+  onToggle: (seriesId: string) => void;
+  onOpenEditor: (seriesId: string) => void;
+}
+
 export interface SeriesCardProps {
   series: WorkoutSeries;
   index: number;
@@ -21,6 +32,7 @@ export interface SeriesCardProps {
   onCommit: (field: SerieField, value: number | null) => void;
   onApplyAll: () => void;
   onChooseUnit: (unit: LoadUnit) => void;
+  execution?: SeriesExecutionProps;
 }
 
 /**
@@ -41,9 +53,22 @@ export default function SeriesCard({
   onCommit,
   onApplyAll,
   onChooseUnit,
+  execution,
 }: SeriesCardProps) {
   const rotulo = `Série ${index + 1}`;
   const baseId = `serie-${series.id}`;
+  const LONG_PRESS_MS = 500;
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressToggle = useRef(false);
+
+  function clearLongPress(): void {
+    if (longPressTimer.current !== null) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }
+
+  useEffect(() => clearLongPress, []);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isRepsMode, setIsRepsMode] = useState(true);
   // Toggle kg/lb é a fonte de verdade da unidade (D10); quando o exercício
@@ -74,6 +99,94 @@ export default function SeriesCard({
     }
     setErrorMsg(null);
     onCommit("load", resultado.valor);
+  }
+
+  // Modo de execução (Mílon #5, opt-in): exibição bloqueada com marcador.
+  // Toque curto alterna na hora; toque longo (500ms) abre o editor sem
+  // alternar ao soltar (supressão); Enter/Espaço no marcador e botão
+  // explícito garantem acessibilidade; programa inativo segue não
+  // interativo (cai no readOnly abaixo).
+  if (execution && !readOnly) {
+    const feito = execution.doneBySeriesId[series.id] === true;
+    const repsTempo =
+      series.reps !== null && series.reps !== undefined
+        ? `${series.reps} reps`
+        : series.durationSeconds !== null && series.durationSeconds !== undefined
+          ? `${series.durationSeconds} s`
+          : "—";
+    const cargaTexto =
+      series.load !== null && series.load !== undefined
+        ? `${series.load}${loadUnit ? ` ${loadUnit}` : ""}`
+        : "—";
+
+    function dispararAlternancia(): void {
+      if (suppressToggle.current) {
+        suppressToggle.current = false;
+        return;
+      }
+      execution?.onToggle(series.id);
+    }
+
+    function iniciarLongPress(): void {
+      suppressToggle.current = false;
+      clearLongPress();
+      longPressTimer.current = setTimeout(() => {
+        longPressTimer.current = null;
+        suppressToggle.current = true;
+        execution?.onOpenEditor(series.id);
+      }, LONG_PRESS_MS);
+    }
+
+    return (
+      <div
+        className="rounded-md border px-3 py-2 flex flex-col gap-1"
+        onPointerDown={iniciarLongPress}
+        onPointerUp={clearLongPress}
+        onPointerMove={clearLongPress}
+        onPointerLeave={clearLongPress}
+        onPointerCancel={clearLongPress}
+      >
+        <span className="text-sm font-medium">{rotulo}</span>
+        <span className="text-xs text-muted-foreground">
+          {repsTempo} · {cargaTexto}
+        </span>
+        <div className="flex items-center gap-2 pt-1">
+          <input
+            type="checkbox"
+            aria-label={rotulo}
+            checked={feito}
+            onChange={() => {}}
+            onClick={(event) => {
+              event.stopPropagation();
+              dispararAlternancia();
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
+                event.preventDefault();
+                event.stopPropagation();
+                suppressToggle.current = false;
+                execution?.onToggle(series.id);
+              }
+            }}
+            className="min-h-[44px] min-w-[44px] h-[44px] w-[44px] shrink-0 accent-[#B7602B]"
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="min-h-[44px] min-w-[44px]"
+            onClick={(event) => {
+              event.stopPropagation();
+              clearLongPress();
+              execution?.onOpenEditor(series.id);
+            }}
+            aria-label={`Editar ${rotulo}`}
+          >
+            Editar
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   if (readOnly) {

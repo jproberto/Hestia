@@ -8,7 +8,7 @@ import { AsyncState } from "@/components/ui/AsyncState";
 import type { ErrorOrigin } from "@/lib/shared";
 import type { LoadUnit, WorkoutEntryView } from "@/lib/milon/types";
 import ExerciseEntryCard from "./ExerciseEntryCard";
-import type { SerieField } from "./SeriesCard";
+import type { SerieField, SeriesExecutionProps } from "./SeriesCard";
 import {
   matchesExerciseQuery,
   normalizeExerciseText,
@@ -38,6 +38,8 @@ export interface WorkoutEntriesListProps {
   onEditExercise: (entryId: string) => void;
   onRemoveEntry: (entryId: string) => void;
   onConfirmUnit: (entryId: string, unit: LoadUnit) => void;
+  /** Pacote de execução (Mílon #5, opt-in): repassado sem interpretar. */
+  execution?: SeriesExecutionProps;
 }
 
 interface GhostState {
@@ -80,6 +82,7 @@ export default function WorkoutEntriesList({
   onEditExercise,
   onRemoveEntry,
   onConfirmUnit,
+  execution,
 }: WorkoutEntriesListProps) {
   void programId;
   const [searchText, setSearchText] = useState("");
@@ -385,6 +388,7 @@ export default function WorkoutEntriesList({
                     onEditExercise={() => onEditExercise(view.entry.id)}
                     onRemoveEntry={() => onRemoveEntry(view.entry.id)}
                     onChooseUnit={(unit) => onConfirmUnit(view.entry.id, unit)}
+                    execution={execution}
                   />
                   {isPlaceholderAfter && index === paginatedViews.length - 1 && (
                     <li

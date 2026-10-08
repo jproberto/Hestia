@@ -526,7 +526,7 @@ describe("ExerciseEntryCard", () => {
       expect(screen.getByText("Série 2")).toBeInTheDocument();
     });
 
-    it("com pacote cada série é um card clicável, sem checkbox nem botão de editar", () => {
+    it("com pacote cada série é um card clicável, sem checkbox, com chrome de manutenção visível (replano D14)", () => {
       render(
         <ExerciseEntryCard
           {...( {
@@ -539,9 +539,15 @@ describe("ExerciseEntryCard", () => {
       const cartoes = cartoesDasSeries();
       expect(cartoes).toHaveLength(2);
       expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+      expect(screen.getByLabelText(/séries/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/descanso/i)).toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: /editar/i }),
-      ).not.toBeInTheDocument();
+        screen.getByRole("button", { name: /editar/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /excluir/i }),
+      ).toBeInTheDocument();
+      expect(handle()).not.toBeNull();
       expect(temFundoDoModulo(cartoes[0])).toBe(true);
       expect(temFundoDoModulo(cartoes[1])).toBe(false);
     });
@@ -589,5 +595,75 @@ describe("ExerciseEntryCard", () => {
         vi.useRealTimers();
       }
     });
+  });
+});
+
+/**
+ * Chrome restaurado no Treino do Dia em execução (Mílon #5 replano,
+ * TASK-001 RED).
+ *
+ * Fonte: plan.md §2 (remover o ocultamento do chrome de manutenção em
+ * execução; showMaintenance deixa de existir; visibilidade depende somente
+ * de programa inativo) + §3 (quantidade, descanso, editar, excluir, handle,
+ * adicionar, busca e filtro disponíveis em execução) + spec §3 (editar,
+ * adicionar e remover já existem e não mudam) + feedback humano (quantidade,
+ * excluir e reordenar no Treino do Dia).
+ *
+ * Expected: FAIL — o chrome ainda é oculto quando há pacote de execução
+ * (showMaintenance = !readOnly && !execution). Hefesto fará GREEN na
+ * TASK-004 sem mudar estes testes.
+ */
+describe("ExerciseEntryCard — chrome visível em execução (replano TASK-001 — RED)", () => {
+  interface ExecPkg {
+    doneBySeriesId: Record<string, boolean>;
+    onToggle: (seriesId: string) => void;
+    onOpenEditor: (seriesId: string) => void;
+  }
+
+  function execPkg(overrides: Partial<ExecPkg> = {}): ExecPkg {
+    return {
+      doneBySeriesId: {},
+      onToggle: vi.fn(),
+      onOpenEditor: vi.fn(),
+      ...overrides,
+    };
+  }
+
+  function renderComExecucao() {
+    render(
+      <ExerciseEntryCard
+        {...({
+          ...base(),
+          execution: execPkg(),
+        } as unknown as ExerciseEntryCardProps)}
+      />,
+    );
+  }
+
+  it("quantidade de séries visível mesmo com o pacote de execução", () => {
+    renderComExecucao();
+
+    expect(screen.getByLabelText(/séries/i)).toBeInTheDocument();
+  });
+
+  it("descanso visível mesmo com o pacote de execução", () => {
+    renderComExecucao();
+
+    expect(screen.getByLabelText(/descanso/i)).toBeInTheDocument();
+  });
+
+  it("editar e excluir visíveis mesmo com o pacote de execução", () => {
+    renderComExecucao();
+
+    expect(screen.getByRole("button", { name: /editar/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /excluir/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("handle de reordenar visível mesmo com o pacote de execução", () => {
+    renderComExecucao();
+
+    expect(handle()).not.toBeNull();
   });
 });

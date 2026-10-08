@@ -598,7 +598,7 @@ describe("WorkoutEntriesList", () => {
       expect(screen.getByText("Supino reto")).toBeInTheDocument();
     });
 
-    it("com pacote cada série é um card clicável, sem checkbox nem botão de editar", () => {
+    it("com pacote cada série é um card clicável, sem checkbox, com chrome de manutenção visível (replano D14)", () => {
       render(
         <WorkoutEntriesList
           {...( {
@@ -611,9 +611,8 @@ describe("WorkoutEntriesList", () => {
       // 2 entradas × 2 séries = 4 cards clicáveis.
       expect(screen.getAllByRole("button", { name: /^série [12]/i })).toHaveLength(4);
       expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
-      expect(
-        screen.queryByRole("button", { name: /editar/i }),
-      ).not.toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: /editar/i })).toHaveLength(2);
+      expect(screen.getAllByRole("button", { name: /excluir/i })).toHaveLength(2);
     });
 
     it("com pacote o toque curto no card chega ao onToggle com o id da série", () => {

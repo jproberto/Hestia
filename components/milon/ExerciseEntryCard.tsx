@@ -37,13 +37,17 @@ export interface ExerciseEntryCardProps {
 }
 
 /**
- * Card do exercício no treino (Mílon #3, CA-25).
+ * Card do exercício no treino (Mílon #3, CA-25; Mílon #5 replano: chrome
+ * sempre visível).
  * Quantidade e descanso são campos não-controlados (key + defaultValue, o
  * commit lê o valor atual no blur/Enter): aumento commita direto, redução com
  * série preenchida pede confirmação via onRequestReduce; descanso é campo
  * único (D4). Unidade da carga (D10) via toggle kg/lb do SeriesCard
  * (fonte de verdade, default kg) — sem prompt separado. readOnly
- * (Programa inativo) oculta handle, campos e ações.
+ * (programa inativo) oculta handle, campos e ações; em execução (Mílon #5)
+ * o chrome de manutenção (quantidade, descanso, editar/excluir, handle)
+ * permanece visível e o pacote de execução governa somente o comportamento
+ * dos cards de série (repassado sem interpretar).
  * isDragging: quando true, o card fica invisível (o ghost card é mostrado em seu lugar)
  * e os demais cards animam suavemente para preencher o espaço.
  */
@@ -64,10 +68,10 @@ export default function ExerciseEntryCard({
 }: ExerciseEntryCardProps) {
   const { entry, exercise, series } = entryView;
 
-  // Em execução (Mílon #5) o card é só leitura+marcação: o chrome de
-  // manutenção (reordenar, quantidade, descanso, editar/excluir exercício)
-  // fica oculto e cada série expõe marcador + edição via pacote.
-  const showMaintenance = !readOnly && !execution;
+  // Replano Mílon #5 (D14): chrome de manutenção sempre visível em execução —
+  // a visibilidade depende somente de programa inativo; o pacote de execução
+  // governa apenas o comportamento dos SeriesCards (repassado sem interpretar).
+  const maintenanceVisible = !readOnly;
 
   const [quantityError, setQuantityError] = useState<string | null>(null);
   const [restError, setRestError] = useState<string | null>(null);
@@ -130,7 +134,7 @@ export default function ExerciseEntryCard({
       style={{ minHeight: isDragging ? "200px" : undefined }}
     >
       <div className="flex items-center gap-2">
-        {showMaintenance ? (
+        {maintenanceVisible ? (
           <button
             type="button"
             aria-label="Arrastar para reordenar"
@@ -144,7 +148,7 @@ export default function ExerciseEntryCard({
         <h3 className="font-display text-sm leading-snug tracking-wider truncate flex-1">
           {exercise.name}
         </h3>
-        {showMaintenance ? (
+        {maintenanceVisible ? (
           <div className="flex items-center gap-1 shrink-0">
             <Button
               type="button"
@@ -168,7 +172,7 @@ export default function ExerciseEntryCard({
         ) : null}
       </div>
 
-      {showMaintenance ? (
+      {maintenanceVisible ? (
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={`${entry.id}-qtd`} className="text-xs font-semibold">
             Séries
@@ -194,7 +198,7 @@ export default function ExerciseEntryCard({
         </div>
       ) : null}
 
-      {showMaintenance ? (
+      {maintenanceVisible ? (
         <div className="flex flex-col gap-1.5">
           <Label
             htmlFor={`${entry.id}-descanso`}

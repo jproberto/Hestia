@@ -70,7 +70,17 @@ export default function SeriesCard({
 
   useEffect(() => clearLongPress, []);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [isRepsMode, setIsRepsMode] = useState(true);
+  // Modo reps/tempo: deriva do dado vigente para a face exibir o rótulo
+  // correto sem clique prévio (paridade execução ↔ manutenção); o toggle
+  // local alterna em seguida nos dois ramos.
+  const [isRepsMode, setIsRepsMode] = useState(
+    () =>
+      series.reps !== null && series.reps !== undefined
+        ? true
+        : series.durationSeconds !== null && series.durationSeconds !== undefined
+          ? false
+          : true,
+  );
   // Toggle kg/lb é a fonte de verdade da unidade (D10); quando o exercício
   // já tem unidade persistida, ela prevalece sobre a escolha local.
   const [selectedUnit, setSelectedUnit] = useState<LoadUnit>(loadUnit ?? "kg");
@@ -101,23 +111,25 @@ export default function SeriesCard({
     onCommit("load", resultado.valor);
   }
 
-  // Modo de execução (Mílon #5, opt-in): o próprio card é o marcador.
+  // Modo de execução (Mílon #5, opt-in): o próprio card é o marcador, com a
+  // mesma face da manutenção (rótulos, conversão secundária e toggles).
   // Toque curto alterna na hora; toque longo (500ms) abre o editor sem
   // alternar ao soltar (supressão do click seguinte); Enter/Espaço no card
   // focado equivalem ao toque curto; programa inativo segue não
-  // interativo (cai no readOnly abaixo). Sem checkbox nem botão de editar.
+  // interativo (cai no readOnly abaixo). Sem checkbox, sem botão de marcar
+  // e sem "Aplicar a todas" (D17). Controles internos isolam o clique.
   if (execution && !readOnly) {
     const feito = execution.doneBySeriesId[series.id] === true;
-    const repsTempo =
-      series.reps !== null && series.reps !== undefined
-        ? `${series.reps} reps`
-        : series.durationSeconds !== null && series.durationSeconds !== undefined
-          ? `${series.durationSeconds} s`
-          : "—";
-    const cargaTexto =
-      series.load !== null && series.load !== undefined
-        ? `${series.load}${loadUnit ? ` ${loadUnit}` : ""}`
-        : "—";
+    const secundariaExec =
+      loadUnit !== null && series.load !== null
+        ? formatarCargaComSecundaria(series.load, loadUnit)
+        : null;
+    const unidadeSecundariaExec: LoadUnit | null =
+      loadUnit === "kg" ? "libra" : loadUnit === "libra" ? "kg" : null;
+    const valorRepsTempo =
+      isRepsMode
+        ? (series.reps ?? "—")
+        : (series.durationSeconds ?? "—");
 
     function dispararAlternancia(): void {
       if (suppressToggle.current) {
@@ -137,6 +149,10 @@ export default function SeriesCard({
       }, LONG_PRESS_MS);
     }
 
+    function isolarClique(event: { stopPropagation: () => void }): void {
+      event.stopPropagation();
+    }
+
     return (
       <div
         role="button"
@@ -145,8 +161,8 @@ export default function SeriesCard({
         aria-pressed={feito}
         className={
           feito
-            ? "rounded-md border px-3 py-2 flex flex-col gap-1 min-h-[44px] w-full text-left bg-[#B7602B] text-white"
-            : "rounded-md border px-3 py-2 flex flex-col gap-1 min-h-[44px] w-full text-left"
+            ? "rounded-md border px-3 py-2 flex flex-col gap-2 min-h-[44px] w-full text-left bg-[#B7602B] text-white"
+            : "rounded-md border px-3 py-2 flex flex-col gap-2 min-h-[44px] w-full text-left"
         }
         style={feito ? { backgroundColor: "#B7602B" } : undefined}
         onClick={dispararAlternancia}
@@ -156,6 +172,7 @@ export default function SeriesCard({
         onPointerLeave={clearLongPress}
         onPointerCancel={clearLongPress}
         onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
           if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
             event.preventDefault();
             suppressToggle.current = false;
@@ -164,9 +181,77 @@ export default function SeriesCard({
         }}
       >
         <span className="text-sm font-medium">{rotulo}</span>
-        <span className="text-xs opacity-80">
-          {repsTempo} · {cargaTexto}
-        </span>
+
+        {/* Face de paridade: mesmos rótulos/formatos da manutenção, só leitura */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold flex-1">
+              {isRepsMode ? "Repetições" : "Tempo (s)"}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={(event) => {
+                event.stopPropagation();
+                setIsRepsMode((prev) => !prev);
+              }}
+              onPointerDown={isolarClique}
+              onPointerUp={isolarClique}
+              aria-label={isRepsMode ? "Alternar para tempo" : "Alternar para repetições"}
+            >
+              {isRepsMode ? "⏱" : "🔁"}
+            </Button>
+          </div>
+          <span className="text-sm">{valorRepsTempo}</span>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold">Carga</span>
+          <span className="text-sm">{series.load ?? "—"}</span>
+          {secundariaExec?.secundaria && unidadeSecundariaExec ? (
+            <span className="text-xs text-muted-foreground">
+              {secundariaExec.secundaria} {unidadeSecundariaExec}
+            </span>
+          ) : null}
+
+          <div className="flex items-center gap-2 pt-1">
+            <span className="text-xs text-muted-foreground">Unidade:</span>
+            <div className="flex gap-1">
+              <Button
+                type="button"
+                size="sm"
+                variant={effectiveUnit === "kg" ? "default" : "outline"}
+                className="h-7 px-2 text-xs"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setSelectedUnit("kg");
+                  onChooseUnit("kg");
+                }}
+                onPointerDown={isolarClique}
+                onPointerUp={isolarClique}
+              >
+                kg
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={effectiveUnit === "libra" ? "default" : "outline"}
+                className="h-7 px-2 text-xs"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setSelectedUnit("libra");
+                  onChooseUnit("libra");
+                }}
+                onPointerDown={isolarClique}
+                onPointerUp={isolarClique}
+              >
+                lb
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

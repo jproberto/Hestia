@@ -519,3 +519,149 @@ describe("SeriesCard", () => {
     });
   });
 });
+
+/**
+ * Paridade UI com a manutenção em execução (Mílon #5 replano, TASK-001 RED).
+ *
+ * Fonte: plan.md §2–§3 (o ramo de execução renderiza a mesma face da
+ * manutenção reaproveitando os trechos do próprio arquivo) + spec §3 (exibe
+ * com exatamente a mesma cara da manutenção, com rótulos de repetição ou
+ * tempo e com a unidade da carga visível) + D17 (sem botão de aplicar a
+ * todas em execução) + contratos (rótulos, conversão secundária, toggles,
+ * interrupção de propagação).
+ *
+ * Expected: FAIL — o ramo de execução ainda exibe a linha compacta
+ * ("X reps · Y") sem rótulos, sem conversão secundária e sem toggles.
+ * Hefesto fará GREEN na TASK-002 sem mudar estes testes.
+ */
+describe("SeriesCard — paridade UI com a manutenção em execução (replano TASK-001 — RED)", () => {
+  interface ExecPkg {
+    doneBySeriesId: Record<string, boolean>;
+    onToggle: (seriesId: string) => void;
+    onOpenEditor: (seriesId: string) => void;
+  }
+
+  function execPkg(overrides: Partial<ExecPkg> = {}): ExecPkg {
+    return {
+      doneBySeriesId: {},
+      onToggle: vi.fn(),
+      onOpenEditor: vi.fn(),
+      ...overrides,
+    };
+  }
+
+  function renderExecucao(
+    seriesOverrides: Partial<WorkoutSeries> = {},
+    loadUnit: LoadUnit | null = "kg",
+    pkgOverrides: Partial<ExecPkg> = {},
+  ) {
+    const props = {
+      ...base({
+        series: makeSeries({ reps: 10, durationSeconds: null, load: 50, ...seriesOverrides }),
+        loadUnit,
+      }),
+      execution: execPkg(pkgOverrides),
+    } as unknown as Parameters<typeof SeriesCard>[0];
+    render(<SeriesCard {...props} />);
+  }
+
+  it("com reps exibe o rótulo Repetições (não só números)", () => {
+    renderExecucao({ reps: 10, durationSeconds: null });
+
+    expect(screen.getByText("Repetições")).toBeInTheDocument();
+  });
+
+  it("com tempo exibe o rótulo Tempo (s) conforme o modo", () => {
+    renderExecucao({ reps: null, durationSeconds: 45 });
+
+    expect(screen.getByText("Tempo (s)")).toBeInTheDocument();
+  });
+
+  it("exibe o rótulo Carga com a unidade visível", () => {
+    renderExecucao({ load: 50 }, "kg");
+
+    expect(screen.getByText("Carga")).toBeInTheDocument();
+    expect(screen.getByText(/kg/)).toBeInTheDocument();
+  });
+
+  it("exibe a conversão secundária de carga da manutenção", () => {
+    renderExecucao({ load: 50 }, "kg");
+
+    const { secundaria } = formatarCargaComSecundaria(50, "kg");
+    expect(secundaria).toBe("110.2");
+    expect(screen.getByText(new RegExp(secundaria ?? ""))).toBeInTheDocument();
+  });
+
+  it("expõe o botão de alternar repetição/tempo com os rótulos da manutenção", () => {
+    renderExecucao();
+
+    expect(
+      screen.getByRole("button", { name: /alternar para (tempo|repetições)/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("expõe os botões kg e lb com a semântica do toggle da manutenção", () => {
+    renderExecucao();
+
+    expect(screen.getByRole("button", { name: /^kg$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^lb$/i })).toBeInTheDocument();
+  });
+
+  it("marcada tem fundo na cor do módulo (#B7602B)", () => {
+    const props = {
+      ...base({ series: makeSeries({ reps: 10, load: 50 }) }),
+      execution: execPkg({ doneBySeriesId: { s1: true } }),
+    } as unknown as Parameters<typeof SeriesCard>[0];
+    render(<SeriesCard {...props} />);
+
+    const cartao = screen.getByRole("button", { name: /^série 1/i });
+    const alvo = `${cartao.className} ${(cartao.getAttribute("style") ?? "")}`.toLowerCase();
+    expect(alvo).toMatch(/b7602b/);
+  });
+
+  it("não há checkbox nem botão de marcar (o card é o próprio marcador)", () => {
+    renderExecucao();
+
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    expect(
+      screen.queryByRole("button", { name: /marcar/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("D17: sem botão Aplicar a todas em execução", () => {
+    renderExecucao();
+
+    expect(
+      screen.queryByRole("button", { name: /aplicar a todas/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("clique no alternar repetição/tempo não alterna a marcação", () => {
+    const onToggle = vi.fn();
+    renderExecucao({}, "kg", { onToggle });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /alternar para (tempo|repetições)/i }),
+    );
+
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it("clique em kg não alterna a marcação", () => {
+    const onToggle = vi.fn();
+    renderExecucao({}, "kg", { onToggle });
+
+    fireEvent.click(screen.getByRole("button", { name: /^kg$/i }));
+
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it("clique em lb não alterna a marcação", () => {
+    const onToggle = vi.fn();
+    renderExecucao({}, "kg", { onToggle });
+
+    fireEvent.click(screen.getByRole("button", { name: /^lb$/i }));
+
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+});

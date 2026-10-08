@@ -223,3 +223,102 @@ describe("SeriesEditModal (TASK-005 — RED)", () => {
     ).toBeDisabled();
   });
 });
+
+/**
+ * Paridade com a manutenção (Mílon #5 replano, TASK-001 RED).
+ *
+ * Fonte: plan.md §2–§3 (campo único repetição/tempo com o mesmo botão de
+ * alternância da manutenção; carga com conversão secundária e os mesmos
+ * botões kg/lb; identificador series-edit-valor; series-edit-reps e
+ * series-edit-tempo deixam de existir) + spec §3 (mesmas opções da
+ * manutenção, troca repetição/tempo, escolha kg/lb) + D18 (unidade só no
+ * salvar) + contratos (salvamento entrega somente os campos; nunca fecha
+ * no erro).
+ *
+ * Expected: FAIL — o modal ainda tem dois campos simultâneos
+ * (series-edit-reps + series-edit-tempo) sem alternância e sem botões de
+ * unidade. Hefesto fará GREEN na TASK-003 sem mudar estes testes.
+ */
+describe("SeriesEditModal — paridade com a manutenção (replano TASK-001 — RED)", () => {
+  type ModalProps = Parameters<typeof SeriesEditModal>[0];
+
+  function renderModal(props: Partial<ModalProps> = {}) {
+    const merged = { ...base(), ...props } as unknown as ModalProps;
+    render(<SeriesEditModal {...merged} />);
+  }
+
+  it("expõe campo único series-edit-valor (sem os dois campos simultâneos)", () => {
+    renderModal();
+
+    expect(document.getElementById("series-edit-valor")).not.toBeNull();
+    expect(document.getElementById("series-edit-reps")).toBeNull();
+    expect(document.getElementById("series-edit-tempo")).toBeNull();
+  });
+
+  it("campo único alterna entre Repetições e Tempo (s) pelo botão da manutenção", () => {
+    renderModal();
+
+    const alternar = screen.getByRole("button", {
+      name: /alternar para (tempo|repetições)/i,
+    });
+    expect(alternar).toBeInTheDocument();
+    fireEvent.click(alternar);
+    expect(screen.getByText("Tempo (s)")).toBeInTheDocument();
+  });
+
+  it("carga exibe conversão secundária e botões kg/lb", () => {
+    renderModal({ series: makeSeries({ reps: 10, load: 50 }), loadUnit: "kg" });
+
+    expect(screen.getByText(/110\.2/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^kg$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^lb$/i })).toBeInTheDocument();
+  });
+
+  it("D18: trocar a unidade chama onChooseUnit sem fechar (unidade só no salvar)", () => {
+    const onChooseUnit = vi.fn();
+    renderModal({ onChooseUnit } as unknown as Partial<ModalProps>);
+
+    fireEvent.click(screen.getByRole("button", { name: /^lb$/i }));
+
+    expect(onChooseUnit).toHaveBeenCalledTimes(1);
+    expect(onChooseUnit).toHaveBeenCalledWith("libra");
+    expect(screen.getByRole("button", { name: /salvar/i })).toBeInTheDocument();
+  });
+
+  it("salvar entrega somente os campos { reps, durationSeconds, load }", async () => {
+    const onSave = vi.fn(async (_fields: SeriesEditFields) => {});
+    renderModal({
+      series: makeSeries({ reps: 10, durationSeconds: null, load: 50 }),
+      onSave,
+    });
+
+    fireEvent.change(screen.getByLabelText(/carga/i), {
+      target: { value: "55" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /salvar/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const campos = onSave.mock.calls[0][0];
+    expect(Object.keys(campos).sort()).toEqual(
+      ["durationSeconds", "load", "reps"].sort(),
+    );
+    expect(campos).not.toHaveProperty("copiar");
+    expect(campos).not.toHaveProperty("copy");
+  });
+
+  it("modal aberto com mensagem visível no erro (validação e persistência, sem fechar)", async () => {
+    const onSave = vi.fn(async () => {});
+    renderModal({ onSave });
+
+    fireEvent.change(campo(/carga/i), { target: { value: "abc" } });
+    fireEvent.click(screen.getByRole("button", { name: /salvar/i }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/valor numérico válido para a carga/i),
+      ).toBeInTheDocument(),
+    );
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /salvar/i })).toBeInTheDocument();
+  });
+});

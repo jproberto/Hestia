@@ -55,3 +55,29 @@ export const CargaZero: Story = {
 export const SomenteLeitura: Story = {
   args: { ...base, series: serie(), index: 0, readOnly: true },
 };
+
+export const ExecucaoParidade: Story = {
+  args: {
+    ...base,
+    series: serie(),
+    index: 0,
+    execution: {
+      doneBySeriesId: {},
+      onToggle: fn(),
+      onOpenEditor: fn(),
+    },
+  },
+};
+
+export const ExecucaoMarcada: Story = {
+  args: {
+    ...base,
+    series: serie(),
+    index: 0,
+    execution: {
+      doneBySeriesId: { s1: true },
+      onToggle: fn(),
+      onOpenEditor: fn(),
+    },
+  },
+};

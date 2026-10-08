@@ -33,6 +33,7 @@ const base = {
   saving: false,
   error: null,
   onClose: fn(),
+  onChooseUnit: fn(),
   onSave: fn(async () => {}),
 };
 
@@ -55,4 +56,21 @@ export const Salvando: Story = {
 
 export const Fechada: Story = {
   args: { ...base, open: false, series: serie() },
+};
+
+export const ParidadeTempo: Story = {
+  args: {
+    ...base,
+    open: true,
+    series: serie({ reps: null, durationSeconds: 60, load: 50 }),
+  },
+};
+
+export const ParidadeLibra: Story = {
+  args: {
+    ...base,
+    open: true,
+    series: serie({ reps: 10, load: 50 }),
+    loadUnit: "libra" as const,
+  },
 };

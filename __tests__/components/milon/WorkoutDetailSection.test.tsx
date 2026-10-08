@@ -785,3 +785,146 @@ describe("modo execução da seção (Mílon #5 — RED)", () => {
     expect(JSON.stringify(chamada)).not.toMatch(/copiar|copy|applyToAll/);
   });
 });
+
+/**
+ * Paridade UI do replano composta na seção (Mílon #5, TASK-001 RED).
+ *
+ * Fonte: plan.md §2 (seção liga o callback de escolha de unidade do modal
+ * ao caminho de persistência de unidade já existente; salvamento do editor
+ * sobre a operação do hook que replica sempre) + §3 (escolha de unidade
+ * com a mesma semântica do toggle da manutenção; salvamento origem +
+ * seguintes incluindo marcadas) + D17 (sem botão aplicar em execução) +
+ * D18 (unidade só no salvar).
+ *
+ * Expected: FAIL nos casos de chrome e de unidade — o chrome segue oculto
+ * em execução e o modal segue sem kg/lb. O caso de replicação passa como
+ * trava verde (regra vigente mantida). Hefesto fará GREEN na TASK-004 sem
+ * mudar estes testes.
+ */
+describe("WorkoutDetailSection — paridade do replano (TASK-001 — RED)", () => {
+  function setupExecReplano(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  function comExecucao(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backNone,
+      executionEnabled: true,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  async function abrirEditorDaPrimeiraSerie(): Promise<void> {
+    vi.useFakeTimers();
+    try {
+      fireEvent.pointerDown(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+      vi.advanceTimersByTime(500);
+      fireEvent.pointerUp(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /salvar/i }),
+      ).toBeInTheDocument(),
+    );
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExecReplano();
+  });
+
+  it("com flag: chrome de manutenção visível em execução (quantidade, descanso, editar, excluir, handle)", () => {
+    conteudoComUmaEntrada();
+    setupExecReplano();
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(screen.getByLabelText(/séries/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/descanso/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /editar/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /excluir/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /arrastar para reordenar/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("com flag: modal de paridade oferece escolha de unidade kg/lb ligada (D18: unidade só no salvar)", async () => {
+    conteudoComUmaEntrada();
+    const state = setupExecReplano();
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+    await abrirEditorDaPrimeiraSerie();
+
+    const dialog = screen.getByRole("heading", {
+      name: /editar série/i,
+    }).parentElement as HTMLElement;
+    const modal = within(dialog);
+    expect(
+      modal.getByRole("button", { name: /^kg$/i }),
+    ).toBeInTheDocument();
+    expect(
+      modal.getByRole("button", { name: /^lb$/i }),
+    ).toBeInTheDocument();
+
+    // D18: o salvamento entrega somente os campos (unidade via onChooseUnit, fora do payload).
+    fireEvent.click(modal.getByRole("button", { name: /salvar/i }));
+    await waitFor(() =>
+      expect(state.saveSeriesExecution).toHaveBeenCalledTimes(1),
+    );
+    const campos = (state.saveSeriesExecution.mock.calls[0] as unknown[])[2] as Record<
+      string,
+      unknown
+    >;
+    expect(campos).toEqual({ reps: 10, durationSeconds: null, load: null });
+  });
+
+  it("com flag: salvar mantém replicação sempre para origem + seguintes (sem indicador de cópia)", async () => {
+    conteudoComUmaEntrada();
+    const state = setupExecReplano({
+      doneSeriesIds: ["ser-2"],
+      markedCount: 1,
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+    await abrirEditorDaPrimeiraSerie();
+    fireEvent.click(screen.getByRole("button", { name: /salvar/i }));
+
+    await waitFor(() =>
+      expect(state.saveSeriesExecution).toHaveBeenCalledTimes(1),
+    );
+    const chamada = state.saveSeriesExecution.mock.calls[0];
+    expect(JSON.stringify(chamada)).toMatch(/ent-1/);
+    expect(JSON.stringify(chamada)).toMatch(/ser-1/);
+    expect(JSON.stringify(chamada)).not.toMatch(/copiar|copy|applyToAll/);
+  });
+});

@@ -95,6 +95,7 @@ interface ExecutionListContext {
   editorError: string | null;
   closeEditor: () => void;
   saveEditor: (fields: SeriesEditFields) => Promise<void>;
+  chooseEditorUnit: (unit: LoadUnit) => void;
 }
 
 /**
@@ -108,11 +109,13 @@ function ExecutionHost({
   workoutId,
   entries,
   onTemplateChanged,
+  onChooseUnitForEntry,
   children,
 }: {
   workoutId: string;
   entries: WorkoutEntryView[];
   onTemplateChanged: () => void;
+  onChooseUnitForEntry: (entryId: string, unit: LoadUnit) => void;
   children: (ctx: ExecutionListContext) => ReactNode;
 }) {
   const exec = useWorkoutExecution(workoutId);
@@ -200,6 +203,14 @@ function ExecutionHost({
     if (!clearProcessing) exec.cancelClearExecution();
   }
 
+  function chooseEditorUnit(unit: LoadUnit): void {
+    // Paridade com a manutenção (D18): escolha de unidade do modal persiste
+    // na hora pelo caminho existente da seção, com reversão visível em falha.
+    const target = editing;
+    if (!target) return;
+    onChooseUnitForEntry(target.entry.id, unit);
+  }
+
   const doneBySeriesId: Record<string, boolean> = {};
   for (const id of exec.doneSeriesIds) doneBySeriesId[id] = true;
 
@@ -229,6 +240,7 @@ function ExecutionHost({
         editorError,
         closeEditor,
         saveEditor,
+        chooseEditorUnit,
       })}
     </>
   );
@@ -639,6 +651,7 @@ export function WorkoutDetailSection({
                 workoutId={workoutId}
                 entries={entriesWithUnit}
                 onTemplateChanged={() => void retry()}
+                onChooseUnitForEntry={handleConfirmUnit}
               >
                 {(ctx) => (
                   <>
@@ -685,6 +698,7 @@ export function WorkoutDetailSection({
                       saving={ctx.editorSaving}
                       error={ctx.editorError}
                       onClose={ctx.closeEditor}
+                      onChooseUnit={ctx.chooseEditorUnit}
                       onSave={ctx.saveEditor}
                     />
 

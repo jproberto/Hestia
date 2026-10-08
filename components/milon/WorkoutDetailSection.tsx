@@ -85,7 +85,6 @@ interface EditingTarget {
 interface ExecutionListContext {
   executionPackage: SeriesExecutionProps | undefined;
   execErrorMsg: string | null;
-  execSuccessNotice: string | null;
   clearConfirmOpen: boolean;
   clearProcessing: boolean;
   confirmClear: () => void;
@@ -230,7 +229,6 @@ function ExecutionHost({
       {children({
         executionPackage,
         execErrorMsg: exec.errorMsg,
-        execSuccessNotice: exec.successNotice,
         clearConfirmOpen: exec.clearConfirmOpen,
         clearProcessing,
         confirmClear,
@@ -655,12 +653,6 @@ export function WorkoutDetailSection({
               >
                 {(ctx) => (
                   <>
-                    {ctx.execSuccessNotice ? (
-                      <div className="rounded border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                        {ctx.execSuccessNotice}
-                      </div>
-                    ) : null}
-
                     {ctx.execErrorMsg ? (
                       <div
                         role="alert"

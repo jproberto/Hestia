@@ -225,6 +225,20 @@
 
 ---
 
+## Feature #5 — Execução série a série
+
+### REG-49: Marcar série no Treino do Dia
+**Dado** o Treino do Dia com treino e séries
+**Quando** a pessoa dá toque curto no card de uma série
+**Então** a série fica marcada na hora, sem confirmação, com fundo na cor do módulo
+
+### REG-50: Executar série com paridade da manutenção (replano)
+**Dado** o Treino do Dia com treino e séries
+**Quando** a pessoa marca/desmarca pelo card (mesma cara da manutenção: rótulos, unidade e conversão) e edita pelo toque longo (rep/tempo + kg/lb, replicando sempre)
+**Então** quantidade, descanso, editar, excluir e reordenar seguem disponíveis como na manutenção, e o início zera somente com confirmação
+
+---
+
 ## Execução de regressão
 
 ```bash
@@ -262,4 +276,4 @@ npm run build-storybook
 **Dado** exercício com séries  
 **Então** grid responsivo (1/2/4 col), campo único reps/tempo com toggle, toggle kg/lb abaixo da carga
 
-**Critério de passagem:** 1168 testes passados, 0 falhas, coverage ≥ 80% (atual: 84.35% lines).
+**Critério de passagem:** 1319 testes passados, 0 falhas, coverage ≥ 80% (atual: 84.94% lines).

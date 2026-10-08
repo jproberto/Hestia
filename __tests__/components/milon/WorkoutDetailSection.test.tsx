@@ -928,3 +928,119 @@ describe("WorkoutDetailSection — paridade do replano (TASK-001 — RED)", () =
     expect(JSON.stringify(chamada)).not.toMatch(/copiar|copy|applyToAll/);
   });
 });
+
+/**
+ * Sem banner de sucesso na execução (correção humana 2026-10-08 — RED).
+ *
+ * Verdade humana: NESTA tela (Treino do Dia em execução) NÃO há
+ * banner/aviso de confirmação a cada alteração ou marcar/desmarcar —
+ * o card já é o feedback; banner de ERRO mantido. O polish visual do
+ * card será proposto e julgado em homologação (sem trava de pixel aqui).
+ *
+ * Trava desta tarefa:
+ * - toggle/save/confirm em execução NÃO exibem successNotice nem chamam
+ *   o banner de sucesso (hook sempre nulo + seção sem banner verde);
+ * - erro segue no banner com origem operacao (role=alert, sem retry);
+ * - manutenção inalterada (comportamento atual preservado).
+ *
+ * Expected: FAIL no caso do banner verde em execução — a produção ainda
+ * renderiza `ctx.execSuccessNotice`. Hefesto fará GREEN removendo o
+ * banner de sucesso da execução sem tocar no erro nem na manutenção.
+ */
+describe("WorkoutDetailSection — sem banner de sucesso na execução (correção humana — RED)", () => {
+  function setupExecSemSucesso(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  function comExecucao(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backNone,
+      executionEnabled: true,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExecSemSucesso();
+  });
+
+  it("em execução: mesmo com successNotice do hook, NENHUM banner verde aparece (o card já é o feedback)", () => {
+    conteudoComUmaEntrada();
+    setupExecSemSucesso({ successNotice: "Alteração salva com sucesso." });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(
+      screen.queryByText("Alteração salva com sucesso."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("em execução: após marcar/desmarcar com successNotice nulo, nenhum banner verde aparece", async () => {
+    conteudoComUmaEntrada();
+    const state = setupExecSemSucesso({
+      doneSeriesIds: [],
+      markedCount: 0,
+      successNotice: null,
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(state.toggleSeries).toHaveBeenCalledTimes(1));
+
+    expect(
+      screen.queryByText("Alteração salva com sucesso."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("trava: em execução o banner de ERRO segue visível (role=alert, sem retry)", () => {
+    conteudoComUmaEntrada();
+    setupExecSemSucesso({
+      errorMsg: "Erro ao alternar série",
+      errorOrigin: "operacao",
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Erro ao alternar série");
+    expect(
+      screen.queryByRole("button", { name: /tentar novamente/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("trava: manutenção inalterada — sem flag, o successNotice atual segue exibido", () => {
+    conteudoComUmaEntrada({ successNotice: "Treino salvo com sucesso." });
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    expect(
+      screen.getByText("Treino salvo com sucesso."),
+    ).toBeInTheDocument();
+    expect(mockedUseWorkoutExecution).not.toHaveBeenCalled();
+  });
+});

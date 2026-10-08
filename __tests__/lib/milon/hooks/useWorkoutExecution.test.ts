@@ -802,4 +802,126 @@ describe("Mílon #5 — useWorkoutExecution (contrato RED, TASK-003)", () => {
       "function",
     );
   });
+
+  // -------------------------------------------------------------------------
+  // 11. Sem banner de sucesso na execução (correção humana 2026-10-08 — RED)
+  // -------------------------------------------------------------------------
+  // Verdade humana: NESTA tela (Treino do Dia em execução) NÃO há
+  // banner/aviso de confirmação a cada alteração ou marcar/desmarcar —
+  // o card já é o feedback; banner de ERRO mantido (origem operacao).
+  // Por isso toggle/save/confirm em execução NÃO exibem successNotice.
+  // Expected: FAIL — a produção ainda chama flashSuccess e acende o aviso.
+  // Hefesto fará GREEN removendo o flash de sucesso sem tocar no erro.
+  describe("11. Sem banner de sucesso na execução (correção humana — RED)", () => {
+    it("marcar a primeira série NÃO acende successNotice (o card já é o feedback)", async () => {
+      const sim: BancoSimulado = { execution: null, dones: [] };
+      instalarBanco(sim);
+      const { result } = renderHook(() => useWorkoutExecution(WORKOUT_ID));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() =>
+        result.current.toggleSeries(
+          makeEntry({ id: "ent-1" }),
+          makeSerie({ id: "s-1", entryId: "ent-1", position: 1 }),
+        ),
+      );
+
+      await waitFor(() => expect(result.current.markedCount).toBe(1));
+      expect(result.current.errorMsg).toBeNull();
+      expect(result.current.errorOrigin).toBeNull();
+      expect(result.current.successNotice).toBeNull();
+    });
+
+    it("desmarcar com restantes NÃO acende successNotice", async () => {
+      const sim: BancoSimulado = {
+        execution: makeExecution(),
+        dones: [makeDone({ seriesId: "s-1" }), makeDone({ seriesId: "s-2" })],
+      };
+      instalarBanco(sim);
+      const { result } = renderHook(() => useWorkoutExecution(WORKOUT_ID));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() =>
+        result.current.toggleSeries(
+          makeEntry({ id: "ent-1" }),
+          makeSerie({ id: "s-1", entryId: "ent-1" }),
+        ),
+      );
+
+      await waitFor(() => expect(result.current.markedCount).toBe(1));
+      expect(result.current.clearConfirmOpen).toBe(false);
+      expect(result.current.successNotice).toBeNull();
+    });
+
+    it("salvar a série NÃO acende successNotice (modal fecha, card atualiza, sem banner)", async () => {
+      const sim: BancoSimulado = { execution: makeExecution(), dones: [] };
+      instalarBanco(sim);
+      const { result } = renderHook(() => useWorkoutExecution(WORKOUT_ID));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() =>
+        result.current.saveSeriesExecution(
+          makeEntry({ id: "ent-1" }),
+          makeSerie({ id: "s-1", entryId: "ent-1", position: 1 }),
+          { reps: 15, load: 60 },
+        ),
+      );
+
+      expect(updateSeriesFieldsStandalone).toHaveBeenCalledWith("s-1", {
+        reps: 15,
+        load: 60,
+      });
+      expect(result.current.errorMsg).toBeNull();
+      expect(result.current.errorOrigin).toBeNull();
+      expect(result.current.successNotice).toBeNull();
+    });
+
+    it("confirmar a limpeza NÃO acende successNotice", async () => {
+      const sim: BancoSimulado = {
+        execution: makeExecution(),
+        dones: [makeDone({ seriesId: "s-1" })],
+      };
+      instalarBanco(sim);
+      const { result } = renderHook(() => useWorkoutExecution(WORKOUT_ID));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() =>
+        result.current.toggleSeries(
+          makeEntry({ id: "ent-1" }),
+          makeSerie({ id: "s-1", entryId: "ent-1" }),
+        ),
+      );
+      await waitFor(() => expect(result.current.clearConfirmOpen).toBe(true));
+
+      await executar(() => result.current.confirmClearExecution());
+
+      await waitFor(() => expect(result.current.clearConfirmOpen).toBe(false));
+      expect(result.current.execution).toBeNull();
+      expect(result.current.successNotice).toBeNull();
+    });
+
+    it("trava: falha ao alternar mantém successNotice nulo e alimenta o banner de erro com origem operacao", async () => {
+      const sim: BancoSimulado = { execution: null, dones: [] };
+      instalarBanco(sim);
+      const { result } = renderHook(() => useWorkoutExecution(WORKOUT_ID));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      vi.mocked(startExecutionStandalone).mockRejectedValueOnce(
+        new Error("falha ao abrir execução"),
+      );
+
+      await act(async () => {
+        await expect(
+          result.current.toggleSeries(
+            makeEntry({ id: "ent-1" }),
+            makeSerie({ id: "s-1", entryId: "ent-1" }),
+          ),
+        ).rejects.toThrow("falha ao abrir execução");
+      });
+
+      expect(result.current.errorMsg).toContain("falha ao abrir execução");
+      expect(result.current.errorOrigin).toBe("operacao");
+      expect(result.current.successNotice).toBeNull();
+    });
+  });
 });

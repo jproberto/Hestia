@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
 import type { ErrorOrigin } from "@/lib/shared";
 import {
@@ -49,9 +49,6 @@ export interface UseWorkoutExecutionReturn {
   retry: () => Promise<void>;
 }
 
-const SUCCESS_NOTICE_MS = 3000;
-const SUCCESS_SAVE_MESSAGE = "Alteração salva com sucesso.";
-
 function toErrorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
 }
@@ -89,22 +86,10 @@ export function useWorkoutExecution(
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [errorOrigin, setErrorOrigin] = useState<ErrorOrigin | null>(null);
-  const [successNotice, setSuccessNotice] = useState<string | null>(null);
-  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const flashSuccess = useCallback((message: string) => {
-    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
-    setSuccessNotice(message);
-    noticeTimerRef.current = setTimeout(() => {
-      setSuccessNotice(null);
-    }, SUCCESS_NOTICE_MS);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
-    };
-  }, []);
+  // Correção humana 2026-10-08: nesta tela (Treino do Dia em execução) NÃO
+  // há banner de sucesso — o card já é o feedback. O campo segue no contrato
+  // como nulo permanente; só o erro alimenta banner (origem operacao).
+  const successNotice: string | null = null;
 
   const doneSeriesIds = useMemo(
     () => dones.map((done) => done.seriesId),
@@ -204,7 +189,6 @@ export function useWorkoutExecution(
             email,
           );
           await recarregar();
-          flashSuccess(SUCCESS_SAVE_MESSAGE);
           return;
         }
         const alvo =
@@ -218,7 +202,6 @@ export function useWorkoutExecution(
           setClearConfirmOpen(true);
           return;
         }
-        flashSuccess(SUCCESS_SAVE_MESSAGE);
       } catch (err: unknown) {
         const message = toErrorMessage(err, "Erro ao alternar série");
         setErrorMsg(message);
@@ -226,7 +209,7 @@ export function useWorkoutExecution(
         throw err instanceof Error ? err : new Error(message);
       }
     },
-    [dones, execution, workout, workoutId, resolveEmail, recarregar, flashSuccess],
+    [dones, execution, workout, workoutId, resolveEmail, recarregar],
   );
 
   const saveSeriesExecution = useCallback(
@@ -244,7 +227,6 @@ export function useWorkoutExecution(
         await updateSeriesFieldsStandalone(serie.id, campos);
         await applySeriesToFollowingStandalone(entry.id, serie.id);
         await recarregar();
-        flashSuccess(SUCCESS_SAVE_MESSAGE);
       } catch (err: unknown) {
         const message = toErrorMessage(err, "Erro ao salvar série");
         setErrorMsg(message);
@@ -252,7 +234,7 @@ export function useWorkoutExecution(
         throw err instanceof Error ? err : new Error(message);
       }
     },
-    [recarregar, flashSuccess],
+    [recarregar],
   );
 
   const confirmClearExecution = useCallback(async (): Promise<void> => {
@@ -267,14 +249,13 @@ export function useWorkoutExecution(
       await clearExecutionStandalone(alvo.id);
       await recarregar();
       setClearConfirmOpen(false);
-      flashSuccess(SUCCESS_SAVE_MESSAGE);
     } catch (err: unknown) {
       const message = toErrorMessage(err, "Erro ao limpar execução");
       setErrorMsg(message);
       setErrorOrigin("operacao");
       throw err instanceof Error ? err : new Error(message);
     }
-  }, [execution, recarregar, flashSuccess]);
+  }, [execution, recarregar]);
 
   const cancelClearExecution = useCallback(() => {
     // Só fecha a pergunta: execução aberta, início original e zero marcadas

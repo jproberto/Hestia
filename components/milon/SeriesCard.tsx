@@ -165,8 +165,8 @@ export default function SeriesCard({
         aria-pressed={feito}
         className={
           feito
-            ? "rounded-md border px-3 py-2 flex flex-col gap-2 min-h-[44px] w-full text-left bg-[#B7602B] text-white"
-            : "rounded-md border px-3 py-2 flex flex-col gap-2 min-h-[44px] w-full text-left"
+            ? "rounded-md border border-[#B7602B] px-3 py-2 flex flex-col gap-2 min-h-[44px] w-full text-left bg-[#B7602B] text-white shadow-sm ring-2 ring-white/30 transition-colors duration-150 active:scale-[0.99]"
+            : "rounded-md border px-3 py-2 flex flex-col gap-2 min-h-[44px] w-full text-left bg-card transition-colors duration-150 active:scale-[0.99]"
         }
         style={feito ? { backgroundColor: "#B7602B" } : undefined}
         onClick={dispararAlternancia}
@@ -184,19 +184,19 @@ export default function SeriesCard({
           }
         }}
       >
-        <span className="text-sm font-medium">{rotulo}</span>
+        <span className="font-display text-base font-medium tracking-wide">{rotulo}</span>
 
         {/* Somente leitura vigente: rótulo + valor + unidade como texto */}
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold">
+          <span className="text-xs font-semibold opacity-90">
             {execIsRepsMode ? "Repetições" : "Tempo (s)"}
           </span>
-          <span className="text-sm">{valorRepsTempo}</span>
+          <span className="text-sm font-semibold">{valorRepsTempo}</span>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold">Carga</span>
-          <span className="text-sm">
+          <span className="text-xs font-semibold opacity-90">Carga</span>
+          <span className="text-sm font-semibold">
             <span>{series.load ?? "—"}</span>
             {loadUnit !== null && series.load !== null ? (
               <span> {loadUnit}</span>

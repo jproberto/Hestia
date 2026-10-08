@@ -14,6 +14,7 @@ Héstia é uma ferramenta pessoal para controle de finanças e planejamento orç
 * **Biblioteca de Exercícios (Mílon):** Cadastro compartilhado do casal (nome + músculo + link de vídeo opcional) com filtro por músculo, busca por texto, lotes com mostrar mais e modal único criar/editar (`/milon/exercises`).
 * **Programas (Mílon):** Agrupa treinos por programa com dono, ciclo de vida `rascunho`/`ativo`/`inativo` (somente um ativo por dono, ativação com confirmação e guarda), filtros por dono/status, página de detalhe e navegação em abas entre Exercícios e Programas (`/milon/programs`).
 * **Treinos + séries planejadas (Mílon):** Dentro de um Programa, treinos com nome obrigatório/único e sugestão automática (`Treino A…Z, AA, AB…`), subtítulo derivado dos músculos e ordem de criação; no treino, exercícios reordenáveis por arrastar e soltar com séries planejadas (quantidade obrigatória, reps/tempo/carga/descanso nascendo vazios, vazio ≠ 0, unidade kg/libra por exercício, "aplicar a todas"); ativação do programa liberada com conteúdo mínimo (`/milon/programs/[id]`, `/milon/programs/[id]/workouts/[workoutId]`).
+* **Treino do Dia v1 (Mílon):** Primeira aba do módulo (`/milon/today`; `/milon` redireciona para ela) exibindo o primeiro treino do programa ativo do dono com edição total igual à manutenção (mesma seção compartilhada, troca restrita aos treinos do programa ativo, vazios orientadores sem erro); casca pronta para execução/timer/encerramento nas features #5/#6/#7.
 
 ### Funcionalidades Recentes (0.7.0)
 

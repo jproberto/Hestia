@@ -111,13 +111,14 @@ export default function SeriesCard({
     onCommit("load", resultado.valor);
   }
 
-  // Modo de execução (Mílon #5, opt-in): o próprio card é o marcador, com a
-  // mesma face da manutenção (rótulos, conversão secundária e toggles).
-  // Toque curto alterna na hora; toque longo (500ms) abre o editor sem
-  // alternar ao soltar (supressão do click seguinte); Enter/Espaço no card
-  // focado equivalem ao toque curto; programa inativo segue não
-  // interativo (cai no readOnly abaixo). Sem checkbox, sem botão de marcar
-  // e sem "Aplicar a todas" (D17). Controles internos isolam o clique.
+  // Modo de execução (Mílon #5, opt-in): o próprio card é o marcador, com
+  // leitura somente dos valores vigentes (rótulos + valores + unidade como
+  // texto). Toggles de repetição/tempo e kg/lb vivem SOMENTE no modal
+  // (SeriesEditModal) — correção 2026-10-08. Toque curto alterna na hora;
+  // toque longo (500ms) abre o editor sem alternar ao soltar (supressão do
+  // click seguinte); Enter/Espaço no card focado equivalem ao toque curto;
+  // programa inativo segue não interativo (cai no readOnly abaixo). Sem
+  // checkbox, sem botão de marcar e sem "Aplicar a todas" (D17). Sem inputs.
   if (execution && !readOnly) {
     const feito = execution.doneBySeriesId[series.id] === true;
     const secundariaExec =
@@ -126,8 +127,15 @@ export default function SeriesCard({
         : null;
     const unidadeSecundariaExec: LoadUnit | null =
       loadUnit === "kg" ? "libra" : loadUnit === "libra" ? "kg" : null;
+    // Modo vigente deriva do dado (sem toggle no card): reps presente → reps.
+    const execIsRepsMode =
+      series.reps !== null && series.reps !== undefined
+        ? true
+        : series.durationSeconds !== null && series.durationSeconds !== undefined
+          ? false
+          : true;
     const valorRepsTempo =
-      isRepsMode
+      execIsRepsMode
         ? (series.reps ?? "—")
         : (series.durationSeconds ?? "—");
 
@@ -147,10 +155,6 @@ export default function SeriesCard({
         suppressToggle.current = true;
         execution?.onOpenEditor(series.id);
       }, LONG_PRESS_MS);
-    }
-
-    function isolarClique(event: { stopPropagation: () => void }): void {
-      event.stopPropagation();
     }
 
     return (
@@ -182,75 +186,33 @@ export default function SeriesCard({
       >
         <span className="text-sm font-medium">{rotulo}</span>
 
-        {/* Face de paridade: mesmos rótulos/formatos da manutenção, só leitura */}
+        {/* Somente leitura vigente: rótulo + valor + unidade como texto */}
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold flex-1">
-              {isRepsMode ? "Repetições" : "Tempo (s)"}
-            </span>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-6 px-2 text-xs"
-              onClick={(event) => {
-                event.stopPropagation();
-                setIsRepsMode((prev) => !prev);
-              }}
-              onPointerDown={isolarClique}
-              onPointerUp={isolarClique}
-              aria-label={isRepsMode ? "Alternar para tempo" : "Alternar para repetições"}
-            >
-              {isRepsMode ? "⏱" : "🔁"}
-            </Button>
-          </div>
+          <span className="text-xs font-semibold">
+            {execIsRepsMode ? "Repetições" : "Tempo (s)"}
+          </span>
           <span className="text-sm">{valorRepsTempo}</span>
         </div>
 
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-semibold">Carga</span>
-          <span className="text-sm">{series.load ?? "—"}</span>
+          <span className="text-sm">
+            <span>{series.load ?? "—"}</span>
+            {loadUnit !== null && series.load !== null ? (
+              <span> {loadUnit}</span>
+            ) : null}
+          </span>
           {secundariaExec?.secundaria && unidadeSecundariaExec ? (
-            <span className="text-xs text-muted-foreground">
+            <span
+              className={
+                feito
+                  ? "text-xs text-stone-200"
+                  : "text-xs text-muted-foreground"
+              }
+            >
               {secundariaExec.secundaria} {unidadeSecundariaExec}
             </span>
           ) : null}
-
-          <div className="flex items-center gap-2 pt-1">
-            <span className="text-xs text-muted-foreground">Unidade:</span>
-            <div className="flex gap-1">
-              <Button
-                type="button"
-                size="sm"
-                variant={effectiveUnit === "kg" ? "default" : "outline"}
-                className="h-7 px-2 text-xs"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setSelectedUnit("kg");
-                  onChooseUnit("kg");
-                }}
-                onPointerDown={isolarClique}
-                onPointerUp={isolarClique}
-              >
-                kg
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={effectiveUnit === "libra" ? "default" : "outline"}
-                className="h-7 px-2 text-xs"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setSelectedUnit("libra");
-                  onChooseUnit("libra");
-                }}
-                onPointerDown={isolarClique}
-                onPointerUp={isolarClique}
-              >
-                lb
-              </Button>
-            </div>
-          </div>
         </div>
       </div>
     );

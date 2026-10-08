@@ -521,20 +521,23 @@ describe("SeriesCard", () => {
 });
 
 /**
- * Paridade UI com a manutenção em execução (Mílon #5 replano, TASK-001 RED).
+ * Correção humana 2026-10-08 (verdade) — Mílon #5 Execução série a série:
+ * (1) toggles de tempo/repetições e kg/lb aparecem SOMENTE no modal
+ * (SeriesEditModal, inalterado); no card do Treino do Dia mostra-se SOMENTE
+ * o que está valendo (rótulos + valores + unidade vigentes, sem botões
+ * alternar/kg/lb no card em execução). (2) Texto cinza sobre fundo marrom
+ * da marcada → cinza mais claro (contraste).
  *
- * Fonte: plan.md §2–§3 (o ramo de execução renderiza a mesma face da
- * manutenção reaproveitando os trechos do próprio arquivo) + spec §3 (exibe
- * com exatamente a mesma cara da manutenção, com rótulos de repetição ou
- * tempo e com a unidade da carga visível) + D17 (sem botão de aplicar a
- * todas em execução) + contratos (rótulos, conversão secundária, toggles,
- * interrupção de propagação).
+ * Fonte: correção humana delegada via Zeus (spec §3 "mesma cara" lida com a
+ * correção: rótulos e valores mantidos, toggles só no modal) + manutenção
+ * inalterada (com toggles — trava de regressão no bloco acima).
  *
- * Expected: FAIL — o ramo de execução ainda exibe a linha compacta
- * ("X reps · Y") sem rótulos, sem conversão secundária e sem toggles.
- * Hefesto fará GREEN na TASK-002 sem mudar estes testes.
+ * Expected: FAIL — o ramo de execução ainda renderiza os toggles
+ * (alternar + kg/lb + linha "Unidade:") e ainda usa text-muted-foreground
+ * sobre o fundo #B7602B. Hefesto fará GREEN removendo os toggles do card
+ * e clareando o cinza da marcada, sem mudar estes testes.
  */
-describe("SeriesCard — paridade UI com a manutenção em execução (replano TASK-001 — RED)", () => {
+describe("SeriesCard — execução somente leitura vigente (correção 2026-10-08 — RED)", () => {
   interface ExecPkg {
     doneBySeriesId: Record<string, boolean>;
     onToggle: (seriesId: string) => void;
@@ -592,19 +595,25 @@ describe("SeriesCard — paridade UI com a manutenção em execução (replano T
     expect(screen.getByText(new RegExp(secundaria ?? ""))).toBeInTheDocument();
   });
 
-  it("expõe o botão de alternar repetição/tempo com os rótulos da manutenção", () => {
+  it("NÃO expõe botão de alternar repetição/tempo no card em execução (só no modal)", () => {
     renderExecucao();
 
     expect(
-      screen.getByRole("button", { name: /alternar para (tempo|repetições)/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /alternar para (tempo|repetições)/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it("expõe os botões kg e lb com a semântica do toggle da manutenção", () => {
+  it("NÃO expõe botões kg/lb no card em execução (só no modal)", () => {
     renderExecucao();
 
-    expect(screen.getByRole("button", { name: /^kg$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^lb$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^kg$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^lb$/i })).not.toBeInTheDocument();
+  });
+
+  it("NÃO exibe linha de Unidade: no card em execução", () => {
+    renderExecucao({ load: 50 }, "kg");
+
+    expect(screen.queryByText(/unidade:/i)).not.toBeInTheDocument();
   });
 
   it("marcada tem fundo na cor do módulo (#B7602B)", () => {
@@ -636,32 +645,28 @@ describe("SeriesCard — paridade UI com a manutenção em execução (replano T
     ).not.toBeInTheDocument();
   });
 
-  it("clique no alternar repetição/tempo não alterna a marcação", () => {
-    const onToggle = vi.fn();
-    renderExecucao({}, "kg", { onToggle });
+  it("exibe somente o valor vigente como texto (card somente leitura, sem inputs)", () => {
+    renderExecucao({ reps: 10, durationSeconds: null, load: 50 }, "kg");
 
-    fireEvent.click(
-      screen.getByRole("button", { name: /alternar para (tempo|repetições)/i }),
+    expect(screen.getByText("Repetições")).toBeInTheDocument();
+    expect(screen.getByText("10")).toBeInTheDocument();
+    expect(screen.getByText("Carga")).toBeInTheDocument();
+    expect(screen.getByText("50")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  it("marcada usa cinza claro na conversão secundária (contraste sobre #B7602B, sem muted-foreground)", () => {
+    const props = {
+      ...base({ series: makeSeries({ reps: 10, load: 50 }) }),
+      execution: execPkg({ doneBySeriesId: { s1: true } }),
+    } as unknown as Parameters<typeof SeriesCard>[0];
+    render(<SeriesCard {...props} />);
+
+    const { secundaria } = formatarCargaComSecundaria(50, "kg");
+    const convertido = screen.getByText(new RegExp(secundaria ?? ""));
+    expect(convertido.className).not.toMatch(/muted-foreground/);
+    expect(convertido.className).toMatch(
+      /text-(white|stone-(100|200)|neutral-(100|200)|zinc-(100|200)|slate-(100|200)|gray-(100|200))/,
     );
-
-    expect(onToggle).not.toHaveBeenCalled();
-  });
-
-  it("clique em kg não alterna a marcação", () => {
-    const onToggle = vi.fn();
-    renderExecucao({}, "kg", { onToggle });
-
-    fireEvent.click(screen.getByRole("button", { name: /^kg$/i }));
-
-    expect(onToggle).not.toHaveBeenCalled();
-  });
-
-  it("clique em lb não alterna a marcação", () => {
-    const onToggle = vi.fn();
-    renderExecucao({}, "kg", { onToggle });
-
-    fireEvent.click(screen.getByRole("button", { name: /^lb$/i }));
-
-    expect(onToggle).not.toHaveBeenCalled();
   });
 });

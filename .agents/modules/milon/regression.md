@@ -93,9 +93,10 @@
 **Quando** a pessoa abre o detalhe  
 **Então** exibe cabeçalho (título, dono, status) + lista de treinos com subtítulos
 
-### REG-17: Navegação — duas abas (Exercícios + Programas)
+### REG-17: Navegação — três abas (Treino do Dia + Programas + Exercícios) [atualizado Mílon #4]
 **Dado** o módulo Mílon  
-**Então** a navegação tem exatamente duas abas: Exercícios e Programas
+**Então** a navegação tem exatamente três abas, nesta ordem: Treino do Dia, Programas, Exercícios  
+**E** a raiz `/milon` redireciona para `/milon/today`
 
 ---
 
@@ -210,6 +211,20 @@
 
 ---
 
+## Feature #4 — Treino do Dia v1 (paridade com manutenção)
+
+### REG-47: Abrir o Mílon cai direto no treino do dia
+**Dado** o dono logado com programa ativo contendo treinos  
+**Quando** a pessoa abre o Mílon (raiz, refresh ou cartão do dashboard)  
+**Então** termina no Treino do Dia vendo o primeiro treino do programa ativo por ordem de criação, com exercícios e séries
+
+### REG-48: Manutenção via Treino do Dia reflete na ficha
+**Dado** o Treino do Dia com o treino selecionado  
+**Quando** a pessoa edita carga/repetições/descanso ou adiciona exercício  
+**Então** o resultado é idêntico ao da página de manutenção do mesmo treino
+
+---
+
 ## Execução de regressão
 
 ```bash
@@ -247,4 +262,4 @@ npm run build-storybook
 **Dado** exercício com séries  
 **Então** grid responsivo (1/2/4 col), campo único reps/tempo com toggle, toggle kg/lb abaixo da carga
 
-**Critério de passagem:** 1116 testes passados, 0 falhas, coverage ≥ 80% (atual: 85% lines).
+**Critério de passagem:** 1168 testes passados, 0 falhas, coverage ≥ 80% (atual: 84.35% lines).

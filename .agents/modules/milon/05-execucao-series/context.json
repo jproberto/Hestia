@@ -6,7 +6,10 @@
   "decisions": [
     "Feature 5 = Execucao serie a serie + edicao no fluxo",
     "Interacao B OFICIAL: curto marca/desmarca, longo edita",
-    "Edicao atualiza o planejado (nova meta permanente)"
+    "Edicao atualiza o planejado (nova meta permanente)",
+    "D17: sem botao aplicar-a-todas na execucao (modal resolve)",
+    "D18: unidade do modal aplica somente no salvar",
+    "Paridade total com manutencao (card + modal + chrome) + marcacao por fundo do modulo"
   ],
   "history": [
     { "phase": "SPEC_DRAFT", "timestamp": "2026-10-08T10:03:00.000Z", "action": "dir created" },
@@ -42,6 +45,7 @@
     { "phase": "PLAN_READY", "timestamp": "2026-10-08T11:30:00.000Z", "action": "Humano corrigiu: caixinha copiar-nao faz diferenca; edicao de serie SEMPRE vale p/ ela + seguintes (B incondicional); pediu alteracao p/ reavaliar" },
     { "phase": "PLAN_READY", "timestamp": "2026-10-08T11:35:00.000Z", "action": "Atena 3a versao: replica incondicional, modal sem caixinha, 6 tasks DAG linear — aguardando approve-plan" },
     { "phase": "PLAN_APPROVED", "timestamp": "2026-10-08T11:40:00.000Z", "action": "Humano aprovou plano (approve-plan); Hera vai alinhar spec as 2 correcoes antes do CODING" },
-    { "phase": "TASKS_READY", "timestamp": "2026-10-08T11:45:00.000Z", "action": "Spec alinhada as correcoes; DAG validado (6 tasks linear); Caronte commita spec+plan" }
+    { "phase": "TASKS_READY", "timestamp": "2026-10-08T11:45:00.000Z", "action": "Spec alinhada as correcoes; DAG validado (6 tasks linear); Caronte commita spec+plan" },
+    { "phase": "CODING", "timestamp": "2026-10-08T11:50:00.000Z", "action": "Caronte commitou spec+plan (c0b5592); CODING iniciado com TASK-001 Minos RED" }
   ]
 }

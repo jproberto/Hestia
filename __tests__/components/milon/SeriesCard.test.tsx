@@ -298,20 +298,15 @@ describe("SeriesCard", () => {
   });
 
   /**
-   * Contrato RED — Mílon #5 Execução série a série (TASK-005):
-   * modo de execução opt-in do SeriesCard.
+   * Contrato RED (correção 2026-10-08) — Mílon #5 Execução série a série:
+   * card inteiro clicável, SEM checkbox, SEM botão editar.
    *
-   * Fonte: spec §3 (série bloqueada exibindo só valores + marcador; toque
-   * curto alterna na hora sem confirmação; toque longo abre o modal) +
-   * plan.md §2 (modo de execução opcional: exibição bloqueada com marcador,
-   * toque curto alterna, toque longo abre o editor, alternativa por teclado
-   * e botão explícito; sem as props novas renderiza idêntico a hoje) + §3
-   * (pacote SeriesExecutionProps com mapa de feito por id da série do
-   * template + callback de alternância + callback de abertura do editor;
-   * gestos: curto alterna exceto a última que desmarca e abre a pergunta;
-   * longo de 500ms abre o editor sem alternar ao soltar; Enter/Espaço no
-   * marcador focado e botão explícito garantem acessibilidade; alvos ≥44px;
-   * programa inativo não interativo) + tasks.json TASK-005.
+   * Fonte: spec §3 alinhada (cada série é um card que é o próprio marcador;
+   * não há caixinha nem botão de editar; todo o card é área clicável; toque
+   * curto alterna na hora sem confirmação; toque longo abre o modal; marcada
+   * tem fundo na cor do módulo) + plan.md §3 (longo de 500ms sem alternar ao
+   * soltar; Enter/Espaço como alternativa por teclado; alvos ≥44px; readOnly
+   * não interage) + tasks.json TASK-005.
    *
    * CONTRATO FIXADO AQUI (nomes que a TASK-006 deve implementar, exportados
    * pelo módulo do SeriesCard):
@@ -319,12 +314,15 @@ describe("SeriesCard", () => {
    *   Record<string, boolean>; onToggle: (seriesId: string) => void;
    *   onOpenEditor: (seriesId: string) => void; }`
    * - `SeriesCardProps` ganha `execution?: SeriesExecutionProps` (opt-in).
+   * - Em execução: card é `role="button"` (ou equivalente acessível) com o
+   *   nome da série; SEM `role="checkbox"`; SEM botão "Editar"; marcada usa
+   *   fundo na cor do módulo (#B7602B, MilonLayout).
    *
-   * Expected: FAIL nos blocos com pacote (props ainda não existem — o
-   * componente ignora `execution` e não renderiza marcador); o bloco "sem
-   * pacote" passa como trava de regressão. Hefesto fará GREEN na TASK-006.
+   * Expected: FAIL enquanto a produção ainda tem checkbox/botão e ainda não
+   * tem card-botão com fundo do módulo; o bloco "sem pacote" passa como trava
+   * de regressão. Hefesto fará GREEN na TASK-006.
    */
-  describe("modo execução (Mílon #5 — RED)", () => {
+  describe("modo execução — card clicável (correção 2026-10-08 — RED)", () => {
     interface SeriesExecutionProps {
       doneBySeriesId: Record<string, boolean>;
       onToggle: (seriesId: string) => void;
@@ -353,16 +351,25 @@ describe("SeriesCard", () => {
       };
     }
 
-    function marcadorDaSerie(): HTMLElement {
-      return screen.getByRole("checkbox", { name: /série 1/i });
+    function cartaoDaSerie(): HTMLElement {
+      return screen.getByRole("button", { name: /^série 1/i });
     }
 
-    it("com pacote exibe bloqueado com marcador (sem inputs de edição)", () => {
+    function temFundoDoModulo(el: HTMLElement): boolean {
+      const alvo = `${el.className} ${(el.getAttribute("style") ?? "")}`.toLowerCase();
+      return (
+        alvo.includes("b7602b") ||
+        alvo.includes("183, 96, 43") ||
+        alvo.includes("183,96,43")
+      );
+    }
+
+    it("com pacote exibe card clicável bloqueado (sem inputs de edição)", () => {
       render(
         <SeriesCard {...comExecucao({}, exec())} />,
       );
 
-      expect(marcadorDaSerie()).toBeInTheDocument();
+      expect(cartaoDaSerie()).toBeInTheDocument();
       expect(screen.getByText("Série 1")).toBeInTheDocument();
       expect(screen.queryByLabelText(/repetições/i)).not.toBeInTheDocument();
       expect(screen.queryByLabelText(/carga/i)).not.toBeInTheDocument();
@@ -371,26 +378,38 @@ describe("SeriesCard", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("marcador reflete o feito pelo mapa (marcada = checked)", () => {
+    it("com pacote não há checkbox nem botão de editar (card é o próprio marcador)", () => {
+      render(
+        <SeriesCard {...comExecucao({}, exec())} />,
+      );
+
+      expect(cartaoDaSerie()).toBeInTheDocument();
+      expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+      expect(
+        screen.queryByRole("button", { name: /editar/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("marcada tem fundo na cor do módulo; desmarcada não tem", () => {
       const { unmount } = render(
         <SeriesCard {...comExecucao({}, exec({ doneBySeriesId: { s1: true } }))} />,
       );
-      expect(marcadorDaSerie()).toBeChecked();
+      expect(temFundoDoModulo(cartaoDaSerie())).toBe(true);
       unmount();
 
       render(
         <SeriesCard {...comExecucao({}, exec({ doneBySeriesId: {} }))} />,
       );
-      expect(marcadorDaSerie()).not.toBeChecked();
+      expect(temFundoDoModulo(cartaoDaSerie())).toBe(false);
     });
 
-    it("toque curto no marcador alterna na hora (onToggle com o id)", () => {
+    it("toque curto no card alterna na hora (onToggle com o id)", () => {
       const onToggle = vi.fn();
       render(
         <SeriesCard {...comExecucao({}, exec({ onToggle }))} />,
       );
 
-      fireEvent.click(marcadorDaSerie());
+      fireEvent.click(cartaoDaSerie());
 
       expect(onToggle).toHaveBeenCalledTimes(1);
       expect(onToggle).toHaveBeenCalledWith("s1");
@@ -405,7 +424,7 @@ describe("SeriesCard", () => {
           <SeriesCard {...comExecucao({}, exec({ onToggle, onOpenEditor }))} />,
         );
 
-        const alvo = screen.getByText("Série 1");
+        const alvo = cartaoDaSerie();
         fireEvent.pointerDown(alvo, { pointerType: "touch" });
         vi.advanceTimersByTime(500);
         fireEvent.pointerUp(alvo, { pointerType: "touch" });
@@ -418,13 +437,13 @@ describe("SeriesCard", () => {
       }
     });
 
-    it("teclado (Enter/Espaço) no marcador focado equivale ao toque curto", () => {
+    it("teclado (Enter/Espaço) no card focado equivale ao toque curto", () => {
       const onToggle = vi.fn();
       render(
         <SeriesCard {...comExecucao({}, exec({ onToggle }))} />,
       );
 
-      marcadorDaSerie().focus();
+      cartaoDaSerie().focus();
       fireEvent.keyDown(document.activeElement as HTMLElement, { key: "Enter" });
       expect(onToggle).toHaveBeenCalledTimes(1);
 
@@ -433,16 +452,27 @@ describe("SeriesCard", () => {
       expect(onToggle).toHaveBeenLastCalledWith("s1");
     });
 
-    it("botão explícito de editar abre o editor (acessibilidade sem gesto)", () => {
-      const onOpenEditor = vi.fn();
-      render(
-        <SeriesCard {...comExecucao({}, exec({ onOpenEditor }))} />,
-      );
+    it("toque curto (<500ms) não abre o editor, só alterna", () => {
+      vi.useFakeTimers();
+      try {
+        const onToggle = vi.fn();
+        const onOpenEditor = vi.fn();
+        render(
+          <SeriesCard {...comExecucao({}, exec({ onToggle, onOpenEditor }))} />,
+        );
 
-      fireEvent.click(screen.getByRole("button", { name: /editar/i }));
+        const alvo = cartaoDaSerie();
+        fireEvent.pointerDown(alvo, { pointerType: "touch" });
+        vi.advanceTimersByTime(200);
+        fireEvent.pointerUp(alvo, { pointerType: "touch" });
+        fireEvent.click(alvo);
 
-      expect(onOpenEditor).toHaveBeenCalledTimes(1);
-      expect(onOpenEditor).toHaveBeenCalledWith("s1");
+        expect(onOpenEditor).not.toHaveBeenCalled();
+        expect(onToggle).toHaveBeenCalledTimes(1);
+        expect(onToggle).toHaveBeenCalledWith("s1");
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("alvos de toque com pelo menos 44px (mão suada)", () => {
@@ -450,11 +480,7 @@ describe("SeriesCard", () => {
         <SeriesCard {...comExecucao({}, exec())} />,
       );
 
-      const alvos = [
-        marcadorDaSerie().className,
-        screen.getByRole("button", { name: /editar/i }).className,
-      ].join(" ");
-      expect(alvos).toMatch(/44/);
+      expect(cartaoDaSerie().className).toMatch(/44/);
     });
 
     it("programa inativo (readOnly) não interage mesmo com pacote", () => {
@@ -466,10 +492,14 @@ describe("SeriesCard", () => {
         />,
       );
 
-      const marcador = screen.queryByRole("checkbox", { name: /série 1/i });
-      if (marcador) fireEvent.click(marcador);
-      const editar = screen.queryByRole("button", { name: /editar/i });
-      if (editar) fireEvent.click(editar);
+      expect(
+        screen.queryByRole("button", { name: /^série 1/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+      expect(
+        screen.queryByRole("button", { name: /editar/i }),
+      ).not.toBeInTheDocument();
+      fireEvent.click(screen.getByText("Série 1"));
 
       expect(onToggle).not.toHaveBeenCalled();
       expect(onOpenEditor).not.toHaveBeenCalled();
@@ -478,7 +508,10 @@ describe("SeriesCard", () => {
     it("sem pacote renderiza idêntico a hoje (trava de regressão — passa no RED)", () => {
       render(<SeriesCard {...base()} />);
 
-      expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+      expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+      expect(
+        screen.queryByRole("button", { name: /^série 1/i }),
+      ).not.toBeInTheDocument();
       expect(screen.getByLabelText(/repetições/i)).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: /aplicar a todas/i }),

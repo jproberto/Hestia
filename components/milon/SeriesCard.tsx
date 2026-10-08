@@ -101,11 +101,11 @@ export default function SeriesCard({
     onCommit("load", resultado.valor);
   }
 
-  // Modo de execução (Mílon #5, opt-in): exibição bloqueada com marcador.
+  // Modo de execução (Mílon #5, opt-in): o próprio card é o marcador.
   // Toque curto alterna na hora; toque longo (500ms) abre o editor sem
-  // alternar ao soltar (supressão); Enter/Espaço no marcador e botão
-  // explícito garantem acessibilidade; programa inativo segue não
-  // interativo (cai no readOnly abaixo).
+  // alternar ao soltar (supressão do click seguinte); Enter/Espaço no card
+  // focado equivalem ao toque curto; programa inativo segue não
+  // interativo (cai no readOnly abaixo). Sem checkbox nem botão de editar.
   if (execution && !readOnly) {
     const feito = execution.doneBySeriesId[series.id] === true;
     const repsTempo =
@@ -139,52 +139,34 @@ export default function SeriesCard({
 
     return (
       <div
-        className="rounded-md border px-3 py-2 flex flex-col gap-1"
+        role="button"
+        tabIndex={0}
+        aria-label={rotulo}
+        aria-pressed={feito}
+        className={
+          feito
+            ? "rounded-md border px-3 py-2 flex flex-col gap-1 min-h-[44px] w-full text-left bg-[#B7602B] text-white"
+            : "rounded-md border px-3 py-2 flex flex-col gap-1 min-h-[44px] w-full text-left"
+        }
+        style={feito ? { backgroundColor: "#B7602B" } : undefined}
+        onClick={dispararAlternancia}
         onPointerDown={iniciarLongPress}
         onPointerUp={clearLongPress}
         onPointerMove={clearLongPress}
         onPointerLeave={clearLongPress}
         onPointerCancel={clearLongPress}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
+            event.preventDefault();
+            suppressToggle.current = false;
+            execution?.onToggle(series.id);
+          }
+        }}
       >
         <span className="text-sm font-medium">{rotulo}</span>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs opacity-80">
           {repsTempo} · {cargaTexto}
         </span>
-        <div className="flex items-center gap-2 pt-1">
-          <input
-            type="checkbox"
-            aria-label={rotulo}
-            checked={feito}
-            onChange={() => {}}
-            onClick={(event) => {
-              event.stopPropagation();
-              dispararAlternancia();
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
-                event.preventDefault();
-                event.stopPropagation();
-                suppressToggle.current = false;
-                execution?.onToggle(series.id);
-              }
-            }}
-            className="min-h-[44px] min-w-[44px] h-[44px] w-[44px] shrink-0 accent-[#B7602B]"
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="min-h-[44px] min-w-[44px]"
-            onClick={(event) => {
-              event.stopPropagation();
-              clearLongPress();
-              execution?.onOpenEditor(series.id);
-            }}
-            aria-label={`Editar ${rotulo}`}
-          >
-            Editar
-          </Button>
-        </div>
       </div>
     );
   }

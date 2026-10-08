@@ -18,9 +18,11 @@ Cenário 3: desmarcar uma série marcada por engano, sem burocracia. Cenário 4:
 
 A tela do Treino do Dia já existe e continua igual. Editar, adicionar e remover exercícios já existe e não muda nesta feature.
 
-Cada série mostra se está marcada ou não. A série fica bloqueada para edição por padrão. Só exibe valores mais o marcador.
+Cada série aparece como um card que é o próprio marcador. Não há caixinha de marcação nem botão de editar separados. A série fica bloqueada para edição por padrão. Só exibe valores no card.
 
-Toque curto no marcador alterna na hora entre marcada e desmarcada. Sem confirmação. Toque longo na série abre o modal de edição daquela série.
+Todo o card da série é área clicável. Toque curto no card alterna na hora entre marcada e desmarcada. Sem confirmação. Toque longo no card abre o modal de edição daquela série.
+
+Série marcada tem fundo na cor do módulo. É o feedback visual de feita.
 
 O modal edita as informações da série e salva. O modal não tem opção de copiar. Ao salvar, os mesmos valores valem para aquela série e para todas as séries seguintes do mesmo exercício, inclusive as já marcadas.
 
@@ -44,9 +46,9 @@ A variante C de desenho e interação. Não entra como requisito.
 
 ## 5. Critérios de Aceite (testáveis)
 
-Dado o treino exibido, quando dou toque curto numa série desmarcada, então ela fica marcada na hora, sem confirmação. Dado uma série marcada, quando dou toque curto nela e ainda resta outra marcada, então ela desmarca na hora, sem confirmação.
+Dado o treino exibido, quando dou toque curto no card da série desmarcada, então ela fica marcada na hora, sem confirmação, com fundo na cor do módulo, sem caixinha de marcação nem botão de editar. Dado uma série marcada, quando dou toque curto no card dela e ainda resta outra marcada, então ela desmarca na hora, sem confirmação.
 
-Dado uma série bloqueada, quando dou toque longo nela, então abre o modal de edição daquela série. Dado o modal aberto, quando salvo, então aquela série e todas as séries seguintes do mesmo exercício ficam com os mesmos valores, inclusive as já marcadas, e a tela volta para exibição bloqueada.
+Dado uma série bloqueada, quando dou toque longo no card dela, então abre o modal de edição daquela série. Dado o modal aberto, quando salvo, então aquela série e todas as séries seguintes do mesmo exercício ficam com os mesmos valores, inclusive as já marcadas, e a tela volta para exibição bloqueada.
 
 Dado uma série marcada, quando edito e salvo, então ela segue marcada. Dado nenhuma série marcada, quando marco a primeira, então o momento de início da execução fica registrado.
 
@@ -64,7 +66,7 @@ Risco baixo de sobrescrever série já marcada ao copiar para todas. Risco aceit
 
 Alternativa 1: só toque curto, sem edição no fluxo. Mais simples. Rejeitada porque obrigaria sair do treino para corrigir carga.
 
-Alternativa 2 (escolhida): toque curto marca e desmarca, toque longo abre modal sem opção de copiar, com replicação sempre para a série e as seguintes. Rápida com mão suada. Não sai do treino. Modal concentra edição e salvamento num só gesto. Nota: a caixinha de copiar existiu no discovery e foi removida por decisão humana, que tornou a replicação incondicional.
+Alternativa 2 (escolhida): toque curto no card marca e desmarca, toque longo no card abre modal sem opção de copiar, com replicação sempre para a série e as seguintes. Rápida com mão suada. Não sai do treino. Modal concentra edição e salvamento num só gesto. Nota: a caixinha de copiar existiu no discovery e foi removida por decisão humana, que tornou a replicação incondicional.
 
 Alternativa descartada (C): variação extra de desenho e interação. Rejeitada por YAGNI. Não entra como requisito.
 

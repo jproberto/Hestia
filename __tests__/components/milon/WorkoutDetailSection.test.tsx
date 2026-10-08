@@ -640,10 +640,12 @@ describe("modo execução da seção (Mílon #5 — RED)", () => {
       />,
     );
 
-    const marcadores = screen.getAllByRole("checkbox");
+    const marcadores = screen.getAllByRole("button", { name: /^série/i });
     expect(marcadores).toHaveLength(2);
-    expect(marcadores[0]).toBeChecked();
-    expect(marcadores[1]).not.toBeChecked();
+    expect(marcadores[0]).toHaveAttribute("aria-pressed", "true");
+    expect(marcadores[0].className).toMatch(/B7602B/);
+    expect(marcadores[1]).toHaveAttribute("aria-pressed", "false");
+    expect(marcadores[1].className).not.toMatch(/B7602B/);
   });
 
   it("com flag: hospeda o modal de edição (título com font-display, sem opção de cópia)", async () => {
@@ -704,7 +706,7 @@ describe("modo execução da seção (Mílon #5 — RED)", () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
     await waitFor(() => expect(state.toggleSeries).toHaveBeenCalled());
 
     await waitFor(() =>
@@ -713,7 +715,10 @@ describe("modo execução da seção (Mílon #5 — RED)", () => {
       ).toBeInTheDocument(),
     );
     // A série clicada já aparece desmarcada antes de qualquer pergunta.
-    expect(screen.getAllByRole("checkbox")[0]).not.toBeChecked();
+    expect(screen.getAllByRole("button", { name: /^série/i })[0]).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 
   it("com flag: confirmar limpa a execução e cancelar mantém início com zero marcadas", async () => {

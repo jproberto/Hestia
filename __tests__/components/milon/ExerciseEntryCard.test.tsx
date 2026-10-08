@@ -465,24 +465,26 @@ describe("ExerciseEntryCard", () => {
   });
 
   /**
-   * Contrato RED — Mílon #5 Execução série a série (TASK-005):
-   * repasse do pacote de execução.
+   * Contrato RED (correção 2026-10-08) — Mílon #5 Execução série a série:
+   * repasse do pacote de execução com card clicável.
    *
    * Fonte: plan.md §2 (ExerciseEntryCard repassa o pacote para cada
-   * SeriesCard; sem ele renderiza idêntico a hoje) + §3 (ExerciseEntryCard
-   * e WorkoutEntriesList aceitam o pacote como prop opcional e o repassam
-   * sem interpretar) + tasks.json TASK-005.
+   * SeriesCard; sem ele renderiza idêntico a hoje) + §3 (aceita o pacote
+   * como prop opcional e o repassa sem interpretar) + spec §3 alinhada
+   * (card é o próprio marcador; SEM checkbox; SEM botão de editar; marcada
+   * com fundo na cor do módulo) + tasks.json TASK-005.
    *
    * CONTRATO FIXADO AQUI (mesmo da SeriesCard): prop opcional
    * `execution?: { doneBySeriesId: Record<string, boolean>;
    * onToggle: (seriesId: string) => void;
    * onOpenEditor: (seriesId: string) => void }`, repassada sem interpretar.
+   * Em execução cada série é um `role="button"` ("Série N"), sem checkbox e
+   * sem botão "Editar"; o feito aparece no fundo do card (cor do módulo).
    *
-   * Expected: FAIL nos blocos com pacote (prop ainda não existe — nenhum
-   * marcador renderiza); o bloco sem pacote passa como trava de regressão.
-   * Hefesto fará GREEN na TASK-006.
+   * Expected: FAIL enquanto a produção ainda tem checkbox/botão; o bloco sem
+   * pacote passa como trava de regressão. Hefesto fará GREEN na TASK-006.
    */
-  describe("repasse do pacote de execução (Mílon #5 — RED)", () => {
+  describe("repasse do pacote de execução (Mílon #5 — card clicável — RED)", () => {
     interface SeriesExecutionProps {
       doneBySeriesId: Record<string, boolean>;
       onToggle: (seriesId: string) => void;
@@ -500,15 +502,31 @@ describe("ExerciseEntryCard", () => {
       };
     }
 
-    it("sem pacote renderiza idêntico a hoje (sem marcadores)", () => {
+    function cartoesDasSeries(): HTMLElement[] {
+      return screen.getAllByRole("button", { name: /^série [12]/i });
+    }
+
+    function temFundoDoModulo(el: HTMLElement): boolean {
+      const alvo = `${el.className} ${(el.getAttribute("style") ?? "")}`.toLowerCase();
+      return (
+        alvo.includes("b7602b") ||
+        alvo.includes("183, 96, 43") ||
+        alvo.includes("183,96,43")
+      );
+    }
+
+    it("sem pacote renderiza idêntico a hoje (sem cards clicáveis)", () => {
       render(<ExerciseEntryCard {...base()} />);
 
-      expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+      expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+      expect(
+        screen.queryByRole("button", { name: /^série [12]/i }),
+      ).not.toBeInTheDocument();
       expect(screen.getByText("Série 1")).toBeInTheDocument();
       expect(screen.getByText("Série 2")).toBeInTheDocument();
     });
 
-    it("com pacote cada série exibe marcador com o feito do mapa", () => {
+    it("com pacote cada série é um card clicável, sem checkbox nem botão de editar", () => {
       render(
         <ExerciseEntryCard
           {...( {
@@ -518,13 +536,17 @@ describe("ExerciseEntryCard", () => {
         />,
       );
 
-      const marcadores = screen.getAllByRole("checkbox");
-      expect(marcadores).toHaveLength(2);
-      expect(marcadores[0]).toBeChecked();
-      expect(marcadores[1]).not.toBeChecked();
+      const cartoes = cartoesDasSeries();
+      expect(cartoes).toHaveLength(2);
+      expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+      expect(
+        screen.queryByRole("button", { name: /editar/i }),
+      ).not.toBeInTheDocument();
+      expect(temFundoDoModulo(cartoes[0])).toBe(true);
+      expect(temFundoDoModulo(cartoes[1])).toBe(false);
     });
 
-    it("com pacote o toque curto repassa a alternância com o id da série", () => {
+    it("com pacote o toque curto no card repassa a alternância com o id da série", () => {
       const onToggle = vi.fn();
       render(
         <ExerciseEntryCard
@@ -535,27 +557,37 @@ describe("ExerciseEntryCard", () => {
         />,
       );
 
-      fireEvent.click(screen.getAllByRole("checkbox")[1]);
+      fireEvent.click(cartoesDasSeries()[1]);
 
       expect(onToggle).toHaveBeenCalledTimes(1);
       expect(onToggle).toHaveBeenCalledWith("s2");
     });
 
-    it("com pacote o botão de editar repassa a abertura do editor", () => {
-      const onOpenEditor = vi.fn();
-      render(
-        <ExerciseEntryCard
-          {...( {
-            ...base(),
-            execution: exec({ onOpenEditor }),
-          } as unknown as ExerciseEntryCardProps )}
-        />,
-      );
+    it("com pacote o toque longo no card repassa a abertura do editor", () => {
+      vi.useFakeTimers();
+      try {
+        const onOpenEditor = vi.fn();
+        const onToggle = vi.fn();
+        render(
+          <ExerciseEntryCard
+            {...( {
+              ...base(),
+              execution: exec({ onOpenEditor, onToggle }),
+            } as unknown as ExerciseEntryCardProps )}
+          />,
+        );
 
-      fireEvent.click(screen.getAllByRole("button", { name: /editar/i })[0]);
+        const alvo = cartoesDasSeries()[0];
+        fireEvent.pointerDown(alvo, { pointerType: "touch" });
+        vi.advanceTimersByTime(500);
+        fireEvent.pointerUp(alvo, { pointerType: "touch" });
 
-      expect(onOpenEditor).toHaveBeenCalledTimes(1);
-      expect(onOpenEditor).toHaveBeenCalledWith("s1");
+        expect(onOpenEditor).toHaveBeenCalledTimes(1);
+        expect(onOpenEditor).toHaveBeenCalledWith("s1");
+        expect(onToggle).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

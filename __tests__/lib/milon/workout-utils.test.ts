@@ -29,7 +29,7 @@
  *   ("vírgula entre os itens, 'e' antes do último").
  */
 import { describe, it, expect } from "vitest";
-import type { WorkoutSeries } from "@/lib/milon/types";
+import type { WorkoutExecutionSeries, WorkoutSeries } from "@/lib/milon/types";
 import {
   MSG_TREINO_COM_EXERCICIOS,
   MSG_PROGRAMA_COM_TREINOS,
@@ -54,6 +54,8 @@ import {
   aplicarSerieOrigemEmTodas,
   converterCarga,
   formatarCargaComSecundaria,
+  contarMarcadasNaExecucao,
+  ehUltimaMarcada,
 } from "@/lib/milon/workout-utils";
 
 // ---------------------------------------------------------------------------
@@ -671,5 +673,100 @@ describe("formatarCargaComSecundaria", () => {
     expect(
       parseFloat(String(resultado.secundaria).replace(",", "."))
     ).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Execução série a série (Mílon #5, TASK-003): regras puras sobre a lista de
+// realizadas da execução aberta.
+//
+// Fonte da verdade: `.agents/modules/milon/05-execucao-series/plan.md` §3
+// (Regras puras de workout-utils: contar marcadas recebe a lista de
+// realizadas da execução aberta e devolve o total; detectar última marcada
+// recebe a lista e o identificador da série do template e indica verdadeiro
+// só quando a lista tem exatamente uma linha e ela referencia a série
+// informada. Nomes exportados exatos: contarMarcadasNaExecucao e
+// ehUltimaMarcada) + `tasks.json` TASK-003.
+//
+// Escrito ANTES da implementação (outside-in): falha porque
+// `contarMarcadasNaExecucao` e `ehUltimaMarcada` ainda não existem em
+// `@/lib/milon/workout-utils` — Expected: FAIL nos blocos novos
+// (acceptanceCriteria 2 da TASK-003). Hefesto fará GREEN (TASK-004) apenas
+// com o contrato do plano — sem inventar APIs.
+// ---------------------------------------------------------------------------
+
+const realizada = (
+  overrides: Partial<WorkoutExecutionSeries> & { seriesId: string },
+): WorkoutExecutionSeries => ({
+  id: `done-${overrides.seriesId}`,
+  executionId: "exec-1",
+  entryId: "ent-1",
+  position: 1,
+  reps: 10,
+  durationSeconds: null,
+  load: 40,
+  createdAt: "2026-10-08T10:01:00.000Z",
+  created_by: "casal@exemplo.com",
+  ...overrides,
+});
+
+describe("contarMarcadasNaExecucao", () => {
+  it("lista vazia → 0 (execução aberta com zero marcadas é estado válido)", () => {
+    expect(contarMarcadasNaExecucao([])).toBe(0);
+  });
+
+  it("uma realizada → 1", () => {
+    expect(contarMarcadasNaExecucao([realizada({ seriesId: "s-1" })])).toBe(1);
+  });
+
+  it("duas realizadas → 2 (total da execução aberta)", () => {
+    expect(
+      contarMarcadasNaExecucao([
+        realizada({ seriesId: "s-1", position: 1 }),
+        realizada({ seriesId: "s-2", position: 2 }),
+      ]),
+    ).toBe(2);
+  });
+
+  it("três realizadas → 3, independente dos valores de retrato", () => {
+    expect(
+      contarMarcadasNaExecucao([
+        realizada({ seriesId: "s-1", reps: 10 }),
+        realizada({ seriesId: "s-2", reps: null, load: null }),
+        realizada({ seriesId: "s-3", durationSeconds: 30 }),
+      ]),
+    ).toBe(3);
+  });
+});
+
+describe("ehUltimaMarcada", () => {
+  it("lista vazia → false para qualquer série", () => {
+    expect(ehUltimaMarcada([], "s-1")).toBe(false);
+  });
+
+  it("exatamente uma linha referenciando a série informada → true", () => {
+    expect(ehUltimaMarcada([realizada({ seriesId: "s-1" })], "s-1")).toBe(true);
+  });
+
+  it("exatamente uma linha de OUTRA série → false", () => {
+    expect(ehUltimaMarcada([realizada({ seriesId: "s-2" })], "s-1")).toBe(false);
+  });
+
+  it("duas marcadas → false mesmo para série presente na lista", () => {
+    const lista = [
+      realizada({ seriesId: "s-1", position: 1 }),
+      realizada({ seriesId: "s-2", position: 2 }),
+    ];
+    expect(ehUltimaMarcada(lista, "s-1")).toBe(false);
+    expect(ehUltimaMarcada(lista, "s-2")).toBe(false);
+  });
+
+  it("três marcadas → false para qualquer série", () => {
+    const lista = [
+      realizada({ seriesId: "s-1" }),
+      realizada({ seriesId: "s-2" }),
+      realizada({ seriesId: "s-3" }),
+    ];
+    expect(ehUltimaMarcada(lista, "s-1")).toBe(false);
   });
 });

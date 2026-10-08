@@ -1,6 +1,10 @@
 // Regras puras de treinos e séries do módulo Mílon (sem I/O, sem repositório).
 // Ver Mapa de Camadas no AGENTS.md + plan.md §3 (contrato textual das utilidades).
-import type { LoadUnit, WorkoutSeries } from "@/lib/milon/types";
+import type {
+  LoadUnit,
+  WorkoutExecutionSeries,
+  WorkoutSeries,
+} from "@/lib/milon/types";
 
 export const MSG_TREINO_COM_EXERCICIOS =
   "Este treino possui exercícios. Remova-os antes de excluir o treino.";
@@ -197,4 +201,20 @@ export function formatarCargaComSecundaria(
   const secundariaUnidade: LoadUnit = unidade === "kg" ? "libra" : "kg";
   const secundaria = converterCarga(valor, unidade, secundariaUnidade).toFixed(1);
   return { principal: `${valor} ${unidade}`, secundaria };
+}
+
+// Execução série a série (Mílon #5, D1): o feito de uma série é a existência
+// da linha realizada correspondente na execução aberta — nunca coluna do
+// template. As duas regras abaixo operam só sobre essa lista de realizadas.
+export function contarMarcadasNaExecucao(
+  realizadas: WorkoutExecutionSeries[],
+): number {
+  return realizadas.length;
+}
+
+export function ehUltimaMarcada(
+  realizadas: WorkoutExecutionSeries[],
+  seriesId: string,
+): boolean {
+  return realizadas.length === 1 && realizadas[0].seriesId === seriesId;
 }

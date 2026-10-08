@@ -7,6 +7,8 @@ export type { UseProgramDetailReturn } from "./useProgramDetail";
 export { useProgramWorkouts } from "./useProgramWorkouts";
 export type { UseProgramWorkoutsReturn } from "./useProgramWorkouts";
 export { useWorkoutDetail } from "./useWorkoutDetail";
+export { useWorkoutExecution } from "./useWorkoutExecution";
+export type { UseWorkoutExecutionReturn } from "./useWorkoutExecution";
 export { useTodayWorkout } from "./useTodayWorkout";
 export type { UseTodayWorkoutReturn } from "./useTodayWorkout";
 export type {

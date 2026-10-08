@@ -1,0 +1,41 @@
+﻿{
+  "status": "approved",
+  "findings": [
+    {
+      "severity": "minor",
+      "category": "test",
+      "file": "__tests__/app/milon/today/page.test.tsx",
+      "line": 0,
+      "evidence": "spec criterio 11 (subtitulo derivado) e 12 (vazio != zero) cobertos so via suites herdadas da manutencao; nenhum teste novo exercita subtitulo ou traco-vs-zero pela rota /milon/today (re-review pos-fix a29861d: paridade segue por construcao via WorkoutDetailSection pura)",
+      "impact": "paridade e por construcao (mesmo componente), risco real baixo; lacuna e de wiring, nao de comportamento",
+      "suggestion": "registrar no backlog do modulo; 1-2 testes wiring via rota today na feature #5 (que ja tocara a secao pelos slots)"
+    },
+    {
+      "severity": "minor",
+      "category": "quality",
+      "file": "lib/milon/hooks/useTodayWorkout.ts",
+      "line": 43,
+      "evidence": "cadeia de selecao implementada duas vezes: effect inicial em promise-chain (linhas 43-118) + fetchSelection/retry em async/await (linhas 120-170), mesma sequencia e-mail -> ativo -> treinos (inalterado pelo fix a29861d, que so moveu layout)",
+      "impact": "duplicacao interna pequena; divergencia futura entre carga inicial e retry passaria silenciosa",
+      "suggestion": "backlog: unificar retry sobre a mesma funcao de carga (manter padrao promise-chain + cancelled do modulo)"
+    },
+    {
+      "severity": "minor",
+      "category": "test",
+      "file": ".agents/modules/milon/04-treino-do-dia/test-report.json",
+      "line": 1,
+      "evidence": "re-execucao Argos pos-fix (2026-10-04): branch 83.52 vs 83.63 registrado; lines/statements 84.35, 1183 passed/0 failed, 105 files conferem exatos",
+      "impact": "nenhum no gate (>=80 mantido); numero de branch levemente defasado no artefato (+0.11pp)",
+      "suggestion": "regenerar o campo branch de test-report.json com o valor da ultima run (83.52) antes do commit do Caronte"
+    }
+  ],
+  "blockers": [],
+  "testGaps": [
+    "layout unico pos-fix a29861d VERIFICADO e travado por contratos de fonte+render, todos verdes na re-execucao: secao com 0 MilonLayout (WorkoutDetailSection.test.tsx bloco layout-unico), today com exatamente 1 MilonLayout (today/page.test.tsx:747-752), wrapper da manutencao com MilonLayout proprio (workouts/[workoutId]/page.test.tsx bloco wrapper) — banner+abas duplicados eliminados nas duas rotas",
+    "subtitulo derivado e vazio != zero nao exercitados pela rota /milon/today (so suites herdadas) — paridade por construcao atenua",
+    "components/milon/WorkoutDetailSection.tsx em 62.79% stmts: ramos de handlers/modais/confirmacoes herdados da extracao mecanica, travados pelos testes da secao + suite do wrapper (paridade mantida pos-fix: secao virou pura, sem regra reescrita)",
+    "lib/milon/hooks/useTodayWorkout.ts em 79.62% stmts: ramos de erro da cadeia inicial e do retry parcialmente cobertos (9 testes passam, incl. erro origem carga e retry com sucesso)",
+    "functions global 75.88% (<80): concentrado em arquivos legados Pluto/shared fora do escopo; mesmo patamar aceito na Milon #3 — waiver por precedente, sem regressao (suites Pluto verdes, build OK com rota /milon/today)"
+  ],
+  "questions": []
+}

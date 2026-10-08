@@ -294,6 +294,25 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
     }
     return await this.listSeriesByEntry(entryId);
   }
+
+  async applySeriesToFollowing(
+    entryId: string,
+    originSeriesId: string,
+  ): Promise<WorkoutSeries[]> {
+    const series = await this.listSeriesByEntry(entryId);
+    const origem = series.find((s) => s.id === originSeriesId);
+    if (!origem) throw new Error("Série de origem não encontrada.");
+    for (const serie of series) {
+      if (serie.position <= origem.position) continue;
+      this.series.set(serie.id, {
+        ...serie,
+        reps: origem.reps,
+        durationSeconds: origem.durationSeconds,
+        load: origem.load,
+      });
+    }
+    return await this.listSeriesByEntry(entryId);
+  }
 }
 
 export function createFakeWorkoutRepository(

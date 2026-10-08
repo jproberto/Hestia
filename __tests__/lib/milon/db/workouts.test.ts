@@ -388,3 +388,128 @@ describe("lib/milon/db/workouts (barrel oficial da UI, TASK-006)", () => {
     ]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-001 (Mílon #5) — consumido pela TASK-002.
+// Fonte: plan.md §3 (Operação nova do repository de treinos:
+// aplicar série de origem nela mais nas seguintes) + tasks.json TASK-001
+// (db/workouts.test.ts exigindo applySeriesToFollowing com standalone
+// replicando origem mais posição maior incluindo marcadas sem tocar na
+// execução).
+//
+// applySeriesToFollowing ainda NÃO existe: estes blocos falham até Hefesto
+// entregá-lo (Expected FAIL por nome ausente no barrel/repository).
+// Regra: copia reps/tempo/carga da origem para a própria origem e somente
+// para as séries da mesma entrada com posição MAIOR que a da origem,
+// incluindo as já marcadas, sem tocar na execução nem nas realizadas,
+// devolvendo a lista ordenada por posição. Série anterior à origem NUNCA
+// muda. Na última série da entrada só a origem é atualizada (sem seguinte).
+// ---------------------------------------------------------------------------
+
+describe("lib/milon/db/workouts applySeriesToFollowing (TASK-002)", () => {
+  const ORIGIN_ID = "s-2";
+
+  const FOUR_SERIES: WorkoutSeriesRow[] = [
+    { ...SERIES_ROW, id: "s-1", entry_id: "e-1", position: 1, reps: 8, duration_seconds: 30, load: 30 },
+    { ...SERIES_ROW, id: "s-2", entry_id: "e-1", position: 2, reps: 10, duration_seconds: 45, load: 40 },
+    { ...SERIES_ROW, id: "s-3", entry_id: "e-1", position: 3, reps: 99, duration_seconds: 99, load: 99 },
+    { ...SERIES_ROW, id: "s-4", entry_id: "e-1", position: 4, reps: null, duration_seconds: null, load: null },
+  ];
+
+  function stubFollowingDb(rows: WorkoutSeriesRow[], recorded: Recorded): IDatabaseClient {
+    const readChain = {
+      eq: (col: string, val: unknown): unknown => {
+        (recorded.eqs ??= []).push([col, val]);
+        return readChain;
+      },
+      order: (col: string, opts?: { ascending?: boolean }): unknown => {
+        (recorded.orders ??= []).push([col, opts?.ascending]);
+        return readChain;
+      },
+      then: (onfulfilled: (value: unknown) => unknown) =>
+        Promise.resolve({ data: rows, error: null }).then(onfulfilled),
+    };
+    return {
+      from: (table: string) => {
+        if (table !== "workout_series") {
+          throw new Error(`tabela inesperada na replicação: ${table}`);
+        }
+        recorded.table = table;
+        return {
+          select: () => readChain,
+          update: (payload: Record<string, unknown>) => ({
+            eq: (col: string, val: unknown) => {
+              (recorded.ops ??= []).push({ table, op: "update", payload, eq: [col, val] });
+              return {
+                then: (onfulfilled: (value: unknown) => unknown) =>
+                  Promise.resolve({ data: null, error: null }).then(onfulfilled),
+              };
+            },
+          }),
+        };
+      },
+    } as unknown as IDatabaseClient;
+  }
+
+  it("expõe applySeriesToFollowing e standalone como funções do barrel", () => {
+    expect(typeof dbBarrel.applySeriesToFollowing).toBe("function");
+    expect(typeof dbBarrel.applySeriesToFollowingStandalone).toBe("function");
+    expect(dbBarrel.applySeriesToFollowing).toBe(workoutRepository.applySeriesToFollowing);
+    expect(dbBarrel.applySeriesToFollowingStandalone).toBe(
+      workoutRepository.applySeriesToFollowingStandalone,
+    );
+  });
+
+  it("replica a origem para ela mais as de posição maior, sem tocar nas anteriores nem na execução", async () => {
+    const recorded: Recorded = {};
+    const result = await dbBarrel.applySeriesToFollowing(
+      stubFollowingDb(FOUR_SERIES, recorded),
+      "e-1",
+      ORIGIN_ID,
+    );
+
+    // Lê as séries da entrada ordenadas por posição.
+    expect(recorded.table).toBe("workout_series");
+    expect(recorded.eqs).toEqual([["entry_id", "e-1"]]);
+    expect(recorded.orders).toEqual([["position", true]]);
+    // Só as seguintes recebem UPDATE com os valores da origem (10/45/40).
+    expect(recorded.ops).toEqual([
+      {
+        table: "workout_series",
+        op: "update",
+        payload: { reps: 10, duration_seconds: 45, load: 40 },
+        eq: ["id", "s-3"],
+      },
+      {
+        table: "workout_series",
+        op: "update",
+        payload: { reps: 10, duration_seconds: 45, load: 40 },
+        eq: ["id", "s-4"],
+      },
+    ]);
+    // Nenhum UPDATE na anterior (s-1) nem na origem (s-2); nenhum toque em execução.
+    expect((recorded.ops ?? []).some((o) => o.eq?.[1] === "s-1")).toBe(false);
+    expect((recorded.ops ?? []).some((o) => o.eq?.[1] === "s-2")).toBe(false);
+    expect(recorded.table).not.toBe("workout_executions");
+    expect(recorded.table).not.toBe("workout_execution_series");
+    // Devolve a lista ordenada por posição.
+    expect(result.map((s: { position: number }) => s.position)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("na última série da entrada atualiza somente a origem (sem seguinte, sem UPDATE)", async () => {
+    const recorded: Recorded = {};
+    const rows: WorkoutSeriesRow[] = [
+      { ...SERIES_ROW, id: "s-1", entry_id: "e-1", position: 1, reps: 8, load: 30 },
+      { ...SERIES_ROW, id: "s-2", entry_id: "e-1", position: 2, reps: 10, load: 40 },
+    ];
+
+    const result = await dbBarrel.applySeriesToFollowing(
+      stubFollowingDb(rows, recorded),
+      "e-1",
+      "s-2",
+    );
+
+    expect(recorded.ops ?? []).toEqual([]);
+    expect(result.map((s: { id: string }) => s.id)).toEqual(["s-1", "s-2"]);
+  });
+});

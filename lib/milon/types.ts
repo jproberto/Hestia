@@ -148,6 +148,67 @@ export interface UpdateWorkoutInput {
 }
 
 // ----------------------------------------------------------------------------
+// Execução série a série (Mílon #5, D1/D2/D3): instância do treino + retrato.
+// finishedAt nulo = execução aberta; retrato nunca é reescrito nesta feature.
+// ----------------------------------------------------------------------------
+
+export interface WorkoutExecutionRow {
+  id: string;
+  workout_id: string;
+  program_id: string;
+  started_at: string;
+  finished_at: string | null;
+  created_at: string;
+  created_by: string;
+}
+
+export interface WorkoutExecution {
+  id: string;
+  workoutId: string;
+  programId: string;
+  startedAt: string;
+  finishedAt: string | null;
+  createdAt: string;
+  created_by: string;
+}
+
+export interface WorkoutExecutionSeriesRow {
+  id: string;
+  execution_id: string;
+  entry_id: string;
+  series_id: string;
+  position: number;
+  reps: number | null;
+  duration_seconds: number | null;
+  load: number | null;
+  created_at: string;
+  created_by: string;
+}
+
+export interface WorkoutExecutionSeries {
+  id: string;
+  executionId: string;
+  entryId: string;
+  seriesId: string;
+  position: number;
+  reps: number | null;
+  durationSeconds: number | null;
+  load: number | null;
+  createdAt: string;
+  created_by: string;
+}
+
+export interface MarkExecutionSeriesInput {
+  executionId: string;
+  entryId: string;
+  seriesId: string;
+  position: number;
+  reps: number | null;
+  durationSeconds: number | null;
+  load: number | null;
+}
+
+// ----------------------------------------------------------------------------
 // Legado do scaffold (removido na TASK-003/004/005 junto aos arquivos example).
 // Mantido nesta task para não quebrar `tsc` enquanto o scaffold ainda consome.
 // ----------------------------------------------------------------------------

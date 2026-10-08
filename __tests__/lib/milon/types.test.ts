@@ -9,6 +9,13 @@ import type {
   LoadUnit,
 } from "@/lib/milon/types";
 
+import type {
+  WorkoutExecutionRow,
+  WorkoutExecution,
+  WorkoutExecutionSeriesRow,
+  WorkoutExecutionSeries,
+} from "@/lib/milon/types";
+
 function loadMigrationSql(): string {
   return migrationSql as unknown as string;
 }
@@ -190,5 +197,84 @@ describe("Milon TASK-001 — types da biblioteca de exercícios", () => {
     expect(update.name).toBe("Supino reto");
     expect(update.muscle).toBe("peito");
     expect(update.videoLink).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-001 (Mílon #5) — consumido pela TASK-002.
+// Fonte: plan.md §3 (Tipos de domínio: WorkoutExecutionRow/WorkoutExecution
+// com início textual obrigatório e fim textual anulável;
+// WorkoutExecutionSeriesRow/WorkoutExecutionSeries com os três
+// identificadores, posição e retrato de valores anuláveis; nulo do banco vira
+// nulo do domínio sem transformação de fuso; nenhum tipo do template muda).
+// Estes blocos passam em runtime (import type é apagado) e falham no
+// `npx tsc --noEmit` até Hefesto criar os tipos (Expected FAIL pelos nomes).
+// ---------------------------------------------------------------------------
+
+describe("Milon 05 TASK-001 — types da execução série a série", () => {
+  it("WorkoutExecutionRow representa a linha com início preenchido e fim nulo", () => {
+    const aberta: WorkoutExecutionRow = {
+      id: "00000000-0000-4000-8000-000000000011",
+      workout_id: "11111111-1111-4111-8111-111111111111",
+      program_id: "22222222-2222-4222-8222-222222222222",
+      started_at: "2026-10-08T10:00:00.000Z",
+      finished_at: null,
+      created_at: "2026-10-08T10:00:00.000Z",
+      created_by: "a@example.com",
+    };
+    expect(aberta.started_at).toContain("2026");
+    expect(aberta.finished_at).toBeNull();
+  });
+
+  it("WorkoutExecution expõe início obrigatório e fim anulável em camelCase sem transformar fuso", () => {
+    const aberta: WorkoutExecution = {
+      id: "00000000-0000-4000-8000-000000000011",
+      workoutId: "11111111-1111-4111-8111-111111111111",
+      programId: "22222222-2222-4222-8222-222222222222",
+      startedAt: "2026-10-08T10:00:00.000Z",
+      finishedAt: null,
+      createdAt: "2026-10-08T10:00:00.000Z",
+      created_by: "a@example.com",
+    };
+    // Mapeamento preserva o texto do banco (sem transformação de fuso).
+    expect(aberta.startedAt).toBe("2026-10-08T10:00:00.000Z");
+    expect(aberta.finishedAt).toBeNull();
+  });
+
+  it("WorkoutExecutionSeriesRow representa a realizada com retrato anulável", () => {
+    const realizada: WorkoutExecutionSeriesRow = {
+      id: "00000000-0000-4000-8000-000000000021",
+      execution_id: "00000000-0000-4000-8000-000000000011",
+      entry_id: "33333333-3333-4333-8333-333333333333",
+      series_id: "44444444-4444-4444-8444-444444444444",
+      position: 2,
+      reps: 10,
+      duration_seconds: null,
+      load: 40,
+      created_at: "2026-10-08T10:01:00.000Z",
+      created_by: "a@example.com",
+    };
+    expect(realizada.position).toBe(2);
+    expect(realizada.reps).toBe(10);
+    expect(realizada.duration_seconds).toBeNull();
+    expect(realizada.load).toBe(40);
+  });
+
+  it("WorkoutExecutionSeries expõe os três identificadores mais retrato em camelCase", () => {
+    const realizada: WorkoutExecutionSeries = {
+      id: "00000000-0000-4000-8000-000000000021",
+      executionId: "00000000-0000-4000-8000-000000000011",
+      entryId: "33333333-3333-4333-8333-333333333333",
+      seriesId: "44444444-4444-4444-8444-444444444444",
+      position: 2,
+      reps: 10,
+      durationSeconds: null,
+      load: 40,
+      createdAt: "2026-10-08T10:01:00.000Z",
+      created_by: "a@example.com",
+    };
+    expect(realizada.executionId).toContain("00000000");
+    expect(realizada.seriesId).toContain("44444444");
+    expect(realizada.durationSeconds).toBeNull();
   });
 });

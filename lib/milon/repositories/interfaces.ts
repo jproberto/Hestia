@@ -11,6 +11,9 @@ import type {
   Workout,
   WorkoutEntry,
   WorkoutSeries,
+  WorkoutExecution,
+  WorkoutExecutionSeries,
+  MarkExecutionSeriesInput,
   CreateWorkoutInput,
   UpdateWorkoutInput,
 } from "../types";
@@ -84,4 +87,28 @@ export interface IWorkoutRepository {
     entryId: string,
     originSeriesId: string,
   ): Promise<WorkoutSeries[]>;
+  applySeriesToFollowing(
+    entryId: string,
+    originSeriesId: string,
+  ): Promise<WorkoutSeries[]>;
+}
+
+// Execução série a série (Mílon #5): feito vive nas realizadas, nunca no template.
+// MarkExecutionSeriesInput vive na fonte única (../types) e é reusado aqui.
+export { type MarkExecutionSeriesInput } from "../types";
+
+export interface IWorkoutExecutionRepository {
+  findOpenExecutionByWorkout(workoutId: string): Promise<WorkoutExecution | null>;
+  startExecution(
+    workoutId: string,
+    programId: string,
+    email: string,
+  ): Promise<WorkoutExecution>;
+  clearExecution(executionId: string): Promise<void>;
+  listDoneByExecution(executionId: string): Promise<WorkoutExecutionSeries[]>;
+  markSeriesDone(
+    input: MarkExecutionSeriesInput,
+    email: string,
+  ): Promise<WorkoutExecutionSeries>;
+  unmarkSeries(executionId: string, seriesId: string): Promise<void>;
 }

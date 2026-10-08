@@ -426,6 +426,45 @@ export async function applySeriesToAll(
   return await listSeriesByEntry(db, entryId);
 }
 
+// Replicação incondicional (Mílon #5, D4): comportamento único de todo
+// salvamento do modal — origem mais as seguintes (posição maior) da mesma
+// entrada, incluindo as já marcadas; anteriores nunca mudam; execução e
+// realizadas nunca são tocadas.
+export async function applySeriesToFollowing(
+  db: IDatabaseClient,
+  entryId: string,
+  originSeriesId: string,
+): Promise<WorkoutSeries[]> {
+  const series = await listSeriesByEntry(db, entryId);
+  const origem = series.find((s) => s.id === originSeriesId);
+  if (!origem) throw new Error("Série de origem não encontrada.");
+
+  for (const serie of series) {
+    if (serie.position <= origem.position) continue;
+    const { error } = await db
+      .from<WorkoutSeriesRow>("workout_series")
+      .update({
+        reps: origem.reps,
+        duration_seconds: origem.durationSeconds,
+        load: origem.load,
+      })
+      .eq("id", serie.id);
+    if (error) throw error;
+  }
+  return series
+    .map((serie) =>
+      serie.position > origem.position
+        ? {
+            ...serie,
+            reps: origem.reps,
+            durationSeconds: origem.durationSeconds,
+            load: origem.load,
+          }
+        : serie,
+    )
+    .sort((a, b) => a.position - b.position);
+}
+
 // Standalones p/ hooks (criam o próprio client, singleton por aba).
 export async function listWorkoutsByProgramStandalone(
   programId: string,
@@ -545,4 +584,11 @@ export async function applySeriesToAllStandalone(
   originSeriesId: string,
 ): Promise<WorkoutSeries[]> {
   return applySeriesToAll(createBrowserDatabaseClient(), entryId, originSeriesId);
+}
+
+export async function applySeriesToFollowingStandalone(
+  entryId: string,
+  originSeriesId: string,
+): Promise<WorkoutSeries[]> {
+  return applySeriesToFollowing(createBrowserDatabaseClient(), entryId, originSeriesId);
 }

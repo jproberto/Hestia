@@ -836,6 +836,97 @@ function defineWorkoutRepositoryContract(
         expect(entrada.restSeconds).toBeNull();
       });
     });
+
+    // ---------------------------------------------------------------------
+    // applySeriesToFollowing — replicação incondicional (Mílon #5, D4)
+    // Comportamento único de todo salvamento do modal: atualiza a origem e
+    // replica para as seguintes (posição maior) incluindo as já marcadas,
+    // preservando o feito; série anterior à origem nunca muda; na última
+    // série só a origem permanece. Não toca em execução nem realizadas.
+    // Ainda NÃO existe no fake: estes blocos falham até Hefesto entregá-lo.
+    // ---------------------------------------------------------------------
+    describe("applySeriesToFollowing", () => {
+      it("copia origem para ela mais as seguintes, sem tocar nas anteriores", async () => {
+        const seeded = build({
+          entries: [makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1)],
+          series: [
+            makeSeries("s-1", "e-1", 1, { reps: 8, load: 30 }),
+            makeSeries("s-2", "e-1", 2, { reps: 10, durationSeconds: 45, load: 40 }),
+            makeSeries("s-3", "e-1", 3, { reps: 99, load: 99 }),
+            makeSeries("s-4", "e-1", 4),
+          ],
+        });
+
+        const result = await seeded.applySeriesToFollowing("e-1", "s-2");
+
+        expect(result.map((s: { position: number }) => s.position)).toEqual([1, 2, 3, 4]);
+        // Anterior intacta.
+        expect(result[0]).toMatchObject({ id: "s-1", reps: 8, load: 30 });
+        // Origem preservada.
+        expect(result[1]).toMatchObject({
+          id: "s-2",
+          position: 2,
+          reps: 10,
+          durationSeconds: 45,
+          load: 40,
+        });
+        // Seguintes sobrescritas com os valores da origem (incondicional,
+        // mesmo as já marcadas — o feito nunca é tocado, só o planejado).
+        expect(result[2]).toMatchObject({
+          id: "s-3",
+          position: 3,
+          reps: 10,
+          durationSeconds: 45,
+          load: 40,
+        });
+        expect(result[3]).toMatchObject({
+          id: "s-4",
+          position: 4,
+          reps: 10,
+          durationSeconds: 45,
+          load: 40,
+        });
+      });
+
+      it("na última série da entrada atualiza somente a origem", async () => {
+        const seeded = build({
+          entries: [makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1)],
+          series: [
+            makeSeries("s-1", "e-1", 1, { reps: 8, load: 30 }),
+            makeSeries("s-2", "e-1", 2, { reps: 10, load: 40 }),
+          ],
+        });
+
+        const result = await seeded.applySeriesToFollowing("e-1", "s-2");
+
+        expect(result.map((s: { id: string }) => s.id)).toEqual(["s-1", "s-2"]);
+        expect(result[0]).toMatchObject({ id: "s-1", reps: 8, load: 30 });
+        expect(result[1]).toMatchObject({ id: "s-2", reps: 10, load: 40 });
+      });
+
+      it("não vaza para outra entrada do mesmo treino", async () => {
+        const seeded = build({
+          entries: [
+            makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1),
+            makeEntry("e-2", "w-1", PROGRAM_A, "ex-2", 2),
+          ],
+          series: [
+            makeSeries("s-1", "e-1", 1, { reps: 10, load: 40 }),
+            makeSeries("s-2", "e-1", 2, { reps: 5, load: 20 }),
+            makeSeries("s-9", "e-2", 1, { reps: 7, load: 25 }),
+          ],
+        });
+
+        await seeded.applySeriesToFollowing("e-1", "s-1");
+
+        expect(
+          (await seeded.listSeriesByEntry("e-2")).map((s: { id: string; reps: number | null }) => [
+            s.id,
+            s.reps,
+          ]),
+        ).toEqual([["s-9", 7]]);
+      });
+    });
   });
 }
 

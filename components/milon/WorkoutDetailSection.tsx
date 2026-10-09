@@ -28,6 +28,7 @@ import type {
   LoadUnit,
   WorkoutEntry,
   WorkoutEntryView,
+  WorkoutExecution,
   WorkoutSeries,
 } from "@/lib/milon/types";
 import type { SerieField, SeriesExecutionProps } from "@/components/milon/SeriesCard";
@@ -102,7 +103,7 @@ interface ExecutionListContext {
   closeEditor: () => void;
   saveEditor: (fields: SeriesEditFields) => Promise<void>;
   displayEntries: WorkoutEntryView[];
-  execExecution: { snapshot?: unknown | null } | null;
+  execExecution: WorkoutExecution | null;
 }
 
 /**
@@ -133,19 +134,11 @@ function ExecutionHost({
   // confirmação de limpeza da última série desmarcada).
   const [, bumpExecution] = useState(0);
 
-  // Congelados (2ª volta D20): com foto (snapshot não-nulo), exibe os
-  // valores congelados; sem foto, exibe o template em tempo real.
-  const execFrozen = (exec as unknown as { frozenEntries?: WorkoutEntryView[] })
-    .frozenEntries;
-  const execSnapshot = (
-    exec.execution as unknown as { snapshot?: unknown | null } | null
-  )?.snapshot;
-  const displayEntries: WorkoutEntryView[] =
-    execSnapshot != null &&
-    Array.isArray(execFrozen) &&
-    execFrozen.length > 0
-      ? execFrozen
-      : entries;
+  // Template ao vivo (spec alinhada §3): o que se exibe é sempre o valor atual
+  // do template, com marcadores de feito por série vindos da execução. A
+  // edição no Treino do Dia aparece na hora (sem foto; valores reais ficam
+  // para o encerrar #7).
+  const displayEntries: WorkoutEntryView[] = entries;
 
   function findTarget(seriesId: string): EditingTarget | null {
     for (const view of displayEntries) {

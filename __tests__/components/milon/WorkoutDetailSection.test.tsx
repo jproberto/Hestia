@@ -1042,21 +1042,17 @@ describe("WorkoutDetailSection — sem banner de sucesso na execução (correç�
 });
 
 /**
- * Replano 2ª volta — badge "Em execução", executionBlocked e frozenEntries.
+ * REMOÇÃO da foto — badge "Em execução", executionBlocked e template ao vivo.
  *
- * Fonte: spec §3 (indicacao visual de "em execução" ao lado do nome do
- * treino enquanto a execução estiver aberta; template bloqueado para edição
- * na manutenção enquanto houver execução aberta; Treino do Dia trabalha com
- * a cópia congelada) + plan.md §1 (Mudanças 1/3/4: frozenEntries derivado do
- * snapshot substitui o template na exibição; badge "Em execução" quando
- * exec.execution !== null; executionBlocked desabilita o chrome de
- * manutenção — readOnly efetivo = readOnly || executionBlocked) + §3
- * (contratos frozenEntries, executionBlocked e badge) + tasks.json TASK-001.
+ * Fonte: spec alinhada §3 (indicacao visual de "em execução" ao lado do nome
+ * enquanto houver execução aberta; template do treino bloqueado na manutenção
+ * enquanto houver execução aberta; Treino do Dia exibe o template ao vivo com
+ * marcadores de feito — sem foto; valores reais ficam p/ #7).
  *
- * Expected: FAIL — a seção ainda não implementa o badge, nem a prop
- * executionBlocked, nem a exibição de frozenEntries (os casos novos de badge,
- * bloqueio e foto congelada falham; os casos sem flag/sem snapshot são
- * travas verdes). Hefesto fará GREEN na TASK-004 sem mudar estes testes.
+ * Badge + executionBlocked preservados (travas verdes). Display é ao vivo:
+ * a seção IGNORA frozenEntries/snapshot e exibe sempre o template.
+ * Expected: FAIL no caso ao vivo enquanto a seção ainda prefere frozenEntries
+ * (RED da remoção). Hefesto fará GREEN removendo a foto sem mudar estes testes.
  */
 describe("WorkoutDetailSection — 2ª volta: badge, executionBlocked e frozenEntries (RED)", () => {
   function setupExec2aVolta(overrides: Record<string, unknown> = {}) {
@@ -1172,7 +1168,10 @@ describe("WorkoutDetailSection — 2ª volta: badge, executionBlocked e frozenEn
     expect(screen.getByRole("button", { name: /editar/i })).toBeInTheDocument();
   });
 
-  it("exibe frozenEntries (derivados do snapshot) em vez do template quando a execução tem foto", () => {
+  it("REMOVIDO foto: com execução aberta exibe o template ao vivo (edição aparece na hora, sem frozen)", () => {
+    // Template ao vivo tem reps 15; a foto antiga congelaria reps 10.
+    // A seção deve IGNORAR frozenEntries/snapshot e exibir sempre o template.
+    // Expected: FAIL enquanto a seção ainda prefere frozenEntries (RED).
     const viewTemplate = makeView(
       makeEntry({ id: "ent-1", position: 1, restSeconds: 60 }),
       makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" }),
@@ -1204,19 +1203,19 @@ describe("WorkoutDetailSection — 2ª volta: badge, executionBlocked e frozenEn
 
     render(<WorkoutDetailSection {...comExecucao()} />);
 
-    // O card exibe o exercício congelado na foto, não o template em tempo real.
+    // Display ao vivo: o que se vê é sempre o valor atual do template.
     expect(
-      screen.getByRole("heading", { level: 3, name: "Supino congelado" }),
+      screen.getByRole("heading", { level: 3, name: "Supino reto" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { level: 3, name: "Supino reto" }),
+      screen.queryByRole("heading", { level: 3, name: "Supino congelado" }),
     ).not.toBeInTheDocument();
   });
 
-  it("trava: sem snapshot (execução sem foto), exibe o template (entries)", () => {
+  it("trava: sem execução aberta exibe o template (entries) sem foto", () => {
     conteudoComUmaEntrada();
     setupExec2aVolta({
-      execution: makeExecution({ snapshot: null }),
+      execution: null,
       frozenEntries: [],
     });
 

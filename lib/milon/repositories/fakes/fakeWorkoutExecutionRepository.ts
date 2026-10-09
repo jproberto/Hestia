@@ -1,7 +1,7 @@
 // Fake em memória de IWorkoutExecutionRepository p/ contracts (fakes-only, decisão 57).
 // Espelha as regras do repository real: abertura idempotente reusando a
-// existente sem trocar o início, cascata da exclusão sobre as realizadas,
-// retrato gravado na marcação, marcação idempotente por execução + série.
+// existente sem trocar o início, cascata da exclusão sobre as realizadas e
+// marcação idempotente por execução + série.
 import type {
   IWorkoutExecutionRepository,
   MarkExecutionSeriesInput,
@@ -9,7 +9,6 @@ import type {
 import type {
   WorkoutExecution,
   WorkoutExecutionSeries,
-  WorkoutExecutionSnapshot,
 } from "../../types";
 
 export interface WorkoutExecutionSeed {
@@ -31,10 +30,8 @@ export class FakeWorkoutExecutionRepository
   seed(seed: WorkoutExecutionSeed = {}): void {
     this.executions.clear();
     this.done.clear();
-    // Foto congelada (2ª volta): execução sem foto registrada segue com
-    // snapshot nula explícita (estado transitório do banco nunca persiste).
     for (const e of seed.executions ?? []) {
-      this.executions.set(e.id, { ...e, snapshot: e.snapshot ?? null });
+      this.executions.set(e.id, { ...e });
     }
     for (const d of seed.doneSeries ?? []) this.done.set(d.id, { ...d });
   }
@@ -72,21 +69,9 @@ export class FakeWorkoutExecutionRepository
       finishedAt: null,
       createdAt: now,
       created_by: email,
-      snapshot: null,
     };
     this.executions.set(execution.id, execution);
     return { ...execution };
-  }
-
-  async setExecutionSnapshot(
-    executionId: string,
-    snapshot: WorkoutExecutionSnapshot,
-  ): Promise<void> {
-    const execution = this.executions.get(executionId);
-    if (!execution) {
-      throw new Error(`Falha ao gravar foto: execução ${executionId} não encontrada.`);
-    }
-    this.executions.set(executionId, { ...execution, snapshot });
   }
 
   async clearExecution(executionId: string): Promise<void> {

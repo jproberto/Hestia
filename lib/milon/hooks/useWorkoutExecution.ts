@@ -13,7 +13,6 @@ import {
   findOpenExecutionByWorkoutStandalone,
   listDoneByExecutionStandalone,
   markSeriesDoneStandalone,
-  setExecutionSnapshotStandalone,
   startExecutionStandalone,
   unmarkSeriesStandalone,
 } from "@/lib/milon/db/executions";
@@ -28,13 +27,11 @@ import type {
   WorkoutEntryView,
   WorkoutExecution,
   WorkoutExecutionSeries,
-  WorkoutExecutionSnapshot,
   WorkoutSeries,
 } from "@/lib/milon/types";
 
 export interface UseWorkoutExecutionReturn {
   execution: WorkoutExecution | null;
-  frozenEntries: WorkoutEntryView[];
   doneSeriesIds: string[];
   markedCount: number;
   toggleSeries: (entry: WorkoutEntry, serie: WorkoutSeries) => Promise<void>;
@@ -73,83 +70,19 @@ async function carregarCadeia(workoutId: string): Promise<LoadedExecution> {
   return { workout, execution: aberta, dones };
 }
 
-// Foto do template (Mílon #5, 2ª volta, D19/D20): montada a partir do template
-// atual (entries) na primeira marcação; imutável após persistida.
-function buildSnapshotFromEntries(
-  views: WorkoutEntryView[],
-): WorkoutExecutionSnapshot {
-  return {
-    entries: views.map((view) => ({
-      entryId: view.entry.id,
-      exerciseId: view.entry.exerciseId,
-      position: view.entry.position,
-      restSeconds: view.entry.restSeconds,
-      exerciseName: view.exercise.name,
-      exerciseMuscle: view.exercise.muscle,
-      exerciseVideoLink: view.exercise.videoLink,
-      loadUnit: (view.exercise.loadUnit ?? "kg") as "kg" | "libra",
-      series: view.series.map((serie) => ({
-        seriesId: serie.id,
-        position: serie.position,
-        reps: serie.reps,
-        durationSeconds: serie.durationSeconds,
-        load: serie.load,
-      })),
-    })),
-  };
-}
-
-// Deriva os congelados do snapshot para exibição (cada entry vira um
-// WorkoutEntryView) — permite aos cards renderizar sem consultar o template.
-function snapshotToFrozenEntries(
-  snapshot: WorkoutExecutionSnapshot,
-  workoutId: string,
-  programId: string,
-  createdAt: string,
-  createdBy: string,
-): WorkoutEntryView[] {
-  return snapshot.entries.map((frozen) => ({
-    entry: {
-      id: frozen.entryId,
-      workoutId,
-      programId,
-      exerciseId: frozen.exerciseId,
-      position: frozen.position,
-      restSeconds: frozen.restSeconds,
-      createdAt,
-      created_by: createdBy,
-    },
-    exercise: {
-      id: frozen.exerciseId,
-      name: frozen.exerciseName,
-      muscle: frozen.exerciseMuscle,
-      videoLink: frozen.exerciseVideoLink,
-      loadUnit: frozen.loadUnit,
-      deletedAt: null,
-      createdAt,
-      created_by: createdBy,
-    },
-    series: frozen.series.map((fs) => ({
-      id: fs.seriesId,
-      entryId: frozen.entryId,
-      position: fs.position,
-      reps: fs.reps,
-      durationSeconds: fs.durationSeconds,
-      load: fs.load,
-      createdAt,
-      created_by: createdBy,
-    })),
-  }));
-}
-
 // Execução série a série do Treino do Dia (Mílon #5): orquestra a execução
 // aberta + realizadas sobre os barrels `db/*`, no padrão do módulo
 // (promise-chain + flag cancelled no mount; erro de operação no banner com
 // origem `operacao` + relançamento; modal nunca fecha no erro — o hook só
 // expõe o estado, quem fecha é a seção). O fim nunca é escrito aqui
 // (reservado à feature 7); o estado do editor mora na WorkoutDetailSection.
+// O Treino do Dia exibe sempre o template ao vivo com marcadores de feito
+// por série (sem foto; valores reais ficam para o encerrar #7).
 export function useWorkoutExecution(
   workoutId: string,
+  // Template atual (mantido na assinatura: a seção compõe o hook com
+  // workoutId + template; o display ao vivo é o próprio template, sem foto).
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   entries: WorkoutEntryView[] = [],
 ): UseWorkoutExecutionReturn {
   const db = useMemo(() => createBrowserDatabaseClient(), []);
@@ -170,22 +103,6 @@ export function useWorkoutExecution(
     [dones],
   );
   const markedCount = useMemo(() => contarMarcadasNaExecucao(dones), [dones]);
-
-  // Congelados (D20): com foto, derivam do snapshot; sem execução (ou sem
-  // foto — transitório que não persiste), são o próprio template.
-  const frozenEntries = useMemo<WorkoutEntryView[]>(() => {
-    const snapshot = execution?.snapshot;
-    if (snapshot != null) {
-      return snapshotToFrozenEntries(
-        snapshot,
-        workoutId,
-        execution?.programId ?? workout?.programId ?? "",
-        execution?.createdAt ?? "",
-        execution?.created_by ?? "",
-      );
-    }
-    return entries;
-  }, [execution, entries, workout, workoutId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -264,16 +181,6 @@ export function useWorkoutExecution(
             treino ? treino.programId : entry.programId,
             email,
           );
-          // Foto do template (D19): na primeira marcação (execução sem foto),
-          // captura o template atual e persiste antes de marcar — mesma
-          // transação: startExecution → setExecutionSnapshot → markSeriesDone.
-          // Imutável: com foto existente, nunca re-tira.
-          if (aberta.snapshot == null) {
-            await setExecutionSnapshotStandalone(
-              aberta.id,
-              buildSnapshotFromEntries(entries),
-            );
-          }
           // Publica a execução aberta (início) antes de marcar.
           await recarregar();
           await markSeriesDoneStandalone(
@@ -309,7 +216,7 @@ export function useWorkoutExecution(
         throw err instanceof Error ? err : new Error(message);
       }
     },
-    [dones, execution, workout, workoutId, resolveEmail, recarregar, entries],
+    [dones, execution, workout, workoutId, resolveEmail, recarregar],
   );
 
   const saveSeriesExecution = useCallback(
@@ -322,8 +229,8 @@ export function useWorkoutExecution(
       setErrorOrigin(null);
       try {
         // Comportamento único (D4): sempre origem + seguintes, incluindo
-        // marcadas — sem indicador de cópia; feito, execução e retratos
-        // nunca são tocados.
+        // marcadas — sem indicador de cópia; feito e execução nunca são
+        // tocados.
         await updateSeriesFieldsStandalone(serie.id, campos);
         await applySeriesToFollowingStandalone(entry.id, serie.id);
         await recarregar();
@@ -365,7 +272,6 @@ export function useWorkoutExecution(
 
   return {
     execution,
-    frozenEntries,
     doneSeriesIds,
     markedCount,
     toggleSeries,

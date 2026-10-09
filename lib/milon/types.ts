@@ -148,35 +148,11 @@ export interface UpdateWorkoutInput {
 }
 
 // ----------------------------------------------------------------------------
-// Execução série a série (Mílon #5, D1/D2/D3): instância do treino + retrato.
-// finishedAt nulo = execução aberta; retrato nunca é reescrito nesta feature.
+// Execução série a série (Mílon #5, D1/D2/D3): instância do treino + séries
+// realizadas. finishedAt nulo = execução aberta. O Treino do Dia exibe o
+// template ao vivo com marcadores de feito por série (sem foto; valores reais
+// ficam para o encerrar #7).
 // ----------------------------------------------------------------------------
-
-// Foto congelada do template (Mílon #5, 2ª volta, D19/D20): gravada na coluna
-// JSONB `snapshot` da execução na primeira marcação e imutável a partir dela.
-export interface WorkoutExecutionFrozenSeries {
-  seriesId: string;
-  position: number;
-  reps: number | null;
-  durationSeconds: number | null;
-  load: number | null;
-}
-
-export interface WorkoutExecutionFrozenEntry {
-  entryId: string;
-  exerciseId: string;
-  position: number;
-  restSeconds: number | null;
-  exerciseName: string;
-  exerciseMuscle: string;
-  exerciseVideoLink: string | null;
-  loadUnit: LoadUnit;
-  series: WorkoutExecutionFrozenSeries[];
-}
-
-export interface WorkoutExecutionSnapshot {
-  entries: WorkoutExecutionFrozenEntry[];
-}
 
 export interface WorkoutExecutionRow {
   id: string;
@@ -186,7 +162,6 @@ export interface WorkoutExecutionRow {
   finished_at: string | null;
   created_at: string;
   created_by: string;
-  snapshot?: WorkoutExecutionSnapshot | null;
 }
 
 export interface WorkoutExecution {
@@ -197,7 +172,6 @@ export interface WorkoutExecution {
   finishedAt: string | null;
   createdAt: string;
   created_by: string;
-  snapshot?: WorkoutExecutionSnapshot | null;
 }
 
 export interface WorkoutExecutionSeriesRow {

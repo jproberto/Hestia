@@ -22,49 +22,10 @@ import type {
 // durationSeconds, load). A foto é imutável após a primeira marcação.
 // ---------------------------------------------------------------------------
 
-type SnapshotEntry = {
-  entryId: string;
-  exerciseId: string;
-  position: number;
-  restSeconds: number | null;
-  exerciseName: string;
-  exerciseMuscle: string;
-  exerciseVideoLink: string | null;
-  loadUnit: "kg" | "libra";
-  series: Array<{
-    seriesId: string;
-    position: number;
-    reps: number | null;
-    durationSeconds: number | null;
-    load: number | null;
-  }>;
-};
-
-function makeSnapshotContrato(): { entries: SnapshotEntry[] } {
-  return {
-    entries: [
-      {
-        entryId: "e-1",
-        exerciseId: "ex-1",
-        position: 1,
-        restSeconds: 60,
-        exerciseName: "Supino reto",
-        exerciseMuscle: "Peito",
-        exerciseVideoLink: null,
-        loadUnit: "kg",
-        series: [
-          {
-            seriesId: "s-1",
-            position: 1,
-            reps: 10,
-            durationSeconds: null,
-            load: 40,
-          },
-        ],
-      },
-    ],
-  };
-}
+// REMOÇÃO da foto (Mílon #5 — RED da remoção): helper de snapshot excluído.
+// A foto (coluna JSONB + setExecutionSnapshot + frozenEntries) foi removida da
+// spec alinhada (template ao vivo + marcadores; valores reais ficam p/ #7).
+// Nenhum teste aqui deve exigir foto — ver blocos "sem foto" abaixo.
 
 // ---------------------------------------------------------------------------
 // Contrato RED da TASK-001 (Mílon #5) — consumido pela TASK-002.
@@ -299,72 +260,30 @@ function defineWorkoutExecutionRepositoryContract(
     });
 
     // -----------------------------------------------------------------------
-    // Foto congelada (replano 2ª volta — RED): setExecutionSnapshot persiste
-    // a foto do template na coluna `snapshot` e findOpenExecutionByWorkout
-    // devolve a execução com a snapshot. Expected: FAIL porque o fake (e o
-    // repository real) ainda não implementam — acceptanceCriteria 2.
+    // REMOÇÃO da foto (RED da remoção): o repository NÃO expõe foto.
+    // Fonte: spec alinhada §3 (template ao vivo + marcadores; bloqueio por
+    // treino garante escrita única) + §4 YAGNI (foto/valores reais ficam p/ #7).
+    // Expected: FAIL enquanto o fake ainda expõe setExecutionSnapshot/snapshot.
+    // Hefesto fará GREEN removendo a foto sem mudar estes testes.
     // -----------------------------------------------------------------------
-    describe("setExecutionSnapshot (foto congelada)", () => {
-      it("setExecutionSnapshot persiste a foto e findOpenExecutionByWorkout a devolve na execução", async () => {
-        const execution = await repo.startExecution(WORKOUT_ID, PROGRAM_ID, EMAIL);
-        const snapshot = makeSnapshotContrato();
+    describe("sem foto (remoção — RED)", () => {
+      it("não expõe setExecutionSnapshot no contrato", () => {
+        expect(
+          (repo as unknown as Record<string, unknown>).setExecutionSnapshot,
+        ).toBeUndefined();
+      });
 
-        await repo.setExecutionSnapshot(
-          execution.id,
-          snapshot as unknown as Parameters<
-            IWorkoutExecutionRepository["setExecutionSnapshot"]
-          >[1],
-        );
+      it("execução aberta não carrega foto: sem campo snapshot", async () => {
+        const execution = await repo.startExecution(WORKOUT_ID, PROGRAM_ID, EMAIL);
+        expect(execution).toMatchObject({ workoutId: WORKOUT_ID, finishedAt: null });
+        expect("snapshot" in execution).toBe(false);
+        expect(
+          (execution as unknown as Record<string, unknown>).snapshot,
+        ).toBeUndefined();
 
         const found = await repo.findOpenExecutionByWorkout(WORKOUT_ID);
-        expect(found?.snapshot).toEqual(snapshot);
-      });
-
-      it("foto tirada de uma execução não vaza para a execução de outro treino", async () => {
-        const uma = await repo.startExecution("w-1", PROGRAM_ID, EMAIL);
-        const outra = await repo.startExecution("w-2", PROGRAM_ID, EMAIL);
-        const snapshot = makeSnapshotContrato();
-
-        await repo.setExecutionSnapshot(
-          uma.id,
-          snapshot as unknown as Parameters<
-            IWorkoutExecutionRepository["setExecutionSnapshot"]
-          >[1],
-        );
-
-        const foundUma = await repo.findOpenExecutionByWorkout("w-1");
-        const foundOutra = await repo.findOpenExecutionByWorkout("w-2");
-        expect(foundUma?.snapshot).toEqual(snapshot);
-        expect(foundOutra?.snapshot).toBeNull();
-      });
-    });
-
-    describe("findOpenExecutionByWorkout com snapshot (foto congelada)", () => {
-      it("devolve a execução com a snapshot quando a foto foi tirada (trava verde do contrato)", async () => {
-        const snapshot = makeSnapshotContrato();
-        const seeded = build({
-          executions: [
-            {
-              ...makeExecution("exec-1", WORKOUT_ID),
-              snapshot,
-            } as WorkoutExecution,
-          ],
-        });
-
-        const found = await seeded.findOpenExecutionByWorkout(WORKOUT_ID);
-
-        expect(found).toMatchObject({ id: "exec-1", finishedAt: null });
-        expect(found?.snapshot).toEqual(snapshot);
-      });
-
-      it("devolve snapshot nula quando a execução está aberta sem foto (estado transitório)", async () => {
-        const seeded = build({
-          executions: [makeExecution("exec-1", WORKOUT_ID)],
-        });
-
-        const found = await seeded.findOpenExecutionByWorkout(WORKOUT_ID);
-
-        expect(found?.snapshot).toBeNull();
+        expect(found).not.toBeNull();
+        expect("snapshot" in (found as object)).toBe(false);
       });
     });
   });

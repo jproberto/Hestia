@@ -32,13 +32,13 @@ Série editada mantém o estado. Se estava marcada, segue marcada. Se estava des
 
 Editar uma série atualiza o planejado. O novo valor vira a meta permanente. É a base da evolução futura.
 
-A primeira marcação de qualquer série registra o momento de início da execução e tira uma foto do template — exercícios, ordenação, valores, descanso e unidade. A partir dessa foto, o Treino do Dia trabalha com uma cópia congelada. Alterações feitas no Treino do Dia (adicionar, remover ou reordenar exercício, mudar séries, pesos, repetições ou descanso) refletem no template. Alterações feitas no template após a foto não afetam a execução já iniciada. Enquanto houver execução aberta (não cancelada, não encerrada), o template daquele treino específico fica bloqueado para edição na manutenção. O nome do treino no Treino do Dia exibe indicação visual de "em execução" enquanto a execução estiver aberta. Desmarcar a última série marcada desmarca na hora e pede confirmação com a pergunta: "Todas as séries foram desmarcada. Deseja cancelar a execução desse treino?" Confirmar cancela a execução: o template é desbloqueado e o momento de início é limpo. Cancelar mantém a execução aberta: o template continua bloqueado e o início é preservado.
+A primeira marcação de qualquer série registra o momento de início da execução. O Treino do Dia exibe o template ao vivo com marcadores de feito por série — o que se vê é sempre o valor atual do template, com indicação do que já foi feito. Enquanto houver execução aberta (não cancelada, não encerrada), o template daquele treino específico fica bloqueado para edição na manutenção, de modo que só o Treino do Dia escreve durante a execução. O nome do treino no Treino do Dia exibe indicação visual de "em execução" enquanto a execução estiver aberta. Desmarcar a última série marcada desmarca na hora e pede confirmação com a pergunta: "Todas as séries foram desmarcada. Deseja cancelar a execução desse treino?" Confirmar cancela a execução: o template é desbloqueado e o momento de início é limpo. Cancelar mantém a execução aberta: o template continua bloqueado e o início é preservado.
 
 Sem validação nova. Valem as regras herdadas da feature de treinos e séries planejadas. Treino vazio não tem comportamento novo. Esta feature presume treino com exercícios cadastrados.
 
 ## 4. Fora de Escopo (YAGNI)
 
-Timer de descanso automático. É a feature 6. Encerrar treino com confirmação. É a feature 7. Cancelar treino (backlog junto com encerrar, #7). Histórico e resumo. É a feature 9. Ajuste responsivo de telas pequenas. É a feature 8.
+Timer de descanso automático. É a feature 6. Encerrar treino com confirmação. É a feature 7. Cancelar treino (backlog junto com encerrar, #7). Foto do treino e registro histórico dos valores reais treinados no dia. Fica para o encerrar (#7), quando haverá valores reais treinados naquele dia. Histórico e resumo. É a feature 9. Ajuste responsivo de telas pequenas. É a feature 8.
 
 Mexer em editar, adicionar ou remover exercícios. Validação nova de valores. Comportamento novo para treino vazio.
 
@@ -50,7 +50,7 @@ Dado o treino exibido, quando dou toque curto no card da série desmarcada, ent�
 
 Dado o card da série com a mesma cara da manutenção, quando dou toque longo nele, então abre o modal de edição daquela série com as mesmas opções da manutenção, com troca entre repetição e tempo. A unidade da carga (kg/lb) e o modo (repetição ou tempo) aparecem como herdados do exercício, sem edição no modal. Dado o modal aberto, quando salvo, então aquela série e todas as séries seguintes do mesmo exercício ficam com os mesmos valores, inclusive as já marcadas, e a série volta a exibir com a mesma cara da manutenção.
 
-Dado uma série marcada, quando edito e salvo, então ela segue marcada. Dado nenhuma série marcada, quando marco a primeira, então o momento de início da execução fica registrado e uma foto do template é tirada com exercícios, ordenação, valores, descanso e unidade. Dado o Treino do Dia com execução iniciada, quando altero séries, pesos, repetições ou descanso, então o template é atualizado. Dado o Treino do Dia com execução iniciada, quando o template é alterado na manutenção, então a execução não é afetada e segue com a cópia congelada. Dado o Treino do Dia com execução aberta, então o nome do treino exibe indicação visual de "em execução". Dado o template de um treino com execução aberta, quando acesso a manutenção, então o treino fica bloqueado para edição.
+Dado uma série marcada, quando edito e salvo, então ela segue marcada. Dado nenhuma série marcada, quando marco a primeira, então o momento de início da execução fica registrado. Dado o Treino do Dia com execução iniciada, então o que se exibe é o template ao vivo com marcadores de feito por série. Dado o Treino do Dia com execução aberta, então o nome do treino exibe indicação visual de "em execução". Dado o template de um treino com execução aberta, quando acesso a manutenção, então o treino fica bloqueado para edição.
 
 Dado só uma série marcada no treino, quando desmarco a última, então ela desmarca na hora e aparece a pergunta: "Todas as séries foram desmarcada. Deseja cancelar a execução desse treino?" Dado a pergunta de cancelamento exibida, quando confirmo, então a execução é cancelada, o template é desbloqueado, o momento de início fica limpo e nenhuma série fica marcada. Dado a pergunta de cancelamento exibida, quando cancelo, então a execução segue aberta, o template continua bloqueado, o início segue registrado e nenhuma série fica marcada.
 
@@ -60,7 +60,7 @@ Depende do Treino do Dia pronto e das regras de treinos e séries planejadas. O 
 
 A modelagem fica com o plano. Pode ser coluna nova ou tabela nova. Sem isso, o início não persiste.
 
-Risco baixo de sobrescrever série já marcada ao copiar para todas. Risco aceito. Mantém a meta coerente.
+Risco baixo de sobrescrever série já marcada ao replicar para todas. Risco aceito. Mantém a meta coerente.
 
 ## 7. Alternativas Consideradas
 
@@ -70,4 +70,4 @@ Alternativa 2 (escolhida): toque curto no card marca e desmarca, toque longo no 
 
 Alternativa descartada (C): variação extra de desenho e interação. Rejeitada por YAGNI. Não entra como requisito.
 
-Sobre a cópia: escolhida a variante que copia para todas as seguintes, mesmo as já marcadas. Mais simples de entender. Mantém a meta igual até o fim. O custo é sobrescrever valor de série já feita, o que foi aceito.
+Sobre a replicação: escolhida a variante que replica para todas as seguintes, mesmo as já marcadas. Mais simples de entender. Mantém a meta igual até o fim. O custo é sobrescrever valor de série já feita, o que foi aceito.

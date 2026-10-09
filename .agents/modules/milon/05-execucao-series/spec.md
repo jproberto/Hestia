@@ -12,19 +12,19 @@ Usuários: o casal. Cada um abre o próprio treino ao chegar na academia. Uso no
 
 Cenário 1: marcar cada série feita, uma a uma, durante o treino. Cenário 2: corrigir os valores de uma série no meio do treino e repetir nas seguintes.
 
-Cenário 3: desmarcar uma série marcada por engano, sem burocracia. Cenário 4: desmarcar tudo e limpar a execução atual.
+Cenário 3: desmarcar uma série marcada por engano, sem burocracia. Cenário 4: desmarcar todas as séries e confirmar o cancelamento da execução.
 
 ## 3. Regras de Negócio
 
 A tela do Treino do Dia já existe e continua igual. Editar, adicionar e remover exercícios já existe e não muda nesta feature.
 
-Cada série aparece como um card que é o próprio marcador. Não há caixinha de marcação nem botão de editar separados. A série fica bloqueada para edição direta no card. Exibe com exatamente a mesma cara da manutenção, com rótulos de repetição ou tempo e com a unidade da carga visível.
+Cada série aparece como um card que é o próprio marcador. Não há caixinha de marcação nem botão de editar separados. A série fica bloqueada para edição direta no card. Exibe com exatamente a mesma cara da manutenção, com rótulos de repetição ou tempo e com a unidade da carga visível. A unidade da carga (kg/lb) e o modo (repetição ou tempo) pertencem ao exercício, não à série — card e modal os herdam do exercício.
 
 Todo o card da série é área clicável. Toque curto no card alterna na hora entre marcada e desmarcada. Sem confirmação. Toque longo no card abre o modal de edição daquela série.
 
 Série marcada tem fundo na cor do módulo. É o feedback visual de feita.
 
-O modal traz as mesmas opções da manutenção, com troca entre repetição e tempo e com escolha da unidade da carga entre quilos e libras, e salva as informações da série. O modal não tem opção de copiar. Ao salvar, os mesmos valores valem para aquela série e para todas as séries seguintes do mesmo exercício, inclusive as já marcadas.
+O modal traz as mesmas opções da manutenção, com troca entre repetição e tempo, e salva as informações da série. A unidade da carga (quilos ou libras) e o modo (repetição ou tempo) são propriedades do exercício e aparecem no modal como herdadas, sem edição aqui. O modal não tem opção de copiar. Ao salvar, os mesmos valores valem para aquela série e para todas as séries seguintes do mesmo exercício, inclusive as já marcadas.
 
 Salvar fecha o modal. A série volta a exibir com a mesma cara da manutenção.
 
@@ -32,13 +32,13 @@ Série editada mantém o estado. Se estava marcada, segue marcada. Se estava des
 
 Editar uma série atualiza o planejado. O novo valor vira a meta permanente. É a base da evolução futura.
 
-A primeira marcação de qualquer série registra o momento de início da execução. Desmarcar a última série marcada desmarca na hora e pede confirmação com a pergunta: nenhuma série marcada, deseja limpar essa execução. A pergunta decide só sobre o início. Confirmar limpa o momento de início e nenhuma série fica marcada. Cancelar mantém a série desmarcada, com o início preservado e nenhuma série marcada.
+A primeira marcação de qualquer série registra o momento de início da execução e tira uma foto do template — exercícios, ordenação, valores, descanso e unidade. A partir dessa foto, o Treino do Dia trabalha com uma cópia congelada. Alterações feitas no Treino do Dia (adicionar, remover ou reordenar exercício, mudar séries, pesos, repetições ou descanso) refletem no template. Alterações feitas no template após a foto não afetam a execução já iniciada. Enquanto houver execução aberta (não cancelada, não encerrada), o template daquele treino específico fica bloqueado para edição na manutenção. O nome do treino no Treino do Dia exibe indicação visual de "em execução" enquanto a execução estiver aberta. Desmarcar a última série marcada desmarca na hora e pede confirmação com a pergunta: "Todas as séries foram desmarcada. Deseja cancelar a execução desse treino?" Confirmar cancela a execução: o template é desbloqueado e o momento de início é limpo. Cancelar mantém a execução aberta: o template continua bloqueado e o início é preservado.
 
 Sem validação nova. Valem as regras herdadas da feature de treinos e séries planejadas. Treino vazio não tem comportamento novo. Esta feature presume treino com exercícios cadastrados.
 
 ## 4. Fora de Escopo (YAGNI)
 
-Timer de descanso automático. É a feature 6. Encerrar treino com confirmação. É a feature 7. Histórico e resumo. É a feature 9. Ajuste responsivo de telas pequenas. É a feature 8.
+Timer de descanso automático. É a feature 6. Encerrar treino com confirmação. É a feature 7. Cancelar treino (backlog junto com encerrar, #7). Histórico e resumo. É a feature 9. Ajuste responsivo de telas pequenas. É a feature 8.
 
 Mexer em editar, adicionar ou remover exercícios. Validação nova de valores. Comportamento novo para treino vazio.
 
@@ -48,11 +48,11 @@ A variante C de desenho e interação. Não entra como requisito.
 
 Dado o treino exibido, quando dou toque curto no card da série desmarcada, então ela fica marcada na hora, sem confirmação, com fundo na cor do módulo, sem caixinha de marcação nem botão de editar. Dado uma série marcada, quando dou toque curto no card dela e ainda resta outra marcada, então ela desmarca na hora, sem confirmação.
 
-Dado o card da série com a mesma cara da manutenção, quando dou toque longo nele, então abre o modal de edição daquela série com as mesmas opções da manutenção, com troca entre repetição e tempo e escolha entre quilos e libras. Dado o modal aberto, quando salvo, então aquela série e todas as séries seguintes do mesmo exercício ficam com os mesmos valores, inclusive as já marcadas, e a série volta a exibir com a mesma cara da manutenção.
+Dado o card da série com a mesma cara da manutenção, quando dou toque longo nele, então abre o modal de edição daquela série com as mesmas opções da manutenção, com troca entre repetição e tempo. A unidade da carga (kg/lb) e o modo (repetição ou tempo) aparecem como herdados do exercício, sem edição no modal. Dado o modal aberto, quando salvo, então aquela série e todas as séries seguintes do mesmo exercício ficam com os mesmos valores, inclusive as já marcadas, e a série volta a exibir com a mesma cara da manutenção.
 
-Dado uma série marcada, quando edito e salvo, então ela segue marcada. Dado nenhuma série marcada, quando marco a primeira, então o momento de início da execução fica registrado.
+Dado uma série marcada, quando edito e salvo, então ela segue marcada. Dado nenhuma série marcada, quando marco a primeira, então o momento de início da execução fica registrado e uma foto do template é tirada com exercícios, ordenação, valores, descanso e unidade. Dado o Treino do Dia com execução iniciada, quando altero séries, pesos, repetições ou descanso, então o template é atualizado. Dado o Treino do Dia com execução iniciada, quando o template é alterado na manutenção, então a execução não é afetada e segue com a cópia congelada. Dado o Treino do Dia com execução aberta, então o nome do treino exibe indicação visual de "em execução". Dado o template de um treino com execução aberta, quando acesso a manutenção, então o treino fica bloqueado para edição.
 
-Dado só uma série marcada no treino, quando desmarco a última, então ela desmarca na hora e aparece a pergunta: nenhuma série marcada, deseja limpar essa execução. Dado a pergunta de limpar exibida, quando confirmo, então o momento de início fica limpo e nenhuma série fica marcada. Dado a pergunta de limpar exibida, quando cancelo, então a série segue desmarcada, o início segue registrado e nenhuma série fica marcada.
+Dado só uma série marcada no treino, quando desmarco a última, então ela desmarca na hora e aparece a pergunta: "Todas as séries foram desmarcada. Deseja cancelar a execução desse treino?" Dado a pergunta de cancelamento exibida, quando confirmo, então a execução é cancelada, o template é desbloqueado, o momento de início fica limpo e nenhuma série fica marcada. Dado a pergunta de cancelamento exibida, quando cancelo, então a execução segue aberta, o template continua bloqueado, o início segue registrado e nenhuma série fica marcada.
 
 ## 6. Riscos e Dependências
 

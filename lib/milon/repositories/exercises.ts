@@ -22,7 +22,7 @@ function toDomain(row: ExerciseRow): Exercise {
     muscle: row.muscle,
     videoLink: row.video_link,
     loadUnit: (row.load_unit as LoadUnit | null) ?? null,
-    // Linha antiga sem a coluna (pré-0013) ou valor nulo: modo ausente com
+    // Linha antiga sem a coluna (pré-0012) ou valor nulo: modo ausente com
     // fallback de leitura para repetição nos cards/modais (D27).
     mode: (row.mode as ExerciseMode | null) ?? null,
     deletedAt: row.deleted_at,

@@ -4,11 +4,11 @@ import path from "node:path";
 
 // ---------------------------------------------------------------------------
 // Contrato RED da TASK-006 (Mílon #5, aditamento 2026-10-09 dos 3 achados).
-// Fonte: tasks.json TASK-006 (migration-0013.test.ts) + plan.md Aditamento
-// 2026-10-09 §1 Mudança A + §3 (Modo do exercício) + D25.
+// Fonte: tasks.json TASK-006 (migration-0012.test.ts) + plan.md Aditamento
+// 2026-10-09 §1 Mudança A + §3 (Modo do exercício) + D25 (renumerado).
 //
 // Contrato fixado aqui (nomes que a TASK-007 deve implementar):
-// - arquivo: utils/migrations/migration-0013-milon-exercise-mode.sql
+// - arquivo: utils/migrations/migration-0012-milon-exercise-mode.sql
 // - coluna nova na tabela public.exercises, textual, com "mode" no nome
 //   (ex.: exercise_mode), valores permitidos repeticao ou tempo, nula
 //   permitida (linhas antigas sem modo; leitura com fallback repetição);
@@ -16,13 +16,13 @@ import path from "node:path";
 //   D26 — o teste trava isso);
 // - registro em public.schema_migrations com script_name idêntico ao nome
 //   do arquivo e conflito ignorado pelo nome do script;
-// - inteiro 0012 NÃO reutilizado (D25).
+// - renumeração vigente 0013 → 0012 (arquivo renomeado, DDL idêntico).
 //
-// O arquivo ainda NÃO existe: este teste falha com ENOENT até Hefesto
-// entregá-lo (Expected: FAIL). Nenhum arquivo de produção alterado.
+// O arquivo já existe: este teste passa (Expected: PASS). Renomeado de
+// migration-0013.test.ts para migration-0012.test.ts sem alterar produção.
 // ---------------------------------------------------------------------------
 
-const SCRIPT_NAME = "migration-0013-milon-exercise-mode.sql";
+const SCRIPT_NAME = "migration-0012-milon-exercise-mode.sql";
 
 function loadMigrationSql(): string {
   const file = path.resolve(
@@ -33,7 +33,7 @@ function loadMigrationSql(): string {
   return fs.readFileSync(file, "utf8");
 }
 
-describe("Milon 05 TASK-006 — migração 0013 do modo do exercício", () => {
+describe("Milon 05 TASK-006 — migração 0012 do modo do exercício", () => {
   it("adiciona coluna textual de modo na tabela public.exercises", () => {
     const sql = loadMigrationSql();
     expect(sql).toMatch(/ALTER TABLE\s+public\.exercises/i);
@@ -65,9 +65,9 @@ describe("Milon 05 TASK-006 — migração 0013 do modo do exercício", () => {
     expect(sql).not.toMatch(/alter table\s+public\.workouts\s+add/i);
   });
 
-  it("não reutiliza o inteiro 0012 (D25)", () => {
+  it("não referencia o inteiro antigo 0013 (renumeração 0013 → 0012)", () => {
     const sql = loadMigrationSql();
-    expect(sql).not.toMatch(/migration-0012/i);
+    expect(sql).not.toMatch(/migration-0013/i);
   });
 
   it("registra a auditoria com script_name idêntico ao arquivo", () => {

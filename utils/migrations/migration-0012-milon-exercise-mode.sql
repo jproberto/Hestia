@@ -27,6 +27,6 @@ INSERT INTO public.schema_migrations (spec_id, spec_name, script_name, executed_
 VALUES (
   'milon-05',
   'Execução série a série - modo do exercício',
-  'migration-0013-milon-exercise-mode.sql',
+  'migration-0012-milon-exercise-mode.sql',
   'joaopsroberto@gmail.com'
 ) ON CONFLICT (script_name) DO NOTHING;

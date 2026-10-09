@@ -9,7 +9,7 @@ export interface ExerciseRow {
   video_link: string | null;
   load_unit: string | null;
   // Modo do exercício (Mílon #5, aditamento 2026-10-09, D25): coluna textual
-  // anulável; opcional para linhas anteriores à migração 0013 (leitura com
+  // anulável; opcional para linhas anteriores à migração 0012 (leitura com
   // fallback repetição). Nenhuma coluna nova nas séries (D26).
   mode?: string | null;
   deleted_at: string | null;
@@ -30,7 +30,7 @@ export interface Exercise {
   videoLink: string | null;
   loadUnit: LoadUnit | null;
   // Nulo = linha antiga sem modo (fallback de leitura: repetição).
-  // Opcional para não quebrar fixtures anteriores à migração 0013.
+  // Opcional para não quebrar fixtures anteriores à migração 0012.
   mode?: ExerciseMode | null;
   deletedAt: string | null;
   createdAt: string;

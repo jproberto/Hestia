@@ -4,12 +4,16 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { Exercise } from "@/lib/milon/types";
+import type { Exercise, ExerciseMode, LoadUnit } from "@/lib/milon/types";
 
 export interface ExerciseModalFields {
   name: string;
   muscle: string;
   videoLink: string | null;
+  // Modo e unidade pertencem ao exercício (Mílon #5, aditamento 2026-10-09):
+  // o modal coleta ambos com padrão pré-selecionado (repetição + kg).
+  mode: ExerciseMode;
+  loadUnit: LoadUnit;
 }
 
 export type ExerciseModalAction = "salvar" | "salvar-e-outro";
@@ -44,6 +48,8 @@ export default function ExerciseModal({
   const [muscle, setMuscle] = useState(editingExercise?.muscle ?? "");
   const [name, setName] = useState(editingExercise?.name ?? "");
   const [videoLink, setVideoLink] = useState(editingExercise?.videoLink ?? "");
+  const [mode, setMode] = useState<ExerciseMode>(editingExercise?.mode ?? "repeticao");
+  const [loadUnit, setLoadUnit] = useState<LoadUnit>(editingExercise?.loadUnit ?? "kg");
   const [validationError, setValidationError] = useState<string | null>(null);
   const muscleInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -56,6 +62,8 @@ export default function ExerciseModal({
     setMuscle(editingExercise?.muscle ?? "");
     setName(editingExercise?.name ?? "");
     setVideoLink(editingExercise?.videoLink ?? "");
+    setMode(editingExercise?.mode ?? "repeticao");
+    setLoadUnit(editingExercise?.loadUnit ?? "kg");
     setValidationError(null);
   }
 
@@ -78,7 +86,13 @@ export default function ExerciseModal({
     setValidationError(null);
     try {
       await onSave(
-        { name: trimmedName, muscle: trimmedMuscle, videoLink: trimmedLink || null },
+        {
+          name: trimmedName,
+          muscle: trimmedMuscle,
+          videoLink: trimmedLink || null,
+          mode,
+          loadUnit,
+        },
         action,
       );
       if (action === "salvar") {
@@ -161,6 +175,58 @@ export default function ExerciseModal({
               value={videoLink}
               onChange={(event) => setVideoLink(event.target.value)}
             />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold">Modo</span>
+            <div role="radiogroup" aria-label="Modo" className="flex gap-4">
+              <label className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="radio"
+                  name="exercise-mode"
+                  value="repeticao"
+                  checked={mode === "repeticao"}
+                  onChange={() => setMode("repeticao")}
+                />
+                Repetições
+              </label>
+              <label className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="radio"
+                  name="exercise-mode"
+                  value="tempo"
+                  checked={mode === "tempo"}
+                  onChange={() => setMode("tempo")}
+                />
+                Tempo
+              </label>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold">Unidade</span>
+            <div role="radiogroup" aria-label="Unidade" className="flex gap-4">
+              <label className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="radio"
+                  name="exercise-load-unit"
+                  value="kg"
+                  checked={loadUnit === "kg"}
+                  onChange={() => setLoadUnit("kg")}
+                />
+                kg
+              </label>
+              <label className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="radio"
+                  name="exercise-load-unit"
+                  value="libra"
+                  checked={loadUnit === "libra"}
+                  onChange={() => setLoadUnit("libra")}
+                />
+                lb
+              </label>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

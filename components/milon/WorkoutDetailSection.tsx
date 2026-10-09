@@ -25,6 +25,7 @@ import {
 } from "@/lib/milon/utils";
 import type {
   Exercise,
+  ExerciseMode,
   LoadUnit,
   WorkoutEntry,
   WorkoutEntryView,
@@ -88,6 +89,7 @@ interface EditingTarget {
   entry: WorkoutEntry;
   serie: WorkoutSeries;
   loadUnit: LoadUnit | null;
+  exerciseMode: ExerciseMode | null;
 }
 
 interface ExecutionListContext {
@@ -144,7 +146,12 @@ function ExecutionHost({
     for (const view of displayEntries) {
       const serie = view.series.find((item) => item.id === seriesId);
       if (serie) {
-        return { entry: view.entry, serie, loadUnit: view.exercise.loadUnit };
+        return {
+          entry: view.entry,
+          serie,
+          loadUnit: view.exercise.loadUnit,
+          exerciseMode: view.exercise.mode ?? null,
+        };
       }
     }
     return null;
@@ -693,6 +700,7 @@ export function WorkoutDetailSection({
                       open={ctx.editing !== null}
                       series={ctx.editing?.serie ?? null}
                       loadUnit={ctx.editing?.loadUnit ?? null}
+                      exerciseMode={ctx.editing?.exerciseMode ?? null}
                       saving={ctx.editorSaving}
                       error={ctx.editorError}
                       onClose={ctx.closeEditor}
@@ -750,6 +758,15 @@ export function WorkoutDetailSection({
                     className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-700 dark:text-rose-300 font-medium"
                   >
                     {unitError}
+                  </div>
+                ) : null}
+
+                {executionBlocked ? (
+                  <div
+                    role="alert"
+                    className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-700 dark:text-rose-300 font-medium"
+                  >
+                    Este treino não pode ser editado pois está em execução.
                   </div>
                 ) : null}
 

@@ -7,6 +7,7 @@ import type {
   Exercise,
   ExerciseRow,
   CreateExerciseInput,
+  ExerciseMode,
   LoadUnit,
   UpdateExerciseInput,
 } from "../types";
@@ -21,6 +22,9 @@ function toDomain(row: ExerciseRow): Exercise {
     muscle: row.muscle,
     videoLink: row.video_link,
     loadUnit: (row.load_unit as LoadUnit | null) ?? null,
+    // Linha antiga sem a coluna (pré-0013) ou valor nulo: modo ausente com
+    // fallback de leitura para repetição nos cards/modais (D27).
+    mode: (row.mode as ExerciseMode | null) ?? null,
     deletedAt: row.deleted_at,
     createdAt: row.created_at,
     created_by: row.created_by,
@@ -83,6 +87,10 @@ export async function createExercise(
       name: input.name.trim(),
       muscle: input.muscle.trim(),
       video_link: input.videoLink ?? null,
+      // Modo/unidade só entram no payload quando informados: sem eles, vale o
+      // nulo do banco (linhas antigas) e o payload segue sem as chaves.
+      ...(input.mode !== undefined ? { mode: input.mode } : {}),
+      ...(input.loadUnit !== undefined ? { load_unit: input.loadUnit } : {}),
       created_by: email,
     })
     .select()
@@ -106,6 +114,10 @@ export async function updateExercise(
       name: input.name.trim(),
       muscle: input.muscle.trim(),
       video_link: input.videoLink,
+      // Edição sem modo/unidade preserva os valores atuais (não redefine para
+      // nulo nem ressuscita excluído).
+      ...(input.mode !== undefined ? { mode: input.mode } : {}),
+      ...(input.loadUnit !== undefined ? { load_unit: input.loadUnit } : {}),
     })
     .eq("id", id)
     .select()
@@ -135,6 +147,20 @@ export async function setExerciseLoadUnit(
   const { error } = await db
     .from<ExerciseRow>("exercises")
     .update({ load_unit: unit })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+// Ajuste de modo do exercício (Mílon #5, aditamento 2026-10-09): persiste o
+// modo sem mexer em nome/músculo/unidade (mesmo padrão do setExerciseLoadUnit).
+export async function setExerciseMode(
+  db: IDatabaseClient,
+  id: string,
+  mode: ExerciseMode,
+): Promise<void> {
+  const { error } = await db
+    .from<ExerciseRow>("exercises")
+    .update({ mode })
     .eq("id", id);
   if (error) throw error;
 }
@@ -171,4 +197,11 @@ export async function setExerciseLoadUnitStandalone(
   unit: LoadUnit,
 ): Promise<void> {
   return setExerciseLoadUnit(createBrowserDatabaseClient(), id, unit);
+}
+
+export async function setExerciseModeStandalone(
+  id: string,
+  mode: ExerciseMode,
+): Promise<void> {
+  return setExerciseMode(createBrowserDatabaseClient(), id, mode);
 }

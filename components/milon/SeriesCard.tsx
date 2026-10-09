@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { LoadUnit, WorkoutSeries } from "@/lib/milon/types";
+import type { ExerciseMode, LoadUnit, WorkoutSeries } from "@/lib/milon/types";
 import {
   formatarCargaComSecundaria,
   validarCarga,
@@ -28,6 +28,9 @@ export interface SeriesCardProps {
   series: WorkoutSeries;
   index: number;
   loadUnit: LoadUnit | null;
+  /** Modo do exercício (Mílon #5, D27, mesmo padrão de `loadUnit`):
+   *  rótulo do valor deriva daqui; nulo/ausente = fallback repetições. */
+  exerciseMode?: ExerciseMode | null;
   readOnly: boolean;
   onCommit: (field: SerieField, value: number | null) => void;
   onApplyAll: () => void;
@@ -36,9 +39,10 @@ export interface SeriesCardProps {
 }
 
 /**
- * Card de uma série planejada (Mílon #3, CA-26).
- * Layout compacto: campo único reps/tempo com toggle, toggle unidade kg/lb
- * abaixo da carga (pré-selecionado kg), card menor.
+ * Card de uma série planejada (Mílon #3, CA-26; Mílon #5 D27).
+ * Layout compacto: campo único com rótulo pelo modo do exercício
+ * (prop `exerciseMode`, sem alternância), carga com toggle de unidade
+ * kg/lb abaixo (pré-selecionado kg, inalterado), card menor.
  * Presentacional: campos não-controlados (key + defaultValue, commit lê o
  * valor atual no blur/Enter) com validações locais via workout-utils e
  * mensagem visível sem commitar quando inválido. Vazio ≠ 0 (D7): vazio exibe
@@ -49,6 +53,7 @@ export default function SeriesCard({
   series,
   index,
   loadUnit,
+  exerciseMode,
   readOnly,
   onCommit,
   onApplyAll,
@@ -70,17 +75,9 @@ export default function SeriesCard({
 
   useEffect(() => clearLongPress, []);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  // Modo reps/tempo: deriva do dado vigente para a face exibir o rótulo
-  // correto sem clique prévio (paridade execução ↔ manutenção); o toggle
-  // local alterna em seguida nos dois ramos.
-  const [isRepsMode, setIsRepsMode] = useState(
-    () =>
-      series.reps !== null && series.reps !== undefined
-        ? true
-        : series.durationSeconds !== null && series.durationSeconds !== undefined
-          ? false
-          : true,
-  );
+  // Modo pertence ao exercício (D27): rótulo deriva da prop, sem alternância
+  // local; nulo/ausente = fallback repetições.
+  const isRepsMode = exerciseMode !== "tempo";
   // Toggle kg/lb é a fonte de verdade da unidade (D10); quando o exercício
   // já tem unidade persistida, ela prevalece sobre a escolha local.
   const [selectedUnit, setSelectedUnit] = useState<LoadUnit>(loadUnit ?? "kg");
@@ -127,13 +124,8 @@ export default function SeriesCard({
         : null;
     const unidadeSecundariaExec: LoadUnit | null =
       loadUnit === "kg" ? "libra" : loadUnit === "libra" ? "kg" : null;
-    // Modo vigente deriva do dado (sem toggle no card): reps presente → reps.
-    const execIsRepsMode =
-      series.reps !== null && series.reps !== undefined
-        ? true
-        : series.durationSeconds !== null && series.durationSeconds !== undefined
-          ? false
-          : true;
+    // Rótulo pelo modo do exercício (D27), valor vigente do modo.
+    const execIsRepsMode = exerciseMode !== "tempo";
     const valorRepsTempo =
       execIsRepsMode
         ? (series.reps ?? "—")
@@ -240,8 +232,10 @@ export default function SeriesCard({
   const unidadeSecundaria: LoadUnit | null =
     loadUnit === "kg" ? "libra" : loadUnit === "libra" ? "kg" : null;
   const cargaInicial = series.load === null ? "" : String(series.load);
-  const repsInicial = series.reps === null ? "" : String(series.reps);
-  const tempoInicial = series.durationSeconds === null ? "" : String(series.durationSeconds);
+  const valorInicial =
+    isRepsMode
+      ? (series.reps === null ? "" : String(series.reps))
+      : (series.durationSeconds === null ? "" : String(series.durationSeconds));
 
   return (
     <div className="rounded-md border px-3 py-2 flex flex-col gap-2">
@@ -251,29 +245,19 @@ export default function SeriesCard({
         <p className="text-xs text-rose-700 dark:text-rose-300">{errorMsg}</p>
       ) : null}
 
-      {/* Campo único Reps/Tempo com toggle */}
+      {/* Campo único Reps/Tempo pelo modo do exercício (D27, sem alternância) */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center gap-2">
           <Label htmlFor={`${baseId}-reps-tempo`} className="text-xs font-semibold flex-1">
             {isRepsMode ? "Repetições" : "Tempo (s)"}
           </Label>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="h-6 px-2 text-xs"
-            onClick={() => setIsRepsMode((prev) => !prev)}
-            aria-label={isRepsMode ? "Alternar para tempo" : "Alternar para repetições"}
-          >
-            {isRepsMode ? "⏱" : "🔁"}
-          </Button>
         </div>
         <Input
-          key={`${baseId}-reps-tempo-${isRepsMode ? repsInicial : tempoInicial}`}
+          key={`${baseId}-reps-tempo-${valorInicial}`}
           id={`${baseId}-reps-tempo`}
           type="text"
           inputMode="numeric"
-          defaultValue={isRepsMode ? repsInicial : tempoInicial}
+          defaultValue={valorInicial}
           onBlur={(event) => commitRepsTempo(event.currentTarget.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter")

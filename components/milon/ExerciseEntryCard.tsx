@@ -235,6 +235,7 @@ export default function ExerciseEntryCard({
             series={serie}
             index={idx}
             loadUnit={exercise.loadUnit}
+            exerciseMode={exercise.mode ?? null}
             readOnly={readOnly}
             onCommit={(field, value) =>
               handleSeriesCommit(serie.id, field, value)

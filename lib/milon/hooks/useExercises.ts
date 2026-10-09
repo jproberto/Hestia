@@ -17,12 +17,14 @@ import {
   normalizeExerciseText,
   type ExerciseSortOrder,
 } from "@/lib/milon/utils";
-import type { CreateExerciseInput, Exercise } from "@/lib/milon/types";
+import type { CreateExerciseInput, Exercise, ExerciseMode, LoadUnit, UpdateExerciseInput } from "@/lib/milon/types";
 
 export interface SaveExerciseInput {
   name: string;
   muscle: string;
   videoLink?: string | null;
+  mode?: ExerciseMode | null;
+  loadUnit?: LoadUnit | null;
 }
 
 export interface UseExercisesReturn {
@@ -215,18 +217,27 @@ export function useExercises(): UseExercisesReturn {
       // garante o item salvo visível (upsert idempotente — sem efeito quando
       // a recarga já contém o salvo).
       try {
+        // Modo/unidade pertencem ao exercício (aditamento 2026-10-09): repassa
+        // quando o chamador informa; quando ausentes, preserva o payload exato
+        // antigo (compat com chamadores ainda sem modo/unidade).
         const payload: CreateExerciseInput = {
           name: input.name,
           muscle: input.muscle,
           videoLink: input.videoLink ?? null,
         };
+        if (input.mode !== undefined) payload.mode = input.mode ?? null;
+        if (input.loadUnit !== undefined) payload.loadUnit = input.loadUnit ?? null;
         let saved: Exercise;
         if (id) {
-          saved = await updateExerciseStandalone(id, {
+          const updatePayload: UpdateExerciseInput = {
             name: payload.name,
             muscle: payload.muscle,
             videoLink: payload.videoLink ?? null,
-          });
+          };
+          if (input.mode !== undefined) updatePayload.mode = input.mode ?? null;
+          if (input.loadUnit !== undefined)
+            updatePayload.loadUnit = input.loadUnit ?? null;
+          saved = await updateExerciseStandalone(id, updatePayload);
         } else {
           saved = await createExerciseStandalone(payload, await resolveEmail());
         }

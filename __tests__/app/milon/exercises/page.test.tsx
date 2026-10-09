@@ -231,7 +231,13 @@ describe("ExercisesPage /milon/exercises - Biblioteca de exercícios (CA-P3-02 /
 
     await waitFor(() => {
       expect(state.save).toHaveBeenCalledWith(
-        { name: "Rosca direta", muscle: "Braço", videoLink: null },
+        {
+          name: "Rosca direta",
+          muscle: "Braço",
+          videoLink: null,
+          mode: "repeticao",
+          loadUnit: "kg",
+        },
         null,
       );
     });
@@ -260,6 +266,8 @@ describe("ExercisesPage /milon/exercises - Biblioteca de exercícios (CA-P3-02 /
         name: "Rosca direta",
         muscle: "Braço",
         videoLink: null,
+        mode: "repeticao",
+        loadUnit: "kg",
       });
     });
     expect(screen.getByRole("heading", { name: /novo exercício/i })).toBeInTheDocument();
@@ -299,7 +307,7 @@ describe("ExercisesPage /milon/exercises - Biblioteca de exercícios (CA-P3-02 /
     });
   });
 
-  it("salvar não envia loadUnit/deletedAt ao hook (unidade e exclusão fora do form)", async () => {
+  it("salvar não envia deletedAt ao hook (exclusão fora do form) mas envia modo e unidade", async () => {
     const item = makeExercise({
       id: "ex-1",
       name: "Supino reto",
@@ -323,10 +331,16 @@ describe("ExercisesPage /milon/exercises - Biblioteca de exercícios (CA-P3-02 /
 
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     const [payload, id] = save.mock.calls[0];
-    // A página não repassa campos de soft delete/unidade para o form de edição.
+    // A página não repassa campos de soft delete para o form de edição; modo
+    // e unidade pertencem ao exercício e viajam no payload.
     expect(id).toBe("ex-1");
-    expect(payload).toEqual({ name: "Supino reto", muscle: "Peito", videoLink: null });
-    expect(payload).not.toHaveProperty("loadUnit");
+    expect(payload).toEqual({
+      name: "Supino reto",
+      muscle: "Peito",
+      videoLink: null,
+      mode: "repeticao",
+      loadUnit: "kg",
+    });
     expect(payload).not.toHaveProperty("deletedAt");
   });
 

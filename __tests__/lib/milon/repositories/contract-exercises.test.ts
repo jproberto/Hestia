@@ -290,3 +290,146 @@ defineExerciseRepositoryContract(
   "fake em memória",
   () => createFakeExerciseRepository(),
 );
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-006 (Mílon #5, aditamento 2026-10-09 dos 3 achados).
+// Fonte: tasks.json TASK-006 (contract-exercises: criação e atualização
+// persistindo modo e unidade + ajuste de modo) + plan.md Aditamento §1
+// Mudança A + §3 (Modo do exercício + Ajuste de modo do exercício) + D25/D26.
+//
+// Contrato fixado aqui (nomes que a TASK-007 deve implementar):
+// - CreateExerciseInput/UpdateExerciseInput ganham `mode` (ExerciseMode |
+//   null/undefined; "repeticao" | "tempo") e `loadUnit` (LoadUnit |
+//   null/undefined); create/update persistem ambos;
+// - Exercise (domínio) ganha `mode: ExerciseMode | null` (nulo = linha
+//   antiga, leitura com fallback repetição) e mantém loadUnit;
+// - nova operação `setExerciseMode(id, mode)` + standalone
+//   `setExerciseModeStandalone(id, mode)`, espelhada no fake (mesmo padrão
+//   do setExerciseLoadUnit vigente);
+// - sem coluna nova nas séries (D26 — nada aqui toca em séries).
+//
+// Expected: FAIL — o repository e o fake ainda ignoram modo/unidade no
+// create/update e ainda não têm setExerciseMode. Hefesto fará GREEN na
+// TASK-007 sem mudar estes testes. Casts `as unknown as` mantêm o tsc
+// verde no RED (a falha é em runtime, não em tipo).
+// ---------------------------------------------------------------------------
+describe("modo e unidade do exercício (TASK-006 — RED)", () => {
+  const EMAIL = "modo@hestia.lan";
+
+  type WithMode<T> = T & {
+    mode?: "repeticao" | "tempo" | null;
+    loadUnit?: "kg" | "libra" | null;
+  };
+
+  it("cria exercício persistindo modo tempo e unidade kg", async () => {
+    const fake = createFakeExerciseRepository();
+    const created = (await fake.create(
+      {
+        name: "Supino reto",
+        muscle: "peito",
+        mode: "tempo",
+        loadUnit: "kg",
+      } as WithMode<Parameters<typeof fake.create>[0]>,
+      EMAIL,
+    )) as unknown as WithMode<Exercise>;
+
+    expect(created.mode).toBe("tempo");
+    expect(created.loadUnit).toBe("kg");
+  });
+
+  it("cria exercício persistindo modo repeticao e unidade libra", async () => {
+    const fake = createFakeExerciseRepository();
+    const created = (await fake.create(
+      {
+        name: "Agachamento",
+        muscle: "perna",
+        mode: "repeticao",
+        loadUnit: "libra",
+      } as WithMode<Parameters<typeof fake.create>[0]>,
+      EMAIL,
+    )) as unknown as WithMode<Exercise>;
+
+    expect(created.mode).toBe("repeticao");
+    expect(created.loadUnit).toBe("libra");
+  });
+
+  it("cria sem modo nem unidade deixa ambos nulos (linhas antigas)", async () => {
+    const fake = createFakeExerciseRepository();
+    const created = (await fake.create(
+      { name: "Rosca direta", muscle: "braço" },
+      EMAIL,
+    )) as unknown as WithMode<Exercise>;
+
+    expect(created.mode).toBeNull();
+    expect(created.loadUnit).toBeNull();
+  });
+
+  it("atualiza exercício persistindo modo e unidade novos", async () => {
+    const fake = createFakeExerciseRepository();
+    const created = await fake.create(
+      { name: "Supino reto", muscle: "peito" },
+      EMAIL,
+    );
+
+    const updated = (await fake.update(created.id, {
+      name: "Supino reto",
+      muscle: "peito",
+      videoLink: null,
+      mode: "tempo",
+      loadUnit: "libra",
+    } as WithMode<Parameters<typeof fake.update>[1]>)) as unknown as WithMode<Exercise>;
+
+    expect(updated.mode).toBe("tempo");
+    expect(updated.loadUnit).toBe("libra");
+    const [lido] = (await fake.list()) as unknown as WithMode<Exercise>[];
+    expect(lido.mode).toBe("tempo");
+    expect(lido.loadUnit).toBe("libra");
+  });
+
+  it("ajuste de modo altera exercício existente sem mexer em nome/músculo/unidade", async () => {
+    const fake = createFakeExerciseRepository();
+    const created = (await fake.create(
+      {
+        name: "Supino reto",
+        muscle: "peito",
+        mode: "repeticao",
+        loadUnit: "kg",
+      } as WithMode<Parameters<typeof fake.create>[0]>,
+      EMAIL,
+    )) as unknown as WithMode<Exercise>;
+
+    const api = fake as unknown as {
+      setExerciseMode: (
+        id: string,
+        mode: "repeticao" | "tempo",
+      ) => Promise<void>;
+    };
+    expect(typeof api.setExerciseMode).toBe("function");
+    await api.setExerciseMode(created.id, "tempo");
+
+    const [lido] = (await fake.list()) as unknown as WithMode<Exercise>[];
+    expect(lido.mode).toBe("tempo");
+    expect(lido.name).toBe("Supino reto");
+    expect(lido.muscle).toBe("peito");
+    expect(lido.loadUnit).toBe("kg");
+  });
+
+  it("ajuste de modo aparece também em listAll (mesmo registro)", async () => {
+    const fake = createFakeExerciseRepository();
+    const created = await fake.create(
+      { name: "Supino reto", muscle: "peito" },
+      EMAIL,
+    );
+    const api = fake as unknown as {
+      setExerciseMode: (
+        id: string,
+        mode: "repeticao" | "tempo",
+      ) => Promise<void>;
+    };
+    await api.setExerciseMode(created.id, "tempo");
+
+    const todos = (await fake.listAll()) as unknown as WithMode<Exercise>[];
+    expect(todos).toHaveLength(1);
+    expect(todos[0].mode).toBe("tempo");
+  });
+});

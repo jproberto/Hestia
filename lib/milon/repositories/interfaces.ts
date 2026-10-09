@@ -3,6 +3,7 @@ import type {
   Exercise,
   CreateExerciseInput,
   UpdateExerciseInput,
+  ExerciseMode,
   MilonItem,
   CreateMilonInput,
   Program,
@@ -23,6 +24,9 @@ export interface IExerciseRepository {
   create(input: CreateExerciseInput, email: string): Promise<Exercise>;
   update(id: string, input: UpdateExerciseInput): Promise<Exercise>;
   remove(id: string): Promise<void>;
+  // Ajuste de modo do exercício (Mílon #5, aditamento 2026-10-09): persiste o
+  // modo de um exercício existente sem mexer em nome/músculo/unidade.
+  setExerciseMode(id: string, mode: ExerciseMode): Promise<void>;
 }
 
 // Legado do scaffold (removido na TASK-004/005 junto a db/example e useExamples).

@@ -198,6 +198,7 @@ describe("lib/milon/db/exercises (barrel oficial da UI, TASK-004)", () => {
         muscle: "peito",
         videoLink: null,
         loadUnit: null,
+        mode: null,
         deletedAt: null,
         createdAt: "2026-09-12T00:00:00.000Z",
         created_by: EMAIL,

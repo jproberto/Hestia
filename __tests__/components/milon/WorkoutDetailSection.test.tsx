@@ -1226,3 +1226,125 @@ describe("WorkoutDetailSection — 2ª volta: badge, executionBlocked e frozenEn
     ).toBeInTheDocument();
   });
 });
+
+/**
+ * Contrato RED da TASK-006 (Mílon #5, aditamento 2026-10-09 dos 3 achados).
+ *
+ * Fonte: tasks.json TASK-006 (WorkoutDetailSection: aviso visível com a
+ * frase exata quando executionBlocked é verdadeiro no ramo de manutenção;
+ * ausência do aviso quando falso) + plan.md Aditamento §1 Mudança C + §3
+ * (Aviso de bloqueio: no ramo de manutenção, com executionBlocked
+ * verdadeiro, alerta visível contendo a frase exata "não pode ser editado
+ * pois está em execução", acima da lista, além dos controles já
+ * desabilitados) + spec §3 (aviso visível de que não pode ser editado
+ * pois está em execução) + D28.
+ *
+ * Contrato fixado aqui (nomes que a TASK-009 deve implementar):
+ * - ramo de manutenção (executionEnabled desligado) com
+ *   `executionBlocked === true` exibe alerta visível (role="alert")
+ *   contendo EXATAMENTE "não pode ser editado pois está em execução";
+ * - com `executionBlocked === false`/ausente, nenhum aviso aparece;
+ * - controles seguem desabilitados via readOnly efetivo (trava verde).
+ *
+ * Expected: FAIL no caso do aviso — a seção atual desabilita o chrome
+ * mas não exibe nenhum aviso textual. Hefesto fará GREEN na TASK-009
+ * sem mudar estes testes.
+ */
+describe("WorkoutDetailSection — aviso visível de bloqueio (TASK-006 — RED)", () => {
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  function manutencao(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backProgram,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    mockedUseWorkoutExecution.mockReturnValue({
+      execution: null,
+      doneSeriesIds: [],
+      markedCount: 0,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null,
+      errorOrigin: null,
+      successNotice: null,
+      retry: vi.fn(async () => {}),
+    });
+  });
+
+  it("manutenção bloqueada exibe aviso com a frase exata", () => {
+    conteudoComUmaEntrada();
+
+    render(<WorkoutDetailSection {...manutencao({ executionBlocked: true })} />);
+
+    expect(
+      screen.getByText(/não pode ser editado pois está em execução/),
+    ).toBeInTheDocument();
+  });
+
+  it("aviso de bloqueio usa role alert (alerta visível, sem retry)", () => {
+    conteudoComUmaEntrada();
+
+    render(<WorkoutDetailSection {...manutencao({ executionBlocked: true })} />);
+
+    const aviso = screen.getByText(
+      /não pode ser editado pois está em execução/,
+    );
+    const alerta = aviso.closest('[role="alert"]');
+    expect(alerta).not.toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /tentar novamente/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("manutenção bloqueada mantém os controles desabilitados além do aviso", () => {
+    conteudoComUmaEntrada();
+
+    render(<WorkoutDetailSection {...manutencao({ executionBlocked: true })} />);
+
+    expect(
+      screen.getByText(/não pode ser editado pois está em execução/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /adicionar exercício/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /editar/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("manutenção desbloqueada não exibe o aviso", () => {
+    conteudoComUmaEntrada();
+
+    render(
+      <WorkoutDetailSection {...manutencao({ executionBlocked: false })} />,
+    );
+
+    expect(
+      screen.queryByText(/não pode ser editado pois está em execução/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /adicionar exercício/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("sem executionBlocked não exibe o aviso (default desbloqueado)", () => {
+    conteudoComUmaEntrada();
+
+    render(<WorkoutDetailSection {...manutencao()} />);
+
+    expect(
+      screen.queryByText(/não pode ser editado pois está em execução/),
+    ).not.toBeInTheDocument();
+  });
+});

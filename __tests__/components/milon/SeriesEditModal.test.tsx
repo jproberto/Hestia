@@ -261,14 +261,17 @@ describe("SeriesEditModal — paridade com a manutenção (replano TASK-001 — 
     expect(document.getElementById("series-edit-tempo")).toBeNull();
   });
 
-  it("campo único alterna entre Repetições e Tempo (s) pelo botão da manutenção", () => {
-    renderModal();
+  it("campo único deriva do modo do exercício sem botão de alternância (D27)", () => {
+    renderModal({
+      series: makeSeries({ reps: 10, durationSeconds: null, load: 50 }),
+      exerciseMode: "tempo",
+    } as unknown as Partial<ModalProps>);
 
-    const alternar = screen.getByRole("button", {
-      name: /alternar para (tempo|repetições)/i,
-    });
-    expect(alternar).toBeInTheDocument();
-    fireEvent.click(alternar);
+    expect(
+      screen.queryByRole("button", {
+        name: /alternar para (tempo|repetições)/i,
+      }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("Tempo (s)")).toBeInTheDocument();
   });
 
@@ -362,5 +365,174 @@ describe("SeriesEditModal — paridade com a manutenção (replano TASK-001 — 
     );
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: /salvar/i })).toBeInTheDocument();
+  });
+});
+
+/**
+ * Contrato RED da TASK-006 (Mílon #5, aditamento 2026-10-09 dos 3 achados).
+ *
+ * Fonte: tasks.json TASK-006 (SeriesEditModal: campo único pelo modo;
+ * unidade como texto sem edição; sem alternância; sem botões de unidade)
+ * + plan.md Aditamento §1 Mudança B + §3 (Modal de execução: recebe modo
+ * e unidade herdadas sem edição; campo único rotulado pelo modo; Carga
+ * com unidade ao lado como texto; sem alternância, sem botões, sem cópia;
+ * salvamento com valor único replicado mantendo marcação) + spec §3
+ * (modal com único campo + Carga com unidade ao lado como texto herdado,
+ * sem troca e sem botões) + D27.
+ *
+ * Contrato fixado aqui (nomes que a TASK-008 deve implementar):
+ * - SeriesEditModalProps ganha `exerciseMode: "repeticao" | "tempo" | null`
+ *   (rótulo do campo único deriva DAQUI, nunca do dado da série; nulo =
+ *   fallback repetições) e mantém `loadUnit` herdada sem edição;
+ * - campo único tem id series-edit-valor e rótulo "Repetições" no modo
+ *   repetição ou "Tempo (s)" no modo tempo;
+ * - o rótulo da Carga exibe a unidade ao lado como texto (ex.:
+ *   "Carga (kg)"), sem botões e sem edição;
+ * - SEM botão de alternância repetição/tempo e SEM botões kg/lb.
+ *
+ * Expected: FAIL — o modal atual deriva o modo do dado da série, tem o
+ * botão de alternância e rotula a Carga sem a unidade ao lado. Hefesto
+ * fará GREEN na TASK-008 sem mudar estes testes. Props novas via cast
+ * para o tsc seguir verde no RED (falha em runtime, não em tipo).
+ */
+describe("SeriesEditModal — campo único pelo modo do exercício (TASK-006 — RED)", () => {
+  type ModalProps = Parameters<typeof SeriesEditModal>[0];
+  type WithMode = ModalProps & {
+    exerciseMode?: "repeticao" | "tempo" | null;
+  };
+
+  function renderModo(props: Partial<WithMode> = {}) {
+    const merged = { ...base(), ...props } as unknown as ModalProps;
+    render(<SeriesEditModal {...merged} />);
+  }
+
+  /** Rótulo associado ao campo único de valor. */
+  function rotuloDoValor(): string {
+    const input = document.getElementById("series-edit-valor") as HTMLInputElement | null;
+    expect(input).not.toBeNull();
+    const id = input?.getAttribute("id");
+    const label = id
+      ? document.querySelector(`label[for="${id}"]`)
+      : null;
+    return label?.textContent ?? "";
+  }
+
+  /** Rótulo associado ao campo de carga. */
+  function rotuloDaCarga(): string {
+    const input = document.getElementById("series-edit-carga") as HTMLInputElement | null;
+    expect(input).not.toBeNull();
+    const id = input?.getAttribute("id");
+    const label = id
+      ? document.querySelector(`label[for="${id}"]`)
+      : null;
+    return label?.textContent ?? "";
+  }
+
+  it("modo tempo rotula o campo único como Tempo (s) mesmo com série de reps", () => {
+    renderModo({
+      series: makeSeries({ reps: 10, durationSeconds: null, load: 50 }),
+      exerciseMode: "tempo",
+      loadUnit: "kg",
+    });
+
+    expect(document.getElementById("series-edit-valor")).not.toBeNull();
+    expect(rotuloDoValor()).toMatch(/tempo/i);
+    expect(rotuloDoValor()).not.toMatch(/repeti/i);
+  });
+
+  it("modo repeticao rotula o campo único como Repetições mesmo com série de tempo", () => {
+    renderModo({
+      series: makeSeries({ reps: null, durationSeconds: 45, load: 50 }),
+      exerciseMode: "repeticao",
+      loadUnit: "kg",
+    });
+
+    expect(rotuloDoValor()).toMatch(/repeti/i);
+  });
+
+  it("modo nulo usa fallback repetições", () => {
+    renderModo({
+      series: makeSeries({ reps: null, durationSeconds: 45, load: 50 }),
+      exerciseMode: null,
+      loadUnit: "kg",
+    });
+
+    expect(rotuloDoValor()).toMatch(/repeti/i);
+  });
+
+  it("rótulo da Carga exibe a unidade herdada ao lado como texto (kg)", () => {
+    renderModo({
+      series: makeSeries({ reps: 10, load: 50 }),
+      exerciseMode: "repeticao",
+      loadUnit: "kg",
+    });
+
+    expect(rotuloDaCarga()).toMatch(/carga/i);
+    expect(rotuloDaCarga()).toMatch(/kg/i);
+  });
+
+  it("rótulo da Carga exibe a unidade herdada ao lado como texto (libra)", () => {
+    renderModo({
+      series: makeSeries({ reps: 10, load: 50 }),
+      exerciseMode: "repeticao",
+      loadUnit: "libra",
+    });
+
+    expect(rotuloDaCarga()).toMatch(/carga/i);
+    expect(rotuloDaCarga()).toMatch(/libra/i);
+  });
+
+  it("NÃO expõe alternância entre repetição e tempo (modo pertence ao exercício)", () => {
+    renderModo({
+      series: makeSeries({ reps: 10, load: 50 }),
+      exerciseMode: "repeticao",
+      loadUnit: "kg",
+    });
+
+    expect(
+      screen.queryByRole("button", {
+        name: /alternar para (tempo|repetições)/i,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("NÃO expõe botões de unidade no modal de execução", () => {
+    renderModo({
+      series: makeSeries({ reps: 10, load: 50 }),
+      exerciseMode: "repeticao",
+      loadUnit: "kg",
+    });
+
+    const dialog = screen.getByRole("heading", {
+      name: /editar série/i,
+    }).parentElement as HTMLElement;
+    expect(
+      within(dialog).queryByRole("button", { name: /^kg$/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: /^lb$/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("salvar no modo tempo entrega durationSeconds com reps nulo", async () => {
+    const onSave = vi.fn(async (_fields: SeriesEditFields) => {});
+    renderModo({
+      series: makeSeries({ reps: 10, durationSeconds: null, load: 50 }),
+      exerciseMode: "tempo",
+      loadUnit: "kg",
+      onSave,
+    });
+
+    fireEvent.change(screen.getByLabelText(/tempo/i), {
+      target: { value: "60" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /salvar/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const campos = onSave.mock.calls[0][0];
+    expect(campos).toMatchObject({
+      reps: null,
+      durationSeconds: 60,
+    });
   });
 });

@@ -9,7 +9,7 @@ import {
   validarCarga,
   validarInteiroCampo,
 } from "@/lib/milon/workout-utils";
-import type { LoadUnit, WorkoutSeries } from "@/lib/milon/types";
+import type { ExerciseMode, LoadUnit, WorkoutSeries } from "@/lib/milon/types";
 
 export interface SeriesEditFields {
   reps: number | null;
@@ -21,6 +21,9 @@ export interface SeriesEditModalProps {
   open: boolean;
   series: WorkoutSeries | null;
   loadUnit: LoadUnit | null;
+  /** Modo do exercício (Mílon #5, D27): rótulo do campo único deriva daqui;
+   *  nulo/ausente = fallback repetições. Sem edição no modal. */
+  exerciseMode?: ExerciseMode | null;
   saving: boolean;
   error: string | null;
   onClose: () => void;
@@ -33,35 +36,32 @@ function textoInicialValor(series: WorkoutSeries | null, repsMode: boolean): str
   return String(valor);
 }
 
-function derivaModoInicial(series: WorkoutSeries | null): boolean {
-  if (series?.reps !== null && series?.reps !== undefined) return true;
-  if (series?.durationSeconds !== null && series?.durationSeconds !== undefined)
-    return false;
-  return true;
-}
-
 /**
- * Modal de edição da série (Mílon #5, 2ª volta D22).
- * Presentacional por props: campo único repetição/tempo com o mesmo botão
- * de alternância da manutenção, carga com conversão secundária e unidade
- * herdada do exercício exibida como texto (sem edição, sem botões kg/lb),
- * sem qualquer opção de cópia — todo salvamento replica sempre para a
- * origem mais as seguintes (decisão da seção/hook). Nunca fecha no erro:
- * validação local mostra mensagem visível e falha de persistência é exibida
- * via `error` mantendo o digitado. O salvamento entrega somente os campos.
+ * Modal de edição da série (Mílon #5, aditamento 2026-10-09 D27).
+ * Presentacional por props: campo único com rótulo derivado do modo do
+ * exercício (prop `exerciseMode`, sem alternância), carga com a unidade
+ * herdada exibida ao lado do rótulo Carga como texto (sem edição, sem
+ * botões kg/lb), sem qualquer opção de cópia — todo salvamento replica
+ * sempre para a origem mais as seguintes (decisão da seção/hook). Nunca
+ * fecha no erro: validação local mostra mensagem visível e falha de
+ * persistência é exibida via `error` mantendo o digitado. O salvamento
+ * entrega somente os campos.
  */
 export default function SeriesEditModal({
   open,
   series,
   loadUnit,
+  exerciseMode,
   saving,
   error,
   onClose,
   onSave,
 }: SeriesEditModalProps) {
-  const [isRepsMode, setIsRepsMode] = useState(() => derivaModoInicial(series));
+  // Modo pertence ao exercício (D27): sem estado local, sem alternância.
+  // Nulo/ausente = fallback repetições (mesmo padrão da unidade nula → kg).
+  const isRepsMode = exerciseMode !== "tempo";
   const [valorText, setValorText] = useState(() =>
-    textoInicialValor(series, derivaModoInicial(series)),
+    textoInicialValor(series, isRepsMode),
   );
   const [cargaText, setCargaText] = useState(
     series?.load === null || series?.load === undefined
@@ -70,17 +70,16 @@ export default function SeriesEditModal({
   );
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Reseta o form ao abrir, ao trocar a série em edição ou ao trocar a
-  // unidade vigente (mesmo padrão dos demais modais do módulo: rerenders
-  // do pai com a mesma série não apagam o digitado).
+  // Reseta o form ao abrir, ao trocar a série em edição ou ao trocar o modo
+  // ou a unidade vigentes (mesmo padrão dos demais modais do módulo:
+  // rerenders do pai com a mesma série não apagam o digitado).
   const resetKey = open
-    ? `open:${series?.id ?? "none"}:${loadUnit ?? "none"}`
+    ? `open:${series?.id ?? "none"}:${exerciseMode ?? "none"}:${loadUnit ?? "none"}`
     : "closed";
   const [prevResetKey, setPrevResetKey] = useState(resetKey);
   if (prevResetKey !== resetKey) {
     setPrevResetKey(resetKey);
-    const modo = derivaModoInicial(series);
-    setIsRepsMode(modo);
+    const modo = exerciseMode !== "tempo";
     setValorText(textoInicialValor(series, modo));
     setCargaText(
       series?.load === null || series?.load === undefined
@@ -107,23 +106,6 @@ export default function SeriesEditModal({
       : null;
   const unidadeSecundaria: LoadUnit =
     effectiveUnit === "kg" ? "libra" : "kg";
-
-  function alternarModo(): void {
-    setIsRepsMode((prev) => {
-      const proximo = !prev;
-      setValorText(
-        proximo
-          ? (series?.reps === null || series?.reps === undefined
-              ? ""
-              : String(series.reps))
-          : (series?.durationSeconds === null ||
-                series?.durationSeconds === undefined
-              ? ""
-              : String(series.durationSeconds)),
-      );
-      return proximo;
-    });
-  }
 
   async function handleSave(event: React.FormEvent): Promise<void> {
     event.preventDefault();
@@ -176,20 +158,6 @@ export default function SeriesEditModal({
               >
                 {isRepsMode ? "Repetições" : "Tempo (s)"}
               </Label>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-6 px-2 text-xs"
-                onClick={alternarModo}
-                aria-label={
-                  isRepsMode
-                    ? "Alternar para tempo"
-                    : "Alternar para repetições"
-                }
-              >
-                {isRepsMode ? "⏱" : "🔁"}
-              </Button>
             </div>
             <Input
               id="series-edit-valor"
@@ -206,7 +174,7 @@ export default function SeriesEditModal({
               htmlFor="series-edit-carga"
               className="text-xs font-semibold"
             >
-              Carga
+              Carga ({effectiveUnit})
             </Label>
             <Input
               id="series-edit-carga"

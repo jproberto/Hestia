@@ -8,6 +8,10 @@ export interface ExerciseRow {
   muscle: string;
   video_link: string | null;
   load_unit: string | null;
+  // Modo do exercício (Mílon #5, aditamento 2026-10-09, D25): coluna textual
+  // anulável; opcional para linhas anteriores à migração 0013 (leitura com
+  // fallback repetição). Nenhuma coluna nova nas séries (D26).
+  mode?: string | null;
   deleted_at: string | null;
   created_at: string;
   created_by: string;
@@ -15,12 +19,19 @@ export interface ExerciseRow {
 
 export type LoadUnit = 'kg' | 'libra';
 
+// Modo do exercício (Mílon #5, aditamento 2026-10-09): o valor único da série
+// deriva dele; card e modal de execução herdam o rótulo via propriedade.
+export type ExerciseMode = 'repeticao' | 'tempo';
+
 export interface Exercise {
   id: string;
   name: string;
   muscle: string;
   videoLink: string | null;
   loadUnit: LoadUnit | null;
+  // Nulo = linha antiga sem modo (fallback de leitura: repetição).
+  // Opcional para não quebrar fixtures anteriores à migração 0013.
+  mode?: ExerciseMode | null;
   deletedAt: string | null;
   createdAt: string;
   created_by: string;
@@ -30,12 +41,16 @@ export interface CreateExerciseInput {
   name: string;
   muscle: string;
   videoLink?: string | null;
+  mode?: ExerciseMode | null;
+  loadUnit?: LoadUnit | null;
 }
 
 export interface UpdateExerciseInput {
   name: string;
   muscle: string;
   videoLink: string | null;
+  mode?: ExerciseMode | null;
+  loadUnit?: LoadUnit | null;
 }
 
 export type ProgramStatus = 'rascunho' | 'ativo' | 'inativo';

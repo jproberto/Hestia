@@ -140,10 +140,16 @@ describe("SeriesCard", () => {
 
     it("tempo válido commita ('durationSeconds', número); inválido mostra a mensagem exata do rótulo 'tempo'", () => {
       const onCommit = vi.fn();
-      render(<SeriesCard {...base({ onCommit })} />);
+      // D27: modo pertence ao exercício (prop exerciseMode), sem alternância no card.
+      const props = {
+        ...base({ onCommit }),
+        exerciseMode: "tempo",
+      } as unknown as Parameters<typeof SeriesCard>[0];
+      render(<SeriesCard {...props} />);
 
-      // Alternar para modo tempo (o campo único reps/tempo tem toggle)
-      fireEvent.click(screen.getByRole("button", { name: /alternar para tempo/i }));
+      expect(
+        screen.queryByRole("button", { name: /alternar para (tempo|repetições)/i }),
+      ).not.toBeInTheDocument();
       digitarEComapitar(/tempo/i, "45");
       expect(onCommit).toHaveBeenCalledWith("durationSeconds", 45);
 
@@ -575,7 +581,16 @@ describe("SeriesCard — execução somente leitura vigente (correção 2026-10-
   });
 
   it("com tempo exibe o rótulo Tempo (s) conforme o modo", () => {
-    renderExecucao({ reps: null, durationSeconds: 45 });
+    // D27: rótulo deriva de exerciseMode (fallback repetições) — passa o modo tempo.
+    const props = {
+      ...base({
+        series: makeSeries({ reps: null, durationSeconds: 45, load: 50 }),
+        loadUnit: "kg" as LoadUnit,
+      }),
+      execution: execPkg({}),
+      exerciseMode: "tempo",
+    } as unknown as Parameters<typeof SeriesCard>[0];
+    render(<SeriesCard {...props} />);
 
     expect(screen.getByText("Tempo (s)")).toBeInTheDocument();
   });
@@ -668,5 +683,121 @@ describe("SeriesCard — execução somente leitura vigente (correção 2026-10-
     expect(convertido.className).toMatch(
       /text-(white|stone-(100|200)|neutral-(100|200)|zinc-(100|200)|slate-(100|200)|gray-(100|200))/,
     );
+  });
+});
+
+/**
+ * Contrato RED da TASK-006 (Mílon #5, aditamento 2026-10-09 dos 3 achados).
+ *
+ * Fonte: tasks.json TASK-006 (SeriesCard: rótulo pelo modo nos dois modos
+ * + fallback repetição quando nulo) + plan.md Aditamento §1 Mudança B +
+ * §3 (Card: recebe o modo como propriedade no mesmo padrão da unidade;
+ * rótulo deriva do modo; sem alternância; ramo de execução só leitura
+ * com fundo do módulo quando feita; controle de unidade da manutenção
+ * inalterado) + spec §3 (rótulo conforme o modo do exercício) + D27.
+ *
+ * Contrato fixado aqui (nomes que a TASK-008 deve implementar):
+ * - SeriesCardProps ganha `exerciseMode: "repeticao" | "tempo" | null`
+ *   (mesmo padrão do `loadUnit` vigente; nulo = fallback repetições);
+ * - o rótulo do valor deriva do MODO DO EXERCÍCIO, nunca do dado da
+ *   série, nos dois ramos (manutenção e execução);
+ * - SEM botão de alternância repetição/tempo no card (modo pertence ao
+ *   exercício); o controle de unidade kg/lb da manutenção permanece
+ *   inalterado (trava verde).
+ *
+ * Expected: FAIL — o card atual deriva do dado da série e tem a
+ * alternância local. Hefesto fará GREEN na TASK-008 sem mudar estes
+ * testes. Props novas via cast para o tsc seguir verde no RED.
+ */
+describe("SeriesCard — rótulo pelo modo do exercício (TASK-006 — RED)", () => {
+  type CardProps = Parameters<typeof SeriesCard>[0];
+
+  function renderManutencao(
+    seriesOverrides: Partial<WorkoutSeries> = {},
+    exerciseMode: "repeticao" | "tempo" | null = "repeticao",
+  ) {
+    const props = {
+      ...base({
+        series: makeSeries({ reps: null, durationSeconds: null, load: null, ...seriesOverrides }),
+        loadUnit: "kg",
+      }),
+      exerciseMode,
+    } as unknown as CardProps;
+    render(<SeriesCard {...props} />);
+  }
+
+  function renderExecucao(
+    seriesOverrides: Partial<WorkoutSeries> = {},
+    exerciseMode: "repeticao" | "tempo" | null = "repeticao",
+  ) {
+    const props = {
+      ...base({
+        series: makeSeries({ reps: null, durationSeconds: null, load: null, ...seriesOverrides }),
+        loadUnit: "kg",
+      }),
+      exerciseMode,
+      execution: {
+        doneBySeriesId: {},
+        onToggle: vi.fn(),
+        onOpenEditor: vi.fn(),
+      },
+    } as unknown as CardProps;
+    render(<SeriesCard {...props} />);
+  }
+
+  it("manutenção modo repeticao rotula Repetições mesmo com série de tempo", () => {
+    renderManutencao({ reps: null, durationSeconds: 45 }, "repeticao");
+
+    expect(screen.getByText("Repetições")).toBeInTheDocument();
+    expect(screen.queryByText("Tempo (s)")).not.toBeInTheDocument();
+  });
+
+  it("manutenção modo tempo rotula Tempo (s) mesmo com série de reps", () => {
+    renderManutencao({ reps: 10, durationSeconds: null }, "tempo");
+
+    expect(screen.getByText("Tempo (s)")).toBeInTheDocument();
+    expect(screen.queryByText("Repetições")).not.toBeInTheDocument();
+  });
+
+  it("manutenção modo nulo usa fallback repetições mesmo com série de tempo", () => {
+    renderManutencao({ reps: null, durationSeconds: 45 }, null);
+
+    expect(screen.getByText("Repetições")).toBeInTheDocument();
+    expect(screen.queryByText("Tempo (s)")).not.toBeInTheDocument();
+  });
+
+  it("execução modo tempo rotula Tempo (s) mesmo com série de reps", () => {
+    renderExecucao({ reps: 10, durationSeconds: null, load: 50 }, "tempo");
+
+    expect(screen.getByText("Tempo (s)")).toBeInTheDocument();
+    expect(screen.queryByText("Repetições")).not.toBeInTheDocument();
+  });
+
+  it("execução modo repeticao rotula Repetições mesmo com série de tempo", () => {
+    renderExecucao({ reps: null, durationSeconds: 45, load: 50 }, "repeticao");
+
+    expect(screen.getByText("Repetições")).toBeInTheDocument();
+    expect(screen.queryByText("Tempo (s)")).not.toBeInTheDocument();
+  });
+
+  it("NÃO expõe alternância de modo no card de manutenção (modo pertence ao exercício)", () => {
+    renderManutencao({ reps: 10 }, "repeticao");
+
+    expect(
+      screen.queryByRole("button", {
+        name: /alternar para (tempo|repetições)/i,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("trava: controle de unidade kg/lb da manutenção permanece inalterado", () => {
+    renderManutencao({ reps: 10, load: 20 }, "repeticao");
+
+    expect(
+      screen.getByRole("button", { name: /^kg$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^lb$/i }),
+    ).toBeInTheDocument();
   });
 });

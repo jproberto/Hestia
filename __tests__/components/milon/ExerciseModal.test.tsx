@@ -83,7 +83,13 @@ describe("ExerciseModal", () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave).toHaveBeenCalledWith(
-      { name: "Panturrilha em pé", muscle: "Panturrilha", videoLink: null },
+      {
+        name: "Panturrilha em pé",
+        muscle: "Panturrilha",
+        videoLink: null,
+        mode: "repeticao",
+        loadUnit: "kg",
+      },
       "salvar",
     );
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
@@ -99,13 +105,19 @@ describe("ExerciseModal", () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave).toHaveBeenCalledWith(
-      { name: "Rosca direta", muscle: "Braço", videoLink: "https://video.exemplo/rosca" },
+      {
+        name: "Rosca direta",
+        muscle: "Braço",
+        videoLink: "https://video.exemplo/rosca",
+        mode: "repeticao",
+        loadUnit: "kg",
+      },
       "salvar",
     );
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
 
-  it("salvar não envia loadUnit/deletedAt (unidade e exclusão ficam fora do form)", async () => {
+  it("salvar não envia deletedAt (exclusão fora do form) mas envia modo e unidade", async () => {
     const onSave = vi.fn(
       async (_fields: ExerciseModalFields, _action: "salvar" | "salvar-e-outro") => {},
     );
@@ -124,13 +136,15 @@ describe("ExerciseModal", () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
 
     const payload = onSave.mock.calls[0][0];
-    // A edição da biblioteca não ressuscita exercício excluído nem redefine a unidade.
-    expect(payload).not.toHaveProperty("loadUnit");
+    // A edição da biblioteca não ressuscita exercício excluído; modo e
+    // unidade pertencem ao exercício e viajam no payload.
     expect(payload).not.toHaveProperty("deletedAt");
     expect(payload).toEqual({
       name: "Supino reto",
       muscle: "Peito",
       videoLink: "https://video.exemplo/supino",
+      mode: "repeticao",
+      loadUnit: "kg",
     });
   });
 
@@ -144,7 +158,13 @@ describe("ExerciseModal", () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave).toHaveBeenCalledWith(
-      { name: "Tríceps testa", muscle: "Braço", videoLink: "https://video.exemplo/triceps" },
+      {
+        name: "Tríceps testa",
+        muscle: "Braço",
+        videoLink: "https://video.exemplo/triceps",
+        mode: "repeticao",
+        loadUnit: "kg",
+      },
       "salvar-e-outro",
     );
     expect(onClose).not.toHaveBeenCalled();
@@ -229,5 +249,118 @@ describe("ExerciseModal", () => {
     const savingButtons = screen.getAllByRole("button", { name: /salvando/i });
     expect(savingButtons).toHaveLength(2);
     savingButtons.forEach((button) => expect(button).toBeDisabled());
+  });
+});
+
+/**
+ * Contrato RED da TASK-006 (Mílon #5, aditamento 2026-10-09 dos 3 achados).
+ *
+ * Fonte: tasks.json TASK-006 (ExerciseModal: seletor de modo
+ * Repeticoes/Tempo + seletor de unidade kg/lb com padrão pré-selecionado)
+ * + plan.md Aditamento §1 Mudança A + §3 (Modal de exercício: recebe e
+ * devolve modo e unidade junto de nome/músculo/link; seletores simples de
+ * modo e unidade; valida nome/músculo obrigatórios com mensagem visível;
+ * nunca fecha no erro) + spec §3 (unidade e modo pertencem ao exercício).
+ *
+ * Contrato fixado aqui (nomes que a TASK-007 deve implementar):
+ * - ExerciseModalFields ganha `mode: "repeticao" | "tempo"` e
+ *   `loadUnit: "kg" | "libra"`; onSave devolve os dois junto de
+ *   nome/músculo/link;
+ * - seletor de modo com rótulo "Modo" e opções "Repetições" e "Tempo"
+ *   (radiogroup rotulado OU select rotulado — o teste aceita os dois);
+ * - seletor de unidade com rótulo "Unidade" e opções "kg" e "lb"/"libra"
+ *   (radiogroup rotulado OU select rotulado);
+ * - padrão pré-selecionado na criação: modo repetição + unidade kg
+ *   (sem tocar nos seletores, o salvar já entrega esses valores).
+ *
+ * Expected: FAIL — o modal atual só tem nome/músculo/link, sem seletores
+ * e sem modo/unidade no payload. Hefesto fará GREEN na TASK-007 sem mudar
+ * estes testes.
+ */
+describe("ExerciseModal — modo e unidade do exercício (TASK-006 — RED)", () => {
+  /** Localiza o grupo/controle rotulado aceitando radiogroup ou select. */
+  function grupoOuControle(rotulo: RegExp): HTMLElement {
+    const porGrupo = screen.queryByRole("radiogroup", { name: rotulo });
+    if (porGrupo) return porGrupo;
+    const porCombo = screen.queryByLabelText(rotulo);
+    if (porCombo) return porCombo;
+    throw new Error(`Seletor com rótulo ${rotulo} não encontrado`);
+  }
+
+  it("exibe seletor de modo com opções Repetições e Tempo", () => {
+    render(<ExerciseModal {...defaultProps()} />);
+
+    const grupo = grupoOuControle(/modo/i);
+    expect(grupo).toBeInTheDocument();
+    expect(screen.getByText(/repetições/i)).toBeInTheDocument();
+    expect(screen.getByText(/^tempo$/i)).toBeInTheDocument();
+  });
+
+  it("exibe seletor de unidade com opções kg e lb/libra", () => {
+    render(<ExerciseModal {...defaultProps()} />);
+
+    const grupo = grupoOuControle(/unidade/i);
+    expect(grupo).toBeInTheDocument();
+    expect(screen.getByText(/^kg$/i)).toBeInTheDocument();
+    const lbOuLibra =
+      screen.queryByText(/^lb$/i) ?? screen.queryByText(/libra/i);
+    expect(lbOuLibra).not.toBeNull();
+  });
+
+  it("criação pré-seleciona modo repetição e unidade kg (padrão sem tocar)", async () => {
+    const onSave = vi.fn(
+      async (_fields: ExerciseModalFields, _action: "salvar" | "salvar-e-outro") => {},
+    );
+    const onClose = vi.fn();
+    render(<ExerciseModal {...defaultProps({ onSave, onClose })} />);
+
+    fillCreateForm("Agachamento", "Perna");
+    fireEvent.click(screen.getByRole("button", { name: /^salvar$/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const payload = onSave.mock.calls[0]?.[0] as unknown as Record<string, unknown>;
+    expect(payload).toMatchObject({ mode: "repeticao", loadUnit: "kg" });
+  });
+
+  it("trocar os seletores reflete no payload do salvar", async () => {
+    const onSave = vi.fn(
+      async (_fields: ExerciseModalFields, _action: "salvar" | "salvar-e-outro") => {},
+    );
+    render(<ExerciseModal {...defaultProps({ onSave })} />);
+
+    fillCreateForm("Prancha", "Abdômen");
+    const opcaoTempo =
+      screen.queryByRole("radio", { name: /^tempo$/i }) ??
+      screen.queryByRole("option", { name: /^tempo$/i });
+    expect(opcaoTempo).not.toBeNull();
+    fireEvent.click(opcaoTempo as HTMLElement);
+    const opcaoLibra =
+      screen.queryByRole("radio", { name: /^(lb|libra)$/i }) ??
+      screen.queryByRole("option", { name: /^(lb|libra)$/i });
+    expect(opcaoLibra).not.toBeNull();
+    fireEvent.click(opcaoLibra as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: /^salvar$/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const payload = onSave.mock.calls[0]?.[0] as unknown as Record<string, unknown>;
+    expect(payload).toMatchObject({ mode: "tempo" });
+    expect(["libra", "lb"]).toContain(payload["loadUnit"]);
+  });
+
+  it("edição abre com modo e unidade atuais pré-selecionados", () => {
+    render(
+      <ExerciseModal
+        {...defaultProps({
+          editingExercise: makeExercise({
+            loadUnit: "libra",
+          }) as unknown as Exercise,
+        })}
+      />,
+    );
+
+    // O teste trava a presença dos seletores com valores herdados; o modo
+    // editado via cast (tipo ainda sem modo) ao menos não quebra o form.
+    expect(grupoOuControle(/modo/i)).toBeInTheDocument();
+    expect(grupoOuControle(/unidade/i)).toBeInTheDocument();
   });
 });

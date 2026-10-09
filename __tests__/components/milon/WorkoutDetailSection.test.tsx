@@ -627,7 +627,10 @@ describe("modo execução da seção (Mílon #5 — RED)", () => {
       />,
     );
 
-    expect(mockedUseWorkoutExecution).toHaveBeenCalledWith("wout-1");
+    expect(mockedUseWorkoutExecution).toHaveBeenCalledWith(
+      "wout-1",
+      expect.any(Array),
+    );
   });
 
   it("com flag: monta marcadores a partir de doneSeriesIds", () => {
@@ -711,7 +714,9 @@ describe("modo execução da seção (Mílon #5 — RED)", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText(/nenhuma série marcada, deseja limpar essa execução/i),
+        screen.getByText(
+          /Todas as séries foram desmarcada\. Deseja cancelar a execução desse treino\?/i,
+        ),
       ).toBeInTheDocument(),
     );
     // A série clicada já aparece desmarcada antes de qualquer pergunta.
@@ -736,7 +741,9 @@ describe("modo execução da seção (Mílon #5 — RED)", () => {
     );
 
     expect(
-      screen.getByText(/nenhuma série marcada, deseja limpar essa execução/i),
+      screen.getByText(
+        /Todas as séries foram desmarcada\. Deseja cancelar a execução desse treino\?/i,
+      ),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /limpar/i }));
@@ -878,9 +885,9 @@ describe("WorkoutDetailSection — paridade do replano (TASK-001 — RED)", () =
     ).toBeInTheDocument();
   });
 
-  it("com flag: modal de paridade oferece escolha de unidade kg/lb ligada (D18: unidade só no salvar)", async () => {
+  it("com flag: modal não oferece escolha de unidade (2ª volta: unidade herdada, sem botões kg/lb)", async () => {
     conteudoComUmaEntrada();
-    const state = setupExecReplano();
+    setupExecReplano();
 
     render(<WorkoutDetailSection {...comExecucao()} />);
     await abrirEditorDaPrimeiraSerie();
@@ -890,22 +897,11 @@ describe("WorkoutDetailSection — paridade do replano (TASK-001 — RED)", () =
     }).parentElement as HTMLElement;
     const modal = within(dialog);
     expect(
-      modal.getByRole("button", { name: /^kg$/i }),
-    ).toBeInTheDocument();
+      modal.queryByRole("button", { name: /^kg$/i }),
+    ).not.toBeInTheDocument();
     expect(
-      modal.getByRole("button", { name: /^lb$/i }),
-    ).toBeInTheDocument();
-
-    // D18: o salvamento entrega somente os campos (unidade via onChooseUnit, fora do payload).
-    fireEvent.click(modal.getByRole("button", { name: /salvar/i }));
-    await waitFor(() =>
-      expect(state.saveSeriesExecution).toHaveBeenCalledTimes(1),
-    );
-    const campos = (state.saveSeriesExecution.mock.calls[0] as unknown[])[2] as Record<
-      string,
-      unknown
-    >;
-    expect(campos).toEqual({ reps: 10, durationSeconds: null, load: null });
+      modal.queryByRole("button", { name: /^lb$/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("com flag: salvar mantém replicação sempre para origem + seguintes (sem indicador de cópia)", async () => {
@@ -1042,5 +1038,192 @@ describe("WorkoutDetailSection — sem banner de sucesso na execução (correç�
       screen.getByText("Treino salvo com sucesso."),
     ).toBeInTheDocument();
     expect(mockedUseWorkoutExecution).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Replano 2ª volta — badge "Em execução", executionBlocked e frozenEntries.
+ *
+ * Fonte: spec §3 (indicacao visual de "em execução" ao lado do nome do
+ * treino enquanto a execução estiver aberta; template bloqueado para edição
+ * na manutenção enquanto houver execução aberta; Treino do Dia trabalha com
+ * a cópia congelada) + plan.md §1 (Mudanças 1/3/4: frozenEntries derivado do
+ * snapshot substitui o template na exibição; badge "Em execução" quando
+ * exec.execution !== null; executionBlocked desabilita o chrome de
+ * manutenção — readOnly efetivo = readOnly || executionBlocked) + §3
+ * (contratos frozenEntries, executionBlocked e badge) + tasks.json TASK-001.
+ *
+ * Expected: FAIL — a seção ainda não implementa o badge, nem a prop
+ * executionBlocked, nem a exibição de frozenEntries (os casos novos de badge,
+ * bloqueio e foto congelada falham; os casos sem flag/sem snapshot são
+ * travas verdes). Hefesto fará GREEN na TASK-004 sem mudar estes testes.
+ */
+describe("WorkoutDetailSection — 2ª volta: badge, executionBlocked e frozenEntries (RED)", () => {
+  function setupExec2aVolta(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      frozenEntries: [] as WorkoutEntryView[],
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  function comExecucao(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backNone,
+      executionEnabled: true,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  function makeExecution(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "exec-1",
+      workoutId: "wout-1",
+      programId: "prog-1",
+      startedAt: "2026-10-08T10:00:00.000Z",
+      finishedAt: null,
+      createdAt: "2026-10-08T10:00:00.000Z",
+      created_by: DONO,
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExec2aVolta();
+  });
+
+  it("exibe badge 'Em execução' ao lado do nome do treino quando exec.execution !== null", () => {
+    conteudoComUmaEntrada();
+    setupExec2aVolta({ execution: makeExecution() });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(screen.getByText("Em execução")).toBeInTheDocument();
+  });
+
+  it("sem execução aberta, não exibe o badge 'Em execução'", () => {
+    conteudoComUmaEntrada();
+    setupExec2aVolta({ execution: null });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(screen.queryByText("Em execução")).not.toBeInTheDocument();
+  });
+
+  it("executionBlocked=true desabilita o chrome de manutenção (quantidade, descanso, editar, excluir, reordenar)", () => {
+    conteudoComUmaEntrada();
+    setupExec2aVolta({ execution: makeExecution() });
+
+    render(
+      <WorkoutDetailSection
+        {...(comExecucao({ executionBlocked: true }) as SectionProps)}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /adicionar exercício/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /editar/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /excluir/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /arrastar para reordenar/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Séries")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Descanso (s)")).not.toBeInTheDocument();
+  });
+
+  it("trava: sem execução aberta (executionBlocked=false), o chrome de manutenção segue visível", () => {
+    conteudoComUmaEntrada();
+    setupExec2aVolta({ execution: null });
+
+    render(
+      <WorkoutDetailSection
+        {...(comExecucao({ executionBlocked: false }) as SectionProps)}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /adicionar exercício/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /editar/i })).toBeInTheDocument();
+  });
+
+  it("exibe frozenEntries (derivados do snapshot) em vez do template quando a execução tem foto", () => {
+    const viewTemplate = makeView(
+      makeEntry({ id: "ent-1", position: 1, restSeconds: 60 }),
+      makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" }),
+      [makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, reps: 15 })],
+    );
+    const viewCongelada = makeView(
+      makeEntry({ id: "ent-1", position: 1, restSeconds: 60 }),
+      makeExercise({
+        id: "ex-1",
+        name: "Supino congelado",
+        muscle: "Peito",
+        loadUnit: "kg",
+      }),
+      [
+        makeSeries({
+          id: "ser-1",
+          entryId: "ent-1",
+          position: 1,
+          reps: 10,
+          load: 40,
+        }),
+      ],
+    );
+    conteudoComUmaEntrada({ entries: [viewTemplate] });
+    setupExec2aVolta({
+      execution: makeExecution({ snapshot: { entries: [] } }),
+      frozenEntries: [viewCongelada],
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    // O card exibe o exercício congelado na foto, não o template em tempo real.
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Supino congelado" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { level: 3, name: "Supino reto" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("trava: sem snapshot (execução sem foto), exibe o template (entries)", () => {
+    conteudoComUmaEntrada();
+    setupExec2aVolta({
+      execution: makeExecution({ snapshot: null }),
+      frozenEntries: [],
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Supino reto" }),
+    ).toBeInTheDocument();
   });
 });

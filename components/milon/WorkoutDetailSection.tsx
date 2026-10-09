@@ -50,6 +50,13 @@ export interface WorkoutDetailSectionProps {
    * comportamento é idêntico ao atual (manutenção intacta por construção).
    */
   executionEnabled?: boolean;
+  /**
+   * Bloqueio do template por treino (Mílon #5, 2ª volta D21): quando true,
+   * o chrome de manutenção é desabilitado (readOnly efetivo =
+   * readOnly || executionBlocked). A página de manutenção carrega a
+   * execução aberta e passa `executionBlocked={execution !== null}`.
+   */
+  executionBlocked?: boolean;
 }
 
 function toMessage(err: unknown, fallback: string): string {
@@ -94,7 +101,8 @@ interface ExecutionListContext {
   editorError: string | null;
   closeEditor: () => void;
   saveEditor: (fields: SeriesEditFields) => Promise<void>;
-  chooseEditorUnit: (unit: LoadUnit) => void;
+  displayEntries: WorkoutEntryView[];
+  execExecution: { snapshot?: unknown | null } | null;
 }
 
 /**
@@ -108,16 +116,14 @@ function ExecutionHost({
   workoutId,
   entries,
   onTemplateChanged,
-  onChooseUnitForEntry,
   children,
 }: {
   workoutId: string;
   entries: WorkoutEntryView[];
   onTemplateChanged: () => void;
-  onChooseUnitForEntry: (entryId: string, unit: LoadUnit) => void;
   children: (ctx: ExecutionListContext) => ReactNode;
 }) {
-  const exec = useWorkoutExecution(workoutId);
+  const exec = useWorkoutExecution(workoutId, entries);
   const [editing, setEditing] = useState<EditingTarget | null>(null);
   const [editorSaving, setEditorSaving] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
@@ -127,8 +133,22 @@ function ExecutionHost({
   // confirmação de limpeza da última série desmarcada).
   const [, bumpExecution] = useState(0);
 
+  // Congelados (2ª volta D20): com foto (snapshot não-nulo), exibe os
+  // valores congelados; sem foto, exibe o template em tempo real.
+  const execFrozen = (exec as unknown as { frozenEntries?: WorkoutEntryView[] })
+    .frozenEntries;
+  const execSnapshot = (
+    exec.execution as unknown as { snapshot?: unknown | null } | null
+  )?.snapshot;
+  const displayEntries: WorkoutEntryView[] =
+    execSnapshot != null &&
+    Array.isArray(execFrozen) &&
+    execFrozen.length > 0
+      ? execFrozen
+      : entries;
+
   function findTarget(seriesId: string): EditingTarget | null {
-    for (const view of entries) {
+    for (const view of displayEntries) {
       const serie = view.series.find((item) => item.id === seriesId);
       if (serie) {
         return { entry: view.entry, serie, loadUnit: view.exercise.loadUnit };
@@ -202,14 +222,6 @@ function ExecutionHost({
     if (!clearProcessing) exec.cancelClearExecution();
   }
 
-  function chooseEditorUnit(unit: LoadUnit): void {
-    // Paridade com a manutenção (D18): escolha de unidade do modal persiste
-    // na hora pelo caminho existente da seção, com reversão visível em falha.
-    const target = editing;
-    if (!target) return;
-    onChooseUnitForEntry(target.entry.id, unit);
-  }
-
   const doneBySeriesId: Record<string, boolean> = {};
   for (const id of exec.doneSeriesIds) doneBySeriesId[id] = true;
 
@@ -238,7 +250,8 @@ function ExecutionHost({
         editorError,
         closeEditor,
         saveEditor,
-        chooseEditorUnit,
+        displayEntries,
+        execExecution: exec.execution,
       })}
     </>
   );
@@ -251,6 +264,7 @@ export function WorkoutDetailSection({
   entryFooter = null,
   footer = null,
   executionEnabled = false,
+  executionBlocked = false,
 }: WorkoutDetailSectionProps) {
   const router = useRouter();
 
@@ -300,6 +314,7 @@ export function WorkoutDetailSection({
   const [unitError, setUnitError] = useState<string | null>(null);
 
   const readOnly = program?.status === "inativo";
+  const effectiveReadOnly = (readOnly ?? false) || executionBlocked;
   const backProgramId =
     backTarget.kind === "program" ? backTarget.programId : "";
   const programId = program?.id ?? backProgramId;
@@ -606,53 +621,51 @@ export function WorkoutDetailSection({
       >
         {workout ? (
           <div className="flex flex-col gap-4">
-            <section
-              aria-label="Cabeçalho do treino"
-              className="rounded-lg border bg-card p-6 shadow-sm flex flex-col gap-2"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="font-display text-2xl leading-snug text-[#B7602B] tracking-wider flex-1">
-                  {workout.name}
-                </h2>
-                {headerActions ?? null}
-                {backTarget.kind === "program" ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleBackToProgram}
-                    aria-label="Voltar ao programa"
-                  >
-                    Voltar ao programa
-                  </Button>
-                ) : null}
-              </div>
-            </section>
-
-            {successNotice ? (
-              <div className="rounded border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                {successNotice}
-              </div>
-            ) : null}
-
-            {unitError ? (
-              <div
-                role="alert"
-                className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-700 dark:text-rose-300 font-medium"
-              >
-                {unitError}
-              </div>
-            ) : null}
-
             {executionEnabled ? (
               <ExecutionHost
                 workoutId={workoutId}
                 entries={entriesWithUnit}
                 onTemplateChanged={() => void retry()}
-                onChooseUnitForEntry={handleConfirmUnit}
               >
                 {(ctx) => (
                   <>
+                    <section
+                      aria-label="Cabeçalho do treino"
+                      className="rounded-lg border bg-card p-6 shadow-sm flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <h2 className="font-display text-2xl leading-snug text-[#B7602B] tracking-wider flex-1">
+                          {workout.name}
+                        </h2>
+                        {ctx.execExecution !== null ? (
+                          <span className="rounded-full border border-[#B7602B] text-[#B7602B] px-2 py-0.5 text-xs font-semibold">
+                            Em execução
+                          </span>
+                        ) : null}
+                        {headerActions ?? null}
+                        {backTarget.kind === "program" ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleBackToProgram}
+                            aria-label="Voltar ao programa"
+                          >
+                            Voltar ao programa
+                          </Button>
+                        ) : null}
+                      </div>
+                    </section>
+
+                    {unitError ? (
+                      <div
+                        role="alert"
+                        className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-700 dark:text-rose-300 font-medium"
+                      >
+                        {unitError}
+                      </div>
+                    ) : null}
+
                     {ctx.execErrorMsg ? (
                       <div
                         role="alert"
@@ -663,10 +676,10 @@ export function WorkoutDetailSection({
                     ) : null}
 
                     <WorkoutEntriesList
-                      entries={entriesWithUnit}
+                      entries={ctx.displayEntries}
                       programId={programId}
-                      readOnly={readOnly ?? false}
-                      empty={entriesWithUnit.length === 0}
+                      readOnly={effectiveReadOnly}
+                      empty={ctx.displayEntries.length === 0}
                       errorMsg={errorMsg}
                       errorOrigin={errorOrigin}
                       onAdd={openPicker}
@@ -690,7 +703,6 @@ export function WorkoutDetailSection({
                       saving={ctx.editorSaving}
                       error={ctx.editorError}
                       onClose={ctx.closeEditor}
-                      onChooseUnit={ctx.chooseEditorUnit}
                       onSave={ctx.saveEditor}
                     />
 
@@ -709,25 +721,65 @@ export function WorkoutDetailSection({
                 )}
               </ExecutionHost>
             ) : (
-              <WorkoutEntriesList
-                entries={entriesWithUnit}
-                programId={programId}
-                readOnly={readOnly ?? false}
-                empty={entriesWithUnit.length === 0}
-                errorMsg={errorMsg}
-                errorOrigin={errorOrigin}
-                onAdd={openPicker}
-                onRetry={() => void retry()}
-                onReorder={handleReorder}
-                onQuantityCommit={handleQuantityCommit}
-                onRequestReduce={handleRequestReduce}
-                onRestCommit={handleRestCommit}
-                onSeriesCommit={handleSeriesCommit}
-                onApplyAll={handleApplyAll}
-                onEditExercise={handleEditExercise}
-                onRemoveEntry={handleRemoveEntry}
-                onConfirmUnit={handleConfirmUnit}
-              />
+              <>
+                <section
+                  aria-label="Cabeçalho do treino"
+                  className="rounded-lg border bg-card p-6 shadow-sm flex flex-col gap-2"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <h2 className="font-display text-2xl leading-snug text-[#B7602B] tracking-wider flex-1">
+                      {workout.name}
+                    </h2>
+                    {headerActions ?? null}
+                    {backTarget.kind === "program" ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleBackToProgram}
+                        aria-label="Voltar ao programa"
+                      >
+                        Voltar ao programa
+                      </Button>
+                    ) : null}
+                  </div>
+                </section>
+
+                {successNotice ? (
+                  <div className="rounded border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    {successNotice}
+                  </div>
+                ) : null}
+
+                {unitError ? (
+                  <div
+                    role="alert"
+                    className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-700 dark:text-rose-300 font-medium"
+                  >
+                    {unitError}
+                  </div>
+                ) : null}
+
+                <WorkoutEntriesList
+                  entries={entriesWithUnit}
+                  programId={programId}
+                  readOnly={effectiveReadOnly}
+                  empty={entriesWithUnit.length === 0}
+                  errorMsg={errorMsg}
+                  errorOrigin={errorOrigin}
+                  onAdd={openPicker}
+                  onRetry={() => void retry()}
+                  onReorder={handleReorder}
+                  onQuantityCommit={handleQuantityCommit}
+                  onRequestReduce={handleRequestReduce}
+                  onRestCommit={handleRestCommit}
+                  onSeriesCommit={handleSeriesCommit}
+                  onApplyAll={handleApplyAll}
+                  onEditExercise={handleEditExercise}
+                  onRemoveEntry={handleRemoveEntry}
+                  onConfirmUnit={handleConfirmUnit}
+                />
+              </>
             )}
 
             {entryFooter

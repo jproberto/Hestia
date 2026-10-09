@@ -13,6 +13,7 @@ import type {
   WorkoutSeries,
   WorkoutExecution,
   WorkoutExecutionSeries,
+  WorkoutExecutionSnapshot,
   MarkExecutionSeriesInput,
   CreateWorkoutInput,
   UpdateWorkoutInput,
@@ -111,4 +112,8 @@ export interface IWorkoutExecutionRepository {
     email: string,
   ): Promise<WorkoutExecutionSeries>;
   unmarkSeries(executionId: string, seriesId: string): Promise<void>;
+  setExecutionSnapshot(
+    executionId: string,
+    snapshot: WorkoutExecutionSnapshot,
+  ): Promise<void>;
 }

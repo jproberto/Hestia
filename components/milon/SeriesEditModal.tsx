@@ -24,7 +24,6 @@ export interface SeriesEditModalProps {
   saving: boolean;
   error: string | null;
   onClose: () => void;
-  onChooseUnit?: (unit: LoadUnit) => void;
   onSave: (fields: SeriesEditFields) => Promise<void>;
 }
 
@@ -42,15 +41,14 @@ function derivaModoInicial(series: WorkoutSeries | null): boolean {
 }
 
 /**
- * Modal de edição da série (Mílon #5, replano paridade).
+ * Modal de edição da série (Mílon #5, 2ª volta D22).
  * Presentacional por props: campo único repetição/tempo com o mesmo botão
- * de alternância da manutenção, carga com conversão secundária e botões
- * kg/lb ligados ao callback de escolha de unidade, sem qualquer opção de
- * cópia — todo salvamento replica sempre para a origem mais as seguintes
- * (decisão da seção/hook). Nunca fecha no erro: validação local mostra
- * mensagem visível e falha de persistência é exibida via `error` mantendo
- * o digitado. A unidade escolhida é comunicada na hora via `onChooseUnit`
- * e o salvamento entrega somente os campos.
+ * de alternância da manutenção, carga com conversão secundária e unidade
+ * herdada do exercício exibida como texto (sem edição, sem botões kg/lb),
+ * sem qualquer opção de cópia — todo salvamento replica sempre para a
+ * origem mais as seguintes (decisão da seção/hook). Nunca fecha no erro:
+ * validação local mostra mensagem visível e falha de persistência é exibida
+ * via `error` mantendo o digitado. O salvamento entrega somente os campos.
  */
 export default function SeriesEditModal({
   open,
@@ -59,7 +57,6 @@ export default function SeriesEditModal({
   saving,
   error,
   onClose,
-  onChooseUnit,
   onSave,
 }: SeriesEditModalProps) {
   const [isRepsMode, setIsRepsMode] = useState(() => derivaModoInicial(series));
@@ -70,9 +67,6 @@ export default function SeriesEditModal({
     series?.load === null || series?.load === undefined
       ? ""
       : String(series.load),
-  );
-  const [selectedUnit, setSelectedUnit] = useState<LoadUnit>(
-    loadUnit ?? "kg",
   );
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -93,13 +87,12 @@ export default function SeriesEditModal({
         ? ""
         : String(series.load),
     );
-    setSelectedUnit(loadUnit ?? "kg");
     setValidationError(null);
   }
 
   if (!open || !series) return null;
 
-  const effectiveUnit: LoadUnit = selectedUnit;
+  const effectiveUnit: LoadUnit = loadUnit ?? "kg";
 
   const cargaNumerica = (() => {
     const texto = cargaText.trim().replace(",", ".");
@@ -130,11 +123,6 @@ export default function SeriesEditModal({
       );
       return proximo;
     });
-  }
-
-  function escolherUnidade(unit: LoadUnit): void {
-    setSelectedUnit(unit);
-    onChooseUnit?.(unit);
   }
 
   async function handleSave(event: React.FormEvent): Promise<void> {
@@ -234,29 +222,9 @@ export default function SeriesEditModal({
               </span>
             ) : null}
             <div className="flex items-center gap-2 pt-1">
-              <span className="text-xs text-muted-foreground">Unidade:</span>
-              <div className="flex gap-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={effectiveUnit === "kg" ? "default" : "outline"}
-                  className="h-7 px-2 text-xs"
-                  onClick={() => escolherUnidade("kg")}
-                  disabled={saving}
-                >
-                  kg
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={effectiveUnit === "libra" ? "default" : "outline"}
-                  className="h-7 px-2 text-xs"
-                  onClick={() => escolherUnidade("libra")}
-                  disabled={saving}
-                >
-                  lb
-                </Button>
-              </div>
+              <span className="text-xs text-muted-foreground">
+                Unidade: {effectiveUnit}
+              </span>
             </div>
           </div>
 

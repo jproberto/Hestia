@@ -74,13 +74,17 @@ import {
   listDoneByExecutionStandalone,
   markSeriesDoneStandalone,
   unmarkSeriesStandalone,
+  setExecutionSnapshotStandalone,
 } from "@/lib/milon/db/executions";
 import type { UpdateSeriesFieldsInput } from "@/lib/milon/repositories/interfaces";
 import type {
+  Exercise,
   Workout,
   WorkoutEntry,
+  WorkoutEntryView,
   WorkoutExecution,
   WorkoutExecutionSeries,
+  WorkoutExecutionSnapshot,
   WorkoutSeries,
 } from "@/lib/milon/types";
 
@@ -133,12 +137,14 @@ vi.mock("@/lib/milon/db/executions", () => ({
   listDoneByExecution: vi.fn(),
   markSeriesDone: vi.fn(),
   unmarkSeries: vi.fn(),
+  setExecutionSnapshot: vi.fn(),
   findOpenExecutionByWorkoutStandalone: vi.fn(),
   startExecutionStandalone: vi.fn(),
   clearExecutionStandalone: vi.fn(),
   listDoneByExecutionStandalone: vi.fn(),
   markSeriesDoneStandalone: vi.fn(),
   unmarkSeriesStandalone: vi.fn(),
+  setExecutionSnapshotStandalone: vi.fn(),
 }));
 
 // getEmail() do client mockado globalmente em __tests__/setup.ts (task 49).
@@ -182,6 +188,66 @@ function makeSerie(overrides: Partial<WorkoutSeries> & { id: string }): WorkoutS
     load: 40,
     createdAt: "2026-10-01T10:00:00.000Z",
     created_by: EMAIL,
+    ...overrides,
+  };
+}
+
+function makeExercise(overrides: Partial<Exercise> = {}): Exercise {
+  return {
+    id: "ex-1",
+    name: "Supino reto",
+    muscle: "Peito",
+    videoLink: null,
+    loadUnit: "kg",
+    deletedAt: null,
+    createdAt: "2026-10-01T10:00:00.000Z",
+    created_by: EMAIL,
+    ...overrides,
+  };
+}
+
+function makeView(overrides: Partial<WorkoutEntryView> = {}): WorkoutEntryView {
+  return {
+    entry: makeEntry({ id: "ent-1" }),
+    exercise: makeExercise(),
+    series: [
+      makeSerie({ id: "s-1", entryId: "ent-1", position: 1, reps: 10, load: 40 }),
+    ],
+    ...overrides,
+  };
+}
+
+/**
+ * Foto do template no formato do contrato do plan.md §3 (WorkoutExecutionSnapshot):
+ * entries com entryId, exerciseId, position, restSeconds, exerciseName,
+ * exerciseMuscle, exerciseVideoLink, loadUnit e series (seriesId, position,
+ * reps, durationSeconds, load).
+ */
+function makeSnapshotContrato(
+  overrides: Partial<WorkoutExecutionSnapshot> = {},
+): WorkoutExecutionSnapshot {
+  return {
+    entries: [
+      {
+        entryId: "ent-1",
+        exerciseId: "ex-1",
+        position: 1,
+        restSeconds: null,
+        exerciseName: "Supino reto",
+        exerciseMuscle: "Peito",
+        exerciseVideoLink: null,
+        loadUnit: "kg",
+        series: [
+          {
+            seriesId: "s-1",
+            position: 1,
+            reps: 10,
+            durationSeconds: null,
+            load: 40,
+          },
+        ],
+      },
+    ],
     ...overrides,
   };
 }
@@ -278,6 +344,13 @@ function instalarBanco(sim: BancoSimulado): void {
       sim.dones = [];
     },
   );
+  // Foto congelada (replano 2ª volta): persistir a foto grava o snapshot na
+  // execução aberta do banco simulado (mesma transação da primeira marcação).
+  vi.mocked(setExecutionSnapshotStandalone).mockImplementation(
+    async (_executionId: string, snapshot: WorkoutExecutionSnapshot) => {
+      if (sim.execution) sim.execution = { ...sim.execution, snapshot };
+    },
+  );
   vi.mocked(updateSeriesFieldsStandalone).mockImplementation(
     async (seriesId: string, fields: UpdateSeriesFieldsInput) => {
       return makeSerie({
@@ -315,6 +388,7 @@ const mocksDoArquivo = [
   listDoneByExecutionStandalone,
   markSeriesDoneStandalone,
   unmarkSeriesStandalone,
+  setExecutionSnapshotStandalone,
   updateSeriesFieldsStandalone,
   applySeriesToFollowingStandalone,
 ];
@@ -922,6 +996,222 @@ describe("Mílon #5 — useWorkoutExecution (contrato RED, TASK-003)", () => {
       expect(result.current.errorMsg).toContain("falha ao abrir execução");
       expect(result.current.errorOrigin).toBe("operacao");
       expect(result.current.successNotice).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 12. Foto do template e frozenEntries (replano 2ª volta — RED)
+  // -------------------------------------------------------------------------
+  // Verdade da 2ª volta (spec §3 + plan.md §1 Mudança 1 + §3 contratos
+  // freezeSnapshot/frozenEntries): o hook recebe `entries` (template atual)
+  // como segundo parâmetro; na primeira marcação (startExecution), após
+  // abrir, captura o template e persiste a foto via setExecutionSnapshot
+  // (startExecution → setExecutionSnapshot → markSeriesDone, mesma transação);
+  // a foto é imutável; frozenEntries deriva do snapshot quando houver foto e
+  // é o próprio template quando não há execução.
+  //
+  // Expected: FAIL — o hook ainda não recebe entries nem tira a foto
+  // (setExecutionSnapshotStandalone nunca chamado, frozenEntries inexistente).
+  // Hefesto fará GREEN na TASK-003 sem mudar estes testes.
+  describe("12. Foto do template e frozenEntries (replano 2ª volta — RED)", () => {
+    it("primeira marcação tira a foto do template: startExecution → setExecutionSnapshot → markSeriesDone (mesma transação)", async () => {
+      const sim: BancoSimulado = { execution: null, dones: [] };
+      instalarBanco(sim);
+      const entries = [makeView()];
+      const { result } = renderHook(() =>
+        useWorkoutExecution(WORKOUT_ID, entries),
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() =>
+        result.current.toggleSeries(entries[0].entry, entries[0].series[0]),
+      );
+
+      await waitFor(() => expect(result.current.markedCount).toBe(1));
+      expect(startExecutionStandalone).toHaveBeenCalledTimes(1);
+      expect(setExecutionSnapshotStandalone).toHaveBeenCalledTimes(1);
+      // Ordem da transação: abrir → fotografar → marcar.
+      const ordemStart =
+        vi.mocked(startExecutionStandalone).mock.invocationCallOrder[0];
+      const ordemSnapshot =
+        vi.mocked(setExecutionSnapshotStandalone).mock.invocationCallOrder[0];
+      const ordemMark =
+        vi.mocked(markSeriesDoneStandalone).mock.invocationCallOrder[0];
+      expect(ordemStart).toBeLessThan(ordemSnapshot);
+      expect(ordemSnapshot).toBeLessThan(ordemMark);
+      // A foto captura o template: exercícios, ordenação, valores, descanso
+      // e unidade (contrato do plan.md §3).
+      const [executionId, snapshot] = vi.mocked(
+        setExecutionSnapshotStandalone,
+      ).mock.calls[0];
+      expect(executionId).toBe("exec-1");
+      expect(snapshot).toMatchObject({
+        entries: [
+          {
+            entryId: "ent-1",
+            exerciseId: "ex-1",
+            position: 1,
+            restSeconds: null,
+            exerciseName: "Supino reto",
+            exerciseMuscle: "Peito",
+            exerciseVideoLink: null,
+            loadUnit: "kg",
+            series: [
+              {
+                seriesId: "s-1",
+                position: 1,
+                reps: 10,
+                durationSeconds: null,
+                load: 40,
+              },
+            ],
+          },
+        ],
+      });
+    });
+
+    it("estado transitório não persiste: após a primeira marcação a execução recarregada SEMPRE tem snapshot", async () => {
+      const sim: BancoSimulado = { execution: null, dones: [] };
+      instalarBanco(sim);
+      const entries = [makeView()];
+      const { result } = renderHook(() =>
+        useWorkoutExecution(WORKOUT_ID, entries),
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() =>
+        result.current.toggleSeries(entries[0].entry, entries[0].series[0]),
+      );
+
+      await waitFor(() => expect(result.current.markedCount).toBe(1));
+      // A foto é tirada na mesma transação da marcação: a execução aberta
+      // nunca persiste sem snapshot.
+      expect(result.current.execution?.snapshot).not.toBeNull();
+      expect(result.current.execution?.snapshot).toMatchObject({
+        entries: [expect.objectContaining({ entryId: "ent-1" })],
+      });
+    });
+
+    it("após a primeira marcação, frozenEntries deriva da foto tirada (não do template em tempo real)", async () => {
+      const sim: BancoSimulado = { execution: null, dones: [] };
+      instalarBanco(sim);
+      const entries = [makeView()];
+      const { result } = renderHook(() =>
+        useWorkoutExecution(WORKOUT_ID, entries),
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() =>
+        result.current.toggleSeries(entries[0].entry, entries[0].series[0]),
+      );
+
+      await waitFor(() => expect(result.current.markedCount).toBe(1));
+      const frozen = result.current.frozenEntries;
+      expect(frozen).toHaveLength(1);
+      expect(frozen[0].entry.id).toBe("ent-1");
+      expect(frozen[0].exercise.id).toBe("ex-1");
+      expect(frozen[0].exercise.name).toBe("Supino reto");
+      expect(frozen[0].exercise.loadUnit).toBe("kg");
+      expect(frozen[0].series[0].id).toBe("s-1");
+      expect(frozen[0].series[0].reps).toBe(10);
+    });
+
+    it("com execução aberta e snapshot, frozenEntries deriva do snapshot (não do template)", async () => {
+      const template = [
+        makeView({
+          series: [
+            makeSerie({
+              id: "s-1",
+              entryId: "ent-1",
+              position: 1,
+              reps: 15,
+              load: 40,
+            }),
+          ],
+        }),
+      ];
+      const sim: BancoSimulado = {
+        execution: {
+          ...makeExecution(),
+          snapshot: makeSnapshotContrato({ entries: [
+            {
+              entryId: "ent-1",
+              exerciseId: "ex-1",
+              position: 1,
+              restSeconds: null,
+              exerciseName: "Supino reto",
+              exerciseMuscle: "Peito",
+              exerciseVideoLink: null,
+              loadUnit: "kg",
+              series: [
+                {
+                  seriesId: "s-1",
+                  position: 1,
+                  reps: 10,
+                  durationSeconds: null,
+                  load: 40,
+                },
+              ],
+            },
+          ] }),
+        },
+        dones: [],
+      };
+      instalarBanco(sim);
+      const { result } = renderHook(() =>
+        useWorkoutExecution(WORKOUT_ID, template),
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      const frozen = result.current.frozenEntries;
+      expect(frozen).toHaveLength(1);
+      // Valor congelado na foto (10), não o template em tempo real (15).
+      expect(frozen[0].series[0].reps).toBe(10);
+      expect(frozen[0].entry.id).toBe("ent-1");
+      expect(frozen[0].exercise.name).toBe("Supino reto");
+      expect(frozen[0].exercise.loadUnit).toBe("kg");
+    });
+
+    it("sem execução aberta, frozenEntries é o próprio template (entries)", async () => {
+      const entries = [makeView()];
+      const sim: BancoSimulado = { execution: null, dones: [] };
+      instalarBanco(sim);
+      const { result } = renderHook(() =>
+        useWorkoutExecution(WORKOUT_ID, entries),
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.frozenEntries).toEqual(entries);
+    });
+
+    it("edição no Treino do Dia atualiza o template mas NÃO a foto (snapshot imutável após a primeira marcação)", async () => {
+      const entries = [makeView()];
+      const sim: BancoSimulado = { execution: makeExecution(), dones: [] };
+      const snapshotOriginal = makeSnapshotContrato();
+      sim.execution = { ...sim.execution!, snapshot: snapshotOriginal };
+      instalarBanco(sim);
+      const { result } = renderHook(() =>
+        useWorkoutExecution(WORKOUT_ID, entries),
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await executar(() =>
+        result.current.saveSeriesExecution(entries[0].entry, entries[0].series[0], {
+          reps: 20,
+        }),
+      );
+
+      // O template é atualizado (origem + seguintes)...
+      expect(updateSeriesFieldsStandalone).toHaveBeenCalledWith("s-1", {
+        reps: 20,
+      });
+      expect(applySeriesToFollowingStandalone).toHaveBeenCalledWith(
+        "ent-1",
+        "s-1",
+      );
+      // ...mas a foto nunca é re-tirada no salvar.
+      expect(setExecutionSnapshotStandalone).not.toHaveBeenCalled();
+      expect(result.current.execution?.snapshot).toEqual(snapshotOriginal);
     });
   });
 });

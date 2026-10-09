@@ -64,7 +64,8 @@ export default function WorkoutConfirmModal({
           </p>
         ) : isLimpar ? (
           <p className="text-sm text-muted-foreground">
-            Nenhuma série marcada, deseja limpar essa execução?
+            Todas as séries foram desmarcada. Deseja cancelar a execução desse
+            treino?
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">

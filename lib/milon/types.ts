@@ -152,6 +152,32 @@ export interface UpdateWorkoutInput {
 // finishedAt nulo = execução aberta; retrato nunca é reescrito nesta feature.
 // ----------------------------------------------------------------------------
 
+// Foto congelada do template (Mílon #5, 2ª volta, D19/D20): gravada na coluna
+// JSONB `snapshot` da execução na primeira marcação e imutável a partir dela.
+export interface WorkoutExecutionFrozenSeries {
+  seriesId: string;
+  position: number;
+  reps: number | null;
+  durationSeconds: number | null;
+  load: number | null;
+}
+
+export interface WorkoutExecutionFrozenEntry {
+  entryId: string;
+  exerciseId: string;
+  position: number;
+  restSeconds: number | null;
+  exerciseName: string;
+  exerciseMuscle: string;
+  exerciseVideoLink: string | null;
+  loadUnit: LoadUnit;
+  series: WorkoutExecutionFrozenSeries[];
+}
+
+export interface WorkoutExecutionSnapshot {
+  entries: WorkoutExecutionFrozenEntry[];
+}
+
 export interface WorkoutExecutionRow {
   id: string;
   workout_id: string;
@@ -160,6 +186,7 @@ export interface WorkoutExecutionRow {
   finished_at: string | null;
   created_at: string;
   created_by: string;
+  snapshot?: WorkoutExecutionSnapshot | null;
 }
 
 export interface WorkoutExecution {
@@ -170,6 +197,7 @@ export interface WorkoutExecution {
   finishedAt: string | null;
   createdAt: string;
   created_by: string;
+  snapshot?: WorkoutExecutionSnapshot | null;
 }
 
 export interface WorkoutExecutionSeriesRow {

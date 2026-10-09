@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import SeriesEditModal from "@/components/milon/SeriesEditModal";
 import type { LoadUnit, WorkoutSeries } from "@/lib/milon/types";
@@ -227,17 +227,17 @@ describe("SeriesEditModal (TASK-005 — RED)", () => {
 /**
  * Paridade com a manutenção (Mílon #5 replano, TASK-001 RED).
  *
- * Fonte: plan.md §2–§3 (campo único repetição/tempo com o mesmo botão de
- * alternância da manutenção; carga com conversão secundária e os mesmos
- * botões kg/lb; identificador series-edit-valor; series-edit-reps e
- * series-edit-tempo deixam de existir) + spec §3 (mesmas opções da
- * manutenção, troca repetição/tempo, escolha kg/lb) + D18 (unidade só no
- * salvar) + contratos (salvamento entrega somente os campos; nunca fecha
- * no erro).
+ * Fonte: plan.md §2–§3 2ª volta (campo único repetição/tempo com o mesmo
+ * botão de alternância da manutenção; carga com conversão secundária;
+ * unidade HERDADA do exercício exibida como texto, sem botões kg/lb e sem
+ * prop onChooseUnit — decisão D22) + spec §3 (mesmas opções da manutenção,
+ * troca repetição/tempo; unidade e modo pertencem ao exercício e aparecem
+ * no modal como herdados, sem edição) + contratos (salvamento entrega
+ * somente os campos; nunca fecha no erro).
  *
- * Expected: FAIL — o modal ainda tem dois campos simultâneos
- * (series-edit-reps + series-edit-tempo) sem alternância e sem botões de
- * unidade. Hefesto fará GREEN na TASK-003 sem mudar estes testes.
+ * Expected: FAIL — o modal ainda tem os botões kg/lb ligados a onChooseUnit
+ * (1ª volta). Hefesto fará GREEN na TASK-004 removendo a escolha de unidade
+ * do modal sem mudar estes testes.
  */
 describe("SeriesEditModal — paridade com a manutenção (replano TASK-001 — RED)", () => {
   type ModalProps = Parameters<typeof SeriesEditModal>[0];
@@ -245,6 +245,12 @@ describe("SeriesEditModal — paridade com a manutenção (replano TASK-001 — 
   function renderModal(props: Partial<ModalProps> = {}) {
     const merged = { ...base(), ...props } as unknown as ModalProps;
     render(<SeriesEditModal {...merged} />);
+  }
+
+  /** Container do modal (card que contém o título "Editar série"). */
+  function modal(): HTMLElement {
+    return screen.getByRole("heading", { name: /editar série/i })
+      .parentElement as HTMLElement;
   }
 
   it("expõe campo único series-edit-valor (sem os dois campos simultâneos)", () => {
@@ -266,23 +272,59 @@ describe("SeriesEditModal — paridade com a manutenção (replano TASK-001 — 
     expect(screen.getByText("Tempo (s)")).toBeInTheDocument();
   });
 
-  it("carga exibe conversão secundária e botões kg/lb", () => {
+  it("carga exibe conversão secundária e a unidade como texto herdado (sem botões kg/lb)", () => {
     renderModal({ series: makeSeries({ reps: 10, load: 50 }), loadUnit: "kg" });
 
     expect(screen.getByText(/110\.2/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^kg$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^lb$/i })).toBeInTheDocument();
+    expect(
+      within(modal()).queryByRole("button", { name: /^kg$/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(modal()).queryByRole("button", { name: /^lb$/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it("D18: trocar a unidade chama onChooseUnit sem fechar (unidade só no salvar)", () => {
+  it("não oferece escolha de unidade: sem botões kg/lb e sem prop onChooseUnit (unidade herdada do exercício)", () => {
     const onChooseUnit = vi.fn();
     renderModal({ onChooseUnit } as unknown as Partial<ModalProps>);
 
-    fireEvent.click(screen.getByRole("button", { name: /^lb$/i }));
+    expect(
+      within(modal()).queryByRole("button", { name: /^kg$/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(modal()).queryByRole("button", { name: /^lb$/i }),
+    ).not.toBeInTheDocument();
+    expect(onChooseUnit).not.toHaveBeenCalled();
+  });
 
-    expect(onChooseUnit).toHaveBeenCalledTimes(1);
-    expect(onChooseUnit).toHaveBeenCalledWith("libra");
-    expect(screen.getByRole("button", { name: /salvar/i })).toBeInTheDocument();
+  it("exibe a unidade herdada do exercício como texto (loadUnit kg), sem edição", () => {
+    renderModal({ series: makeSeries({ reps: 10, load: 50 }), loadUnit: "kg" });
+
+    const textos = within(modal()).getAllByText(/kg/);
+    expect(textos.length).toBeGreaterThan(0);
+    // A unidade aparece como texto, nunca como botão de escolha.
+    for (const texto of textos) {
+      expect(texto.tagName).not.toBe("BUTTON");
+    }
+  });
+
+  it("exibe 'libra' como texto herdado quando o exercício tem loadUnit libra", () => {
+    renderModal({
+      series: makeSeries({ reps: 10, load: 50 }),
+      loadUnit: "libra",
+    });
+
+    const textos = within(modal()).getAllByText(/libra/);
+    expect(textos.length).toBeGreaterThan(0);
+    for (const texto of textos) {
+      expect(texto.tagName).not.toBe("BUTTON");
+    }
+    expect(
+      within(modal()).queryByRole("button", { name: /^kg$/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(modal()).queryByRole("button", { name: /^lb$/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("salvar entrega somente os campos { reps, durationSeconds, load }", async () => {

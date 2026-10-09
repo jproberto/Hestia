@@ -11,10 +11,11 @@ import type {
   WorkoutExecutionRow,
   WorkoutExecutionSeries,
   WorkoutExecutionSeriesRow,
+  WorkoutExecutionSnapshot,
 } from "../types";
 
 function toExecutionDomain(row: WorkoutExecutionRow): WorkoutExecution {
-  return {
+  const execution: WorkoutExecution = {
     id: row.id,
     workoutId: row.workout_id,
     programId: row.program_id,
@@ -23,6 +24,9 @@ function toExecutionDomain(row: WorkoutExecutionRow): WorkoutExecution {
     createdAt: row.created_at,
     created_by: row.created_by,
   };
+  // Foto congelada (2ª volta): sem foto no row, o domínio segue sem o campo.
+  if (row.snapshot != null) execution.snapshot = row.snapshot;
+  return execution;
 }
 
 function toDoneDomain(row: WorkoutExecutionSeriesRow): WorkoutExecutionSeries {
@@ -61,6 +65,21 @@ export async function findOpenExecutionByWorkout(
 
   if (error) throw error;
   return data ? toExecutionDomain(data) : null;
+}
+
+export async function setExecutionSnapshot(
+  db: IDatabaseClient,
+  executionId: string,
+  snapshot: WorkoutExecutionSnapshot,
+): Promise<void> {
+  const { data, error } = await db
+    .from<WorkoutExecutionRow>("workout_executions")
+    .update({ snapshot })
+    .eq("id", executionId)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error(`Falha ao gravar foto: execução ${executionId} não encontrada.`);
 }
 
 export async function startExecution(
@@ -209,4 +228,11 @@ export async function unmarkSeriesStandalone(
   seriesId: string,
 ): Promise<void> {
   return unmarkSeries(createBrowserDatabaseClient(), executionId, seriesId);
+}
+
+export async function setExecutionSnapshotStandalone(
+  executionId: string,
+  snapshot: WorkoutExecutionSnapshot,
+): Promise<void> {
+  return setExecutionSnapshot(createBrowserDatabaseClient(), executionId, snapshot);
 }

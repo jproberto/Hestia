@@ -259,7 +259,7 @@ describe("WorkoutConfirmModal", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("texto contém a pergunta 'nenhuma série marcada, deseja limpar essa execução'", () => {
+    it("texto exato 'Todas as séries foram desmarcada. Deseja cancelar a execução desse treino?' (2ª volta)", () => {
       render(
         <WorkoutConfirmModal
           {...(limpar() as unknown as WorkoutConfirmModalProps)}
@@ -267,7 +267,9 @@ describe("WorkoutConfirmModal", () => {
       );
 
       expect(
-        screen.getByText(/nenhuma série marcada, deseja limpar essa execução/i),
+        screen.getByText(
+          "Todas as séries foram desmarcada. Deseja cancelar a execução desse treino?",
+        ),
       ).toBeInTheDocument();
     });
 

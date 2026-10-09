@@ -25,14 +25,16 @@
         "__tests__/app/milon/programs/[id]/workouts/[workoutId]/page.test.tsx",
         "__tests__/components/milon/WorkoutConfirmModal.test.tsx"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-002",
       "title": "Migração 0012 (coluna snapshot) + repository + tipos da foto congelada",
       "description": "Hefesto implementa a persistência da foto do template. Arquivos: utils/migrations/migration-0012-milon-execucao-snapshot.sql (novo) adicionando coluna JSONB snapshot na tabela workout_executions, com registro em public.schema_migrations (nome do arquivo idêntico, conflito ignorado pelo nome do script); lib/milon/types.ts adicionando interfaces WorkoutExecutionSnapshot, WorkoutExecutionFrozenEntry, WorkoutExecutionFrozenSeries e estendendo WorkoutExecution com campo snapshot; lib/milon/repositories/executions.ts adicionando setExecutionSnapshot(db, executionId, snapshot) e estendendo findOpenExecutionByWorkout para retornar a execução com snapshot; lib/milon/repositories/interfaces.ts estendendo IWorkoutExecutionRepository com setExecutionSnapshot; lib/milon/repositories/fakes/fakeWorkoutExecutionRepository.ts espelhando setExecutionSnapshot e a snapshot no findOpenExecutionByWorkout do fake; lib/milon/db/executions.ts re-exportando o repository estendido (não muda — export * já cobre). Interfaces: Consome as expectativas da TASK-001 para migration-0012 e contract-workout-executions, e o plano §3 (contratos do snapshot); Produz a migração 0012, o repository estendido (setExecutionSnapshot, findOpenExecutionByWorkout com snapshot), o fake estendido e os tipos (WorkoutExecutionSnapshot, WorkoutExecutionFrozenEntry, WorkoutExecutionFrozenSeries, WorkoutExecution com snapshot) que a TASK-003 consome. Passos: implementar o mínimo para os testes da TASK-001 passarem; rodar npm test -- __tests__/lib/milon/migration-0012.test.ts com Expected PASS; rodar npm test -- __tests__/lib/milon/repositories/contract-workout-executions.test.ts com Expected PASS; rodar npx tsc --noEmit com Expected PASS.",
       "assignee": "hefesto",
-      "dependencies": ["TASK-001"],
+      "dependencies": [
+        "TASK-001"
+      ],
       "acceptanceCriteria": [
         "npm test -- __tests__/lib/milon/migration-0012.test.ts passa integralmente incluindo os casos novos de coluna snapshot e registro em schema_migrations (Expected: PASS)",
         "npm test -- __tests__/lib/milon/repositories/contract-workout-executions.test.ts passa integralmente incluindo os casos novos de setExecutionSnapshot e snapshot (Expected: PASS)",
@@ -47,14 +49,16 @@
         "lib/milon/repositories/fakes/fakeWorkoutExecutionRepository.ts",
         "lib/milon/db/executions.ts"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-003",
       "title": "Hook useWorkoutExecution com foto na primeira marcação e frozenEntries",
       "description": "Hefesto estende o hook useWorkoutExecution para tirar a foto do template na primeira marcação e expor frozenEntries. Arquivo: lib/milon/hooks/useWorkoutExecution.ts como único arquivo de produção alterado. Interfaces: Consome o repository estendido da TASK-002 (setExecutionSnapshot, findOpenExecutionByWorkout com snapshot), os tipos da TASK-002 (WorkoutExecutionSnapshot, WorkoutExecutionFrozenEntry, WorkoutExecutionFrozenSeries, WorkoutExecution com snapshot) e as expectativas da TASK-001 para useWorkoutExecution.test.ts; Produz o hook estendido (parâmetro entries, foto na primeira marcação, frozenEntries) que a TASK-004 consome. Comportamento: o hook passa a receber entries: WorkoutEntryView[] como segundo parâmetro (o template atual, carregado por useWorkoutDetail na seção); na primeira marcação (quando startExecution é chamado porque não havia execução aberta), após startExecution retornar, o hook captura o template atual (entries), monta o WorkoutExecutionSnapshot (entries com entryId, exerciseId, position, restSeconds, exerciseName, exerciseMuscle, exerciseVideoLink, loadUnit, e series com seriesId, position, reps, durationSeconds, load) e persiste via setExecutionSnapshot; a partir desse momento, o hook carrega a execução com snapshot e deriva frozenEntries (lista de WorkoutEntryView congelados) a partir do snapshot; quando não há execução, frozenEntries é o próprio entries (o template); a foto nunca é atualizada após a primeira marcação (imutável); a edição no Treino do Dia (saveSeriesExecution) continua atualizando o template (updateSeriesFieldsStandalone + applySeriesToFollowingStandalone) sem tocar na foto. Passos: implementar o mínimo para os testes da TASK-001 passarem; rodar npm test -- __tests__/lib/milon/hooks/useWorkoutExecution.test.ts com Expected PASS; rodar npx tsc --noEmit com Expected PASS; rodar git diff --name-only e registrar ausência dos caminhos de components, app e utils/migrations.",
       "assignee": "hefesto",
-      "dependencies": ["TASK-002"],
+      "dependencies": [
+        "TASK-002"
+      ],
       "acceptanceCriteria": [
         "npm test -- __tests__/lib/milon/hooks/useWorkoutExecution.test.ts passa integralmente incluindo os casos novos de foto e frozenEntries (Expected: PASS)",
         "npx tsc --noEmit passa sem erros (Expected: PASS)",
@@ -63,14 +67,16 @@
       "files": [
         "lib/milon/hooks/useWorkoutExecution.ts"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-004",
       "title": "UI: modal sem unidade, badge 'Em execução', executionBlocked e texto de cancelamento",
       "description": "Hefesto implementa as mudanças de UI das 7 novas decisões. Arquivos: components/milon/SeriesEditModal.tsx removendo a prop onChooseUnit e os botões kg/lb, exibindo a unidade como texto herdado (prop loadUnit) sem edição, mantendo campo único repetição/tempo com alternância, carga com conversão secundária, Salvar/Cancelar, validação herdada com mensagem visível e nunca fechando no erro; components/milon/WorkoutDetailSection.tsx passando entries para o useWorkoutExecution, exibindo frozenEntries quando houver snapshot (senão exibindo o template), exibindo badge 'Em execução' ao lado do nome do treino quando exec.execution !== null, aceitando nova prop executionBlocked e desabilitando o chrome de manutenção quando true (readOnly efetivo = readOnly || executionBlocked), removendo chooseEditorUnit; app/milon/programs/[id]/workouts/[workoutId]/page.tsx carregando a execução aberta (findOpenExecutionByWorkoutStandalone) e passando executionBlocked={execution !== null} para WorkoutDetailSection; components/milon/WorkoutConfirmModal.tsx atualizando o texto da variante limpar-execucao para 'Todas as séries foram desmarcada. Deseja cancelar a execução desse treino?'. Interfaces: Consome o hook estendido da TASK-003 (frozenEntries, execution) e as expectativas da TASK-001 para os componentes e páginas; Produz a UI atualizada que Minos valida na homologação. Passos: implementar o mínimo para os testes da TASK-001 passarem; rodar npm test -- __tests__/components/milon/SeriesEditModal.test.tsx com Expected PASS; rodar npm test -- __tests__/components/milon/WorkoutDetailSection.test.tsx com Expected PASS; rodar npm test -- __tests__/app/milon/programs/[id]/workouts/[workoutId]/page.test.tsx com Expected PASS; rodar npm test -- __tests__/components/milon/WorkoutConfirmModal.test.tsx com Expected PASS; rodar npx tsc --noEmit com Expected PASS; rodar a busca por onChooseUnit em components/milon/SeriesEditModal.tsx com Expected 0 resultados; rodar a busca por chooseEditorUnit em components/milon/WorkoutDetailSection.tsx com Expected 0 resultados; rodar git diff --name-only e registrar ausência dos caminhos de lib/milon/repositories, lib/milon/db, lib/milon/hooks, lib/milon/types.ts, lib/milon/workout-utils.ts, utils/migrations e app/milon/today.",
       "assignee": "hefesto",
-      "dependencies": ["TASK-003"],
+      "dependencies": [
+        "TASK-003"
+      ],
       "acceptanceCriteria": [
         "npm test -- __tests__/components/milon/SeriesEditModal.test.tsx passa integralmente incluindo os casos novos de ausência de kg/lb e onChooseUnit (Expected: PASS)",
         "npm test -- __tests__/components/milon/WorkoutDetailSection.test.tsx passa integralmente incluindo os casos novos de badge, executionBlocked e frozenEntries (Expected: PASS)",
@@ -87,14 +93,16 @@
         "app/milon/programs/[id]/workouts/[workoutId]/page.tsx",
         "components/milon/WorkoutConfirmModal.tsx"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-005",
       "title": "Regressão final: suite completa, cobertura e substituições",
       "description": "Hefesto executa a regressão final do replano 2ª volta. Nenhum arquivo novo de produção — esta task só verifica. Interfaces: Consome todas as tasks anteriores (TASK-001..004); Produz o estado final validado que Minos revisa. Verificações: rodar a suite completa do módulo (npm test) com Expected de zero falhas; rodar a cobertura (npm run coverage) com Expected de pelo menos oitenta por cento em lines/statements e branch; rodar git diff --name-only e registrar ausência dos caminhos intocados (utils/migrations/migration-0011-milon-execucao.sql, components/milon/SeriesCard.tsx, components/milon/ExerciseEntryCard.tsx, components/milon/WorkoutEntriesList.tsx, lib/milon/repositories/workouts.ts, lib/milon/hooks/useWorkoutDetail.ts, lib/milon/workout-utils.ts, app/milon/today/page.tsx); rodar a busca por onChooseUnit em components/milon/SeriesEditModal.tsx com Expected 0 resultados; rodar a busca por chooseEditorUnit em components/milon/WorkoutDetailSection.tsx com Expected 0 resultados; rodar npx tsc --noEmit com Expected PASS; rodar npm run lint com Expected de zero erros.",
       "assignee": "hefesto",
-      "dependencies": ["TASK-004"],
+      "dependencies": [
+        "TASK-004"
+      ],
       "acceptanceCriteria": [
         "suite completa do módulo passa com zero falhas (Expected: PASS)",
         "cobertura de pelo menos oitenta por cento em lines/statements e branch (Expected: PASS)",
@@ -105,7 +113,106 @@
         "npm run lint passa com zero erros (Expected: PASS)"
       ],
       "files": [],
+      "status": "completed"
+    },
+    {
+      "id": "TASK-006",
+      "title": "Testes RED dos 3 achados (modo do exercício + modal campo único + aviso de bloqueio)",
+      "description": "Minos escreve os testes RED sem tocar em produção. Arquivos: __tests__/lib/milon/migration-0013.test.ts (novo) com casos exigindo a coluna de modo na tabela public.exercises e o registro em public.schema_migrations com o nome migration-0013-milon-exercise-mode.sql; __tests__/lib/milon/repositories/contract-exercises.test.ts (existente, atualizado) com casos exigindo criação e atualização de exercício persistindo modo e unidade e ajuste de modo de exercício existente; __tests__/components/milon/ExerciseModal.test.tsx (existente, atualizado) com casos exigindo seletor de modo Repeticoes/Tempo e seletor de unidade kg/lb com padrao pre-selecionado; __tests__/components/milon/SeriesEditModal.test.tsx (existente, atualizado) com casos exigindo campo unico de valor com rotulo conforme o modo do exercicio, unidade exibida como texto ao lado de Carga sem edicao, ausencia da alternancia entre repeticao e tempo e ausencia de botoes de unidade; __tests__/components/milon/SeriesCard.test.tsx (existente, atualizado) com casos exigindo rotulo derivado do modo do exercicio nos dois modos e fallback para repeticao quando o modo e nulo; __tests__/components/milon/WorkoutDetailSection.test.tsx (existente, atualizado) com casos exigindo aviso visivel contendo a frase exata nao pode ser editado pois esta em execucao quando executionBlocked e verdadeiro no ramo de manutencao e ausencia do aviso quando falso. Interfaces: Consome somente a spec.md alinhada aos 3 achados, o Aditamento 2026-10-09 do plan.md e os componentes atuais como referencia de comportamento; Produz as expectativas RED que a TASK-007, a TASK-008 e a TASK-009 consomem. Passos: escrever os testes; rodar cada arquivo com Expected FAIL; rodar git status --porcelain e registrar que somente caminhos sob __tests__ foram modificados.",
+      "assignee": "minos",
+      "dependencies": [
+        "TASK-005"
+      ],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/lib/milon/migration-0013.test.ts falha porque utils/migrations/migration-0013-milon-exercise-mode.sql ainda nao existe (Expected: FAIL)",
+        "npm test -- __tests__/lib/milon/repositories/contract-exercises.test.ts falha nos casos novos de modo e unidade porque lib/milon/repositories/exercises.ts ainda nao implementa (Expected: FAIL)",
+        "npm test -- __tests__/components/milon/ExerciseModal.test.tsx falha nos casos novos de modo e unidade porque components/milon/ExerciseModal.tsx ainda nao implementa (Expected: FAIL)",
+        "npm test -- __tests__/components/milon/SeriesEditModal.test.tsx falha nos casos novos de campo unico pelo modo porque components/milon/SeriesEditModal.tsx ainda tem a alternancia (Expected: FAIL)",
+        "npm test -- __tests__/components/milon/SeriesCard.test.tsx falha nos casos novos de rotulo pelo modo porque components/milon/SeriesCard.tsx ainda deriva do dado da serie (Expected: FAIL)",
+        "npm test -- __tests__/components/milon/WorkoutDetailSection.test.tsx falha nos casos novos de aviso porque a secao ainda nao exibe o aviso no ramo de manutencao (Expected: FAIL)",
+        "git status --porcelain mostra somente caminhos sob __tests__ como modificados e nenhum arquivo sob components, lib, app ou utils/migrations foi alterado por esta task"
+      ],
+      "files": [
+        "__tests__/lib/milon/migration-0013.test.ts",
+        "__tests__/lib/milon/repositories/contract-exercises.test.ts",
+        "__tests__/components/milon/ExerciseModal.test.tsx",
+        "__tests__/components/milon/SeriesEditModal.test.tsx",
+        "__tests__/components/milon/SeriesCard.test.tsx",
+        "__tests__/components/milon/WorkoutDetailSection.test.tsx"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-007",
+      "title": "Modo do exercício (migração 0013 + tipos + repositório + modal de exercício)",
+      "description": "Hefesto implementa a modelagem do modo do exercicio e a criacao de modo e unidade no exercicio. Arquivos: utils/migrations/migration-0013-milon-exercise-mode.sql (novo) adicionando coluna textual de modo na tabela public.exercises com valores permitidos repeticao ou tempo e nulo permitido, com registro em public.schema_migrations com nome do arquivo identico e conflito ignorado pelo nome do script; lib/milon/types.ts estendendo a linha do banco, o dominio e as entradas de criacao e edicao do exercicio com modo e unidade; lib/milon/repositories/exercises.ts persistindo modo e unidade na criacao e na atualizacao e adicionando operacao de ajuste de modo com standalone; lib/milon/repositories/interfaces.ts estendendo o contrato do repositorio de exercicios; lib/milon/repositories/fakes/fakeExerciseRepository.ts espelhando; components/milon/ExerciseModal.tsx ganhando seletor de modo Repeticoes/Tempo e seletor de unidade kg/lb com padrao pre-selecionado, validacao local com mensagem visivel e nunca fechando no erro. Interfaces: Consome as expectativas da TASK-006 para migracao 0013, contrato de exercicios e modal de exercicio, e os contratos do Aditamento 2026-10-09 do plan.md; Produz a migracao 0013, os tipos e o repositorio estendidos e o modal de exercicio que a TASK-008 consome. Passos: implementar o minimo para os testes da TASK-006 passarem; rodar npm test -- __tests__/lib/milon/migration-0013.test.ts com Expected PASS; rodar npm test -- __tests__/lib/milon/repositories/contract-exercises.test.ts com Expected PASS; rodar npm test -- __tests__/components/milon/ExerciseModal.test.tsx com Expected PASS; rodar npx tsc --noEmit com Expected PASS.",
+      "assignee": "hefesto",
+      "dependencies": [
+        "TASK-006"
+      ],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/lib/milon/migration-0013.test.ts passa integralmente incluindo coluna de modo e registro em schema_migrations (Expected: PASS)",
+        "npm test -- __tests__/lib/milon/repositories/contract-exercises.test.ts passa integralmente incluindo os casos novos de modo e unidade (Expected: PASS)",
+        "npm test -- __tests__/components/milon/ExerciseModal.test.tsx passa integralmente incluindo os casos novos de seletores (Expected: PASS)",
+        "npx tsc --noEmit passa sem erros (Expected: PASS)",
+        "git diff --name-only nao lista nenhum caminho sob components/milon/SeriesEditModal.tsx, components/milon/SeriesCard.tsx, components/milon/WorkoutDetailSection.tsx, lib/milon/repositories/executions.ts, lib/milon/hooks ou app/milon/today"
+      ],
+      "files": [
+        "utils/migrations/migration-0013-milon-exercise-mode.sql",
+        "lib/milon/types.ts",
+        "lib/milon/repositories/exercises.ts",
+        "lib/milon/repositories/interfaces.ts",
+        "lib/milon/repositories/fakes/fakeExerciseRepository.ts",
+        "lib/milon/db/exercises.ts",
+        "components/milon/ExerciseModal.tsx"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-008",
+      "title": "Modal de execução com campo único + cards com rótulo pelo modo do exercício",
+      "description": "Hefesto implementa o campo unico de valor com rotulo conforme o modo do exercicio. Arquivos: components/milon/SeriesEditModal.tsx recebendo modo e unidade do exercicio como propriedades herdadas, exibindo campo unico de valor com rotulo conforme o modo, carga com a unidade exibida como texto ao lado de Carga sem edicao, sem alternancia entre repeticao e tempo e sem botoes de unidade, mantendo Salvar/Cancelar, validacao com mensagem visivel e nunca fechando no erro; components/milon/SeriesCard.tsx recebendo o modo do exercicio como propriedade no mesmo padrao da unidade, derivando o rotulo do valor do modo do exercicio com fallback para repeticao quando nulo, sem alternancia de modo no card, mantendo o controle de unidade da manutencao inalterado e o ramo de execucao somente leitura com fundo na cor do modulo quando feita; components/milon/WorkoutDetailSection.tsx repassando o modo do exercicio ao card e ao modal de execucao. Interfaces: Consome o modal de exercicio e os tipos da TASK-007 (modo e unidade no dominio) e as expectativas da TASK-006 para SeriesEditModal, SeriesCard e secao; Produz a interface de valor unico que a TASK-009 valida na regressao. O salvamento mantem o comportamento vigente: atualiza a origem e replica sempre para as series seguintes da mesma entrada incluindo as ja marcadas, com o outro campo de valor nulo, mantendo o estado de marcacao. Passos: implementar o minimo para os testes da TASK-006 passarem; rodar npm test -- __tests__/components/milon/SeriesEditModal.test.tsx com Expected PASS; rodar npm test -- __tests__/components/milon/SeriesCard.test.tsx com Expected PASS; rodar npm test -- __tests__/components/milon/WorkoutDetailSection.test.tsx com Expected PASS apenas nos casos de repasse de modo; rodar npx tsc --noEmit com Expected PASS; rodar a busca pelo alternador de modo em components/milon/SeriesEditModal.tsx com Expected 0 resultados; rodar a busca pelo alternador de modo em components/milon/SeriesCard.tsx com Expected 0 resultados.",
+      "assignee": "hefesto",
+      "dependencies": [
+        "TASK-007"
+      ],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/components/milon/SeriesEditModal.test.tsx passa integralmente incluindo campo unico pelo modo e unidade como texto sem edicao (Expected: PASS)",
+        "npm test -- __tests__/components/milon/SeriesCard.test.tsx passa integralmente incluindo rotulo pelo modo e fallback (Expected: PASS)",
+        "npx tsc --noEmit passa sem erros (Expected: PASS)",
+        "busca pelo alternador de modo retorna 0 em codigo vivo em components/milon/SeriesEditModal.tsx, confirmando a remocao da troca entre repeticao e tempo no modal de execucao",
+        "busca pelo alternador de modo retorna 0 em codigo vivo em components/milon/SeriesCard.tsx, confirmando a remocao da alternancia local no card",
+        "git diff --name-only nao lista nenhum caminho sob utils/migrations, lib/milon/repositories/executions.ts, lib/milon/hooks, app/milon/today ou components/milon/WorkoutConfirmModal.tsx"
+      ],
+      "files": [
+        "components/milon/SeriesEditModal.tsx",
+        "components/milon/SeriesCard.tsx",
+        "components/milon/WorkoutDetailSection.tsx"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "TASK-009",
+      "title": "Aviso visível de bloqueio na manutenção + regressão final do aditamento",
+      "description": "Hefesto implementa o aviso visivel de bloqueio e executa a regressao final do aditamento. Arquivo de producao: components/milon/WorkoutDetailSection.tsx exibindo no ramo de manutencao, quando executionBlocked e verdadeiro, alerta visivel contendo a frase exata nao pode ser editado pois esta em execucao acima da lista, mantendo os controles desabilitados via readOnly efetivo e sem exibir o aviso quando falso. Interfaces: Consome as expectativas da TASK-006 para o aviso e todo o estado das TASK-007 e TASK-008; Produz o estado final validado do aditamento. Verificacoes: rodar npm test -- __tests__/components/milon/WorkoutDetailSection.test.tsx com Expected PASS incluindo o aviso; rodar a suite completa do modulo com Expected de zero falhas; rodar a cobertura com Expected de pelo menos oitenta por cento em lines/statements e branch; rodar npx tsc --noEmit com Expected PASS; rodar npm run lint com Expected de zero erros; rodar git diff --name-only do aditamento e registrar ausencia dos caminhos intocados (utils/migrations/migration-0011-milon-execucao.sql, lib/milon/repositories/executions.ts, lib/milon/hooks/useWorkoutExecution.ts, lib/milon/hooks/useWorkoutDetail.ts, lib/milon/workout-utils.ts, app/milon/today/page.tsx, components/milon/WorkoutConfirmModal.tsx, components/milon/WorkoutEntriesList.tsx, components/milon/ExerciseEntryCard.tsx).",
+      "assignee": "hefesto",
+      "dependencies": [
+        "TASK-008"
+      ],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/components/milon/WorkoutDetailSection.test.tsx passa integralmente incluindo o aviso visivel com a frase exata quando executionBlocked e verdadeiro e ausencia quando falso (Expected: PASS)",
+        "suite completa do modulo passa com zero falhas (Expected: PASS)",
+        "cobertura de pelo menos oitenta por cento em lines/statements e branch (Expected: PASS)",
+        "npx tsc --noEmit passa sem erros (Expected: PASS)",
+        "npm run lint passa com zero erros (Expected: PASS)",
+        "git diff --name-only do aditamento nao lista nenhum caminho sob utils/migrations/migration-0011-milon-execucao.sql, lib/milon/repositories/executions.ts, lib/milon/hooks/useWorkoutExecution.ts, lib/milon/hooks/useWorkoutDetail.ts, lib/milon/workout-utils.ts, app/milon/today/page.tsx, components/milon/WorkoutConfirmModal.tsx, components/milon/WorkoutEntriesList.tsx ou components/milon/ExerciseEntryCard.tsx"
+      ],
+      "files": [
+        "components/milon/WorkoutDetailSection.tsx"
+      ],
       "status": "pending"
     }
-  ]
+  ],
+  "aditamento_2026_10_08_remocao_foto": "Decisao humana registrada no commit 7782d37 com spec alinhada: foto/snapshot removida - sem coluna snapshot, sem frozenEntries, sem migration-0012 (excluida, nunca aplicada); valores reais ficam para #7; display = template ao vivo + marcadores; resto vigente (badge, bloqueio, unidade herdada, texto de cancelamento, replicacao). Nota de supersessao sem mudar status completed/history: TASK-002 superseded na integra; TASK-003 superseded na integra; TASK-001 e TASK-004 superseded apenas na parte foto; TASK-005 vigente como verificacao do estado sem foto.",
+  "aditamento_2026_10_09_tres_achados": "Mini-plano aditivo dos 3 achados da homologacao: modo e unidade pertencem ao exercicio (migracao 0013 reservada, 0012 nao reutilizada), serie com valor unico de interface sem coluna nova, modal de execucao com campo unico e unidade ao lado de Carga como texto, aviso visivel de bloqueio na manutencao com a frase exata. TASK-006 Minos RED; TASK-007 modo+modal de exercicio; TASK-008 modal de execucao e cards; TASK-009 aviso e regressao. Resto do plano intacto e preservado."
 }

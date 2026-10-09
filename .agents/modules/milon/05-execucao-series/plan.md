@@ -110,3 +110,69 @@ A prop `onChooseUnit` e os botões kg/lb do `SeriesEditModal` são removidos: a 
 - **Risco: edição no Treino do Dia atualizar o template mas não a foto.** Mitigação: a foto é imutável por decisão — o hook não atualiza o snapshot após a primeira marcação. O template é atualizado (reflete no template), mas o Treino do Dia segue exibindo frozenEntries. Teste dedicado verifica que a edição atualiza o template mas não a foto.
 - **Risco: execução aberta sem snapshot (estado transitório).** Mitigação: a foto é tirada na mesma transação da primeira marcação (startExecution → setExecutionSnapshot → markSeriesDone), de modo que a execução nunca persiste sem snapshot. O campo `snapshot` é nulo apenas antes da primeira marcação (estado que não persiste).
 - **Risco: dois donos marcando o mesmo treino ao mesmo tempo.** Mitigação: inalterada, herdada do plano vigente (unicidade e idempotência já commitadas — índice único `idx_workout_executions_open_unique` e abertura idempotente).
+
+## Aditamento 2026-10-09 (mini-plano dos 3 achados da homologação)
+
+Decisão humana pós-homologação (código atual sem foto, commit 7782d37 + fixes): três achados aditivos, sem replanejar o resto. Resto do plano segue intacto e preservado — replicação incondicional, início/limpeza, bloqueio por treino, badge "Em execução", card clicável (curto alterna, longo de quinhentos milissegundos abre o modal), sem banner, unidade herdada.
+
+**Achado 1 — modo e unidade pertencem ao EXERCÍCIO; série tem valor único; modal com campo único.** Verificado no código real: a tabela de exercícios já possui coluna de unidade de carga (migração 0009, campo textual com valores kg/libra, nulo permitido) e NÃO possui nenhuma coluna de modo (repetição ou tempo) — confirmado em lib/milon/types.ts (ExerciseRow/Exercise sem modo), lib/milon/repositories/exercises.ts (conversão linha-domínio sem modo) e components/milon/ExerciseModal.tsx (form só com nome/músculo/link). A tabela de séries planejadas possui dois campos de valor (repetições e tempo em segundos) mais carga — confirmado em lib/milon/types.ts (WorkoutSeriesRow/WorkoutSeries). O modal de execução atual (components/milon/SeriesEditModal.tsx) tem alternância local entre repetição e tempo e exibe a unidade como texto herdado sem edição. O card de manutenção atual (components/milon/SeriesCard.tsx) deriva o rótulo repetição/tempo do dado da série e tem alternância local mais botões de unidade.
+
+**Achado 2 — aviso visível de bloqueio na manutenção.** Verificado no código real: a página de manutenção (app/milon/programs/[id]/workouts/[workoutId]/page.tsx) já carrega a execução aberta e passa executionBlocked para components/milon/WorkoutDetailSection.tsx, que já desabilita o chrome de manutenção via readOnly efetivo — mas o ramo de manutenção (sem execução habilitada) NÃO exibe nenhum aviso textual visível além de desabilitar os controles.
+
+**Achado 3 — premissa: criar modo e unidade no exercício.** A unidade já existe (só falta expor na criação/edição do exercício); falta criar o modo.
+
+### 1. Arquitetura (aditiva)
+
+**Mudança A — modo do exercício (premissa do achado 3 + base do achado 1):** o modo (repetição ou tempo) é modelado como coluna nova na tabela de exercícios (migração 0013 — inteiro 0012 permanece livre e NÃO é reutilizado, para evitar qualquer confusão com o arquivo excluído que chegou a ser aplicado e revertido só em ambiente de desenvolvimento; decisão D25). A coluna é textual, valores permitidos repetição ou tempo, nula permitida para as linhas já existentes — leitura com nulo trata como repetição (mesmo padrão de fallback já vigente para unidade nula tratada como kg). Nenhuma coluna nova nas séries: "valor único" refere-se à interface (um só campo por modal/card cujo significado vem do modo do exercício) e à persistência (ao salvar no modo repetição, o campo de tempo fica nulo e vice-versa — comportamento já vigente no modal de execução e mantido). Tipos ExerciseRow/Exercise ganham o modo; entradas de criação/edição de exercício ganham modo e unidade; o repositório de exercícios persiste ambos na criação e na atualização (mantida a regra anti-duplicata por nome+músculo); o fake espelha; o modal de exercício (criar/editar) ganha seletor de modo (Repetições/Tempo) e seletor de unidade (kg/lb), com validação local e mensagem visível, sem fechar no erro.
+
+**Mudança B — modal de execução com campo único (achado 1):** o modal de edição da série em execução perde a alternância entre repetição e tempo e passa a receber o modo do exercício como propriedade; o rótulo do campo único de valor deriva do modo (Repetições ou Tempo em segundos); o rótulo do campo de carga passa a incluir a unidade herdada como texto ao lado (unidade exibida junto de Carga, sem edição, sem botões). O card em execução já exibe a mesma face da manutenção com rótulo conforme o modo e unidade como texto — passa a derivar o rótulo do modo do exercício (propriedade nova de modo, mesmo padrão da propriedade existente de unidade), sem alternância no card. O card de manutenção passa a derivar o rótulo do modo do exercício em vez do dado da série; a alternância local de repetição/tempo é removida da manutenção; o controle de unidade da manutenção permanece inalterado (já persiste no exercício, coerente com unidade pertencendo ao exercício).
+
+**Mudança C — aviso visível de bloqueio (achado 2):** o ramo de manutenção de WorkoutDetailSection exibe, quando executionBlocked é verdadeiro, um aviso textual visível contendo a frase exata "não pode ser editado pois está em execução" (elemento de alerta, acima da lista), além dos controles já desabilitados. Sem retry, sem banner novo, sem AsyncState novo.
+
+### 2. Componentes (Create/Modify/Test/Docs — só o aditivo)
+
+Create: utils/migrations/migration-0013-milon-exercise-mode.sql, camada de migração, motivo: adiciona a coluna de modo na tabela de exercícios (incremental, nunca edita migrações aplicadas; registra execução em public.schema_migrations com nome do arquivo idêntico, conflito ignorado pelo nome do script).
+
+Modify: lib/milon/types.ts (fonte única — modo do exercício em linha, domínio e entradas de criação/edição, mais entradas ganhando unidade); lib/milon/repositories/exercises.ts (persistir modo e unidade na criação/atualização + nova operação de ajuste de modo do exercício com standalone); lib/milon/repositories/interfaces.ts (estender contrato do repositório de exercícios); lib/milon/repositories/fakes/fakeExerciseRepository.ts (espelhar); lib/milon/db/exercises.ts (re-exporta — sem mudança de forma, só cobertura do contrato); components/milon/ExerciseModal.tsx (seletores de modo e unidade); components/milon/SeriesEditModal.tsx (campo único com rótulo pelo modo, unidade ao lado de Carga como texto, sem alternância); components/milon/SeriesCard.tsx (rótulo derivado do modo do exercício, sem alternância de modo; controle de unidade da manutenção inalterado); components/milon/WorkoutDetailSection.tsx (repassar modo do exercício ao card e ao modal de execução; aviso visível no ramo de manutenção quando executionBlocked).
+
+Test: espelhos em __tests__ nos arquivos já existentes de exercícios (contrato, fake, modal), séries (card, modal de edição), seção e página de manutenção, mais teste novo da migração 0013 — todos detalhados nas tasks.
+
+Docs: nenhum (Mnemósine pós-homologação).
+
+Intocados neste aditamento (proibido alterar): utils/migrations/migration-0011-milon-execucao.sql, lib/milon/repositories/executions.ts, lib/milon/hooks/useWorkoutExecution.ts, lib/milon/hooks/useWorkoutDetail.ts, lib/milon/workout-utils.ts, app/milon/today/page.tsx, components/milon/WorkoutConfirmModal.tsx, components/milon/WorkoutEntriesList.tsx, components/milon/ExerciseEntryCard.tsx. A task final verifica ausência desses caminhos no diff do aditamento.
+
+Tarefa de substituição: a alternância local de modo sai do modal de execução e do card — as tasks do aditamento carregam o critério de que a busca pelo alternador de modo retorna 0 em código vivo nos dois arquivos (remove ou justifica).
+
+### 3. Contratos (descrição textual, sem código de implementação)
+
+- **Modo do exercício:** valor textual com dois valores permitidos (repetição ou tempo), nulo permitido nas linhas antigas com fallback de leitura para repetição. Presente na linha do banco, no domínio e nas entradas de criação/edição do exercício (que também passam a carregar a unidade).
+- **Ajuste de modo do exercício:** operação do repositório que persiste o modo de um exercício existente, com versão standalone para a interface; espelhada no fake e no contrato.
+- **Modal de exercício:** recebe e devolve modo e unidade junto de nome/músculo/link; seletores simples de modo (Repetições/Tempo) e unidade (kg/lb); valida nome/músculo obrigatórios com mensagem visível; nunca fecha no erro.
+- **Modal de execução:** recebe o modo e a unidade do exercício como propriedades herdadas (sem edição); campo único de valor com rótulo conforme o modo; campo de carga com a unidade exibida como texto ao lado do rótulo Carga; sem alternância, sem botões de unidade, sem opção de copiar; salvamento com valor único (outro campo de valor nulo) replicado para a série e as seguintes, mantendo o estado de marcação.
+- **Card:** recebe o modo do exercício como propriedade (mesmo padrão da unidade); rótulo do valor deriva do modo; sem alternância de modo no card; ramo de execução mantém leitura somente dos valores vigentes com fundo na cor do módulo quando feita; ramo de manutenção mantém o controle de unidade existente.
+- **Aviso de bloqueio:** no ramo de manutenção, com executionBlocked verdadeiro, alerta visível contendo a frase exata "não pode ser editado pois está em execução", além dos controles desabilitados.
+
+### 4. Data Flow (deltas do aditamento)
+
+1. Criar/editar exercício: modal coleta nome/músculo/link + modo + unidade → repositório persiste tudo (anti-duplicata mantida) → lista reflete.
+2. Abrir editor em execução: seção localiza a série na exibição e abre o modal com modo e unidade do exercício daquela entrada → modal exibe campo único rotulado pelo modo + Carga com unidade ao lado como texto → salvar replica para a série e as seguintes (comportamento vigente inalterado).
+3. Manutenção com execução aberta: página carrega execução aberta e passa executionBlocked verdadeiro → seção desabilita o chrome (vigente) E exibe o aviso visível (novo).
+
+### 5. Decisões Técnicas
+
+- **D25 Migração 0013 em vez de reutilizar a 0012:** o inteiro 0012 teve arquivo excluído após aplicação e reversão só em desenvolvimento; reutilizá-lo arriscaria confusão de auditoria. O aditamento reserva e consome o inteiro 0013 com arquivo migration-0013-milon-exercise-mode.sql. Alternativa descartada: reutilizar 0012.
+- **D26 Sem coluna nova nas séries:** "valor único" é conceito de interface e de escrita (um campo preenchido por vez conforme o modo), já vigente no salvamento; nova coluna de valor seria migração com backfill sem ganho. Alternativa descartada: coluna de valor único nas séries.
+- **D27 Rótulo pelo modo do exercício nos dois ramos:** card e modal derivam o rótulo do modo do exercício via propriedade (mesmo padrão da unidade herdada), eliminando a alternância local que contradizia a premissa de que o modo pertence ao exercício. Alternativa descartada: manter alternância local.
+- **D28 Aviso como alerta simples no ramo de manutenção:** texto exato da spec, sem retry e sem banner novo, para não reimplementar estados assíncronos. Alternativa descartada: componente de estado assíncrono.
+
+### 6. Riscos e Mitigações
+
+- **Risco: linhas de exercício antigas sem modo.** Mitigação: coluna nula com fallback de leitura para repetição; teste dedicado cobre exercício sem modo.
+- **Risco: regressão na manutenção ao derivar o rótulo do exercício.** Mitigação: testes de card cobrem rótulo pelo modo nos dois modos e fallback; suite completa e cobertura de pelo menos oitenta por cento na task final.
+- **Risco: modal de exercício quebrar criação rápida.** Mitigação: modo e unidade com padrão pré-selecionado (repetição, kg); teste cobre criar sem tocar nos seletores.
+
+## Aditamento 2026-10-08 (remoção da foto)
+
+Decisão humana posterior ao replano, registrada no commit 7782d37 com spec alinhada: foto/snapshot do template removida — sem coluna snapshot, sem frozenEntries, sem migration-0012 (arquivo excluído, nunca aplicada em nenhum ambiente). Valores reais treinados no dia ficam para a feature #7 (encerrar). O Treino do Dia exibe o template ao vivo com marcadores de feito por série. Resto do plano vigente sem alteração: badge "Em execução", bloqueio do template por treino, unidade herdada no modal, texto de cancelamento e replicação incondicional.
+
+Nota de supersessão (sem mudar status completed/history): TASK-002 superseded na íntegra; TASK-003 superseded na íntegra; TASK-001 e TASK-004 superseded apenas na parte foto (demais expectativas seguem vigentes); TASK-005 segue vigente como verificação final do estado sem foto.

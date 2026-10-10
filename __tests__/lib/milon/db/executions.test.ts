@@ -69,8 +69,7 @@ const DONE_ROW: WorkoutExecutionSeriesRow = {
   entry_id: "e-1",
   series_id: "s-1",
   position: 1,
-  reps: 10,
-  duration_seconds: null,
+  value: 10,
   load: 40,
   created_at: "2026-10-08T10:01:00.000Z",
   created_by: EMAIL,
@@ -81,8 +80,7 @@ const MARK_INPUT: MarkExecutionSeriesInput = {
   entryId: "e-1",
   seriesId: "s-1",
   position: 1,
-  reps: 10,
-  durationSeconds: null,
+  value: 10,
   load: 40,
 };
 
@@ -368,8 +366,7 @@ describe("lib/milon/db/executions (barrel oficial da UI, TASK-002)", () => {
         entryId: "e-1",
         seriesId: "s-1",
         position: 1,
-        reps: 10,
-        durationSeconds: null,
+        value: 10,
         load: 40,
         createdAt: "2026-10-08T10:01:00.000Z",
         created_by: EMAIL,
@@ -387,8 +384,7 @@ describe("lib/milon/db/executions (barrel oficial da UI, TASK-002)", () => {
       entry_id: "e-1",
       series_id: "s-1",
       position: 1,
-      reps: 10,
-      duration_seconds: null,
+      value: 10,
       load: 40,
       created_by: EMAIL,
     });
@@ -406,5 +402,43 @@ describe("lib/milon/db/executions (barrel oficial da UI, TASK-002)", () => {
       { table: "workout_execution_series", op: "delete", eq: ["execution_id", EXECUTION_ID] },
       { table: "workout_execution_series", op: "delete", eq: ["series_id", "s-1"] },
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-013 (Mílon #5, Aditamento 2026-10-10 "valor único") —
+// consumido pela TASK-014.
+// Fonte: tasks.json TASK-013 + plan.md Aditamento 2026-10-10 §3 (entrada de
+// marcação com valor único; retrato com `value`) + spec §3.
+// Expected: FAIL (repository atual grava reps/duration_seconds e ignora
+// `value`).
+// Convenção: `value` via cast na entrada — o tipo ainda não tem o campo
+// (RED inclui os tipos); em runtime o objeto o carrega.
+// ---------------------------------------------------------------------------
+
+describe("lib/milon/db/executions valor único (TASK-013 RED — D34)", () => {
+  it("marcar grava a realizada com valor único (sem reps/duration_seconds)", async () => {
+    const recorded: Recorded = {};
+    const input = {
+      executionId: EXECUTION_ID,
+      entryId: "e-1",
+      seriesId: "s-1",
+      position: 1,
+      value: 10,
+      load: 40,
+    } as unknown as MarkExecutionSeriesInput;
+
+    const done = await markSeriesDone(stubMarkDb(DONE_ROW, recorded), input, EMAIL);
+
+    expect(recorded.insertPayload).toMatchObject({
+      execution_id: EXECUTION_ID,
+      entry_id: "e-1",
+      series_id: "s-1",
+      position: 1,
+      value: 10,
+      load: 40,
+      created_by: EMAIL,
+    });
+    expect((done as unknown as Record<string, unknown>).value).toBe(10);
   });
 });

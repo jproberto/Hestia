@@ -56,8 +56,7 @@ function toSeriesDomain(row: WorkoutSeriesRow): WorkoutSeries {
     id: row.id,
     entryId: row.entry_id,
     position: row.position,
-    reps: row.reps,
-    durationSeconds: row.duration_seconds,
+    value: row.value,
     load: row.load,
     createdAt: row.created_at,
     created_by: row.created_by,
@@ -397,8 +396,7 @@ export async function setSeriesQuantity(
       .insert({
         entry_id: entryId,
         position,
-        reps: null,
-        duration_seconds: null,
+        value: null,
         load: null,
         created_by: email,
       });
@@ -413,9 +411,7 @@ export async function updateSeriesFields(
   fields: UpdateSeriesFieldsInput,
 ): Promise<WorkoutSeries> {
   const payload: Record<string, unknown> = {};
-  if ("reps" in fields) payload.reps = fields.reps;
-  if ("durationSeconds" in fields)
-    payload.duration_seconds = fields.durationSeconds;
+  if ("value" in fields) payload.value = fields.value;
   if ("load" in fields) payload.load = fields.load;
 
   const { data, error } = await db
@@ -442,18 +438,13 @@ export async function applySeriesToAll(
 
   for (const serie of series) {
     if (serie.id === originSeriesId) continue;
-    if (
-      serie.reps === origem.reps &&
-      serie.durationSeconds === origem.durationSeconds &&
-      serie.load === origem.load
-    ) {
+    if (serie.value === origem.value && serie.load === origem.load) {
       continue;
     }
     const { error } = await db
       .from<WorkoutSeriesRow>("workout_series")
       .update({
-        reps: origem.reps,
-        duration_seconds: origem.durationSeconds,
+        value: origem.value,
         load: origem.load,
       })
       .eq("id", serie.id);
@@ -480,8 +471,7 @@ export async function applySeriesToFollowing(
     const { error } = await db
       .from<WorkoutSeriesRow>("workout_series")
       .update({
-        reps: origem.reps,
-        duration_seconds: origem.durationSeconds,
+        value: origem.value,
         load: origem.load,
       })
       .eq("id", serie.id);
@@ -492,8 +482,7 @@ export async function applySeriesToFollowing(
       serie.position > origem.position
         ? {
             ...serie,
-            reps: origem.reps,
-            durationSeconds: origem.durationSeconds,
+            value: origem.value,
             load: origem.load,
           }
         : serie,

@@ -216,8 +216,7 @@ function makeSerie(
   return {
     entryId: "ent-1",
     position: 1,
-    reps: null,
-    durationSeconds: null,
+    value: null,
     load: null,
     createdAt: "2026-10-01T10:00:00.000Z",
     created_by: EMAIL,
@@ -292,7 +291,7 @@ function carregarPadrao(): void {
     ],
     seriesByEntry: {
       "ent-1": [
-        makeSerie({ id: "s-1", entryId: "ent-1", position: 1, reps: 10 }),
+        makeSerie({ id: "s-1", entryId: "ent-1", position: 1, value: 10 }),
         makeSerie({ id: "s-2", entryId: "ent-1", position: 2 }),
       ],
       "ent-2": [makeSerie({ id: "s-3", entryId: "ent-2", position: 1 })],
@@ -848,15 +847,15 @@ describe("Mílon #3 — useWorkoutDetail (contrato RED, TASK-007)", () => {
     it("updateSeries: sucesso grava o campo da série e recarrega", async () => {
       const { result } = await montarPadrao();
       vi.mocked(updateSeriesFieldsStandalone).mockResolvedValue(
-        makeSerie({ id: "s-1", entryId: "ent-1", position: 1, reps: 12 }),
+        makeSerie({ id: "s-1", entryId: "ent-1", position: 1, value: 12 }),
       );
 
       await executar(() =>
-        result.current.updateSeries("s-1", "reps", 12),
+        result.current.updateSeries("s-1", "value", 12),
       );
 
       expect(updateSeriesFieldsStandalone).toHaveBeenCalledWith("s-1", {
-        reps: 12,
+        value: 12,
       });
       await waitFor(() =>
         expect(listEntriesByProgramStandalone).toHaveBeenCalledTimes(2),
@@ -872,7 +871,7 @@ describe("Mílon #3 — useWorkoutDetail (contrato RED, TASK-007)", () => {
       );
 
       await executar(() =>
-        result.current.updateSeries("s-1", "reps", 12),
+        result.current.updateSeries("s-1", "value", 12),
       );
 
       expect(result.current.errorMsg).toContain("Erro ao salvar série");
@@ -880,7 +879,7 @@ describe("Mílon #3 — useWorkoutDetail (contrato RED, TASK-007)", () => {
       expect(listEntriesByProgramStandalone).toHaveBeenCalledTimes(1);
     });
 
-    it("applyToAll: sucesso copia reps/tempo/carga para as demais e recarrega", async () => {
+    it("applyToAll: sucesso copia value/carga para as demais e recarrega", async () => {
       const { result } = await montarPadrao();
       vi.mocked(applySeriesToAllStandalone).mockResolvedValue([]);
 
@@ -946,7 +945,7 @@ describe("Mílon #3 — useWorkoutDetail (contrato RED, TASK-007)", () => {
 
     type HookComEntry = {
       setEntryMode: (entryId: string, mode: "repeticao" | "tempo") => Promise<void>;
-      setEntryLoadUnit: (entryId: string, unit: "kg" | "libra") => Promise<void>;
+      setEntryLoadUnit: (entryId: string, unit: "kg" | "lb") => Promise<void>;
     };
 
     function hookComEntry(result: { current: unknown }): HookComEntry {
@@ -988,12 +987,12 @@ describe("Mílon #3 — useWorkoutDetail (contrato RED, TASK-007)", () => {
       const { result } = await montarPadrao();
 
       await executar(() =>
-        hookComEntry(result).setEntryLoadUnit("ent-1", "libra"),
+        hookComEntry(result).setEntryLoadUnit("ent-1", "lb"),
       );
 
       expect(setEntryLoadUnitStandalone).toHaveBeenCalledWith(
         "ent-1",
-        "libra",
+        "lb",
       );
       await waitFor(() =>
         expect(listEntriesByProgramStandalone).toHaveBeenCalledTimes(2),
@@ -1010,7 +1009,7 @@ describe("Mílon #3 — useWorkoutDetail (contrato RED, TASK-007)", () => {
       const { result } = await montarPadrao();
 
       await executar(() =>
-        hookComEntry(result).setEntryLoadUnit("ent-1", "libra"),
+        hookComEntry(result).setEntryLoadUnit("ent-1", "lb"),
       );
 
       expect(result.current.errorMsg).toContain("Falha de rede na unidade");
@@ -1038,5 +1037,40 @@ describe("Mílon #3 — useWorkoutDetail (contrato RED, TASK-007)", () => {
 
   it("hooks/index exporta useWorkoutDetail como caminho oficial", () => {
     expect(typeof hooksIndex.useWorkoutDetail).toBe("function");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-013 (Mílon #5, Aditamento 2026-10-10 "valor único") —
+// consumido pela TASK-015 (escopo mínimo de tipos; cobertura plena do hook
+// pertence à TASK-015 por arbitragem Zeus).
+// Fonte: tasks.json TASK-013 + plan.md Aditamento 2026-10-10 §3 (commit e
+// salvamento com valor único) + spec §3.
+// Expected: FAIL (hook atual mapeia qualquer campo fora de reps/
+// durationSeconds para `{ load }`, sem `value`).
+// Convenção: campo "value" via cast — o tipo ainda não tem o campo (RED
+// inclui os tipos); em runtime a string o carrega.
+// ---------------------------------------------------------------------------
+
+describe("Milon 05 TASK-013 RED — useWorkoutDetail com valor único (D34)", () => {
+  it("updateSeries com campo value persiste o valor único via standalone", async () => {
+    const { result } = await montarPadrao();
+    vi.mocked(updateSeriesFieldsStandalone).mockResolvedValue(
+      makeSerie({ id: "s-1", entryId: "ent-1", position: 1, value: 12 }),
+    );
+
+    await executar(() =>
+      result.current.updateSeries(
+        "s-1",
+        "value" as unknown as Parameters<
+          typeof result.current.updateSeries
+        >[1],
+        9,
+      ),
+    );
+
+    expect(updateSeriesFieldsStandalone).toHaveBeenCalledWith("s-1", {
+      value: 9,
+    });
   });
 });

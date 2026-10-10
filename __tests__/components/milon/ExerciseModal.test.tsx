@@ -306,7 +306,7 @@ describe("ExerciseModal — biblioteca sem seletores (TASK-010 — RED)", () => 
     render(
       <ExerciseModal
         {...defaultProps({
-          editingExercise: makeExercise({ loadUnit: "libra" }),
+          editingExercise: makeExercise({ loadUnit: "lb" }),
           onSave,
         })}
       />,

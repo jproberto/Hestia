@@ -274,8 +274,7 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
         id: this.nextId("s"),
         entryId,
         position,
-        reps: null,
-        durationSeconds: null,
+        value: null,
         load: null,
         createdAt: new Date().toISOString(),
         created_by: email,
@@ -293,11 +292,7 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
     if (!atual) throw new Error("Série não encontrada.");
     const updated: WorkoutSeries = {
       ...atual,
-      reps: "reps" in fields ? (fields.reps ?? null) : atual.reps,
-      durationSeconds:
-        "durationSeconds" in fields
-          ? (fields.durationSeconds ?? null)
-          : atual.durationSeconds,
+      value: "value" in fields ? (fields.value ?? null) : atual.value,
       load: "load" in fields ? (fields.load ?? null) : atual.load,
     };
     this.series.set(seriesId, updated);
@@ -315,8 +310,7 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
       if (serie.id === originSeriesId) continue;
       this.series.set(serie.id, {
         ...serie,
-        reps: origem.reps,
-        durationSeconds: origem.durationSeconds,
+        value: origem.value,
         load: origem.load,
       });
     }
@@ -334,8 +328,7 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
       if (serie.position <= origem.position) continue;
       this.series.set(serie.id, {
         ...serie,
-        reps: origem.reps,
-        durationSeconds: origem.durationSeconds,
+        value: origem.value,
         load: origem.load,
       });
     }

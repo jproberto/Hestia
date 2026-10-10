@@ -164,10 +164,10 @@
 **Quando** aciona "aplicar a todas" → copia reps/tempo/carga  
 **Quando** aciona de novo de outra série → sobrescreve
 
-### REG-32: Unidade de carga — por exercício, primeira digitação
-**Dado** exercício sem unidade  
-**Quando** digita primeiro peso → escolhe kg/libra  
-**Então** nunca mais pergunta para aquele exercício
+### REG-32: Unidade de carga — por exercício no treino (entry), primeira digitação (0012 correta)
+**Dado** entry sem unidade
+**Quando** digita primeiro peso → escolhe kg/libra
+**Então** persiste na entry; a unidade legada da biblioteca é só lida e ignorada no treino
 
 ### REG-33: Carga vazia ≠ 0 (traço vs zero)
 **Dado** carga vazia → exibe traço  
@@ -232,10 +232,43 @@
 **Quando** a pessoa dá toque curto no card de uma série
 **Então** a série fica marcada na hora, sem confirmação, com fundo na cor do módulo
 
-### REG-50: Executar série com paridade da manutenção (replano)
+### REG-50: Executar série com paridade da manutenção (0012 correta: campo único pelo modo da entry)
 **Dado** o Treino do Dia com treino e séries
-**Quando** a pessoa marca/desmarca pelo card (mesma cara da manutenção: rótulos, unidade e conversão) e edita pelo toque longo (rep/tempo + kg/lb, replicando sempre)
+**Quando** a pessoa marca/desmarca pelo card (mesma cara da manutenção: rótulo pelo modo da entry, unidade da entry e conversão) e edita pelo toque longo (campo único rotulado pelo modo da entry, unidade ao lado de Carga como texto, replicando sempre para a série e as seguintes)
 **Então** quantidade, descanso, editar, excluir e reordenar seguem disponíveis como na manutenção, e o início zera somente com confirmação
+**E** modo e unidade são ajustados nos seletores do exercício no treino (entry), nunca na biblioteca
+
+### REG-51: Badge, bloqueio, aviso e cancelamento da execução (mini-plano: aviso visível)
+**Dado** o Treino do Dia com treino e séries
+**Quando** a pessoa marca a primeira série
+**Então** o início registra, o display segue o template ao vivo com marcadores, o nome mostra "Em execução" e a manutenção do treino bloqueia com aviso visível de que não pode ser editado pois está em execução
+**E** ao desmarcar tudo, confirmar "Todas as séries foram desmarcada. Deseja cancelar a execução desse treino?" desbloqueia e limpa o início
+
+### REG-52: Valor único nas séries (migração 0013) — coluna `value` substitui `reps`/`duration_seconds`
+**Dado** série planejada ou realizada
+**Então** uma só coluna `value` (inteiro ou nulo); significado vem do modo da entry; troca de modo não muda o número
+
+### REG-53: Unidade abreviada no banco (migração 0014) — `kg`/`lb` sem transformação
+**Dado** banco com `load_unit` em `exercises` e `workout_entries`
+**Então** restrição `CHECK (load_unit IN ('kg','lb'))` nas duas tabelas; dados legados `libra` convertidos para `lb`; interface exibe valor direto sem função de abreviação; conversão secundária com fator exato 0.45359237
+
+### REG-54: Ícones Editar/Excluir no card da entry (padrão biblioteca)
+**Dado** card da entry em manutenção
+**Então** botões são ícones `Pencil`/`Trash2` (h-3.5 w-3.5, lucide-react) com mesmas classes, rótulos acessíveis, títulos e área de toque da biblioteca; handlers inalterados
+
+### REG-55: Texto de cancelamento da execução atualizado
+**Dado** variante `limpar-execucao` do `WorkoutConfirmModal`
+**Então** exibe exatamente "Todas as séries foram desmarcada. Deseja cancelar a execução desse treino?"
+
+### REG-56: Substituições validadas (busca zerada em código vivo)
+- `onChooseUnit` / `chooseEditorUnit` => 0 ocorrências
+- alternância de modo (`alternar para`) => 0 ocorrências em SeriesEditModal/SeriesCard
+- `reps` / `durationSeconds` / `duration_seconds` => 0 ocorrências em lib/milon/** e components/milon/** (exceto testes de migração 0009/0011/0012)
+- `libra` => 0 ocorrências em lib/milon/** e components/milon/** (exceto testes de migração 0009/0012/0014 e comentários de conversão)
+- `abreviarUnidadeCarga` => 0 ocorrências em todo o repo
+- `>Editar<` / `>Excluir<` (botões de texto) => 0 ocorrências em ExerciseEntryCard.tsx
+- `confirmLoadUnit` / `setExerciseLoadUnitStandalone` no caminho do treino => 0 ocorrências
+- arquivo antigo `migration-0012-milon-exercise-mode.sql` => ausente
 
 ---
 
@@ -272,8 +305,8 @@ npm run build-storybook
 **Quando** arrasta pelo handle  
 **Então** ghost card com opacidade, placeholder de drop, animação suave, mobile+desktop
 
-### REG-46: Card de séries compacto — grid 4 col, reps/tempo único, toggle unidade
-**Dado** exercício com séries  
-**Então** grid responsivo (1/2/4 col), campo único reps/tempo com toggle, toggle kg/lb abaixo da carga
+### REG-46: Card de séries compacto — grid 4 col, valor único pelo modo da entry, toggle unidade na entry
+**Dado** exercício com séries
+**Então** grid responsivo (1/2/4 col), campo único com rótulo pelo modo da entry, toggle kg/lb abaixo da carga persistindo na entry
 
-**Critério de passagem:** 1319 testes passados, 0 falhas, coverage ≥ 80% (atual: 84.94% lines).
+**Critério de passagem:** 1476 testes passados, 0 falhas, coverage ≥ 80% (atual: 85.16% lines, 84.05% branch).

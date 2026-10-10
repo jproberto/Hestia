@@ -44,8 +44,7 @@ export interface IProgramRepository {
 }
 
 export interface UpdateSeriesFieldsInput {
-  reps?: number | null;
-  durationSeconds?: number | null;
+  value?: number | null;
   load?: number | null;
 }
 

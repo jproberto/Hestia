@@ -179,8 +179,7 @@ function makeSerie(overrides: Partial<WorkoutSeries> & { id: string }): WorkoutS
   return {
     entryId: "ent-1",
     position: 1,
-    reps: 10,
-    durationSeconds: null,
+    value: 10,
     load: 40,
     createdAt: "2026-10-01T10:00:00.000Z",
     created_by: EMAIL,
@@ -207,7 +206,7 @@ function makeView(overrides: Partial<WorkoutEntryView> = {}): WorkoutEntryView {
     entry: makeEntry({ id: "ent-1" }),
     exercise: makeExercise(),
     series: [
-      makeSerie({ id: "s-1", entryId: "ent-1", position: 1, reps: 10, load: 40 }),
+      makeSerie({ id: "s-1", entryId: "ent-1", position: 1, value: 10, load: 40 }),
     ],
     ...overrides,
   };
@@ -240,8 +239,7 @@ function makeDone(
     executionId: "exec-1",
     entryId: "ent-1",
     position: 1,
-    reps: 10,
-    durationSeconds: null,
+    value: 10,
     load: 40,
     createdAt: "2026-10-08T10:01:00.000Z",
     created_by: EMAIL,
@@ -290,8 +288,7 @@ function instalarBanco(sim: BancoSimulado): void {
         entryId: input.entryId,
         seriesId: input.seriesId,
         position: input.position,
-        reps: input.reps,
-        durationSeconds: input.durationSeconds,
+        value: input.value,
         load: input.load,
       });
       sim.dones.push(nova);
@@ -313,8 +310,7 @@ function instalarBanco(sim: BancoSimulado): void {
     async (seriesId: string, fields: UpdateSeriesFieldsInput) => {
       return makeSerie({
         id: seriesId,
-        reps: fields.reps ?? null,
-        durationSeconds: fields.durationSeconds ?? null,
+        value: fields.value ?? null,
         load: fields.load ?? null,
       });
     },
@@ -423,7 +419,7 @@ describe("Mílon #5 — useWorkoutExecution (contrato RED, TASK-003)", () => {
       await waitFor(() => expect(result.current.loading).toBe(false));
 
       const entry = makeEntry({ id: "ent-1" });
-      const serie = makeSerie({ id: "s-1", entryId: "ent-1", position: 1, reps: 12, durationSeconds: null, load: 50 });
+      const serie = makeSerie({ id: "s-1", entryId: "ent-1", position: 1, value: 12, load: 50 });
 
       await executar(() => result.current.toggleSeries(entry, serie));
 
@@ -442,8 +438,7 @@ describe("Mílon #5 — useWorkoutExecution (contrato RED, TASK-003)", () => {
           entryId: "ent-1",
           seriesId: "s-1",
           position: 1,
-          reps: 12,
-          durationSeconds: null,
+          value: 12,
           load: 50,
         }),
         EMAIL,
@@ -473,7 +468,7 @@ describe("Mílon #5 — useWorkoutExecution (contrato RED, TASK-003)", () => {
 
       const entry = makeEntry({ id: "ent-1" });
       await executar(() =>
-        result.current.toggleSeries(entry, makeSerie({ id: "s-2", entryId: "ent-1", position: 2, reps: 10, load: 40 })),
+        result.current.toggleSeries(entry, makeSerie({ id: "s-2", entryId: "ent-1", position: 2, value: 10, load: 40 })),
       );
 
       await waitFor(() => expect(result.current.markedCount).toBe(2));
@@ -623,13 +618,13 @@ describe("Mílon #5 — useWorkoutExecution (contrato RED, TASK-003)", () => {
 
       const entry = makeEntry({ id: "ent-1" });
       const origem = makeSerie({ id: "s-1", entryId: "ent-1", position: 1 });
-      const campos: UpdateSeriesFieldsInput = { reps: 15, load: 60 };
+      const campos: UpdateSeriesFieldsInput = { value: 15, load: 60 };
 
       await executar(() => result.current.saveSeriesExecution(entry, origem, campos));
 
       // Sem indicador de cópia: a chamada recebe SOMENTE os campos.
       expect(updateSeriesFieldsStandalone).toHaveBeenCalledWith("s-1", {
-        reps: 15,
+        value: 15,
         load: 60,
       });
       // Replicação incondicional: origem + posição maior, incluindo marcadas.
@@ -657,11 +652,11 @@ describe("Mílon #5 — useWorkoutExecution (contrato RED, TASK-003)", () => {
       const ultima = makeSerie({ id: "s-9", entryId: "ent-1", position: 9 });
 
       await executar(() =>
-        result.current.saveSeriesExecution(entry, ultima, { reps: 8 }),
+        result.current.saveSeriesExecution(entry, ultima, { value: 8 }),
       );
 
       expect(updateSeriesFieldsStandalone).toHaveBeenCalledWith("s-9", {
-        reps: 8,
+        value: 8,
       });
       // O comportamento único vale para todo salvamento: a replicação é
       // chamada mesmo na última (o repository não encontra seguinte e só a
@@ -688,11 +683,11 @@ describe("Mílon #5 — useWorkoutExecution (contrato RED, TASK-003)", () => {
       await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.doneSeriesIds).toContain("s-1");
 
-      await executar(() =>
+await executar(() =>
         result.current.saveSeriesExecution(
           makeEntry({ id: "ent-1" }),
-          makeSerie({ id: "s-1", entryId: "ent-1" }),
-          { reps: 20 },
+          makeSerie({ id: "s-1", entryId: "ent-1", position: 1 }),
+          { value: 20 },
         ),
       );
 
@@ -714,7 +709,7 @@ describe("Mílon #5 — useWorkoutExecution (contrato RED, TASK-003)", () => {
         result.current.saveSeriesExecution(
           makeEntry({ id: "ent-1" }),
           makeSerie({ id: "s-1", entryId: "ent-1", position: 1 }),
-          { reps: 20 },
+          { value: 20 },
         ),
       );
 
@@ -766,7 +761,7 @@ describe("Mílon #5 — useWorkoutExecution (contrato RED, TASK-003)", () => {
           result.current.saveSeriesExecution(
             makeEntry({ id: "ent-1" }),
             makeSerie({ id: "s-1", entryId: "ent-1" }),
-            { reps: 9 },
+            { value: 9 },
           ),
         ).rejects.toThrow("falha ao salvar série");
       });
@@ -894,12 +889,12 @@ describe("Mílon #5 — useWorkoutExecution (contrato RED, TASK-003)", () => {
         result.current.saveSeriesExecution(
           makeEntry({ id: "ent-1" }),
           makeSerie({ id: "s-1", entryId: "ent-1", position: 1 }),
-          { reps: 15, load: 60 },
+          { value: 15, load: 60 },
         ),
       );
 
       expect(updateSeriesFieldsStandalone).toHaveBeenCalledWith("s-1", {
-        reps: 15,
+        value: 15,
         load: 60,
       });
       expect(result.current.errorMsg).toBeNull();
@@ -1012,12 +1007,12 @@ describe("Mílon #5 — useWorkoutExecution (contrato RED, TASK-003)", () => {
         result.current.saveSeriesExecution(
           makeEntry({ id: "ent-1" }),
           makeSerie({ id: "s-1", entryId: "ent-1", position: 1 }),
-          { reps: 20 },
+          { value: 20 },
         ),
       );
 
       expect(updateSeriesFieldsStandalone).toHaveBeenCalledWith("s-1", {
-        reps: 20,
+        value: 20,
       });
       expect(applySeriesToFollowingStandalone).toHaveBeenCalledWith(
         "ent-1",
@@ -1026,3 +1021,53 @@ describe("Mílon #5 — useWorkoutExecution (contrato RED, TASK-003)", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-013 (Mílon #5, Aditamento 2026-10-10 "valor único") —
+// consumido pela TASK-015 (escopo mínimo de tipos; cobertura plena do hook
+// pertence à TASK-015 por arbitragem Zeus).
+// Fonte: tasks.json TASK-013 + plan.md Aditamento 2026-10-10 §3 (marcação
+// com valor único) + spec §3.
+// Expected: FAIL (hook atual monta o retrato com reps/durationSeconds e
+// ignora `value`).
+// Convenção: `value` via cast na série — o tipo ainda não tem o campo (RED
+// inclui os tipos); em runtime o objeto o carrega.
+// ---------------------------------------------------------------------------
+
+describe("Milon 05 TASK-013 RED — useWorkoutExecution com valor único (D34)", () => {
+  it("primeira marcação monta o retrato com valor único (sem reps/durationSeconds)", async () => {
+    const sim: BancoSimulado = { execution: null, dones: [] };
+    instalarBanco(sim);
+    const { result } = renderHook(() => useWorkoutExecution(WORKOUT_ID));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const entry = makeEntry({ id: "ent-1" });
+    const serie = {
+      ...makeSerie({
+        id: "s-1",
+        entryId: "ent-1",
+        position: 1,
+        load: 50,
+      }),
+      value: 12,
+    } as unknown as Parameters<typeof result.current.toggleSeries>[1];
+
+    await executar(() => result.current.toggleSeries(entry, serie));
+
+    await waitFor(() => expect(result.current.markedCount).toBe(1));
+    expect(markSeriesDoneStandalone).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entryId: "ent-1",
+        seriesId: "s-1",
+        position: 1,
+        value: 12,
+        load: 50,
+      }),
+      EMAIL,
+    );
+  });
+});
+
+
+
+

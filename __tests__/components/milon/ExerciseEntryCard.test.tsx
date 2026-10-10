@@ -33,7 +33,7 @@ import type { Exercise, LoadUnit, WorkoutEntry, WorkoutEntryView, WorkoutSeries 
  * - Mensagens escritas caractere a caractere conforme plan.md §3.
  */
 
-type SerieField = "reps" | "durationSeconds" | "load";
+type SerieField = "value" | "load";
 
 interface ExerciseEntryCardProps {
   entryView: WorkoutEntryView;
@@ -63,8 +63,7 @@ function makeSeries(id: string, overrides: Partial<WorkoutSeries> = {}): Workout
     id,
     entryId: "entry-1",
     position: 1,
-    reps: null,
-    durationSeconds: null,
+    value: null,
     load: null,
     createdAt: CRIADO_EM,
     created_by: DONO,
@@ -239,7 +238,7 @@ describe("ExerciseEntryCard", () => {
         <ExerciseEntryCard
           {...base({
             entryView: makeView([
-              makeSeries("s1", { position: 1, reps: 10 }),
+              makeSeries("s1", { position: 1, value: 10 }),
               makeSeries("s2", { position: 2 }),
               makeSeries("s3", { position: 3 }),
             ]),
@@ -397,7 +396,7 @@ describe("ExerciseEntryCard", () => {
 
       fireEvent.click(screen.getByRole("button", { name: /^lb$/i }));
       expect(onChooseUnit).toHaveBeenCalledTimes(1);
-      expect(onChooseUnit).toHaveBeenCalledWith("libra");
+      expect(onChooseUnit).toHaveBeenCalledWith("lb");
 
       fireEvent.click(screen.getByRole("button", { name: /^kg$/i }));
       expect(onChooseUnit).toHaveBeenCalledTimes(2);
@@ -689,7 +688,7 @@ describe("ExerciseEntryCard — chrome visível em execução (replano TASK-001 
  *   (não da biblioteca): radiogroup rotulado OU select rotulado OU grupo
  *   rotulado — o teste aceita os três (mesma flexibilidade do TASK-006);
  * - rótulos acessíveis fixos: "Modo" e "Unidade"; valores literais
- *   "repeticao"/"tempo" e "kg"/"libra" (mesmos do banco);
+ *   "repeticao"/"tempo" e "kg"/"lb" (mesmos do banco);
  * - trocar o Modo commita via callback NOVO `onModeCommit(mode)`
  *   (opcional na transição); trocar a Unidade no seletor da entry commita
  *   via callback NOVO `onUnitCommit(unit)` (opcional na transição);
@@ -736,7 +735,7 @@ describe("ExerciseEntryCard — seletores de Modo e Unidade da entry (TASK-010 �
       created_by: DONO,
     };
     return {
-      entry: makeEntryComModo("tempo", "libra"),
+      entry: makeEntryComModo("tempo", "lb"),
       exercise,
       series: [makeSeries("s1", { position: 1, load: 50 })],
     };
@@ -819,12 +818,12 @@ describe("ExerciseEntryCard — seletores de Modo e Unidade da entry (TASK-010 �
     expect(valorSelecionado(controle as HTMLElement)).toMatch(/tempo/i);
   });
 
-  it("exibe seletor de Unidade refletindo a entry (libra, mesmo com biblioteca em kg)", () => {
+  it("exibe seletor de Unidade refletindo a entry (lb, mesmo com biblioteca em kg)", () => {
     render(<ExerciseEntryCard {...base({ entryView: makeViewDivergente() })} />);
 
     const controle = controleDaEntry(elementoDaEntry(), /unidade/i);
     expect(controle).not.toBeNull();
-    expect(valorSelecionado(controle as HTMLElement)).toMatch(/libra/i);
+    expect(valorSelecionado(controle as HTMLElement)).toMatch(/lb/i);
   });
 
   it("trocar o Modo commita via onModeCommit", () => {
@@ -873,7 +872,7 @@ describe("ExerciseEntryCard — seletores de Modo e Unidade da entry (TASK-010 �
     ).toBeInTheDocument();
   });
 
-  it("SeriesCard da entry usa a unidade DA ENTRY (libra como texto, mesmo com biblioteca em kg)", () => {
+  it("SeriesCard da entry usa a unidade DA ENTRY (lb como texto, mesmo com biblioteca em kg)", () => {
     render(
       <ExerciseEntryCard
         {...({
@@ -887,9 +886,12 @@ describe("ExerciseEntryCard — seletores de Modo e Unidade da entry (TASK-010 �
       />,
     );
 
-    // Unidade principal como texto exato; a secundária convertida vive no
-    // mesmo nó ("<valor> <unidade>") e não casa com match exato.
-    expect(within(elementoDaEntry()).getByText("libra")).toBeInTheDocument();
+    // Escopado ao card da série em execução (o seletor de unidade da entry
+    // também exibe lb, então a busca global teria múltiplos resultados).
+    const cartao = within(elementoDaEntry()).getByRole("button", {
+      name: /^série 1/i,
+    });
+    expect(within(cartao).getByText("lb")).toBeInTheDocument();
   });
 
   it("trava: seletores da entry ocultos sob readOnly", () => {
@@ -905,5 +907,101 @@ describe("ExerciseEntryCard — seletores de Modo e Unidade da entry (TASK-010 �
     expect(
       controleDaEntry(elementoDaEntry(), /unidade/i),
     ).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-013 (Mílon #5, Aditamento 2026-10-10 "lb + ícones") —
+// consumido pela TASK-015.
+// Fonte: tasks.json TASK-013 + spec §3 (botões Editar/Excluir do exercício
+// no treino como ícones no padrão da biblioteca; unidade abreviada kg/lb)
+// + plan.md Aditamento 2026-10-10 §1 (Mudanças B/C), §3 e D36/D38.
+// Expected: FAIL (card atual usa botões de texto e opção com valor "libra").
+// ---------------------------------------------------------------------------
+
+describe("Milon 05 TASK-013 RED — ExerciseEntryCard com ícones + lb (D36/D38)", () => {
+  function redEntryView(): WorkoutEntryView {
+    const entry: WorkoutEntry = {
+      id: "entry-1",
+      workoutId: "w-1",
+      programId: "prog-a",
+      exerciseId: "ex-1",
+      position: 1,
+      restSeconds: null,
+      createdAt: CRIADO_EM,
+      created_by: DONO,
+    };
+    const exercise: Exercise = {
+      id: "ex-1",
+      name: "Supino reto",
+      muscle: "peito",
+      videoLink: null,
+      loadUnit: null,
+      deletedAt: null,
+      createdAt: CRIADO_EM,
+      created_by: DONO,
+    };
+    return {
+      entry,
+      exercise,
+      series: [
+        {
+          id: "s1",
+          entryId: "entry-1",
+          position: 1,
+          value: null,
+          load: null,
+          createdAt: CRIADO_EM,
+          created_by: DONO,
+        },
+      ],
+    };
+  }
+
+  function redEntryProps() {
+    return {
+      entryView: redEntryView(),
+      readOnly: false,
+      unitPromptValue: null,
+      saving: false,
+      onQuantityCommit: vi.fn(),
+      onRequestReduce: vi.fn(),
+      onRestCommit: vi.fn(),
+      onSeriesCommit: vi.fn(),
+      onApplyAll: vi.fn(),
+      onEditExercise: vi.fn(),
+      onRemoveEntry: vi.fn(),
+      onChooseUnit: vi.fn(),
+    };
+  }
+
+  it("Editar e Excluir são ícones com rótulos acessíveis no padrão da biblioteca", () => {
+    render(<ExerciseEntryCard {...redEntryProps()} />);
+    expect(
+      screen.getByRole("button", { name: "Editar Supino reto" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Excluir Supino reto" }),
+    ).toBeInTheDocument();
+  });
+
+  it("não há botões de texto Editar/Excluir no card da entry", () => {
+    render(<ExerciseEntryCard {...redEntryProps()} />);
+    expect(
+      screen.queryByRole("button", { name: /^editar$/i }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^excluir$/i }),
+    ).toBeNull();
+  });
+
+  it("seletor de unidade usa o valor lb (rótulo lb)", () => {
+    render(<ExerciseEntryCard {...redEntryProps()} />);
+    const seletor = screen.getByLabelText(/unidade/i) as HTMLSelectElement;
+    const valores = Array.from(seletor.options).map((o) => o.value);
+    expect(valores).toContain("lb");
+    expect(valores).not.toContain("libra");
+    const rotulos = Array.from(seletor.options).map((o) => o.text);
+    expect(rotulos).toContain("lb");
   });
 });

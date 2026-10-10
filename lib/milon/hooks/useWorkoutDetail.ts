@@ -41,7 +41,7 @@ import type {
   WorkoutSeries,
 } from "@/lib/milon/types";
 
-export type WorkoutSeriesField = "reps" | "durationSeconds" | "load";
+export type WorkoutSeriesField = "value" | "load";
 
 export interface SaveWorkoutExerciseInput {
   name: string;
@@ -415,11 +415,7 @@ export function useWorkoutDetail(workoutId: string): UseWorkoutDetailReturn {
       setErrorMsg(null);
       setErrorOrigin(null);
       const payload: UpdateSeriesFieldsInput =
-        field === "reps"
-          ? { reps: value }
-          : field === "durationSeconds"
-            ? { durationSeconds: value }
-            : { load: value };
+        field === "value" ? { value } : { load: value };
       try {
         await updateSeriesFieldsStandalone(seriesId, payload);
       } catch (err: unknown) {

@@ -98,8 +98,7 @@ function makeSeries(overrides: Partial<WorkoutSeries> = {}): WorkoutSeries {
     id: "serie-1",
     entryId: "entry-1",
     position: 1,
-    reps: null,
-    durationSeconds: null,
+    value: null,
     load: null,
     createdAt: CRIADO_EM,
     created_by: DONO,
@@ -124,9 +123,9 @@ const ROSCA = makeExercise({ id: "ex-2", name: "Rosca direta", muscle: "Braço" 
 const ENTRADA_1 = makeEntry({ id: "entry-1", exerciseId: "ex-1", position: 1 });
 const ENTRADA_2 = makeEntry({ id: "entry-2", exerciseId: "ex-2", position: 2 });
 
-const SERIE_1A = makeSeries({ id: "s1", entryId: "entry-1", position: 1, reps: 10, load: 40 });
+const SERIE_1A = makeSeries({ id: "s1", entryId: "entry-1", position: 1, value: 10, load: 40 });
 const SERIE_1B = makeSeries({ id: "s2", entryId: "entry-1", position: 2 });
-const SERIE_2A = makeSeries({ id: "s3", entryId: "entry-2", position: 1, reps: 12 });
+const SERIE_2A = makeSeries({ id: "s3", entryId: "entry-2", position: 1, value: 12 });
 const SERIE_2B = makeSeries({ id: "s4", entryId: "entry-2", position: 2 });
 
 const ENTRADAS: WorkoutEntryView[] = [
@@ -478,7 +477,7 @@ describe("WorkoutEntriesList", () => {
       // Assinatura do card é (seriesId, field, value); a lista pode repassar
       // direto ou embrulhar com a entrada — os 3 argumentos fixados pelo plano
       // têm de aparecer de qualquer forma.
-      expect(chamadaContemTodos(onSeriesCommit, ["s3", "reps", 8])).toBe(true);
+      expect(chamadaContemTodos(onSeriesCommit, ["s3", "value", 8])).toBe(true);
     });
 
     it("'Aplicar a todas' dispara onApplyAll com a entrada e a série de origem", () => {
@@ -531,7 +530,7 @@ describe("WorkoutEntriesList", () => {
 
       // Carga commita direto (sem prompt âmbar na UI).
       expect(
-        within(card).queryByText("Escolha a unidade da carga: kg ou libra."),
+        within(card).queryByText("Escolha a unidade da carga: kg ou lb."),
       ).not.toBeInTheDocument();
       expect(onSeriesCommit).toHaveBeenCalled();
       expect(
@@ -546,7 +545,7 @@ describe("WorkoutEntriesList", () => {
       // O plan.md §3 não fixa a lista de argumentos de onConfirmUnit (só o
       // nome); o que é inegociável é que a unidade escolhida e a entrada
       // cheguem ao callback.
-      expect(chamadaContemTodos(onConfirmUnit, ["entry-2", "libra"])).toBe(true);
+      expect(chamadaContemTodos(onConfirmUnit, ["entry-2", "lb"])).toBe(true);
     });
   });
 

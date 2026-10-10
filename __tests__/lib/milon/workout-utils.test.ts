@@ -29,7 +29,9 @@
  *   ("vírgula entre os itens, 'e' antes do último").
  */
 import { describe, it, expect } from "vitest";
-import type { WorkoutExecutionSeries, WorkoutSeries } from "@/lib/milon/types";
+import fs from "node:fs";
+import path from "node:path";
+import type { LoadUnit, WorkoutExecutionSeries, WorkoutSeries } from "@/lib/milon/types";
 import {
   MSG_TREINO_COM_EXERCICIOS,
   MSG_PROGRAMA_COM_TREINOS,
@@ -67,8 +69,7 @@ const serie = (
 ): WorkoutSeries => ({
   entryId: "entry-1",
   position: 1,
-  reps: null,
-  durationSeconds: null,
+  value: null,
   load: null,
   createdAt: "2026-10-01T00:00:00.000Z",
   created_by: "casal@exemplo.com",
@@ -80,7 +81,7 @@ const treinosDeAaZ = (): string[] =>
   Array.from({ length: 26 }, (_, i) => `Treino ${String.fromCharCode(65 + i)}`);
 
 /** Aceita 1 casa decimal com separador "." ou "," e sufixo de unidade opcional. */
-const CASA_DECIMAL = /^\d+[.,]\d(\s*(kg|libra))?$/;
+const CASA_DECIMAL = /^\d+[.,]\d(\s*(kg|lb))?$/;
 
 // ---------------------------------------------------------------------------
 // Constantes de mensagem — texto exato caractere a caractere (plan.md §3)
@@ -127,7 +128,7 @@ describe("constantes de mensagem", () => {
 
   it("MSG_UNIDADE_OBRIGATORIA tem o texto exato do plano", () => {
     expect(MSG_UNIDADE_OBRIGATORIA).toBe(
-      "Escolha a unidade da carga: kg ou libra."
+      "Escolha a unidade da carga: kg ou lb."
     );
   });
 
@@ -477,13 +478,13 @@ describe("hasSeriePreenchida", () => {
     ).toBe(false);
   });
 
-  it("só reps preenchido → true", () => {
-    expect(hasSeriePreenchida([serie({ id: "s1", reps: 10 })])).toBe(true);
+  it("só value preenchido → true", () => {
+    expect(hasSeriePreenchida([serie({ id: "s1", value: 10 })])).toBe(true);
   });
 
-  it("só tempo preenchido → true", () => {
+  it("só value (modo tempo) preenchido → true", () => {
     expect(
-      hasSeriePreenchida([serie({ id: "s1", durationSeconds: 30 })])
+      hasSeriePreenchida([serie({ id: "s1", value: 30 })])
     ).toBe(true);
   });
 
@@ -495,7 +496,7 @@ describe("hasSeriePreenchida", () => {
     expect(
       hasSeriePreenchida([
         serie({ id: "s1" }),
-        serie({ id: "s2", reps: 8 }),
+        serie({ id: "s2", value: 8 }),
         serie({ id: "s3" }),
       ])
     ).toBe(true);
@@ -503,12 +504,11 @@ describe("hasSeriePreenchida", () => {
 });
 
 describe("aplicarSerieOrigemEmTodas", () => {
-  it("copia reps/durationSeconds/load da origem para as demais séries", () => {
+  it("copia value/load da origem para as demais séries", () => {
     const origem = serie({
       id: "s1",
       position: 1,
-      reps: 10,
-      durationSeconds: 30,
+      value: 10,
       load: 60,
     });
     const destino = serie({ id: "s2", position: 2 });
@@ -516,38 +516,34 @@ describe("aplicarSerieOrigemEmTodas", () => {
 
     expect(resultado).toHaveLength(2);
     expect(resultado[1]).toMatchObject({
-      reps: 10,
-      durationSeconds: 30,
+      value: 10,
       load: 60,
     });
   });
 
   it("sobrescreve valores anteriores das demais séries (re-executável)", () => {
-    const origem = serie({ id: "s1", position: 1, reps: 10, load: 60 });
+    const origem = serie({ id: "s1", position: 1, value: 10, load: 60 });
     const destino = serie({
       id: "s2",
       position: 2,
-      reps: 5,
-      durationSeconds: 90,
+      value: 5,
       load: 20,
     });
     const resultado = aplicarSerieOrigemEmTodas([origem, destino], "s1");
 
     expect(resultado[1]).toMatchObject({
-      reps: 10,
-      durationSeconds: null,
+      value: 10,
       load: 60,
     });
   });
 
   it("null da origem sobrescreve valor existente nas demais", () => {
-    const origem = serie({ id: "s1", position: 1, reps: 10 });
+    const origem = serie({ id: "s1", position: 1, value: 10 });
     const destino = serie({ id: "s2", position: 2, load: 99 });
     const resultado = aplicarSerieOrigemEmTodas([origem, destino], "s1");
 
     expect(resultado[1]).toMatchObject({
-      reps: 10,
-      durationSeconds: null,
+      value: 10,
       load: null,
     });
   });
@@ -556,22 +552,20 @@ describe("aplicarSerieOrigemEmTodas", () => {
     const origem = serie({
       id: "s1",
       position: 1,
-      reps: 10,
-      durationSeconds: 30,
+      value: 10,
       load: 60,
     });
-    const destino = serie({ id: "s2", position: 2, reps: 1 });
+    const destino = serie({ id: "s2", position: 2, value: 1 });
     const resultado = aplicarSerieOrigemEmTodas([origem, destino], "s1");
 
     expect(resultado[0]).toMatchObject({
-      reps: 10,
-      durationSeconds: 30,
+      value: 10,
       load: 60,
     });
   });
 
   it("preserva position/id/entryId das séries (não reordena nem recria)", () => {
-    const origem = serie({ id: "s1", position: 1, reps: 10 });
+    const origem = serie({ id: "s1", position: 1, value: 10 });
     const meio = serie({ id: "s2", position: 2 });
     const fim = serie({ id: "s3", position: 3 });
     const resultado = aplicarSerieOrigemEmTodas([origem, meio, fim], "s1");
@@ -586,7 +580,7 @@ describe("aplicarSerieOrigemEmTodas", () => {
   });
 
   it("não introduz campo de descanso (descanso é campo único da entrada, D4)", () => {
-    const origem = serie({ id: "s1", position: 1, reps: 10 });
+    const origem = serie({ id: "s1", position: 1, value: 10 });
     const destino = serie({ id: "s2", position: 2 });
     const resultado = aplicarSerieOrigemEmTodas([origem, destino], "s1");
 
@@ -595,8 +589,7 @@ describe("aplicarSerieOrigemEmTodas", () => {
         "id",
         "entryId",
         "position",
-        "reps",
-        "durationSeconds",
+        "value",
         "load",
         "createdAt",
         "created_by",
@@ -606,33 +599,33 @@ describe("aplicarSerieOrigemEmTodas", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Conversão e formatação de carga (D10 — fator exato 0,45359237 kg/libra)
+// Conversão e formatação de carga (D10 — fator exato 0,45359237 kg/lb)
 // ---------------------------------------------------------------------------
 
 describe("converterCarga", () => {
-  it("libra → kg multiplica pelo fator exato 0.45359237", () => {
-    expect(converterCarga(1, "libra", "kg")).toBe(0.45359237);
-    expect(converterCarga(100, "libra", "kg")).toBeCloseTo(45.359237, 9);
+  it("lb → kg multiplica pelo fator exato 0.45359237", () => {
+    expect(converterCarga(1, "lb", "kg")).toBe(0.45359237);
+    expect(converterCarga(100, "lb", "kg")).toBeCloseTo(45.359237, 9);
   });
 
-  it("kg → libra divide pelo fator exato 0.45359237", () => {
-    expect(converterCarga(0.45359237, "kg", "libra")).toBe(1);
+  it("kg → lb divide pelo fator exato 0.45359237", () => {
+    expect(converterCarga(0.45359237, "kg", "lb")).toBe(1);
   });
 
   it("mesma unidade devolve o mesmo valor", () => {
     expect(converterCarga(50, "kg", "kg")).toBe(50);
-    expect(converterCarga(50, "libra", "libra")).toBe(50);
+    expect(converterCarga(50, "lb", "lb")).toBe(50);
   });
 
   it("ida e volta são consistentes (round trip)", () => {
-    const ida = converterCarga(100, "kg", "libra");
-    const volta = converterCarga(ida, "libra", "kg");
+    const ida = converterCarga(100, "kg", "lb");
+    const volta = converterCarga(ida, "lb", "kg");
     expect(volta).toBeCloseTo(100, 6);
   });
 });
 
 describe("formatarCargaComSecundaria", () => {
-  it("kg → libra: secundária convertida com exatamente 1 casa decimal", () => {
+  it("kg → lb: secundária convertida com exatamente 1 casa decimal", () => {
     const resultado = formatarCargaComSecundaria(100, "kg");
     expect(resultado.secundaria).toMatch(CASA_DECIMAL);
     expect(parseFloat(String(resultado.secundaria).replace(",", "."))).toBe(
@@ -640,8 +633,8 @@ describe("formatarCargaComSecundaria", () => {
     );
   });
 
-  it("libra → kg: secundária convertida com exatamente 1 casa decimal", () => {
-    const resultado = formatarCargaComSecundaria(10, "libra");
+  it("lb → kg: secundária convertida com exatamente 1 casa decimal", () => {
+    const resultado = formatarCargaComSecundaria(10, "lb");
     expect(resultado.secundaria).toMatch(CASA_DECIMAL);
     expect(parseFloat(String(resultado.secundaria).replace(",", "."))).toBe(
       4.5
@@ -655,9 +648,9 @@ describe("formatarCargaComSecundaria", () => {
   });
 
   it("principal preserva o decimal digitado", () => {
-    const resultado = formatarCargaComSecundaria(12.5, "libra");
+    const resultado = formatarCargaComSecundaria(12.5, "lb");
     expect(resultado.principal.replace(",", ".")).toContain("12.5");
-    expect(resultado.principal).toContain("libra");
+    expect(resultado.principal).toContain("lb");
   });
 
   it("unidade nula → secundaria null", () => {
@@ -702,8 +695,7 @@ const realizada = (
   executionId: "exec-1",
   entryId: "ent-1",
   position: 1,
-  reps: 10,
-  durationSeconds: null,
+  value: 10,
   load: 40,
   createdAt: "2026-10-08T10:01:00.000Z",
   created_by: "casal@exemplo.com",
@@ -731,9 +723,9 @@ describe("contarMarcadasNaExecucao", () => {
   it("três realizadas → 3, independente dos valores de retrato", () => {
     expect(
       contarMarcadasNaExecucao([
-        realizada({ seriesId: "s-1", reps: 10 }),
-        realizada({ seriesId: "s-2", reps: null, load: null }),
-        realizada({ seriesId: "s-3", durationSeconds: 30 }),
+        realizada({ seriesId: "s-1", value: 10 }),
+        realizada({ seriesId: "s-2", value: null, load: null }),
+        realizada({ seriesId: "s-3", value: 30 }),
       ]),
     ).toBe(3);
   });
@@ -768,5 +760,106 @@ describe("ehUltimaMarcada", () => {
       realizada({ seriesId: "s-3" }),
     ];
     expect(ehUltimaMarcada(lista, "s-1")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-013 (Mílon #5, Aditamento 2026-10-10 "valor único +
+// lb") — consumido pelas TASK-014/015.
+// Fonte: tasks.json TASK-013 + plan.md Aditamento 2026-10-10 §1 (Mudanças
+// A/B), §3 (contratos de valor único e D38) + spec §3.
+// Expected: FAIL em todos os blocos de comportamento (código atual ainda usa
+// reps/durationSeconds/libra). O bloco da guarda abreviarUnidadeCarga já é
+// verde (a função nunca foi implementada — D38 removeu a ideia do plano).
+// Convenção: `value` via cast — o tipo ainda não tem o campo (RED inclui os
+// tipos); em runtime o objeto o carrega.
+// ---------------------------------------------------------------------------
+
+describe("Milon 05 TASK-013 RED — valor único nas regras puras (D34)", () => {
+  type SerieComValor = WorkoutSeries & { value: number | null };
+
+  const serieValor = (
+    overrides: Record<string, unknown> & { id: string },
+  ): WorkoutSeries =>
+    ({
+      entryId: "entry-1",
+      position: 1,
+      value: null,
+      load: null,
+      createdAt: "2026-10-01T00:00:00.000Z",
+      created_by: "casal@exemplo.com",
+      ...overrides,
+    }) as unknown as WorkoutSeries;
+
+  it("hasSeriePreenchida: série só com value preenchido conta como preenchida", () => {
+    expect(hasSeriePreenchida([serieValor({ id: "s1", value: 10 })])).toBe(
+      true,
+    );
+  });
+
+  it("hasSeriePreenchida: value 0 conta como preenchida (0 é valor, não vazio)", () => {
+    expect(hasSeriePreenchida([serieValor({ id: "s1", value: 0 })])).toBe(
+      true,
+    );
+  });
+
+  it("aplicarSerieOrigemEmTodas: copia value + carga da origem para as seguintes", () => {
+    const origem = serieValor({ id: "s1", position: 1, value: 12, load: 60 });
+    const destino = serieValor({ id: "s2", position: 2 });
+    const resultado = aplicarSerieOrigemEmTodas(
+      [origem, destino],
+      "s1",
+    ) as unknown as SerieComValor[];
+    expect(resultado[1].value).toBe(12);
+    expect(resultado[1].load).toBe(60);
+  });
+
+  it("aplicarSerieOrigemEmTodas: resultado não carrega reps/durationSeconds", () => {
+    const origem = serieValor({ id: "s1", position: 1, value: 12, load: 60 });
+    const destino = serieValor({ id: "s2", position: 2 });
+    const resultado = aplicarSerieOrigemEmTodas(
+      [origem, destino],
+      "s1",
+    ) as unknown as Array<Record<string, unknown>>;
+    expect("reps" in resultado[1]).toBe(false);
+    expect("durationSeconds" in resultado[1]).toBe(false);
+    expect(resultado[1].value).toBe(12);
+  });
+});
+
+describe("Milon 05 TASK-013 RED — lb no banco com exibição direta (D38)", () => {
+  it("MSG_UNIDADE_OBRIGATORIA cita kg ou lb (nunca libra por extenso)", () => {
+    expect(MSG_UNIDADE_OBRIGATORIA).toBe(
+      "Escolha a unidade da carga: kg ou lb.",
+    );
+  });
+
+  it("converterCarga opera com lb: 1 lb → kg usa o fator exato", () => {
+    expect(converterCarga(1, "lb" as unknown as LoadUnit, "kg")).toBe(
+      0.45359237,
+    );
+  });
+
+  it("converterCarga opera com lb: ida e volta a partir de lb são consistentes", () => {
+    const ida = converterCarga(100, "lb" as unknown as LoadUnit, "kg");
+    const volta = converterCarga(ida, "kg", "lb" as unknown as LoadUnit);
+    expect(volta).toBeCloseTo(100, 6);
+  });
+
+  it("formatarCargaComSecundaria com lb exibe lb direto e secundária em kg", () => {
+    const resultado = formatarCargaComSecundaria(10, "lb" as unknown as LoadUnit);
+    expect(resultado.principal).toContain("lb");
+    expect(resultado.principal).not.toContain("libra");
+    expect(parseFloat(String(resultado.secundaria).replace(",", "."))).toBe(
+      4.5,
+    );
+  });
+
+  it("não existe função de transformação de unidade (exibição direta, D38)", () => {
+    const fonte = fs.readFileSync(
+      path.resolve(__dirname, "../../../lib/milon/workout-utils.ts"),
+      "utf8",
+    );
+    expect(fonte).not.toMatch(/abreviarUnidadeCarga/);
   });
 });

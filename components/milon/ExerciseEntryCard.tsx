@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Pencil, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EntryMode, LoadUnit, WorkoutEntryView } from "@/lib/milon/types";
@@ -164,24 +164,26 @@ export default function ExerciseEntryCard({
         </h3>
         {maintenanceVisible ? (
           <div className="flex items-center gap-1 shrink-0">
-            <Button
+            <button
               type="button"
-              size="sm"
-              variant="outline"
-              disabled={saving}
               onClick={onEditExercise}
-            >
-              Editar
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
               disabled={saving}
-              onClick={onRemoveEntry}
+              aria-label={`Editar ${exercise.name}`}
+              title="Editar exercício"
+              className="p-2 min-h-10 min-w-10 inline-flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:pointer-events-none disabled:opacity-50"
             >
-              Excluir
-            </Button>
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={onRemoveEntry}
+              disabled={saving}
+              aria-label={`Excluir ${exercise.name}`}
+              title="Excluir exercício"
+              className="p-2 min-h-10 min-w-10 inline-flex items-center justify-center rounded hover:bg-rose-100 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 transition-colors disabled:pointer-events-none disabled:opacity-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </div>
         ) : null}
       </div>
@@ -283,7 +285,7 @@ export default function ExerciseEntryCard({
               disabled={saving}
             >
               <option value="kg">kg</option>
-              <option value="libra">lb</option>
+              <option value="lb">lb</option>
             </select>
           </div>
         </div>

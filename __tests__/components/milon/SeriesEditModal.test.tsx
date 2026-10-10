@@ -17,7 +17,7 @@ import type { LoadUnit, WorkoutSeries } from "@/lib/milon/types";
  * opção de cópia; nunca fecha no erro) + §3 (contrato textual do modal:
  * props com a série em edição, unidade de carga do exercício, estado de
  * salvamento, mensagem de erro local, callback de fechar e callback de
- * salvar recebendo SOMENTE os campos, sem qualquer indicador de cópia;
+ *   salvar recebendo SOMENTE os campos, sem qualquer indicador de cópia;
  * validação herdada de workout-utils com mensagens visíveis e modal
  * permanecendo aberto no erro; título usa o token font-display) +
  * `tasks.json` TASK-005 (acceptanceCriteria — fonte da cobertura).
@@ -31,7 +31,7 @@ import type { LoadUnit, WorkoutSeries } from "@/lib/milon/types";
  * - props: `open`, `series` (série em edição), `loadUnit` (unidade de carga
  *   do exercício), `saving`, `error` (mensagem de erro local),
  *   `onClose()`, `onSave(fields)` com fields = SOMENTE
- *   `{ reps, durationSeconds, load }` (sem indicador de cópia);
+ *   salvar recebendo SOMENTE os campos `{ value, load }` (sem indicador de cópia);
  * - abre com os valores atuais da série; sem qualquer opção de cópia
  *   (sem checkbox, sem texto copiar/aplicar/segintes como opção);
  * - validação herdada (workout-utils) com mensagem visível e modal
@@ -43,8 +43,7 @@ const CRIADO_EM = "2026-10-01T00:00:00Z";
 const DONO = "ana@hestia.lan";
 
 interface SeriesEditFields {
-  reps: number | null;
-  durationSeconds: number | null;
+  value: number | null;
   load: number | null;
 }
 
@@ -63,8 +62,7 @@ function makeSeries(overrides: Partial<WorkoutSeries> = {}): WorkoutSeries {
     id: "ser-1",
     entryId: "ent-1",
     position: 1,
-    reps: 10,
-    durationSeconds: null,
+    value: 10,
     load: 50,
     createdAt: CRIADO_EM,
     created_by: DONO,
@@ -106,7 +104,7 @@ describe("SeriesEditModal (TASK-005 — RED)", () => {
   it("abre com os valores atuais da série", () => {
     render(
       <SeriesEditModal
-        {...base({ series: makeSeries({ reps: 12, load: 42.5 }) })}
+        {...base({ series: makeSeries({ value: 12, load: 42.5 }) })}
       />,
     );
 
@@ -130,13 +128,13 @@ describe("SeriesEditModal (TASK-005 — RED)", () => {
     const onSave = vi.fn(async (_fields: SeriesEditFields) => {});
     render(
       <SeriesEditModal
-        {...base({ series: makeSeries({ reps: 10, load: 50 }), onSave })}
+        {...base({ series: makeSeries({ value: 10, load: 50 }), onSave })}
       />,
     );
 
-    const reps = campo(/repetições/i);
-    fireEvent.change(reps, { target: { value: "12" } });
-    fireEvent.blur(reps);
+    const valor = campo(/repetições/i);
+    fireEvent.change(valor, { target: { value: "12" } });
+    fireEvent.blur(valor);
     const carga = campo(/carga/i);
     fireEvent.change(carga, { target: { value: "55" } });
     fireEvent.blur(carga);
@@ -146,9 +144,9 @@ describe("SeriesEditModal (TASK-005 — RED)", () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const campos = onSave.mock.calls[0][0];
     expect(Object.keys(campos).sort()).toEqual(
-      ["durationSeconds", "load", "reps"].sort(),
+      ["load", "value"].sort(),
     );
-    expect(campos).toMatchObject({ reps: 12, load: 55 });
+    expect(campos).toMatchObject({ value: 12, load: 55 });
     expect(campos).not.toHaveProperty("copiar");
     expect(campos).not.toHaveProperty("copy");
     expect(campos).not.toHaveProperty("applyToFollowing");
@@ -158,9 +156,9 @@ describe("SeriesEditModal (TASK-005 — RED)", () => {
     const onSave = vi.fn(async () => {});
     render(<SeriesEditModal {...base({ onSave })} />);
 
-    const reps = campo(/repetições/i);
-    fireEvent.change(reps, { target: { value: "abc" } });
-    fireEvent.blur(reps);
+    const valor = campo(/repetições/i);
+    fireEvent.change(valor, { target: { value: "abc" } });
+    fireEvent.blur(valor);
     fireEvent.click(screen.getByRole("button", { name: /salvar/i }));
 
     await waitFor(() =>
@@ -264,7 +262,7 @@ describe("SeriesEditModal — paridade com a manutenção (replano TASK-001 — 
 
   it("campo único deriva do modo do exercício sem botão de alternância (D27)", () => {
     renderModal({
-      series: makeSeries({ reps: 10, durationSeconds: null, load: 50 }),
+      series: makeSeries({ value: 10, load: 50 }),
       exerciseMode: "tempo",
     } as unknown as Partial<ModalProps>);
 
@@ -277,7 +275,7 @@ describe("SeriesEditModal — paridade com a manutenção (replano TASK-001 — 
   });
 
   it("carga exibe conversão secundária e a unidade como texto herdado (sem botões kg/lb)", () => {
-    renderModal({ series: makeSeries({ reps: 10, load: 50 }), loadUnit: "kg" });
+    renderModal({ series: makeSeries({ value: 10, load: 50 }), loadUnit: "kg" });
 
     expect(screen.getByText(/110\.2/)).toBeInTheDocument();
     expect(
@@ -302,7 +300,7 @@ describe("SeriesEditModal — paridade com a manutenção (replano TASK-001 — 
   });
 
   it("exibe a unidade herdada do exercício como texto (loadUnit kg), sem edição", () => {
-    renderModal({ series: makeSeries({ reps: 10, load: 50 }), loadUnit: "kg" });
+    renderModal({ series: makeSeries({ value: 10, load: 50 }), loadUnit: "kg" });
 
     const textos = within(modal()).getAllByText(/kg/);
     expect(textos.length).toBeGreaterThan(0);
@@ -312,13 +310,13 @@ describe("SeriesEditModal — paridade com a manutenção (replano TASK-001 — 
     }
   });
 
-  it("exibe 'libra' como texto herdado quando o exercício tem loadUnit libra", () => {
+  it("exibe 'lb' como texto herdado quando o exercício tem loadUnit lb", () => {
     renderModal({
-      series: makeSeries({ reps: 10, load: 50 }),
-      loadUnit: "libra",
+      series: makeSeries({ value: 10, load: 50 }),
+      loadUnit: "lb",
     });
 
-    const textos = within(modal()).getAllByText(/libra/);
+    const textos = within(modal()).getAllByText(/lb/);
     expect(textos.length).toBeGreaterThan(0);
     for (const texto of textos) {
       expect(texto.tagName).not.toBe("BUTTON");
@@ -331,10 +329,10 @@ describe("SeriesEditModal — paridade com a manutenção (replano TASK-001 — 
     ).not.toBeInTheDocument();
   });
 
-  it("salvar entrega somente os campos { reps, durationSeconds, load }", async () => {
+  it("salvar entrega somente os campos { value, load }", async () => {
     const onSave = vi.fn(async (_fields: SeriesEditFields) => {});
     renderModal({
-      series: makeSeries({ reps: 10, durationSeconds: null, load: 50 }),
+      series: makeSeries({ value: 10, load: 50 }),
       onSave,
     });
 
@@ -346,7 +344,7 @@ describe("SeriesEditModal — paridade com a manutenção (replano TASK-001 — 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const campos = onSave.mock.calls[0][0];
     expect(Object.keys(campos).sort()).toEqual(
-      ["durationSeconds", "load", "reps"].sort(),
+      ["load", "value"].sort(),
     );
     expect(campos).not.toHaveProperty("copiar");
     expect(campos).not.toHaveProperty("copy");
@@ -429,9 +427,9 @@ describe("SeriesEditModal — campo único pelo modo do exercício (TASK-006 —
     return label?.textContent ?? "";
   }
 
-  it("modo tempo rotula o campo único como Tempo (s) mesmo com série de reps", () => {
+  it("modo tempo rotula o campo único como Tempo (s) mesmo com série de valor", () => {
     renderModo({
-      series: makeSeries({ reps: 10, durationSeconds: null, load: 50 }),
+      series: makeSeries({ value: 10, load: 50 }),
       exerciseMode: "tempo",
       loadUnit: "kg",
     });
@@ -443,7 +441,7 @@ describe("SeriesEditModal — campo único pelo modo do exercício (TASK-006 —
 
   it("modo repeticao rotula o campo único como Repetições mesmo com série de tempo", () => {
     renderModo({
-      series: makeSeries({ reps: null, durationSeconds: 45, load: 50 }),
+      series: makeSeries({ value: 45, load: 50 }),
       exerciseMode: "repeticao",
       loadUnit: "kg",
     });
@@ -453,7 +451,7 @@ describe("SeriesEditModal — campo único pelo modo do exercício (TASK-006 —
 
   it("modo nulo usa fallback repetições", () => {
     renderModo({
-      series: makeSeries({ reps: null, durationSeconds: 45, load: 50 }),
+      series: makeSeries({ value: 45, load: 50 }),
       exerciseMode: null,
       loadUnit: "kg",
     });
@@ -463,7 +461,7 @@ describe("SeriesEditModal — campo único pelo modo do exercício (TASK-006 —
 
   it("rótulo da Carga exibe a unidade herdada ao lado como texto (kg)", () => {
     renderModo({
-      series: makeSeries({ reps: 10, load: 50 }),
+      series: makeSeries({ value: 10, load: 50 }),
       exerciseMode: "repeticao",
       loadUnit: "kg",
     });
@@ -472,20 +470,20 @@ describe("SeriesEditModal — campo único pelo modo do exercício (TASK-006 —
     expect(rotuloDaCarga()).toMatch(/kg/i);
   });
 
-  it("rótulo da Carga exibe a unidade herdada ao lado como texto (libra)", () => {
+  it("rótulo da Carga exibe a unidade herdada ao lado como texto (lb)", () => {
     renderModo({
-      series: makeSeries({ reps: 10, load: 50 }),
+      series: makeSeries({ value: 10, load: 50 }),
       exerciseMode: "repeticao",
-      loadUnit: "libra",
+      loadUnit: "lb",
     });
 
     expect(rotuloDaCarga()).toMatch(/carga/i);
-    expect(rotuloDaCarga()).toMatch(/libra/i);
+    expect(rotuloDaCarga()).toMatch(/lb/i);
   });
 
   it("NÃO expõe alternância entre repetição e tempo (modo pertence ao exercício)", () => {
     renderModo({
-      series: makeSeries({ reps: 10, load: 50 }),
+      series: makeSeries({ value: 10, load: 50 }),
       exerciseMode: "repeticao",
       loadUnit: "kg",
     });
@@ -499,7 +497,7 @@ describe("SeriesEditModal — campo único pelo modo do exercício (TASK-006 —
 
   it("NÃO expõe botões de unidade no modal de execução", () => {
     renderModo({
-      series: makeSeries({ reps: 10, load: 50 }),
+      series: makeSeries({ value: 10, load: 50 }),
       exerciseMode: "repeticao",
       loadUnit: "kg",
     });
@@ -515,10 +513,10 @@ describe("SeriesEditModal — campo único pelo modo do exercício (TASK-006 —
     ).not.toBeInTheDocument();
   });
 
-  it("salvar no modo tempo entrega durationSeconds com reps nulo", async () => {
+  it("salvar no modo tempo entrega valor único com carga", async () => {
     const onSave = vi.fn(async (_fields: SeriesEditFields) => {});
     renderModo({
-      series: makeSeries({ reps: 10, durationSeconds: null, load: 50 }),
+      series: makeSeries({ value: 10, load: 50 }),
       exerciseMode: "tempo",
       loadUnit: "kg",
       onSave,
@@ -532,8 +530,8 @@ describe("SeriesEditModal — campo único pelo modo do exercício (TASK-006 —
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const campos = onSave.mock.calls[0][0];
     expect(campos).toMatchObject({
-      reps: null,
-      durationSeconds: 60,
+      value: 60,
+      load: 50,
     });
   });
 });
@@ -586,16 +584,89 @@ describe("SeriesEditModal — valores vindos da entry (TASK-010 — RED)", () =>
   it("modal alimentado pela entry: rótulo pelo modo da entry + Carga com a unidade da entry", () => {
     const entry = {
       mode: "tempo",
-      loadUnit: "libra",
-    } as unknown as { mode: "tempo"; loadUnit: "libra" };
+      loadUnit: "lb",
+    } as unknown as { mode: "tempo"; loadUnit: "lb" };
     const props = {
-      ...base({ series: makeSeries({ reps: 10, durationSeconds: null, load: 50 }) }),
+      ...base({ series: makeSeries({ value: 10, load: 50 }) }),
       exerciseMode: entry.mode,
       loadUnit: entry.loadUnit,
     } as unknown as Parameters<typeof SeriesEditModal>[0];
     render(<SeriesEditModal {...props} />);
 
     expect(screen.getByLabelText(/tempo/i)).toBeInTheDocument();
-    expect(screen.getByText(/carga \(libra\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/carga \(lb\)/i)).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-013 (Mílon #5, Aditamento 2026-10-10 "valor único +
+// lb") — consumido pela TASK-015.
+// Fonte: tasks.json TASK-013 + spec §3 (modal com campo único + unidade ao
+// lado de Carga abreviada kg/lb) + plan.md Aditamento 2026-10-10 §1
+// (Mudanças A/B), §3 e D34/D38.
+// Expected: FAIL (modal atual devolve reps/durationSeconds e converte a
+// secundária na direção errada para lb).
+// ---------------------------------------------------------------------------
+
+describe("Milon 05 TASK-013 RED — SeriesEditModal com valor único + lb (D34/D38)", () => {
+  it("salvamento devolve valor único + carga (sem reps/durationSeconds)", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const series: WorkoutSeries = {
+      id: "ser-1",
+      entryId: "ent-1",
+      position: 1,
+      value: 10,
+      load: 50,
+      createdAt: CRIADO_EM,
+      created_by: DONO,
+    };
+    render(
+      <SeriesEditModal
+        open={true}
+        series={series}
+        loadUnit="kg"
+        exerciseMode="repeticao"
+        saving={false}
+        error={null}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    await screen.findByText(/editar série/i);
+    expect(onSave).toHaveBeenCalledTimes(1);
+    const salvo = onSave.mock.calls[0][0] as unknown as Record<string, unknown>;
+    expect(salvo.value).toBe(10);
+    expect(salvo.load).toBe(50);
+    expect("reps" in salvo).toBe(false);
+    expect("durationSeconds" in salvo).toBe(false);
+  });
+
+  it("unidade lb aparece direta ao lado de Carga com secundária correta em kg", () => {
+    const series: WorkoutSeries = {
+      id: "ser-1",
+      entryId: "ent-1",
+      position: 1,
+      value: 10,
+      load: 10,
+      createdAt: CRIADO_EM,
+      created_by: DONO,
+    };
+    render(
+      <SeriesEditModal
+        open={true}
+        series={series}
+        loadUnit={"lb" as LoadUnit}
+        exerciseMode="repeticao"
+        saving={false}
+        error={null}
+        onClose={vi.fn()}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+    expect(screen.getByText(/carga \(lb\)/i)).toBeInTheDocument();
+    // 10 lb ≈ 4.5 kg na secundária; sem "libra" por extenso em tela.
+    expect(screen.getByText(/4\.5 kg/)).toBeInTheDocument();
+    expect(screen.queryByText(/libra/i)).toBeNull();
   });
 });

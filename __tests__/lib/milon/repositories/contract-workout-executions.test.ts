@@ -73,15 +73,14 @@ function makeMarkInput(
   executionId: string,
   seriesId: string,
   position: number,
-  fields: { reps?: number | null; durationSeconds?: number | null; load?: number | null } = {},
+  fields: { value?: number | null; load?: number | null } = {},
 ): MarkExecutionSeriesInput {
   return {
     executionId,
     entryId: "e-1",
     seriesId,
     position,
-    reps: fields.reps ?? null,
-    durationSeconds: fields.durationSeconds ?? null,
+    value: fields.value ?? null,
     load: fields.load ?? null,
   };
 }
@@ -161,8 +160,8 @@ function defineWorkoutExecutionRepositoryContract(
 
       it("exclusão em cascata remove as realizadas da execução", async () => {
         const execution = await repo.startExecution(WORKOUT_ID, PROGRAM_ID, EMAIL);
-        await repo.markSeriesDone(makeMarkInput(execution.id, "s-1", 1, { reps: 10 }), EMAIL);
-        await repo.markSeriesDone(makeMarkInput(execution.id, "s-2", 2, { reps: 12 }), EMAIL);
+        await repo.markSeriesDone(makeMarkInput(execution.id, "s-1", 1, { value: 10 }), EMAIL);
+        await repo.markSeriesDone(makeMarkInput(execution.id, "s-2", 2, { value: 12 }), EMAIL);
         expect(await repo.listDoneByExecution(execution.id)).toHaveLength(2);
 
         await repo.clearExecution(execution.id);
@@ -177,8 +176,8 @@ function defineWorkoutExecutionRepositoryContract(
       it("excluir uma execução não afeta as realizadas de outra execução", async () => {
         const uma = await repo.startExecution("w-1", PROGRAM_ID, EMAIL);
         const outra = await repo.startExecution("w-2", PROGRAM_ID, EMAIL);
-        await repo.markSeriesDone(makeMarkInput(uma.id, "s-1", 1, { reps: 10 }), EMAIL);
-        await repo.markSeriesDone(makeMarkInput(outra.id, "s-9", 1, { reps: 8 }), EMAIL);
+        await repo.markSeriesDone(makeMarkInput(uma.id, "s-1", 1, { value: 10 }), EMAIL);
+        await repo.markSeriesDone(makeMarkInput(outra.id, "s-9", 1, { value: 8 }), EMAIL);
 
         await repo.clearExecution(uma.id);
 
@@ -195,8 +194,8 @@ function defineWorkoutExecutionRepositoryContract(
 
       it("lista as realizadas ordenadas por position asc", async () => {
         const execution = await repo.startExecution(WORKOUT_ID, PROGRAM_ID, EMAIL);
-        await repo.markSeriesDone(makeMarkInput(execution.id, "s-2", 2, { reps: 12 }), EMAIL);
-        await repo.markSeriesDone(makeMarkInput(execution.id, "s-1", 1, { reps: 10 }), EMAIL);
+        await repo.markSeriesDone(makeMarkInput(execution.id, "s-2", 2, { value: 12 }), EMAIL);
+        await repo.markSeriesDone(makeMarkInput(execution.id, "s-1", 1, { value: 10 }), EMAIL);
 
         const listed = await repo.listDoneByExecution(execution.id);
 
@@ -210,7 +209,7 @@ function defineWorkoutExecutionRepositoryContract(
         const execution = await repo.startExecution(WORKOUT_ID, PROGRAM_ID, EMAIL);
 
         const done = await repo.markSeriesDone(
-          makeMarkInput(execution.id, "s-1", 1, { reps: 10, durationSeconds: 45, load: 40 }),
+          makeMarkInput(execution.id, "s-1", 1, { value: 10, load: 40 }),
           EMAIL,
         );
 
@@ -219,8 +218,7 @@ function defineWorkoutExecutionRepositoryContract(
           entryId: "e-1",
           seriesId: "s-1",
           position: 1,
-          reps: 10,
-          durationSeconds: 45,
+          value: 10,
           load: 40,
         });
         expect(await repo.listDoneByExecution(execution.id)).toHaveLength(1);
@@ -229,8 +227,8 @@ function defineWorkoutExecutionRepositoryContract(
       it("toque duplo não duplica (idempotente por execução mais série)", async () => {
         const execution = await repo.startExecution(WORKOUT_ID, PROGRAM_ID, EMAIL);
 
-        await repo.markSeriesDone(makeMarkInput(execution.id, "s-1", 1, { reps: 10 }), EMAIL);
-        await repo.markSeriesDone(makeMarkInput(execution.id, "s-1", 1, { reps: 10 }), EMAIL);
+        await repo.markSeriesDone(makeMarkInput(execution.id, "s-1", 1, { value: 10 }), EMAIL);
+        await repo.markSeriesDone(makeMarkInput(execution.id, "s-1", 1, { value: 10 }), EMAIL);
 
         expect(await repo.listDoneByExecution(execution.id)).toHaveLength(1);
       });
@@ -239,8 +237,8 @@ function defineWorkoutExecutionRepositoryContract(
     describe("unmarkSeries", () => {
       it("remove só a realizada da série informada mantendo as demais", async () => {
         const execution = await repo.startExecution(WORKOUT_ID, PROGRAM_ID, EMAIL);
-        await repo.markSeriesDone(makeMarkInput(execution.id, "s-1", 1, { reps: 10 }), EMAIL);
-        await repo.markSeriesDone(makeMarkInput(execution.id, "s-2", 2, { reps: 12 }), EMAIL);
+        await repo.markSeriesDone(makeMarkInput(execution.id, "s-1", 1, { value: 10 }), EMAIL);
+        await repo.markSeriesDone(makeMarkInput(execution.id, "s-2", 2, { value: 12 }), EMAIL);
 
         await repo.unmarkSeries(execution.id, "s-1");
 
@@ -251,7 +249,7 @@ function defineWorkoutExecutionRepositoryContract(
 
       it("desmarcar série ausente é sem operação (não lança, nada muda)", async () => {
         const execution = await repo.startExecution(WORKOUT_ID, PROGRAM_ID, EMAIL);
-        await repo.markSeriesDone(makeMarkInput(execution.id, "s-1", 1, { reps: 10 }), EMAIL);
+        await repo.markSeriesDone(makeMarkInput(execution.id, "s-1", 1, { value: 10 }), EMAIL);
 
         await expect(repo.unmarkSeries(execution.id, "s-inexistente")).resolves.toBeUndefined();
 
@@ -293,3 +291,32 @@ defineWorkoutExecutionRepositoryContract(
   "fake em memória",
   (seed: ExecutionSeed = {}) => createFakeWorkoutExecutionRepository(seed),
 );
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-013 (Mílon #5, Aditamento 2026-10-10 "valor único") —
+// consumido pela TASK-014.
+// Fonte: tasks.json TASK-013 + plan.md Aditamento 2026-10-10 §3 (entrada de
+// marcação com valor único + carga; retrato com `value`) + spec §3.
+// Expected: FAIL (fake atual persiste reps/durationSeconds e ignora `value`).
+// Convenção: `value` via cast — o tipo ainda não tem o campo (RED inclui os
+// tipos); em runtime o objeto o carrega.
+// ---------------------------------------------------------------------------
+
+describe("Milon 05 TASK-013 RED — contrato de execuções com valor único (D34)", () => {
+  it("markSeriesDone persiste o valor único no retrato", async () => {
+    const repo = createFakeWorkoutExecutionRepository();
+    const feita = (await repo.markSeriesDone(
+      {
+        executionId: "exec-1",
+        entryId: "ent-1",
+        seriesId: "s-1",
+        position: 1,
+        value: 10,
+        load: 50,
+      } as unknown as MarkExecutionSeriesInput,
+      EMAIL,
+    )) as unknown as Record<string, unknown>;
+    expect(feita.value).toBe(10);
+    expect(feita.load).toBe(50);
+  });
+});

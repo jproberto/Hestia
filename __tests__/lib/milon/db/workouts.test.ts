@@ -65,8 +65,7 @@ const SERIES_ROW: WorkoutSeriesRow = {
   id: "s-1",
   entry_id: "e-1",
   position: 1,
-  reps: 10,
-  duration_seconds: null,
+  value: 10,
   load: 40,
   created_at: "2026-10-01T09:00:00.000Z",
   created_by: EMAIL,
@@ -289,8 +288,7 @@ describe("lib/milon/db/workouts (barrel oficial da UI, TASK-006)", () => {
         id: "s-1",
         entryId: "e-1",
         position: 1,
-        reps: 10,
-        durationSeconds: null,
+        value: 10,
         load: 40,
         createdAt: "2026-10-01T09:00:00.000Z",
         created_by: EMAIL,
@@ -401,7 +399,7 @@ describe("lib/milon/db/workouts (barrel oficial da UI, TASK-006)", () => {
 //
 // applySeriesToFollowing ainda NÃO existe: estes blocos falham até Hefesto
 // entregá-lo (Expected FAIL por nome ausente no barrel/repository).
-// Regra: copia reps/tempo/carga da origem para a própria origem e somente
+// Regra: copia valor/carga da origem para a própria origem e somente
 // para as séries da mesma entrada com posição MAIOR que a da origem,
 // incluindo as já marcadas, sem tocar na execução nem nas realizadas,
 // devolvendo a lista ordenada por posição. Série anterior à origem NUNCA
@@ -412,10 +410,10 @@ describe("lib/milon/db/workouts applySeriesToFollowing (TASK-002)", () => {
   const ORIGIN_ID = "s-2";
 
   const FOUR_SERIES: WorkoutSeriesRow[] = [
-    { ...SERIES_ROW, id: "s-1", entry_id: "e-1", position: 1, reps: 8, duration_seconds: 30, load: 30 },
-    { ...SERIES_ROW, id: "s-2", entry_id: "e-1", position: 2, reps: 10, duration_seconds: 45, load: 40 },
-    { ...SERIES_ROW, id: "s-3", entry_id: "e-1", position: 3, reps: 99, duration_seconds: 99, load: 99 },
-    { ...SERIES_ROW, id: "s-4", entry_id: "e-1", position: 4, reps: null, duration_seconds: null, load: null },
+    { ...SERIES_ROW, id: "s-1", entry_id: "e-1", position: 1, value: 8, load: 30 },
+    { ...SERIES_ROW, id: "s-2", entry_id: "e-1", position: 2, value: 10, load: 40 },
+    { ...SERIES_ROW, id: "s-3", entry_id: "e-1", position: 3, value: 99, load: 99 },
+    { ...SERIES_ROW, id: "s-4", entry_id: "e-1", position: 4, value: null, load: null },
   ];
 
   function stubFollowingDb(rows: WorkoutSeriesRow[], recorded: Recorded): IDatabaseClient {
@@ -474,18 +472,18 @@ describe("lib/milon/db/workouts applySeriesToFollowing (TASK-002)", () => {
     expect(recorded.table).toBe("workout_series");
     expect(recorded.eqs).toEqual([["entry_id", "e-1"]]);
     expect(recorded.orders).toEqual([["position", true]]);
-    // Só as seguintes recebem UPDATE com os valores da origem (10/45/40).
+    // Só as seguintes recebem UPDATE com os valores da origem (10/40).
     expect(recorded.ops).toEqual([
       {
         table: "workout_series",
         op: "update",
-        payload: { reps: 10, duration_seconds: 45, load: 40 },
+        payload: { value: 10, load: 40 },
         eq: ["id", "s-3"],
       },
       {
         table: "workout_series",
         op: "update",
-        payload: { reps: 10, duration_seconds: 45, load: 40 },
+        payload: { value: 10, load: 40 },
         eq: ["id", "s-4"],
       },
     ]);
@@ -501,8 +499,8 @@ describe("lib/milon/db/workouts applySeriesToFollowing (TASK-002)", () => {
   it("na última série da entrada atualiza somente a origem (sem seguinte, sem UPDATE)", async () => {
     const recorded: Recorded = {};
     const rows: WorkoutSeriesRow[] = [
-      { ...SERIES_ROW, id: "s-1", entry_id: "e-1", position: 1, reps: 8, load: 30 },
-      { ...SERIES_ROW, id: "s-2", entry_id: "e-1", position: 2, reps: 10, load: 40 },
+      { ...SERIES_ROW, id: "s-1", entry_id: "e-1", position: 1, value: 8, load: 30 },
+      { ...SERIES_ROW, id: "s-2", entry_id: "e-1", position: 2, value: 10, load: 40 },
     ];
 
     const result = await dbBarrel.applySeriesToFollowing(
@@ -512,6 +510,78 @@ describe("lib/milon/db/workouts applySeriesToFollowing (TASK-002)", () => {
     );
 
     expect(recorded.ops ?? []).toEqual([]);
+    expect(result.map((s: { id: string }) => s.id)).toEqual(["s-1", "s-2"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-013 (Mílon #5, Aditamento 2026-10-10 "valor único") —
+// consumido pela TASK-014.
+// Fonte: tasks.json TASK-013 + plan.md Aditamento 2026-10-10 §3 (replicação
+// para as seguintes copiando value + carga) + spec §3.
+// Expected: FAIL (repository atual replica reps/duration_seconds/load e
+// ignora `value`).
+// Convenção: `value` via cast nas linhas — o tipo ainda não tem o campo
+// (RED inclui os tipos); em runtime o objeto o carrega.
+// ---------------------------------------------------------------------------
+
+describe("lib/milon/db/workouts valor único (TASK-013 RED — D34)", () => {
+  function redStubFollowingDb(rows: WorkoutSeriesRow[], recorded: Recorded): IDatabaseClient {
+    const readChain = {
+      eq: (col: string, val: unknown): unknown => {
+        (recorded.eqs ??= []).push([col, val]);
+        return readChain;
+      },
+      order: (col: string, opts?: { ascending?: boolean }): unknown => {
+        (recorded.orders ??= []).push([col, opts?.ascending]);
+        return readChain;
+      },
+      then: (onfulfilled: (value: unknown) => unknown) =>
+        Promise.resolve({ data: rows, error: null }).then(onfulfilled),
+    };
+    return {
+      from: (table: string) => {
+        if (table !== "workout_series") {
+          throw new Error(`tabela inesperada na replicação: ${table}`);
+        }
+        recorded.table = table;
+        return {
+          select: () => readChain,
+          update: (payload: Record<string, unknown>) => ({
+            eq: (col: string, val: unknown) => {
+              (recorded.ops ??= []).push({ table, op: "update", payload, eq: [col, val] });
+              return {
+                then: (onfulfilled: (value: unknown) => unknown) =>
+                  Promise.resolve({ data: null, error: null }).then(onfulfilled),
+              };
+            },
+          }),
+        };
+      },
+    } as unknown as IDatabaseClient;
+  }
+
+  it("applySeriesToFollowing replica value + carga (sem reps/duration_seconds)", async () => {
+    const recorded: Recorded = {};
+    const rows = [
+      { ...SERIES_ROW, id: "s-1", entry_id: "e-1", position: 1, load: 40, value: 10 },
+      { ...SERIES_ROW, id: "s-2", entry_id: "e-1", position: 2, load: null, value: null },
+    ] as unknown as WorkoutSeriesRow[];
+
+    const result = await dbBarrel.applySeriesToFollowing(
+      redStubFollowingDb(rows, recorded),
+      "e-1",
+      "s-1",
+    );
+
+    expect(recorded.ops).toEqual([
+      {
+        table: "workout_series",
+        op: "update",
+        payload: { value: 10, load: 40 },
+        eq: ["id", "s-2"],
+      },
+    ]);
     expect(result.map((s: { id: string }) => s.id)).toEqual(["s-1", "s-2"]);
   });
 });

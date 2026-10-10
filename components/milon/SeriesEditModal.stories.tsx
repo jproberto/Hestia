@@ -19,8 +19,7 @@ function serie(overrides: Partial<WorkoutSeries> = {}): WorkoutSeries {
     id: "ser-1",
     entryId: "ent-1",
     position: 1,
-    reps: 10,
-    durationSeconds: null,
+    value: 10,
     load: 50,
     createdAt: CRIADO_EM,
     created_by: DONO,
@@ -33,7 +32,6 @@ const base = {
   saving: false,
   error: null,
   onClose: fn(),
-  onChooseUnit: fn(),
   onSave: fn(async () => {}),
 };
 
@@ -62,15 +60,15 @@ export const ParidadeTempo: Story = {
   args: {
     ...base,
     open: true,
-    series: serie({ reps: null, durationSeconds: 60, load: 50 }),
+    series: serie({ value: 60, load: 50 }),
   },
 };
 
-export const ParidadeLibra: Story = {
+export const ParidadeLb: Story = {
   args: {
     ...base,
     open: true,
-    series: serie({ reps: 10, load: 50 }),
-    loadUnit: "libra" as const,
+    series: serie({ value: 10, load: 50 }),
+    loadUnit: "lb" as const,
   },
 };

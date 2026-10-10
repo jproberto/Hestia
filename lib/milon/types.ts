@@ -13,7 +13,7 @@ export interface ExerciseRow {
   created_by: string;
 }
 
-export type LoadUnit = 'kg' | 'libra';
+export type LoadUnit = 'kg' | 'lb';
 
 // Modo do exercício (Mílon #5, aditamento 2026-10-09): mantido como tipo para
 // os cards/modais que ainda derivam o rótulo por propriedade (a fonte passa a
@@ -138,8 +138,9 @@ export interface WorkoutSeriesRow {
   id: string;
   entry_id: string;
   position: number;
-  reps: number | null;
-  duration_seconds: number | null;
+  // Valor único da série (Mílon #5, aditamento 2026-10-10, D34): coluna value
+  // da migração 0013 (nulo = vazio); o significado vem do modo da entry.
+  value: number | null;
   load: number | null;
   created_at: string;
   created_by: string;
@@ -149,8 +150,7 @@ export interface WorkoutSeries {
   id: string;
   entryId: string;
   position: number;
-  reps: number | null;
-  durationSeconds: number | null;
+  value: number | null;
   load: number | null;
   createdAt: string;
   created_by: string;
@@ -203,8 +203,8 @@ export interface WorkoutExecutionSeriesRow {
   entry_id: string;
   series_id: string;
   position: number;
-  reps: number | null;
-  duration_seconds: number | null;
+  // Retrato com valor único (D34): acompanha a coluna value do template.
+  value: number | null;
   load: number | null;
   created_at: string;
   created_by: string;
@@ -216,8 +216,7 @@ export interface WorkoutExecutionSeries {
   entryId: string;
   seriesId: string;
   position: number;
-  reps: number | null;
-  durationSeconds: number | null;
+  value: number | null;
   load: number | null;
   createdAt: string;
   created_by: string;
@@ -228,8 +227,7 @@ export interface MarkExecutionSeriesInput {
   entryId: string;
   seriesId: string;
   position: number;
-  reps: number | null;
-  durationSeconds: number | null;
+  value: number | null;
   load: number | null;
 }
 

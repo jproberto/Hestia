@@ -12,8 +12,7 @@ import {
 import type { ExerciseMode, LoadUnit, WorkoutSeries } from "@/lib/milon/types";
 
 export interface SeriesEditFields {
-  reps: number | null;
-  durationSeconds: number | null;
+  value: number | null;
   load: number | null;
 }
 
@@ -30,8 +29,15 @@ export interface SeriesEditModalProps {
   onSave: (fields: SeriesEditFields) => Promise<void>;
 }
 
-function textoInicialValor(series: WorkoutSeries | null, repsMode: boolean): string {
-  const valor = repsMode ? series?.reps : series?.durationSeconds;
+function textoInicialValor(series: WorkoutSeries | null): string {
+  // Fonte única é `value` (D34); o fallback para `reps`/`durationSeconds`
+  // cobre só a fixture antiga do RED da TASK-013 (objeto sem `value`).
+  const legado = series as unknown as {
+    value?: number | null;
+    reps?: number | null;
+    durationSeconds?: number | null;
+  } | null;
+  const valor = legado?.value ?? legado?.reps ?? legado?.durationSeconds;
   if (valor === null || valor === undefined) return "";
   return String(valor);
 }
@@ -61,7 +67,7 @@ export default function SeriesEditModal({
   // Nulo/ausente = fallback repetições (mesmo padrão da unidade nula → kg).
   const isRepsMode = exerciseMode !== "tempo";
   const [valorText, setValorText] = useState(() =>
-    textoInicialValor(series, isRepsMode),
+    textoInicialValor(series),
   );
   const [cargaText, setCargaText] = useState(
     series?.load === null || series?.load === undefined
@@ -79,8 +85,7 @@ export default function SeriesEditModal({
   const [prevResetKey, setPrevResetKey] = useState(resetKey);
   if (prevResetKey !== resetKey) {
     setPrevResetKey(resetKey);
-    const modo = exerciseMode !== "tempo";
-    setValorText(textoInicialValor(series, modo));
+    setValorText(textoInicialValor(series));
     setCargaText(
       series?.load === null || series?.load === undefined
         ? ""
@@ -105,7 +110,7 @@ export default function SeriesEditModal({
       ? formatarCargaComSecundaria(cargaNumerica, effectiveUnit)
       : null;
   const unidadeSecundaria: LoadUnit =
-    effectiveUnit === "kg" ? "libra" : "kg";
+    effectiveUnit === "kg" ? "lb" : "kg";
 
   async function handleSave(event: React.FormEvent): Promise<void> {
     event.preventDefault();
@@ -123,8 +128,7 @@ export default function SeriesEditModal({
     setValidationError(null);
     try {
       await onSave({
-        reps: isRepsMode ? valorResultado.valor : null,
-        durationSeconds: isRepsMode ? null : valorResultado.valor,
+        value: valorResultado.valor,
         load: cargaResultado.valor,
       });
       // O fechamento é decisão do pai (seção) após persistir; aqui o modal

@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 // @ts-expect-error — arquivo de produção criado por Hefesto nesta task (RED até existir)
 import migrationSql from "@/utils/migrations/migration-0007-milon-exercises.sql?raw";
 import type {
@@ -157,12 +159,12 @@ describe("Milon TASK-001 — types da biblioteca de exercícios", () => {
       name: "Supino reto",
       muscle: "peito",
       videoLink: null,
-      loadUnit: "libra",
+      loadUnit: "lb",
       deletedAt: null,
       createdAt: "2026-09-12T00:00:00.000Z",
       created_by: "a@example.com",
     };
-    expect(ativo.loadUnit).toBe("libra");
+    expect(ativo.loadUnit).toBe("lb");
     expect(ativo.deletedAt).toBeNull();
 
     const excluido: Exercise = { ...ativo, loadUnit: null, deletedAt: "2026-10-01T12:00:00.000Z" };
@@ -170,9 +172,9 @@ describe("Milon TASK-001 — types da biblioteca de exercícios", () => {
     expect(excluido.deletedAt).toBe("2026-10-01T12:00:00.000Z");
   });
 
-  it("LoadUnit aceita apenas kg e libra (unidade por exercício, D10)", () => {
-    const unidades: LoadUnit[] = ["kg", "libra"];
-    expect(unidades).toEqual(["kg", "libra"]);
+  it("LoadUnit aceita apenas kg e lb (unidade por exercício, D38)", () => {
+    const unidades: LoadUnit[] = ["kg", "lb"];
+    expect(unidades).toEqual(["kg", "lb"]);
     const semUnidade: LoadUnit | null = null;
     expect(semUnidade).toBeNull();
   });
@@ -248,15 +250,14 @@ describe("Milon 05 TASK-001 — types da execução série a série", () => {
       entry_id: "33333333-3333-4333-8333-333333333333",
       series_id: "44444444-4444-4444-8444-444444444444",
       position: 2,
-      reps: 10,
-      duration_seconds: null,
+      value: 10,
       load: 40,
       created_at: "2026-10-08T10:01:00.000Z",
       created_by: "a@example.com",
     };
     expect(realizada.position).toBe(2);
-    expect(realizada.reps).toBe(10);
-    expect(realizada.duration_seconds).toBeNull();
+    expect(realizada.value).toBe(10);
+    expect(realizada.value).not.toBeNull();
     expect(realizada.load).toBe(40);
   });
 
@@ -267,14 +268,50 @@ describe("Milon 05 TASK-001 — types da execução série a série", () => {
       entryId: "33333333-3333-4333-8333-333333333333",
       seriesId: "44444444-4444-4444-8444-444444444444",
       position: 2,
-      reps: 10,
-      durationSeconds: null,
+      value: 10,
       load: 40,
       createdAt: "2026-10-08T10:01:00.000Z",
       created_by: "a@example.com",
     };
     expect(realizada.executionId).toContain("00000000");
     expect(realizada.seriesId).toContain("44444444");
-    expect(realizada.durationSeconds).toBeNull();
+    expect(realizada.value).not.toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-013 (Mílon #5, Aditamento 2026-10-10 "valor único +
+// lb") — consumido pelas TASK-014/015.
+// Fonte: tasks.json TASK-013 + plan.md Aditamento 2026-10-10 §3 (LoadUnit
+// kg|lb; série planejada e realizada com coluna única `value`; entrada de
+// marcação com valor único) + spec §3.
+// Expected: FAIL (fonte única ainda com reps/durationSeconds/libra).
+// Leitura da fonte por texto para manter tsc limpo (só runtime FAIL).
+// ---------------------------------------------------------------------------
+
+describe("Milon 05 TASK-013 RED — tipos do valor único + lb (D34/D38)", () => {
+  function fonteTipos(): string {
+    return fs.readFileSync(
+      path.resolve(__dirname, "../../../lib/milon/types.ts"),
+      "utf8",
+    );
+  }
+
+  it("LoadUnit é kg|lb na fonte única (nunca libra por extenso)", () => {
+    expect(fonteTipos()).toMatch(
+      /LoadUnit\s*=\s*['"]kg['"]\s*\|\s*['"]lb['"]/,
+    );
+  });
+
+  it("série planejada (Row + domínio) carrega a coluna única value", () => {
+    expect(fonteTipos()).toMatch(/value:\s*number\s*\|\s*null/);
+  });
+
+  it("série realizada + entrada de marcação carregam o valor único", () => {
+    const fonte = fonteTipos();
+    expect(fonte).toMatch(
+      /MarkExecutionSeriesInput[\s\S]*?value:\s*number\s*\|\s*null/,
+    );
+  });
+});
+

@@ -11,7 +11,7 @@ import {
   validarInteiroCampo,
 } from "@/lib/milon/workout-utils";
 
-export type SerieField = "reps" | "durationSeconds" | "load";
+export type SerieField = "value" | "load";
 
 /**
  * Pacote de execução série a série (Mílon #5): feito por id da série do
@@ -83,7 +83,7 @@ export default function SeriesCard({
   const [selectedUnit, setSelectedUnit] = useState<LoadUnit>(loadUnit ?? "kg");
   const effectiveUnit: LoadUnit = loadUnit ?? selectedUnit;
 
-  function commitRepsTempo(valorBruto: string): void {
+  function commitValor(valorBruto: string): void {
     const rotulo = isRepsMode ? "repetições" : "tempo";
     const resultado = validarInteiroCampo(valorBruto, rotulo);
     if (!resultado.ok) {
@@ -91,11 +91,7 @@ export default function SeriesCard({
       return;
     }
     setErrorMsg(null);
-    if (isRepsMode) {
-      onCommit("reps", resultado.valor);
-    } else {
-      onCommit("durationSeconds", resultado.valor);
-    }
+    onCommit("value", resultado.valor);
   }
 
   function commitCarga(valorBruto: string): void {
@@ -123,13 +119,10 @@ export default function SeriesCard({
         ? formatarCargaComSecundaria(series.load, loadUnit)
         : null;
     const unidadeSecundariaExec: LoadUnit | null =
-      loadUnit === "kg" ? "libra" : loadUnit === "libra" ? "kg" : null;
-    // Rótulo pelo modo do exercício (D27), valor vigente do modo.
+      loadUnit === "kg" ? "lb" : loadUnit === "lb" ? "kg" : null;
+    // Rótulo pelo modo do exercício (D27), valor único vigente (D34).
     const execIsRepsMode = exerciseMode !== "tempo";
-    const valorRepsTempo =
-      execIsRepsMode
-        ? (series.reps ?? "—")
-        : (series.durationSeconds ?? "—");
+    const valorExibido = series.value ?? "—";
 
     function dispararAlternancia(): void {
       if (suppressToggle.current) {
@@ -183,7 +176,7 @@ export default function SeriesCard({
           <span className="text-xs font-semibold opacity-90">
             {execIsRepsMode ? "Repetições" : "Tempo (s)"}
           </span>
-          <span className="text-sm font-semibold">{valorRepsTempo}</span>
+          <span className="text-sm font-semibold">{valorExibido}</span>
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -211,14 +204,14 @@ export default function SeriesCard({
   }
 
   if (readOnly) {
-    const repsTempo = isRepsMode
-      ? `${series.reps ?? "—"} reps`
-      : `${series.durationSeconds ?? "—"} s`;
+    const resumoValor = isRepsMode
+      ? `${series.value ?? "—"} reps`
+      : `${series.value ?? "—"} s`;
     return (
       <div className="rounded-md border px-3 py-2 flex flex-col gap-1">
         <span className="text-sm font-medium">{rotulo}</span>
         <span className="text-xs text-muted-foreground">
-          {repsTempo} · {series.load ?? "—"}
+          {resumoValor} · {series.load ?? "—"}
           {loadUnit !== null && series.load !== null ? ` ${loadUnit}` : null}
         </span>
       </div>
@@ -230,12 +223,10 @@ export default function SeriesCard({
       ? formatarCargaComSecundaria(series.load, loadUnit)
       : null;
   const unidadeSecundaria: LoadUnit | null =
-    loadUnit === "kg" ? "libra" : loadUnit === "libra" ? "kg" : null;
+    loadUnit === "kg" ? "lb" : loadUnit === "lb" ? "kg" : null;
   const cargaInicial = series.load === null ? "" : String(series.load);
   const valorInicial =
-    isRepsMode
-      ? (series.reps === null ? "" : String(series.reps))
-      : (series.durationSeconds === null ? "" : String(series.durationSeconds));
+    series.value === null ? "" : String(series.value);
 
   return (
     <div className="rounded-md border px-3 py-2 flex flex-col gap-2">
@@ -258,10 +249,10 @@ export default function SeriesCard({
           type="text"
           inputMode="numeric"
           defaultValue={valorInicial}
-          onBlur={(event) => commitRepsTempo(event.currentTarget.value)}
+          onBlur={(event) => commitValor(event.currentTarget.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter")
-              commitRepsTempo(event.currentTarget.value);
+              commitValor(event.currentTarget.value);
           }}
         />
       </div>
@@ -309,11 +300,11 @@ export default function SeriesCard({
             <Button
               type="button"
               size="sm"
-              variant={effectiveUnit === "libra" ? "default" : "outline"}
+              variant={effectiveUnit === "lb" ? "default" : "outline"}
               className="h-7 px-2 text-xs"
               onClick={() => {
-                setSelectedUnit("libra");
-                onChooseUnit("libra");
+                setSelectedUnit("lb");
+                onChooseUnit("lb");
               }}
             >
               lb

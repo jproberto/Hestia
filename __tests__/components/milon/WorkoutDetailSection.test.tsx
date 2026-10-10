@@ -156,8 +156,7 @@ function makeSeries(overrides: Partial<WorkoutSeries> = {}): WorkoutSeries {
     id: "ser-1",
     entryId: "ent-1",
     position: 1,
-    reps: 10,
-    durationSeconds: null,
+    value: 10,
     load: null,
     createdAt: "2026-10-01T00:11:00Z",
     created_by: DONO,
@@ -225,8 +224,8 @@ function conteudoComUmaEntrada(overrides: Record<string, unknown> = {}) {
     makeEntry({ id: "ent-1", position: 1, restSeconds: 60 }),
     makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" }),
     [
-      makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, reps: 10 }),
-      makeSeries({ id: "ser-2", entryId: "ent-1", position: 2, reps: null }),
+      makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, value: 10 }),
+      makeSeries({ id: "ser-2", entryId: "ent-1", position: 2, value: null }),
     ],
   );
   return setupHook({
@@ -277,7 +276,7 @@ describe("WorkoutDetailSection (TASK-002 — RED)", () => {
             restSeconds: 90,
           }),
           rosca,
-          [makeSeries({ id: "ser-3", entryId: "ent-2", position: 1, reps: 8 })],
+          [makeSeries({ id: "ser-3", entryId: "ent-2", position: 1, value: 8 })],
         ),
         makeView(
           makeEntry({
@@ -288,8 +287,8 @@ describe("WorkoutDetailSection (TASK-002 — RED)", () => {
           }),
           supino,
           [
-            makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, reps: 10 }),
-            makeSeries({ id: "ser-2", entryId: "ent-1", position: 2, reps: null }),
+            makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, value: 10 }),
+            makeSeries({ id: "ser-2", entryId: "ent-1", position: 2, value: null }),
           ],
         ),
       ],
@@ -358,7 +357,25 @@ describe("WorkoutDetailSection (TASK-002 — RED)", () => {
       <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
     );
     await clickConnectedButton(/adicionar exercício/i, 0);
-    await clickConnectedButton(/supino reto/i, 0);
+    // A query é escopada ao diálogo do picker: "Supino reto" também existe
+    // como h3 do card da entry e nos rótulos acessíveis Editar/Excluir
+    // ("Editar Supino reto"), então o índice global 0 clicaria no card.
+    await waitFor(() => {
+      const dialogo = screen
+        .getByRole("heading", { name: "Escolher exercício" })
+        .closest(".fixed") as HTMLElement;
+      expect(
+        within(dialogo).getByRole("button", { name: /supino reto/i })
+          .isConnected,
+      ).toBe(true);
+    });
+    fireEvent.click(
+      within(
+        screen
+          .getByRole("heading", { name: "Escolher exercício" })
+          .closest(".fixed") as HTMLElement,
+      ).getByRole("button", { name: /supino reto/i }),
+    );
 
     await waitFor(() =>
       expect(state.addExercise).toHaveBeenCalledWith("ex-1"),
@@ -1169,13 +1186,13 @@ describe("WorkoutDetailSection — 2ª volta: badge, executionBlocked e frozenEn
   });
 
   it("REMOVIDO foto: com execução aberta exibe o template ao vivo (edição aparece na hora, sem frozen)", () => {
-    // Template ao vivo tem reps 15; a foto antiga congelaria reps 10.
+    // Template ao vivo tem valor 15; a foto antiga congelaria valor 10.
     // A seção deve IGNORAR frozenEntries/snapshot e exibir sempre o template.
     // Expected: FAIL enquanto a seção ainda prefere frozenEntries (RED).
     const viewTemplate = makeView(
       makeEntry({ id: "ent-1", position: 1, restSeconds: 60 }),
       makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" }),
-      [makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, reps: 15 })],
+      [makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, value: 15 })],
     );
     const viewCongelada = makeView(
       makeEntry({ id: "ent-1", position: 1, restSeconds: 60 }),
@@ -1190,7 +1207,7 @@ describe("WorkoutDetailSection — 2ª volta: badge, executionBlocked e frozenEn
           id: "ser-1",
           entryId: "ent-1",
           position: 1,
-          reps: 10,
+          value: 10,
           load: 40,
         }),
       ],
@@ -1360,7 +1377,7 @@ describe("WorkoutDetailSection — aviso visível de bloqueio (TASK-006 — RED)
  * CONTRATO FIXADO AQUI (o que a TASK-012 deve implementar):
  * - o card da entry exibe seletores de Modo/Unidade vinculados à entry
  *   (radiogroup rotulado OU select rotulado OU grupo rotulado; rótulos
- *   "Modo"/"Unidade"; valores literais repeticao|tempo e kg|libra);
+ *   "Modo"/"Unidade"; valores literais repeticao|tempo e kg|lb);
  * - trocar o Modo chama `setEntryMode(entryId, mode)` do hook de detalhe;
  *   trocar a Unidade chama `setEntryLoadUnit(entryId, unit)` do hook;
  * - os cards/séries da entry exibem modo e unidade DA ENTRY (divergência da
@@ -1377,7 +1394,7 @@ describe("WorkoutDetailSection — ajustes de modo/unidade da entry (TASK-010 �
   /** Entry COM modo/unidade (forma pós-0012; cast compila antes e depois). */
   function makeEntryComModo(
     mode: "repeticao" | "tempo",
-    loadUnit: "kg" | "libra",
+    loadUnit: "kg" | "lb",
     overrides: Partial<WorkoutEntry> = {},
   ): WorkoutEntry {
     return makeEntry({
@@ -1389,11 +1406,11 @@ describe("WorkoutDetailSection — ajustes de modo/unidade da entry (TASK-010 �
   /** Conteúdo com biblioteca DIVERGENTE de propósito (fonte = entry). */
   function conteudoDivergente() {
     const view = makeView(
-      makeEntryComModo("tempo", "libra", { id: "ent-1", restSeconds: 60 }),
+      makeEntryComModo("tempo", "lb", { id: "ent-1", restSeconds: 60 }),
       makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" }),
       [
-        makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, reps: 10 }),
-        makeSeries({ id: "ser-2", entryId: "ent-1", position: 2, reps: null }),
+        makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, value: 10 }),
+        makeSeries({ id: "ser-2", entryId: "ent-1", position: 2, value: null }),
       ],
     );
     return setupHook({
@@ -1458,7 +1475,7 @@ describe("WorkoutDetailSection — ajustes de modo/unidade da entry (TASK-010 �
     expect(controleDaEntry(/modo/i)).not.toBeNull();
   });
 
-  it("exibe seletor de Unidade da entry refletindo libra (biblioteca em kg)", () => {
+  it("exibe seletor de Unidade da entry refletindo lb (biblioteca em kg)", () => {
     conteudoDivergente();
 
     render(

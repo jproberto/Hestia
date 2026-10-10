@@ -934,3 +934,101 @@ defineWorkoutRepositoryContract(
   "fake em memória",
   (seed: WorkoutSeed = {}) => createFakeWorkoutRepository(seed),
 );
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-010 (Mílon #5, Aditamento 2026-10-09 "0012 CORRETA").
+// Fonte: tasks.json TASK-010 (contract-workouts: criação com padrões +
+// ajustes da entry) + plan.md Aditamento 0012 CORRETA §1 Mudanças A/B +
+// §3 (Modo/Unidade da entry + Ajustes de modo/unidade da entry) + D29/D33.
+//
+// Contrato fixado aqui (nomes que a TASK-011 deve implementar):
+// - WorkoutEntryRow/WorkoutEntry ganham `mode` (repeticao|tempo) e
+//   `loadUnit` (kg|libra), OPCIONAIS com fallback de leitura
+//   (repeticao/kg) para não quebrar fixtures pré-0012 — mesmo padrão do
+//   `mode?` do exercício; novas entries nascem com repeticao+kg;
+// - novas operações `setEntryMode(entryId, mode)` +
+//   `setEntryModeStandalone(entryId, mode)` e
+//   `setEntryLoadUnit(entryId, unit)` +
+//   `setEntryLoadUnitStandalone(entryId, unit)` no repositório de treinos,
+//   espelhadas no fake e no contrato IWorkoutRepository;
+// - leitura de entry pré-migração (sem os campos) trata nulo como
+//   repeticao/kg.
+//
+// Expected: FAIL — o repository e o fake ainda não têm modo/unidade na
+// entry nem os ajustes. Hefesto fará GREEN na TASK-011 sem mudar estes
+// testes. Casts `as unknown as` mantêm o tsc verde no RED (a falha é em
+// runtime, não em tipo).
+// ---------------------------------------------------------------------------
+describe("modo e unidade da entry (TASK-010 — RED)", () => {
+  type EntryComModo = WorkoutEntry & {
+    mode?: "repeticao" | "tempo" | null;
+    loadUnit?: "kg" | "libra" | null;
+  };
+
+  function entryComoRegistro(entry: WorkoutEntry): Record<string, unknown> {
+    return entry as unknown as Record<string, unknown>;
+  }
+
+  it("addEntry devolve a entry com padrões repeticao e kg", async () => {
+    const repo = createFakeWorkoutRepository();
+
+    const entry = (await repo.addEntry(
+      "w-1",
+      PROGRAM_A,
+      "ex-1",
+      EMAIL,
+    )) as unknown as EntryComModo;
+
+    expect(entry.mode).toBe("repeticao");
+    expect(entry.loadUnit).toBe("kg");
+  });
+
+  it("setEntryMode existe e persiste com reflexo em leitura", async () => {
+    const repo = createFakeWorkoutRepository();
+    const entry = await repo.addEntry("w-1", PROGRAM_A, "ex-1", EMAIL);
+
+    const api = repo as unknown as {
+      setEntryMode: (entryId: string, mode: "repeticao" | "tempo") => Promise<void>;
+    };
+    expect(typeof api.setEntryMode).toBe("function");
+    await api.setEntryMode(entry.id, "tempo");
+
+    const lidas = (await repo.listEntriesByWorkout(
+      "w-1",
+    )) as unknown as EntryComModo[];
+    expect(lidas).toHaveLength(1);
+    expect(lidas[0].mode).toBe("tempo");
+    // O ajuste de modo não mexe na unidade.
+    expect(lidas[0].loadUnit).toBe("kg");
+  });
+
+  it("setEntryLoadUnit existe e persiste com reflexo em leitura", async () => {
+    const repo = createFakeWorkoutRepository();
+    const entry = await repo.addEntry("w-1", PROGRAM_A, "ex-1", EMAIL);
+
+    const api = repo as unknown as {
+      setEntryLoadUnit: (entryId: string, unit: "kg" | "libra") => Promise<void>;
+    };
+    expect(typeof api.setEntryLoadUnit).toBe("function");
+    await api.setEntryLoadUnit(entry.id, "libra");
+
+    const lidas = (await repo.listEntriesByWorkout(
+      "w-1",
+    )) as unknown as EntryComModo[];
+    expect(lidas).toHaveLength(1);
+    expect(lidas[0].loadUnit).toBe("libra");
+    // O ajuste de unidade não mexe no modo.
+    expect(lidas[0].mode).toBe("repeticao");
+  });
+
+  it("leitura de entry pré-migração (sem os campos) trata nulo como repeticao/kg", async () => {
+    const repo = createFakeWorkoutRepository({
+      entries: [makeEntry("e-pre", "w-1", PROGRAM_A, "ex-1", 1)],
+    });
+
+    const lidas = await repo.listEntriesByWorkout("w-1");
+    expect(lidas).toHaveLength(1);
+    expect(entryComoRegistro(lidas[0]).mode).toBe("repeticao");
+    expect(entryComoRegistro(lidas[0]).loadUnit).toBe("kg");
+  });
+});

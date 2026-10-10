@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import type { IExerciseRepository } from "@/lib/milon/repositories/interfaces";
 import { createFakeExerciseRepository } from "@/lib/milon/repositories/fakes/fakeExerciseRepository";
 import { EXERCISE_DUPLICATE_MESSAGE } from "@/lib/milon/repositories/exercises";
@@ -199,8 +201,9 @@ function defineExerciseRepositoryContract(
 //   - `list()` devolve SÓ os ativos; `listAll()` devolve todos (inclui os
 //     soft-deletados, para renderização de contexto de treino);
 //   - `remove()` passa a ser SOFT DELETE (grava `deletedAt`, não apaga);
-//   - `setExerciseLoadUnit(id, unit)` persiste a unidade por exercício (D10);
 //   - a anti-duplicata considera apenas linhas não excluídas.
+// (D33, reversão biblioteca: `setExerciseLoadUnit` REMOVIDO — ausência
+// asserida no bloco TASK-010 abaixo; este bloco não o referencia.)
 // Testada na classe concreta (createFakeExerciseRepository) — não exige
 // mudança na interface IExerciseRepository.
 // ---------------------------------------------------------------------------
@@ -264,26 +267,9 @@ describe("fake em memória: soft delete e unidade de carga (contrato TASK-001)",
     expect(await fake.listAll()).toHaveLength(2);
   });
 
-  it("setExerciseLoadUnit persiste a unidade no exercício", async () => {
-    const fake = createFakeExerciseRepository([ativo("ex-1", "Supino reto", "peito")]);
-
-    await fake.setExerciseLoadUnit("ex-1", "kg");
-
-    const [exercicio] = await fake.list();
-    expect(exercicio.loadUnit).toBe("kg");
-    // A escolha é do casal: o mesmo registro visto por listAll também muda.
-    expect((await fake.listAll())[0].loadUnit).toBe("kg");
-  });
-
-  it("setExerciseLoadUnit aceita libra e não mexe em deletedAt", async () => {
-    const fake = createFakeExerciseRepository([ativo("ex-1", "Supino reto", "peito")]);
-
-    await fake.setExerciseLoadUnit("ex-1", "libra");
-
-    const exercicio = (await fake.list())[0];
-    expect(exercicio.loadUnit).toBe("libra");
-    expect(exercicio.deletedAt).toBeNull();
-  });
+  // D33 (reversão biblioteca): `setExerciseLoadUnit` removido do fake e da
+  // interface — ausência asserida no bloco TASK-010 abaixo ("não expõe ajuste
+  // de unidade da biblioteca"). Sem teste de persistência de unidade aqui.
 });
 
 defineExerciseRepositoryContract(
@@ -292,79 +278,53 @@ defineExerciseRepositoryContract(
 );
 
 // ---------------------------------------------------------------------------
-// Contrato RED da TASK-006 (Mílon #5, aditamento 2026-10-09 dos 3 achados).
-// Fonte: tasks.json TASK-006 (contract-exercises: criação e atualização
-// persistindo modo e unidade + ajuste de modo) + plan.md Aditamento §1
-// Mudança A + §3 (Modo do exercício + Ajuste de modo do exercício) + D25/D26.
+// Contrato RED da TASK-010 (Mílon #5, Aditamento 2026-10-09 "0012 CORRETA").
+// SUBSTITUI o bloco TASK-006 (modo/unidade na biblioteca, superseded pela
+// reversão D33 — removido, não apenas comentado).
 //
-// Contrato fixado aqui (nomes que a TASK-007 deve implementar):
-// - CreateExerciseInput/UpdateExerciseInput ganham `mode` (ExerciseMode |
-//   null/undefined; "repeticao" | "tempo") e `loadUnit` (LoadUnit |
-//   null/undefined); create/update persistem ambos;
-// - Exercise (domínio) ganha `mode: ExerciseMode | null` (nulo = linha
-//   antiga, leitura com fallback repetição) e mantém loadUnit;
-// - nova operação `setExerciseMode(id, mode)` + standalone
-//   `setExerciseModeStandalone(id, mode)`, espelhada no fake (mesmo padrão
-//   do setExerciseLoadUnit vigente);
-// - sem coluna nova nas séries (D26 — nada aqui toca em séries).
+// Fonte: tasks.json TASK-010 (contract-exercises: somente nome/músculo/vídeo
+// + ausência do ajuste de modo da biblioteca) + plan.md Aditamento 0012
+// CORRETA §1 Mudança B + §3 (Modal da biblioteca + Biblioteca legada) + D30/D33.
 //
-// Expected: FAIL — o repository e o fake ainda ignoram modo/unidade no
-// create/update e ainda não têm setExerciseMode. Hefesto fará GREEN na
-// TASK-007 sem mudar estes testes. Casts `as unknown as` mantêm o tsc
-// verde no RED (a falha é em runtime, não em tipo).
+// Contrato fixado aqui (o que a TASK-011 deve implementar):
+// - CreateExerciseInput/UpdateExerciseInput voltam a ter SÓ nome, músculo e
+//   vídeo; modo e unidade extras são IGNORADOS na criação/atualização;
+// - Exercise (domínio) PERDE `mode`; mantém `loadUnit` como leitura legada
+//   (D30 — lida, ignorada no treino; sem escrita pelo caminho do treino);
+// - REMOVIDOS do repository, do fake e da interface: `setExerciseMode` (+
+//   standalone) e `setExerciseLoadUnit` (+ standalone) — os ajustes vivem
+//   na entry (setEntryMode/setEntryLoadUnit do repositório de treinos).
+//
+// Expected: FAIL — o repository e o fake ainda persistem modo/unidade e
+// ainda têm os ajustes. Hefesto fará GREEN na TASK-011 sem mudar estes
+// testes. Casts `as unknown as` mantêm o tsc verde no RED.
 // ---------------------------------------------------------------------------
-describe("modo e unidade do exercício (TASK-006 — RED)", () => {
-  const EMAIL = "modo@hestia.lan";
+describe("biblioteca somente nome/músculo/vídeo (TASK-010 — RED)", () => {
+  const EMAIL = "biblioteca@hestia.lan";
 
-  type WithMode<T> = T & {
-    mode?: "repeticao" | "tempo" | null;
-    loadUnit?: "kg" | "libra" | null;
-  };
-
-  it("cria exercício persistindo modo tempo e unidade kg", async () => {
+  it("cria exercício ignorando modo e unidade extras (só nome, músculo e vídeo)", async () => {
     const fake = createFakeExerciseRepository();
     const created = (await fake.create(
       {
         name: "Supino reto",
         muscle: "peito",
+        videoLink: null,
         mode: "tempo",
-        loadUnit: "kg",
-      } as WithMode<Parameters<typeof fake.create>[0]>,
-      EMAIL,
-    )) as unknown as WithMode<Exercise>;
-
-    expect(created.mode).toBe("tempo");
-    expect(created.loadUnit).toBe("kg");
-  });
-
-  it("cria exercício persistindo modo repeticao e unidade libra", async () => {
-    const fake = createFakeExerciseRepository();
-    const created = (await fake.create(
-      {
-        name: "Agachamento",
-        muscle: "perna",
-        mode: "repeticao",
         loadUnit: "libra",
-      } as WithMode<Parameters<typeof fake.create>[0]>,
+      } as unknown as Parameters<typeof fake.create>[0],
       EMAIL,
-    )) as unknown as WithMode<Exercise>;
+    )) as unknown as Record<string, unknown>;
 
-    expect(created.mode).toBe("repeticao");
-    expect(created.loadUnit).toBe("libra");
-  });
-
-  it("cria sem modo nem unidade deixa ambos nulos (linhas antigas)", async () => {
-    const fake = createFakeExerciseRepository();
-    const created = (await fake.create(
-      { name: "Rosca direta", muscle: "braço" },
-      EMAIL,
-    )) as unknown as WithMode<Exercise>;
-
-    expect(created.mode).toBeNull();
+    expect(created.name).toBe("Supino reto");
+    expect(created.muscle).toBe("peito");
+    expect(created.videoLink).toBeNull();
+    // Modo removido do exercício (D33): nem a chave existe na resposta.
+    expect(created.mode).toBeUndefined();
+    // Unidade extra ignorada na criação (D30: sem escrita pela biblioteca).
     expect(created.loadUnit).toBeNull();
   });
 
-  it("atualiza exercício persistindo modo e unidade novos", async () => {
+  it("atualiza exercício ignorando modo e unidade extras", async () => {
     const fake = createFakeExerciseRepository();
     const created = await fake.create(
       { name: "Supino reto", muscle: "peito" },
@@ -372,64 +332,52 @@ describe("modo e unidade do exercício (TASK-006 — RED)", () => {
     );
 
     const updated = (await fake.update(created.id, {
-      name: "Supino reto",
+      name: "Supino inclinado",
       muscle: "peito",
-      videoLink: null,
+      videoLink: "https://example.com/novo",
       mode: "tempo",
       loadUnit: "libra",
-    } as WithMode<Parameters<typeof fake.update>[1]>)) as unknown as WithMode<Exercise>;
+    } as unknown as Parameters<typeof fake.update>[1])) as unknown as Record<
+      string,
+      unknown
+    >;
 
-    expect(updated.mode).toBe("tempo");
-    expect(updated.loadUnit).toBe("libra");
-    const [lido] = (await fake.list()) as unknown as WithMode<Exercise>[];
-    expect(lido.mode).toBe("tempo");
-    expect(lido.loadUnit).toBe("libra");
+    expect(updated.name).toBe("Supino inclinado");
+    expect(updated.videoLink).toBe("https://example.com/novo");
+    expect(updated.mode).toBeUndefined();
+    expect(updated.loadUnit).toBeNull();
   });
 
-  it("ajuste de modo altera exercício existente sem mexer em nome/músculo/unidade", async () => {
+  it("não expõe ajuste de modo da biblioteca (removido, D33)", async () => {
     const fake = createFakeExerciseRepository();
-    const created = (await fake.create(
-      {
-        name: "Supino reto",
-        muscle: "peito",
-        mode: "repeticao",
-        loadUnit: "kg",
-      } as WithMode<Parameters<typeof fake.create>[0]>,
-      EMAIL,
-    )) as unknown as WithMode<Exercise>;
+    await fake.create({ name: "Supino reto", muscle: "peito" }, EMAIL);
 
-    const api = fake as unknown as {
-      setExerciseMode: (
-        id: string,
-        mode: "repeticao" | "tempo",
-      ) => Promise<void>;
-    };
-    expect(typeof api.setExerciseMode).toBe("function");
-    await api.setExerciseMode(created.id, "tempo");
-
-    const [lido] = (await fake.list()) as unknown as WithMode<Exercise>[];
-    expect(lido.mode).toBe("tempo");
-    expect(lido.name).toBe("Supino reto");
-    expect(lido.muscle).toBe("peito");
-    expect(lido.loadUnit).toBe("kg");
+    expect(
+      (fake as unknown as Record<string, unknown>).setExerciseMode,
+    ).toBeUndefined();
   });
 
-  it("ajuste de modo aparece também em listAll (mesmo registro)", async () => {
+  it("não expõe ajuste de unidade da biblioteca (removido, D33)", async () => {
     const fake = createFakeExerciseRepository();
-    const created = await fake.create(
-      { name: "Supino reto", muscle: "peito" },
-      EMAIL,
+    await fake.create({ name: "Supino reto", muscle: "peito" }, EMAIL);
+
+    expect(
+      (fake as unknown as Record<string, unknown>).setExerciseLoadUnit,
+    ).toBeUndefined();
+  });
+
+  it("código vivo sem os ajustes da biblioteca (substituição, D33)", () => {
+    const src = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        "../../../../lib/milon/repositories/exercises.ts",
+      ),
+      "utf8",
     );
-    const api = fake as unknown as {
-      setExerciseMode: (
-        id: string,
-        mode: "repeticao" | "tempo",
-      ) => Promise<void>;
-    };
-    await api.setExerciseMode(created.id, "tempo");
-
-    const todos = (await fake.listAll()) as unknown as WithMode<Exercise>[];
-    expect(todos).toHaveLength(1);
-    expect(todos[0].mode).toBe("tempo");
+    expect(src).not.toMatch(/setExerciseMode/);
+    expect(src).not.toMatch(/export async function setExerciseLoadUnit/);
+    expect(src).not.toMatch(
+      /export async function setExerciseLoadUnitStandalone/,
+    );
   });
 });

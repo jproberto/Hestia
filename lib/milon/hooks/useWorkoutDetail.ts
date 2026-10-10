@@ -12,6 +12,8 @@ import {
   listWorkoutsByProgramStandalone,
   removeEntryStandalone,
   reorderEntriesStandalone,
+  setEntryLoadUnitStandalone,
+  setEntryModeStandalone,
   setEntryRestSecondsStandalone,
   setSeriesQuantityStandalone,
   updateSeriesFieldsStandalone,
@@ -19,7 +21,6 @@ import {
 import {
   createExerciseStandalone,
   listExercisesAllStandalone,
-  setExerciseLoadUnitStandalone,
   updateExerciseStandalone,
 } from "@/lib/milon/db/exercises";
 import { findProgramByIdStandalone } from "@/lib/milon/db/programs";
@@ -30,6 +31,7 @@ import {
 } from "@/lib/milon/workout-utils";
 import type { UpdateSeriesFieldsInput } from "@/lib/milon/repositories/interfaces";
 import type {
+  EntryMode,
   Exercise,
   LoadUnit,
   Program,
@@ -82,12 +84,8 @@ export interface UseWorkoutDetailReturn {
   createExerciseAndAdd: (
     input: CreateWorkoutExerciseInput,
   ) => Promise<Exercise>;
-  confirmLoadUnit: (
-    exerciseId: string,
-    unit: LoadUnit,
-    seriesId: string,
-    value: number,
-  ) => Promise<void>;
+  setEntryMode: (entryId: string, mode: EntryMode) => Promise<void>;
+  setEntryLoadUnit: (entryId: string, unit: LoadUnit) => Promise<void>;
 }
 
 const SUCCESS_NOTICE_MS = 3000;
@@ -448,20 +446,29 @@ export function useWorkoutDetail(workoutId: string): UseWorkoutDetailReturn {
     [refreshViews, flashSuccess, failAsPage],
   );
 
-  const confirmLoadUnit = useCallback(
-    async (
-      exerciseId: string,
-      unit: LoadUnit,
-      seriesId: string,
-      value: number,
-    ): Promise<void> => {
+  const setEntryMode = useCallback(
+    async (entryId: string, mode: EntryMode): Promise<void> => {
       setErrorMsg(null);
       setErrorOrigin(null);
       try {
-        await updateSeriesFieldsStandalone(seriesId, { load: value });
-        await setExerciseLoadUnitStandalone(exerciseId, unit);
+        await setEntryModeStandalone(entryId, mode);
       } catch (err: unknown) {
-        throw failAsPage(err, "Erro ao salvar unidade da carga");
+        throw failAsPage(err, "Erro ao salvar modo");
+      }
+      await refreshViews();
+      flashSuccess(SUCCESS_SAVE_MESSAGE);
+    },
+    [refreshViews, flashSuccess, failAsPage],
+  );
+
+  const setEntryLoadUnit = useCallback(
+    async (entryId: string, unit: LoadUnit): Promise<void> => {
+      setErrorMsg(null);
+      setErrorOrigin(null);
+      try {
+        await setEntryLoadUnitStandalone(entryId, unit);
+      } catch (err: unknown) {
+        throw failAsPage(err, "Erro ao salvar unidade");
       }
       await refreshViews();
       flashSuccess(SUCCESS_SAVE_MESSAGE);
@@ -489,7 +496,8 @@ export function useWorkoutDetail(workoutId: string): UseWorkoutDetailReturn {
     applyToAll,
     saveExercise,
     createExerciseAndAdd,
-    confirmLoadUnit,
+    setEntryMode,
+    setEntryLoadUnit,
   };
 }
 

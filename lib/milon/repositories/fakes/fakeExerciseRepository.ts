@@ -6,8 +6,6 @@ import type { IExerciseRepository } from "../interfaces";
 import type {
   Exercise,
   CreateExerciseInput,
-  ExerciseMode,
-  LoadUnit,
   UpdateExerciseInput,
 } from "../../types";
 
@@ -36,18 +34,6 @@ export class FakeExerciseRepository implements IExerciseRepository {
     );
   }
 
-  async setExerciseLoadUnit(id: string, unit: LoadUnit): Promise<void> {
-    const current = this.exercises.get(id);
-    if (!current) throw new Error("Exercício não encontrado.");
-    this.exercises.set(id, { ...current, loadUnit: unit });
-  }
-
-  async setExerciseMode(id: string, mode: ExerciseMode): Promise<void> {
-    const current = this.exercises.get(id);
-    if (!current) throw new Error("Exercício não encontrado.");
-    this.exercises.set(id, { ...current, mode });
-  }
-
   async create(input: CreateExerciseInput, email: string): Promise<Exercise> {
     const name = input.name.trim();
     const muscle = input.muscle.trim();
@@ -64,9 +50,9 @@ export class FakeExerciseRepository implements IExerciseRepository {
       name,
       muscle,
       videoLink: input.videoLink ?? null,
-      // Ausentes na criação = linhas antigas: ambos nulos.
-      mode: input.mode ?? null,
-      loadUnit: input.loadUnit ?? null,
+      // Biblioteca com só nome, músculo e vídeo (D33): sem modo e sem
+      // escrita de unidade (extras ignorados, D30).
+      loadUnit: null,
       deletedAt: null,
       createdAt: new Date().toISOString(),
       created_by: email,
@@ -94,10 +80,6 @@ export class FakeExerciseRepository implements IExerciseRepository {
       name,
       muscle,
       videoLink: input.videoLink,
-      // Edição sem modo/unidade preserva os valores atuais.
-      mode: input.mode !== undefined ? (input.mode ?? null) : current.mode,
-      loadUnit:
-        input.loadUnit !== undefined ? (input.loadUnit ?? null) : current.loadUnit,
     };
     this.exercises.set(id, updated);
     return updated;

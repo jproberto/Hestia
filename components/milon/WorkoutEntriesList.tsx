@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AsyncState } from "@/components/ui/AsyncState";
 import type { ErrorOrigin } from "@/lib/shared";
-import type { LoadUnit, WorkoutEntryView } from "@/lib/milon/types";
+import type { EntryMode, LoadUnit, WorkoutEntryView } from "@/lib/milon/types";
 import ExerciseEntryCard from "./ExerciseEntryCard";
 import type { SerieField, SeriesExecutionProps } from "./SeriesCard";
 import {
@@ -40,6 +40,9 @@ export interface WorkoutEntriesListProps {
   onConfirmUnit: (entryId: string, unit: LoadUnit) => void;
   /** Pacote de execução (Mílon #5, opt-in): repassado sem interpretar. */
   execution?: SeriesExecutionProps;
+  /** Ajustes de modo/unidade da entry (Mílon #5, D31): repassados sem interpretar. */
+  onModeCommit?: (entryId: string, mode: EntryMode) => void;
+  onUnitCommit?: (entryId: string, unit: LoadUnit) => void;
 }
 
 interface GhostState {
@@ -83,6 +86,8 @@ export default function WorkoutEntriesList({
   onRemoveEntry,
   onConfirmUnit,
   execution,
+  onModeCommit,
+  onUnitCommit,
 }: WorkoutEntriesListProps) {
   void programId;
   const [searchText, setSearchText] = useState("");
@@ -389,6 +394,8 @@ export default function WorkoutEntriesList({
                     onRemoveEntry={() => onRemoveEntry(view.entry.id)}
                     onChooseUnit={(unit) => onConfirmUnit(view.entry.id, unit)}
                     execution={execution}
+                    onModeCommit={(mode) => onModeCommit?.(view.entry.id, mode)}
+                    onUnitCommit={(unit) => onUnitCommit?.(view.entry.id, unit)}
                   />
                   {isPlaceholderAfter && index === paginatedViews.length - 1 && (
                     <li

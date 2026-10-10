@@ -1,12 +1,13 @@
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import SeriesCard from "@/components/milon/SeriesCard";
+import ExerciseEntryCard from "@/components/milon/ExerciseEntryCard";
 import {
   MSG_CARGA_NEGATIVA,
   MSG_CARGA_NAO_NUMERICA,
   formatarCargaComSecundaria,
 } from "@/lib/milon/workout-utils";
-import type { LoadUnit, WorkoutSeries } from "@/lib/milon/types";
+import type { Exercise, LoadUnit, WorkoutEntry, WorkoutEntryView, WorkoutSeries } from "@/lib/milon/types";
 
 /**
  * Contrato (plan.md §3 "SeriesCard (props)" + tasks.json TASK-013/TASK-022 +
@@ -799,5 +800,104 @@ describe("SeriesCard — rótulo pelo modo do exercício (TASK-006 — RED)", ()
     expect(
       screen.getByRole("button", { name: /^lb$/i }),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * Contrato RED da TASK-010 (Mílon #5, Aditamento 2026-10-09 "0012 CORRETA").
+ *
+ * Fonte: tasks.json TASK-010 (SeriesCard: rótulo e unidade vindos da entry)
+ * + plan.md Aditamento 0012 CORRETA §1 Mudança C + §3 (Card de série: mesmos
+ * nomes de props, fonte trocada para a entry) + D32 + spec §3.
+ *
+ * CONTRATO FIXADO AQUI: o SeriesCard continua recebendo `exerciseMode` /
+ * `loadUnit` (D32 — sem rename), mas os chamadores (ExerciseEntryCard via
+ * WorkoutEntriesList/WorkoutDetailSection) passam a alimentar com os valores
+ * DA ENTRY. A divergência biblioteca × entry prova a fonte: entry em tempo
+ * + biblioteca sem modo exibe "Tempo (s)"; entry em libra + biblioteca em kg
+ * exibe a unidade "libra" como texto (ramo de execução, somente leitura).
+ *
+ * Expected: FAIL — a entry card atual repassa valores da biblioteca.
+ * Hefesto fará GREEN na TASK-012 sem mudar estes testes (os callbacks novos
+ * da entry vão por spread com cast para compilar antes e depois).
+ */
+describe("SeriesCard — valores vindos da entry (TASK-010 — RED)", () => {
+  function viewDivergente(): WorkoutEntryView {
+    const exercise: Exercise = {
+      id: "ex-1",
+      name: "Supino reto",
+      muscle: "Peito",
+      videoLink: null,
+      loadUnit: "kg",
+      deletedAt: null,
+      createdAt: CRIADO_EM,
+      created_by: DONO,
+    };
+    const entry = {
+      id: "entry-1",
+      workoutId: "wout-1",
+      programId: "prog-1",
+      exerciseId: "ex-1",
+      position: 1,
+      restSeconds: null,
+      createdAt: CRIADO_EM,
+      created_by: DONO,
+      mode: "tempo",
+      loadUnit: "libra",
+    } as unknown as WorkoutEntry;
+    return {
+      entry,
+      exercise,
+      series: [makeSeries({ id: "s1", entryId: "entry-1", position: 1, load: 50 })],
+    };
+  }
+
+  function renderPelaEntry() {
+    const props = {
+      entryView: viewDivergente(),
+      readOnly: false,
+      unitPromptValue: null,
+      saving: false,
+      onQuantityCommit: vi.fn(),
+      onRequestReduce: vi.fn(),
+      onRestCommit: vi.fn(),
+      onSeriesCommit: vi.fn(),
+      onApplyAll: vi.fn(),
+      onEditExercise: vi.fn(),
+      onRemoveEntry: vi.fn(),
+      onChooseUnit: vi.fn(),
+      ...({ onModeCommit: vi.fn(), onUnitCommit: vi.fn() } as unknown as Record<
+        string,
+        unknown
+      >),
+      execution: {
+        doneBySeriesId: {},
+        onToggle: vi.fn(),
+        onOpenEditor: vi.fn(),
+      },
+    } as unknown as Parameters<typeof ExerciseEntryCard>[0];
+    render(<ExerciseEntryCard {...props} />);
+  }
+
+  function elementoDaEntry(): HTMLElement {
+    const el = document.querySelector('[data-entry-id="entry-1"]');
+    if (!el) throw new Error("Card da entry não renderizado");
+    return el as HTMLElement;
+  }
+
+  it("rótulo do card vem DA ENTRY (Tempo (s) com biblioteca sem modo)", () => {
+    renderPelaEntry();
+
+    expect(
+      within(elementoDaEntry()).getByText("Tempo (s)"),
+    ).toBeInTheDocument();
+  });
+
+  it("unidade do card vem DA ENTRY (libra como texto com biblioteca em kg)", () => {
+    renderPelaEntry();
+
+    // Unidade principal como texto exato; a secundária convertida vive no
+    // mesmo nó ("<valor> <unidade>") e não casa com match exato.
+    expect(within(elementoDaEntry()).getByText("libra")).toBeInTheDocument();
   });
 });

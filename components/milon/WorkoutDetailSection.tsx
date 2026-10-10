@@ -18,12 +18,12 @@ import SeriesEditModal, {
 } from "@/components/milon/SeriesEditModal";
 import { useWorkoutDetail } from "@/lib/milon/hooks/useWorkoutDetail";
 import { useWorkoutExecution } from "@/lib/milon/hooks/useWorkoutExecution";
-import { setExerciseLoadUnitStandalone } from "@/lib/milon/db/exercises";
 import {
   compareExercisesByMuscleThenName,
   normalizeExerciseText,
 } from "@/lib/milon/utils";
 import type {
+  EntryMode,
   Exercise,
   ExerciseMode,
   LoadUnit,
@@ -149,8 +149,8 @@ function ExecutionHost({
         return {
           entry: view.entry,
           serie,
-          loadUnit: view.exercise.loadUnit,
-          exerciseMode: view.exercise.mode ?? null,
+          loadUnit: view.entry.loadUnit ?? view.exercise.loadUnit ?? null,
+          exerciseMode: (view.entry.mode ?? view.exercise.mode ?? null) as ExerciseMode | null,
         };
       }
     }
@@ -287,6 +287,8 @@ export function WorkoutDetailSection({
     applyToAll,
     saveExercise,
     createExerciseAndAdd,
+    setEntryMode,
+    setEntryLoadUnit,
   } = useWorkoutDetail(workoutId);
 
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -305,67 +307,28 @@ export function WorkoutDetailSection({
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [confirmProcessing, setConfirmProcessing] = useState(false);
 
-  // Toggle kg/lb otimista (sem reload): a troca visual acontece na hora via
-  // estado local do SeriesCard + override por exercício aqui na seção; a
-  // persistência roda em background sem refetch cheio (sem setLoading/retry).
-  const [unitOverrides, setUnitOverrides] = useState<Record<string, LoadUnit>>(
-    {},
-  );
-  const [unitError, setUnitError] = useState<string | null>(null);
-
   const readOnly = program?.status === "inativo";
   const effectiveReadOnly = (readOnly ?? false) || executionBlocked;
   const backProgramId =
     backTarget.kind === "program" ? backTarget.programId : "";
   const programId = program?.id ?? backProgramId;
 
-  // Entradas/exercícios com a unidade otimista aplicada: todos os cards do
-  // mesmo exercício passam a exibir a nova unidade (principal + secundária
-  // convertida) na hora, sem remontar inputs (keys por carga intactas).
-  const entriesWithUnit = useMemo(
-    () =>
-      unitOverrides && Object.keys(unitOverrides).length === 0
-        ? entries
-        : entries.map((view) => {
-            const override = unitOverrides[view.exercise.id];
-            if (!override || view.exercise.loadUnit === override) return view;
-            return {
-              ...view,
-              exercise: { ...view.exercise, loadUnit: override },
-            };
-          }),
-    [entries, unitOverrides],
-  );
-
-  const exercisesWithUnit = useMemo(
-    () =>
-      unitOverrides && Object.keys(unitOverrides).length === 0
-        ? exercises
-        : exercises.map((exercise) => {
-            const override = unitOverrides[exercise.id];
-            if (!override || exercise.loadUnit === override) return exercise;
-            return { ...exercise, loadUnit: override };
-          }),
-    [exercises, unitOverrides],
-  );
-
   const muscleOptions = useMemo(
-    () => deriveMuscleOptions(exercisesWithUnit),
-    [exercisesWithUnit],
+    () => deriveMuscleOptions(exercises),
+    [exercises],
   );
 
   const pickerExercises = useMemo(
     () =>
-      [...exercisesWithUnit]
+      [...exercises]
         .filter((exercise) => exercise.deletedAt === null)
         .sort(compareExercisesByMuscleThenName),
-    [exercisesWithUnit],
+    [exercises],
   );
 
   const findView = useCallback(
-    (entryId: string) =>
-      entriesWithUnit.find((view) => view.entry.id === entryId),
-    [entriesWithUnit],
+    (entryId: string) => entries.find((view) => view.entry.id === entryId),
+    [entries],
   );
 
   const handleBackToProgram = useCallback(() => {
@@ -527,7 +490,7 @@ export function WorkoutDetailSection({
   const handleSeriesCommit = useCallback(
     (entryId: string, seriesId: string, field: SerieField, value: number | null) => {
       void entryId;
-      // Carga commita direto; unidade via toggle kg/lb (handleConfirmUnit).
+      // Carga commita direto; unidade via toggle kg/lb (handleUnitCommit).
       void updateSeries(seriesId, field, value).catch(() => {
         // O erro fica visível na página via hook (banner).
       });
@@ -544,37 +507,26 @@ export function WorkoutDetailSection({
     [applyToAll],
   );
 
-  const handleConfirmUnit = useCallback(
-    (entryId: string, unit: LoadUnit) => {
-      // Toggle kg/lb instantâneo (como o toggle Repetições/Tempo): atualiza
-      // o visual na hora via override otimista + estado local do SeriesCard
-      // e persiste em background sem refetch cheio (sem setLoading/retry, sem
-      // remontar a lista). Só a unidade é persistida (D10); a carga segue
-      // intacta (D7: vazio ≠ 0). Falha reverte o override e comunica via
-      // banner local (origem operacao: sem retry, norma D27/R31).
-      const view = findView(entryId);
-      if (!view) return;
-      const exerciseId = view.exercise.id;
-      const previous: LoadUnit | null = view.exercise.loadUnit;
-      if (previous === unit) return;
-      setUnitOverrides((prev) => ({ ...prev, [exerciseId]: unit }));
-      setUnitError(null);
-      void setExerciseLoadUnitStandalone(exerciseId, unit).catch(
-        (err: unknown) => {
-          setUnitOverrides((prev) => {
-            const next = { ...prev };
-            if (previous === null) {
-              delete next[exerciseId];
-            } else {
-              next[exerciseId] = previous;
-            }
-            return next;
-          });
-          setUnitError(toMessage(err, "Não foi possível salvar a unidade."));
-        },
-      );
+  const handleModeCommit = useCallback(
+    (entryId: string, mode: EntryMode) => {
+      // Modo pertence à entry (Mílon #5, D31): persiste via hook; o erro
+      // fica visível na página via hook (banner).
+      void setEntryMode?.(entryId, mode)?.catch(() => {
+        // O erro fica visível na página via hook (banner).
+      });
     },
-    [findView],
+    [setEntryMode],
+  );
+
+  const handleUnitCommit = useCallback(
+    (entryId: string, unit: LoadUnit) => {
+      // Unidade pertence à entry (Mílon #5, D31): o alternador de unidade
+      // da manutenção persiste na entry; o erro fica visível via hook.
+      void setEntryLoadUnit?.(entryId, unit)?.catch(() => {
+        // O erro fica visível na página via hook (banner).
+      });
+    },
+    [setEntryLoadUnit],
   );
 
   const handleReorder = useCallback(
@@ -624,7 +576,7 @@ export function WorkoutDetailSection({
             {executionEnabled ? (
               <ExecutionHost
                 workoutId={workoutId}
-                entries={entriesWithUnit}
+                entries={entries}
                 onTemplateChanged={() => void retry()}
               >
                 {(ctx) => (
@@ -657,15 +609,6 @@ export function WorkoutDetailSection({
                       </div>
                     </section>
 
-                    {unitError ? (
-                      <div
-                        role="alert"
-                        className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-700 dark:text-rose-300 font-medium"
-                      >
-                        {unitError}
-                      </div>
-                    ) : null}
-
                     {ctx.execErrorMsg ? (
                       <div
                         role="alert"
@@ -692,7 +635,9 @@ export function WorkoutDetailSection({
                       onApplyAll={handleApplyAll}
                       onEditExercise={handleEditExercise}
                       onRemoveEntry={handleRemoveEntry}
-                      onConfirmUnit={handleConfirmUnit}
+                      onConfirmUnit={handleUnitCommit}
+                      onModeCommit={handleModeCommit}
+                      onUnitCommit={handleUnitCommit}
                       execution={ctx.executionPackage}
                     />
 
@@ -752,15 +697,6 @@ export function WorkoutDetailSection({
                   </div>
                 ) : null}
 
-                {unitError ? (
-                  <div
-                    role="alert"
-                    className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-700 dark:text-rose-300 font-medium"
-                  >
-                    {unitError}
-                  </div>
-                ) : null}
-
                 {executionBlocked ? (
                   <div
                     role="alert"
@@ -771,10 +707,10 @@ export function WorkoutDetailSection({
                 ) : null}
 
                 <WorkoutEntriesList
-                  entries={entriesWithUnit}
+                  entries={entries}
                   programId={programId}
                   readOnly={effectiveReadOnly}
-                  empty={entriesWithUnit.length === 0}
+                  empty={entries.length === 0}
                   errorMsg={errorMsg}
                   errorOrigin={errorOrigin}
                   onAdd={openPicker}
@@ -787,13 +723,15 @@ export function WorkoutDetailSection({
                   onApplyAll={handleApplyAll}
                   onEditExercise={handleEditExercise}
                   onRemoveEntry={handleRemoveEntry}
-                  onConfirmUnit={handleConfirmUnit}
+                  onConfirmUnit={handleUnitCommit}
+                  onModeCommit={handleModeCommit}
+                  onUnitCommit={handleUnitCommit}
                 />
               </>
             )}
 
             {entryFooter
-              ? entriesWithUnit.map((view) => (
+              ? entries.map((view) => (
                   <Fragment key={view.entry.id}>
                     {typeof entryFooter === "function"
                       ? entryFooter(view)

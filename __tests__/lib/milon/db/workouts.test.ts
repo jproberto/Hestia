@@ -260,6 +260,8 @@ describe("lib/milon/db/workouts (barrel oficial da UI, TASK-006)", () => {
         exerciseId: "ex-1",
         position: 1,
         restSeconds: null,
+        mode: "repeticao",
+        loadUnit: "kg",
         createdAt: "2026-10-01T09:00:00.000Z",
         created_by: EMAIL,
       },

@@ -1,9 +1,10 @@
 // Contratos de repositório do módulo Mílon (DIP: consumidos via interfaces).
 import type {
+  EntryMode,
   Exercise,
   CreateExerciseInput,
+  LoadUnit,
   UpdateExerciseInput,
-  ExerciseMode,
   MilonItem,
   CreateMilonInput,
   Program,
@@ -24,9 +25,6 @@ export interface IExerciseRepository {
   create(input: CreateExerciseInput, email: string): Promise<Exercise>;
   update(id: string, input: UpdateExerciseInput): Promise<Exercise>;
   remove(id: string): Promise<void>;
-  // Ajuste de modo do exercício (Mílon #5, aditamento 2026-10-09): persiste o
-  // modo de um exercício existente sem mexer em nome/músculo/unidade.
-  setExerciseMode(id: string, mode: ExerciseMode): Promise<void>;
 }
 
 // Legado do scaffold (removido na TASK-004/005 junto a db/example e useExamples).
@@ -77,6 +75,10 @@ export interface IWorkoutRepository {
   removeEntry(entryId: string): Promise<void>;
   reorderEntries(workoutId: string, orderedEntryIds: string[]): Promise<void>;
   setEntryRestSeconds(entryId: string, seconds: number | null): Promise<void>;
+  // Ajustes de modo/unidade da entry (Mílon #5, aditamento 2026-10-09 "0012
+  // CORRETA", D29): persistem o modo e a unidade do exercício NO TREINO.
+  setEntryMode(entryId: string, mode: EntryMode): Promise<void>;
+  setEntryLoadUnit(entryId: string, unit: LoadUnit): Promise<void>;
   listSeriesByEntry(entryId: string): Promise<WorkoutSeries[]>;
   setSeriesQuantity(
     entryId: string,

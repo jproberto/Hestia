@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { LoadUnit, WorkoutEntryView } from "@/lib/milon/types";
+import type { EntryMode, LoadUnit, WorkoutEntryView } from "@/lib/milon/types";
 import {
   MSG_QUANTIDADE_SERIES_INVALIDA,
   hasSeriePreenchida,
@@ -34,6 +34,10 @@ export interface ExerciseEntryCardProps {
   onChooseUnit: (unit: LoadUnit) => void;
   /** Pacote de execução (Mílon #5, opt-in): repassado sem interpretar. */
   execution?: SeriesExecutionProps;
+  /** Ajuste de modo da entry (Mílon #5, D31): seletor no chrome de manutenção. */
+  onModeCommit?: (mode: EntryMode) => void;
+  /** Ajuste de unidade da entry (Mílon #5, D31): seletor no chrome de manutenção. */
+  onUnitCommit?: (unit: LoadUnit) => void;
 }
 
 /**
@@ -65,8 +69,18 @@ export default function ExerciseEntryCard({
   onRemoveEntry,
   onChooseUnit,
   execution,
+  onModeCommit,
+  onUnitCommit,
 }: ExerciseEntryCardProps) {
   const { entry, exercise, series } = entryView;
+
+  // Modo e unidade pertencem ao exercício NO TREINO (entry — Mílon #5, D31):
+  // a entry é a fonte; a biblioteca entra só como fallback para linhas
+  // anteriores à migração. Séries e modal derivam destes valores.
+  const entryMode = entry.mode ?? exercise.mode ?? null;
+  const entryUnit = entry.loadUnit ?? exercise.loadUnit ?? null;
+  const modeValue: EntryMode = entryMode ?? "repeticao";
+  const unitValue: LoadUnit = entryUnit ?? "kg";
 
   // Replano Mílon #5 (D14): chrome de manutenção sempre visível em execução —
   // a visibilidade depende somente de programa inativo; o pacote de execução
@@ -228,14 +242,61 @@ export default function ExerciseEntryCard({
         </div>
       ) : null}
 
+      {maintenanceVisible ? (
+        <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label
+              htmlFor={`${entry.id}-mode`}
+              className="text-xs font-semibold"
+            >
+              Modo
+            </Label>
+            <select
+              id={`${entry.id}-mode`}
+              aria-label="Modo"
+              className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none"
+              value={modeValue}
+              onChange={(event) =>
+                onModeCommit?.(event.currentTarget.value as EntryMode)
+              }
+              disabled={saving}
+            >
+              <option value="repeticao">Repetições</option>
+              <option value="tempo">Tempo</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label
+              htmlFor={`${entry.id}-unit`}
+              className="text-xs font-semibold"
+            >
+              Unidade
+            </Label>
+            <select
+              id={`${entry.id}-unit`}
+              aria-label="Unidade"
+              className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none"
+              value={unitValue}
+              onChange={(event) =>
+                onUnitCommit?.(event.currentTarget.value as LoadUnit)
+              }
+              disabled={saving}
+            >
+              <option value="kg">kg</option>
+              <option value="libra">lb</option>
+            </select>
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
         {series.map((serie, idx) => (
           <SeriesCard
             key={serie.id}
             series={serie}
             index={idx}
-            loadUnit={exercise.loadUnit}
-            exerciseMode={exercise.mode ?? null}
+            loadUnit={entryUnit}
+            exerciseMode={entryMode}
             readOnly={readOnly}
             onCommit={(field, value) =>
               handleSeriesCommit(serie.id, field, value)

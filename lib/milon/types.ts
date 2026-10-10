@@ -8,10 +8,6 @@ export interface ExerciseRow {
   muscle: string;
   video_link: string | null;
   load_unit: string | null;
-  // Modo do exercício (Mílon #5, aditamento 2026-10-09, D25): coluna textual
-  // anulável; opcional para linhas anteriores à migração 0012 (leitura com
-  // fallback repetição). Nenhuma coluna nova nas séries (D26).
-  mode?: string | null;
   deleted_at: string | null;
   created_at: string;
   created_by: string;
@@ -19,9 +15,15 @@ export interface ExerciseRow {
 
 export type LoadUnit = 'kg' | 'libra';
 
-// Modo do exercício (Mílon #5, aditamento 2026-10-09): o valor único da série
-// deriva dele; card e modal de execução herdam o rótulo via propriedade.
+// Modo do exercício (Mílon #5, aditamento 2026-10-09): mantido como tipo para
+// os cards/modais que ainda derivam o rótulo por propriedade (a fonte passa a
+// ser a entry na TASK-012). A coluna de modo na biblioteca foi revertida (D33)
+// e o domínio do exercício não a carrega mais.
 export type ExerciseMode = 'repeticao' | 'tempo';
+
+// Modo da entry do treino (Mílon #5, aditamento 2026-10-09 "0012 CORRETA",
+// D29): o modo e a unidade pertencem ao exercício NO TREINO (entry).
+export type EntryMode = 'repeticao' | 'tempo';
 
 export interface Exercise {
   id: string;
@@ -29,8 +31,9 @@ export interface Exercise {
   muscle: string;
   videoLink: string | null;
   loadUnit: LoadUnit | null;
-  // Nulo = linha antiga sem modo (fallback de leitura: repetição).
-  // Opcional para não quebrar fixtures anteriores à migração 0012.
+  // Biblioteca sem modo (D33, reversão do modo-na-biblioteca): a chave segue
+  // ausente em leitura nova. Mantida opcional e transitória porque o modal da
+  // biblioteca ainda a lê até a TASK-012; nunca escrita pelo repositório.
   mode?: ExerciseMode | null;
   deletedAt: string | null;
   createdAt: string;
@@ -41,16 +44,12 @@ export interface CreateExerciseInput {
   name: string;
   muscle: string;
   videoLink?: string | null;
-  mode?: ExerciseMode | null;
-  loadUnit?: LoadUnit | null;
 }
 
 export interface UpdateExerciseInput {
   name: string;
   muscle: string;
   videoLink: string | null;
-  mode?: ExerciseMode | null;
-  loadUnit?: LoadUnit | null;
 }
 
 export type ProgramStatus = 'rascunho' | 'ativo' | 'inativo';
@@ -111,6 +110,11 @@ export interface WorkoutEntryRow {
   exercise_id: string;
   position: number;
   rest_seconds: number | null;
+  // Modo e unidade da entry (Mílon #5, aditamento 2026-10-09 "0012 CORRETA",
+  // D29): colunas da migração 0012 nova; opcionais para linhas anteriores
+  // à migração (leitura com fallback repetição/kg).
+  mode?: string | null;
+  load_unit?: string | null;
   created_at: string;
   created_by: string;
 }
@@ -122,6 +126,10 @@ export interface WorkoutEntry {
   exerciseId: string;
   position: number;
   restSeconds: number | null;
+  // Opcionais com fallback de leitura (repetição/kg) para não quebrar
+  // fixtures pré-0012; novas entries nascem com repetição+kg.
+  mode?: EntryMode | null;
+  loadUnit?: LoadUnit | null;
   createdAt: string;
   created_by: string;
 }

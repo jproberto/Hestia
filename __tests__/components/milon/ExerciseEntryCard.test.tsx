@@ -1,11 +1,11 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import ExerciseEntryCard from "@/components/milon/ExerciseEntryCard";
 import {
   MSG_QUANTIDADE_SERIES_INVALIDA,
   MSG_UNIDADE_OBRIGATORIA,
 } from "@/lib/milon/workout-utils";
-import type { Exercise, LoadUnit, WorkoutEntryView, WorkoutSeries } from "@/lib/milon/types";
+import type { Exercise, LoadUnit, WorkoutEntry, WorkoutEntryView, WorkoutSeries } from "@/lib/milon/types";
 
 /**
  * Contrato (plan.md §3 "ExerciseEntryCard (props)" + tasks.json TASK-013 +
@@ -48,6 +48,10 @@ interface ExerciseEntryCardProps {
   onEditExercise: () => void;
   onRemoveEntry: () => void;
   onChooseUnit: (unit: LoadUnit) => void;
+  // Ajustes da entry (TASK-010, opcionais na transição para não quebrar os
+  // renders antigos): seletores de Modo/Unidade da entry no chrome.
+  onModeCommit?: (mode: "repeticao" | "tempo") => void;
+  onUnitCommit?: (unit: LoadUnit) => void;
 }
 
 const CRIADO_EM = "2026-10-01T00:00:00Z";
@@ -115,6 +119,8 @@ function base(
     onEditExercise: vi.fn(),
     onRemoveEntry: vi.fn(),
     onChooseUnit: vi.fn(),
+    onModeCommit: vi.fn(),
+    onUnitCommit: vi.fn(),
     ...overrides,
   };
 }
@@ -665,5 +671,239 @@ describe("ExerciseEntryCard — chrome visível em execução (replano TASK-001 
     renderComExecucao();
 
     expect(handle()).not.toBeNull();
+  });
+});
+
+/**
+ * Contrato RED da TASK-010 (Mílon #5, Aditamento 2026-10-09 "0012 CORRETA").
+ *
+ * Fonte: tasks.json TASK-010 (ExerciseEntryCard: seletores de Modo e Unidade
+ * da entry) + plan.md Aditamento 0012 CORRETA §1 Mudança C + §3 (Card da
+ * entry + Card de série e modal de execução) + D31/D32 + spec §3 (modo e
+ * unidade pertencem ao exercício NO TREINO — entry; biblioteca sem
+ * Modo/Unidade).
+ *
+ * CONTRATO FIXADO AQUI (o que a TASK-012 deve implementar):
+ * - o chrome de manutenção do card ganha seletores de Modo
+ *   (Repetições/Tempo) e de Unidade (kg/lb) vinculados aos valores DA ENTRY
+ *   (não da biblioteca): radiogroup rotulado OU select rotulado OU grupo
+ *   rotulado — o teste aceita os três (mesma flexibilidade do TASK-006);
+ * - rótulos acessíveis fixos: "Modo" e "Unidade"; valores literais
+ *   "repeticao"/"tempo" e "kg"/"libra" (mesmos do banco);
+ * - trocar o Modo commita via callback NOVO `onModeCommit(mode)`
+ *   (opcional na transição); trocar a Unidade no seletor da entry commita
+ *   via callback NOVO `onUnitCommit(unit)` (opcional na transição);
+ *   `onChooseUnit` segue existindo para o toggle do SeriesCard (que passa a
+ *   persistir na entry);
+ * - os SeriesCards da entry recebem modo e unidade DA ENTRY (divergência da
+ *   biblioteca prova a fonte);
+ * - seletores OCULTOS sob readOnly (mesma regra do restante do chrome —
+ *   trava o teste antigo "oculta handle, campos e ações", que sonda
+ *   queryByLabelText(/repetições/i)); desabilitados durante salvamento.
+ *
+ * Expected: FAIL — o card atual não tem os seletores e repassa valores da
+ * biblioteca. Hefesto fará GREEN na TASK-012 sem mudar estes testes.
+ */
+describe("ExerciseEntryCard — seletores de Modo e Unidade da entry (TASK-010 — RED)", () => {
+  /** Entry COM modo/unidade (forma pós-0012; cast compila antes e depois). */
+  function makeEntryComModo(
+    mode: "repeticao" | "tempo",
+    loadUnit: LoadUnit,
+  ): WorkoutEntry {
+    return {
+      id: "entry-1",
+      workoutId: "wout-1",
+      programId: "prog-1",
+      exerciseId: "ex-1",
+      position: 1,
+      restSeconds: null,
+      createdAt: CRIADO_EM,
+      created_by: DONO,
+      ...({ mode, loadUnit } as unknown as Record<string, unknown>),
+    } as unknown as WorkoutEntry;
+  }
+
+  /** Biblioteca DIVERGENTE de propósito: prova que a fonte é a entry. */
+  function makeViewDivergente(): WorkoutEntryView {
+    const exercise: Exercise = {
+      id: "ex-1",
+      name: "Supino reto",
+      muscle: "Peito",
+      videoLink: null,
+      loadUnit: "kg",
+      deletedAt: null,
+      createdAt: CRIADO_EM,
+      created_by: DONO,
+    };
+    return {
+      entry: makeEntryComModo("tempo", "libra"),
+      exercise,
+      series: [makeSeries("s1", { position: 1, load: 50 })],
+    };
+  }
+
+  /** Localiza o controle da entry aceitando radiogroup, select ou grupo. */
+  function controleDaEntry(container: HTMLElement, rotulo: RegExp): HTMLElement | null {
+    return (
+      within(container).queryByRole("radiogroup", { name: rotulo }) ??
+      within(container).queryByRole("combobox", { name: rotulo }) ??
+      within(container).queryByRole("group", { name: rotulo })
+    );
+  }
+
+  /** Valor selecionado no controle (nome do radio marcado ou valor do combo). */
+  function valorSelecionado(controle: HTMLElement): string | null {
+    const marcadoAria = controle.querySelector('[aria-checked="true"]');
+    if (marcadoAria) {
+      return (
+        marcadoAria.getAttribute("aria-label") ??
+        marcadoAria.textContent?.trim() ??
+        null
+      );
+    }
+    const radios = Array.from(
+      controle.querySelectorAll('input[type="radio"]'),
+    ) as HTMLInputElement[];
+    const marcado = radios.find((r) => r.checked);
+    if (marcado) {
+      if (marcado.getAttribute("aria-label")) {
+        return marcado.getAttribute("aria-label");
+      }
+      const envoltorio = marcado.closest("label");
+      if (envoltorio?.textContent) return envoltorio.textContent.trim();
+      if (marcado.id) {
+        const rotulo = controle.querySelector(`label[for="${marcado.id}"]`);
+        if (rotulo?.textContent) return rotulo.textContent.trim();
+      }
+      return marcado.value || null;
+    }
+    if (controle instanceof HTMLSelectElement) return controle.value;
+    const combo = controle.querySelector("select");
+    if (combo instanceof HTMLSelectElement) return combo.value;
+    return null;
+  }
+
+  function escolherOpcao(controle: HTMLElement, opcao: RegExp): void {
+    const radio = within(controle).queryByRole("radio", { name: opcao });
+    if (radio) {
+      fireEvent.click(radio);
+      return;
+    }
+    const combo =
+      controle instanceof HTMLSelectElement
+        ? controle
+        : controle.querySelector("select");
+    if (combo instanceof HTMLSelectElement) {
+      const item = Array.from(combo.querySelectorAll("option")).find((o) =>
+        opcao.test(o.textContent ?? ""),
+      );
+      fireEvent.change(combo, {
+        target: { value: item?.value ?? item?.textContent ?? "" },
+      });
+      return;
+    }
+    throw new Error("Controle da entry sem opção selecionável");
+  }
+
+  function elementoDaEntry(): HTMLElement {
+    const el = document.querySelector('[data-entry-id="entry-1"]');
+    if (!el) throw new Error("Card da entry não renderizado");
+    return el as HTMLElement;
+  }
+
+  it("exibe seletor de Modo refletindo a entry (tempo, mesmo com biblioteca sem modo)", () => {
+    render(<ExerciseEntryCard {...base({ entryView: makeViewDivergente() })} />);
+
+    const controle = controleDaEntry(elementoDaEntry(), /modo/i);
+    expect(controle).not.toBeNull();
+    expect(valorSelecionado(controle as HTMLElement)).toMatch(/tempo/i);
+  });
+
+  it("exibe seletor de Unidade refletindo a entry (libra, mesmo com biblioteca em kg)", () => {
+    render(<ExerciseEntryCard {...base({ entryView: makeViewDivergente() })} />);
+
+    const controle = controleDaEntry(elementoDaEntry(), /unidade/i);
+    expect(controle).not.toBeNull();
+    expect(valorSelecionado(controle as HTMLElement)).toMatch(/libra/i);
+  });
+
+  it("trocar o Modo commita via onModeCommit", () => {
+    const onModeCommit = vi.fn();
+    render(
+      <ExerciseEntryCard
+        {...base({ entryView: makeViewDivergente(), onModeCommit })}
+      />,
+    );
+
+    escolherOpcao(controleDaEntry(elementoDaEntry(), /modo/i) as HTMLElement, /repeti/i);
+    expect(onModeCommit).toHaveBeenCalledWith("repeticao");
+  });
+
+  it("trocar a Unidade no seletor da entry commita via onUnitCommit", () => {
+    const onUnitCommit = vi.fn();
+    render(
+      <ExerciseEntryCard
+        {...base({ entryView: makeViewDivergente(), onUnitCommit })}
+      />,
+    );
+
+    escolherOpcao(
+      controleDaEntry(elementoDaEntry(), /unidade/i) as HTMLElement,
+      /^(kg)$/i,
+    );
+    expect(onUnitCommit).toHaveBeenCalledWith("kg");
+  });
+
+  it("SeriesCard da entry usa o modo DA ENTRY (Tempo (s), mesmo com biblioteca sem modo)", () => {
+    render(
+      <ExerciseEntryCard
+        {...({
+          ...base({ entryView: makeViewDivergente() }),
+          execution: {
+            doneBySeriesId: {},
+            onToggle: vi.fn(),
+            onOpenEditor: vi.fn(),
+          },
+        } as unknown as ExerciseEntryCardProps)}
+      />,
+    );
+
+    expect(
+      within(elementoDaEntry()).getByText("Tempo (s)"),
+    ).toBeInTheDocument();
+  });
+
+  it("SeriesCard da entry usa a unidade DA ENTRY (libra como texto, mesmo com biblioteca em kg)", () => {
+    render(
+      <ExerciseEntryCard
+        {...({
+          ...base({ entryView: makeViewDivergente() }),
+          execution: {
+            doneBySeriesId: {},
+            onToggle: vi.fn(),
+            onOpenEditor: vi.fn(),
+          },
+        } as unknown as ExerciseEntryCardProps)}
+      />,
+    );
+
+    // Unidade principal como texto exato; a secundária convertida vive no
+    // mesmo nó ("<valor> <unidade>") e não casa com match exato.
+    expect(within(elementoDaEntry()).getByText("libra")).toBeInTheDocument();
+  });
+
+  it("trava: seletores da entry ocultos sob readOnly", () => {
+    render(
+      <ExerciseEntryCard
+        {...base({ entryView: makeViewDivergente(), readOnly: true })}
+      />,
+    );
+
+    expect(
+      controleDaEntry(elementoDaEntry(), /modo/i),
+    ).not.toBeInTheDocument();
+    expect(
+      controleDaEntry(elementoDaEntry(), /unidade/i),
+    ).not.toBeInTheDocument();
   });
 });

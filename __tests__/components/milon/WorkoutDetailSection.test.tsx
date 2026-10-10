@@ -1348,3 +1348,169 @@ describe("WorkoutDetailSection — aviso visível de bloqueio (TASK-006 — RED)
     ).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Contrato RED da TASK-010 (Mílon #5, Aditamento 2026-10-09 "0012 CORRETA").
+ *
+ * Fonte: tasks.json TASK-010 (WorkoutDetailSection: ajustes de modo/unidade
+ * da entry + ausência do ajuste de unidade da biblioteca no caminho do
+ * treino) + plan.md Aditamento 0012 CORRETA §1 Mudança C + §3 (Hook de
+ * detalhe + Card da entry) + D31/D32/D33 + spec §3.
+ *
+ * CONTRATO FIXADO AQUI (o que a TASK-012 deve implementar):
+ * - o card da entry exibe seletores de Modo/Unidade vinculados à entry
+ *   (radiogroup rotulado OU select rotulado OU grupo rotulado; rótulos
+ *   "Modo"/"Unidade"; valores literais repeticao|tempo e kg|libra);
+ * - trocar o Modo chama `setEntryMode(entryId, mode)` do hook de detalhe;
+ *   trocar a Unidade chama `setEntryLoadUnit(entryId, unit)` do hook;
+ * - os cards/séries da entry exibem modo e unidade DA ENTRY (divergência da
+ *   biblioteca prova a fonte);
+ * - o caminho do treino NÃO usa mais o ajuste de unidade da biblioteca
+ *   (`setExerciseLoadUnitStandalone` fora da seção).
+ *
+ * Expected: FAIL — a seção atual não tem os seletores da entry, alimenta os
+ * cards com a biblioteca e persiste unidade via setExerciseLoadUnitStandalone.
+ * Hefesto fará GREEN na TASK-012 sem mudar estes testes (o hook é mockado
+ * por arquivo; as chaves novas vão por overrides do estado mockado).
+ */
+describe("WorkoutDetailSection — ajustes de modo/unidade da entry (TASK-010 — RED)", () => {
+  /** Entry COM modo/unidade (forma pós-0012; cast compila antes e depois). */
+  function makeEntryComModo(
+    mode: "repeticao" | "tempo",
+    loadUnit: "kg" | "libra",
+    overrides: Partial<WorkoutEntry> = {},
+  ): WorkoutEntry {
+    return makeEntry({
+      ...overrides,
+      ...({ mode, loadUnit } as unknown as Partial<WorkoutEntry>),
+    });
+  }
+
+  /** Conteúdo com biblioteca DIVERGENTE de propósito (fonte = entry). */
+  function conteudoDivergente() {
+    const view = makeView(
+      makeEntryComModo("tempo", "libra", { id: "ent-1", restSeconds: 60 }),
+      makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" }),
+      [
+        makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, reps: 10 }),
+        makeSeries({ id: "ser-2", entryId: "ent-1", position: 2, reps: null }),
+      ],
+    );
+    return setupHook({
+      workout: makeWorkout({ name: "Treino A" }),
+      program: makeProgram(),
+      entries: [view],
+      exercises: [makeExercise({ id: "ex-1", name: "Supino reto" })],
+      workoutUsedExerciseIds: ["ex-1"],
+      setEntryMode: vi.fn(async () => {}),
+      setEntryLoadUnit: vi.fn(async () => {}),
+    }) as unknown as {
+      setEntryMode: Mock;
+      setEntryLoadUnit: Mock;
+    };
+  }
+
+  function elementoDaEntry(): HTMLElement {
+    const el = document.querySelector('[data-entry-id="ent-1"]');
+    if (!el) throw new Error("Card da entry não renderizado");
+    return el as HTMLElement;
+  }
+
+  /** Localiza o seletor da entry aceitando radiogroup, select ou grupo. */
+  function controleDaEntry(rotulo: RegExp): HTMLElement | null {
+    const escopo = within(elementoDaEntry());
+    return (
+      escopo.queryByRole("radiogroup", { name: rotulo }) ??
+      escopo.queryByRole("combobox", { name: rotulo }) ??
+      escopo.queryByRole("group", { name: rotulo })
+    );
+  }
+
+  function escolherOpcao(controle: HTMLElement, opcao: RegExp): void {
+    const radio = within(controle).queryByRole("radio", { name: opcao });
+    if (radio) {
+      fireEvent.click(radio);
+      return;
+    }
+    const combo =
+      controle instanceof HTMLSelectElement
+        ? controle
+        : controle.querySelector("select");
+    if (combo instanceof HTMLSelectElement) {
+      const item = Array.from(combo.querySelectorAll("option")).find((o) =>
+        opcao.test(o.textContent ?? ""),
+      );
+      fireEvent.change(combo, {
+        target: { value: item?.value ?? item?.textContent ?? "" },
+      });
+      return;
+    }
+    throw new Error("Controle da entry sem opção selecionável");
+  }
+
+  it("exibe seletor de Modo da entry refletindo tempo (biblioteca sem modo)", () => {
+    conteudoDivergente();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    expect(controleDaEntry(/modo/i)).not.toBeNull();
+  });
+
+  it("exibe seletor de Unidade da entry refletindo libra (biblioteca em kg)", () => {
+    conteudoDivergente();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    expect(controleDaEntry(/unidade/i)).not.toBeNull();
+  });
+
+  it("trocar o Modo da entry chama setEntryMode do hook com (entryId, modo)", () => {
+    const state = conteudoDivergente();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    escolherOpcao(controleDaEntry(/modo/i) as HTMLElement, /repeti/i);
+    expect(state.setEntryMode).toHaveBeenCalledWith("ent-1", "repeticao");
+  });
+
+  it("trocar a Unidade da entry chama setEntryLoadUnit do hook com (entryId, unidade)", () => {
+    const state = conteudoDivergente();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    escolherOpcao(controleDaEntry(/unidade/i) as HTMLElement, /^(kg)$/i);
+    expect(state.setEntryLoadUnit).toHaveBeenCalledWith("ent-1", "kg");
+  });
+
+  it("card da entry exibe o rótulo DO MODO DA ENTRY (Tempo (s) com biblioteca sem modo)", () => {
+    conteudoDivergente();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    // Rótulo deriva do modo da entry: fixture com 2 séries => 2 ocorrências.
+    expect(
+      within(elementoDaEntry()).getAllByText("Tempo (s)"),
+    ).toHaveLength(2);
+  });
+
+  it("código vivo sem o ajuste de unidade da biblioteca no caminho do treino (substituição, D33)", () => {
+    const src = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        "../../../components/milon/WorkoutDetailSection.tsx",
+      ),
+      "utf8",
+    );
+    expect(src).not.toMatch(/setExerciseLoadUnitStandalone/);
+  });
+});

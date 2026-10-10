@@ -14,6 +14,8 @@ import {
 } from "../workout-utils";
 import type {
   CreateWorkoutInput,
+  EntryMode,
+  LoadUnit,
   UpdateWorkoutInput,
   Workout,
   WorkoutEntry,
@@ -41,6 +43,9 @@ function toEntryDomain(row: WorkoutEntryRow): WorkoutEntry {
     exerciseId: row.exercise_id,
     position: row.position,
     restSeconds: row.rest_seconds,
+    // Linhas anteriores à migração 0012 nova: nulo tratado como repetição/kg.
+    mode: (row.mode as EntryMode | null) ?? "repeticao",
+    loadUnit: (row.load_unit as LoadUnit | null) ?? "kg",
     createdAt: row.created_at,
     created_by: row.created_by,
   };
@@ -241,6 +246,9 @@ export async function addEntry(
         exercise_id: exerciseId,
         position,
         rest_seconds: null,
+        // Novas entries nascem com os padrões repetição+kg (D29).
+        mode: "repeticao",
+        load_unit: "kg",
         created_by: email,
       })
       .select()
@@ -309,6 +317,34 @@ export async function setEntryRestSeconds(
   const { error } = await db
     .from<WorkoutEntryRow>("workout_entries")
     .update({ rest_seconds: seconds })
+    .eq("id", entryId);
+  if (error) throw error;
+}
+
+// Ajuste de modo da entry (Mílon #5, aditamento 2026-10-09 "0012 CORRETA",
+// D29): persiste o modo do exercício NO TREINO sem mexer nos demais campos.
+export async function setEntryMode(
+  db: IDatabaseClient,
+  entryId: string,
+  mode: EntryMode,
+): Promise<void> {
+  const { error } = await db
+    .from<WorkoutEntryRow>("workout_entries")
+    .update({ mode })
+    .eq("id", entryId);
+  if (error) throw error;
+}
+
+// Ajuste de unidade da entry (Mílon #5, aditamento 2026-10-09 "0012 CORRETA",
+// D29): persiste a unidade da carga do exercício NO TREINO.
+export async function setEntryLoadUnit(
+  db: IDatabaseClient,
+  entryId: string,
+  unit: LoadUnit,
+): Promise<void> {
+  const { error } = await db
+    .from<WorkoutEntryRow>("workout_entries")
+    .update({ load_unit: unit })
     .eq("id", entryId);
   if (error) throw error;
 }
@@ -556,6 +592,20 @@ export async function setEntryRestSecondsStandalone(
   seconds: number | null,
 ): Promise<void> {
   return setEntryRestSeconds(createBrowserDatabaseClient(), entryId, seconds);
+}
+
+export async function setEntryModeStandalone(
+  entryId: string,
+  mode: EntryMode,
+): Promise<void> {
+  return setEntryMode(createBrowserDatabaseClient(), entryId, mode);
+}
+
+export async function setEntryLoadUnitStandalone(
+  entryId: string,
+  unit: LoadUnit,
+): Promise<void> {
+  return setEntryLoadUnit(createBrowserDatabaseClient(), entryId, unit);
 }
 
 export async function listSeriesByEntryStandalone(

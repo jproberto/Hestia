@@ -23,7 +23,9 @@
  * - retorno: `{ workout, program, entries, exercises, workoutUsedExerciseIds,
  *   loading, errorMsg, errorOrigin, successNotice, retry, addExercise,
  *   removeEntry, reorderEntries, setQuantity, setRest, updateSeries,
- *   applyToAll, saveExercise, createExerciseAndAdd, confirmLoadUnit }`;
+ *   applyToAll, saveExercise, createExerciseAndAdd, setEntryMode,
+ *   setEntryLoadUnit }` (TASK-010: confirmLoadUnit removido — unidade na
+ *   biblioteca fora do caminho do treino, D33);
  * - cadeia de carga: `findWorkoutById` -> `findProgramById` (status/leitura)
  *   -> `listEntriesByProgram` (filtrada pelo treino para exibir; o conjunto
  *   completo do Programa alimenta `programUsedExerciseIds`, D14) ->
@@ -38,11 +40,11 @@
  *   anti-duplicata da #1, `createExerciseAndAdd`) RELANÇAM o erro — a página
  *   mostra no modal e o modal permanece aberto (NÃO tocam em `errorMsg`);
  * - `removeEntry`/`reorderEntries`/`setQuantity`/`setRest`/`updateSeries`/
- *   `applyToAll`/`confirmLoadUnit` alimentam `errorMsg` da página
+ *   `applyToAll`/`setEntryMode`/`setEntryLoadUnit` alimentam `errorMsg` da página
  *   (`'bloqueio'` para guarda de domínio, `'operacao'` para falha de
  *   gravação) e recarregam as entradas/séries em sucesso;
- * - `confirmLoadUnit` grava a série (`updateSeriesFieldsStandalone`) E chama
- *   `setExerciseLoadUnitStandalone` (unidade escolhida uma vez, D10).
+ * - `confirmLoadUnit` REMOVIDO (TASK-010, D33): `setEntryMode`/`setEntryLoadUnit`
+ *   persistem modo/unidade NA ENTRY via standalones do barrel de treinos.
  *
  * Convenções fixadas aqui (não ditas literalmente pela spec; derivadas do
  * contrato do plano e do padrão do módulo — reportar a Zeus se o contrato
@@ -62,7 +64,9 @@
  * - e-mail da sessão = mock global de `__tests__/setup.ts` ("teste@hestia.com"),
  *   repassado aos standalones que exigem `email`.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useWorkoutDetail } from "@/lib/milon/hooks/useWorkoutDetail";
 import * as hooksIndex from "@/lib/milon/hooks";
@@ -83,7 +87,6 @@ import {
   listExercisesAllStandalone,
   createExerciseStandalone,
   updateExerciseStandalone,
-  setExerciseLoadUnitStandalone,
 } from "@/lib/milon/db/exercises";
 import { findProgramByIdStandalone } from "@/lib/milon/db/programs";
 import { MSG_EXERCICIO_JA_NO_PROGRAMA } from "@/lib/milon/workout-utils";
@@ -117,6 +120,8 @@ vi.mock("@/lib/milon/db/workouts", () => ({
   setSeriesQuantity: vi.fn(),
   updateSeriesFields: vi.fn(),
   applySeriesToAll: vi.fn(),
+  setEntryMode: vi.fn(),
+  setEntryLoadUnit: vi.fn(),
   listWorkoutsByProgramStandalone: vi.fn(),
   findWorkoutByIdStandalone: vi.fn(),
   createWorkoutStandalone: vi.fn(),
@@ -134,6 +139,8 @@ vi.mock("@/lib/milon/db/workouts", () => ({
   setSeriesQuantityStandalone: vi.fn(),
   updateSeriesFieldsStandalone: vi.fn(),
   applySeriesToAllStandalone: vi.fn(),
+  setEntryModeStandalone: vi.fn(),
+  setEntryLoadUnitStandalone: vi.fn(),
 }));
 
 vi.mock("@/lib/milon/db/exercises", () => ({
@@ -148,7 +155,6 @@ vi.mock("@/lib/milon/db/exercises", () => ({
   createExerciseStandalone: vi.fn(),
   updateExerciseStandalone: vi.fn(),
   deleteExerciseStandalone: vi.fn(),
-  setExerciseLoadUnitStandalone: vi.fn(),
 }));
 
 vi.mock("@/lib/milon/db/programs", () => ({
@@ -348,7 +354,6 @@ const mocksDoArquivo = [
   applySeriesToAllStandalone,
   createExerciseStandalone,
   updateExerciseStandalone,
-  setExerciseLoadUnitStandalone,
 ];
 
 // ---------------------------------------------------------------------------
@@ -906,23 +911,56 @@ describe("Mílon #3 — useWorkoutDetail (contrato RED, TASK-007)", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 6. confirmLoadUnit — D10: grava a série E define a unidade do exercício
+  // 6. Ajustes de modo/unidade da entry (TASK-010 — RED; SUBSTITUI o bloco
+  //    confirmLoadUnit/D10, superseded pela reversão D33 — removido).
+  //    Fonte: tasks.json TASK-010 + plan.md Aditamento 0012 CORRETA §3
+  //    (Hook de detalhe: setEntryMode/setEntryLoadUnit com banner em falha,
+  //    mesmo padrão do descanso; perde o ajuste de unidade da biblioteca).
+  //
+  //    Contrato fixado aqui (o que a TASK-011/TASK-012 devem implementar):
+  //    - `setEntryMode(entryId, mode)` chama `setEntryModeStandalone` e
+  //      recarrega as entradas em sucesso; em falha alimenta errorMsg com
+  //      origem 'operacao' SEM recarregar (padrão setRest);
+  //    - `setEntryLoadUnit(entryId, unit)` idem via
+  //      `setEntryLoadUnitStandalone`;
+  //    - `confirmLoadUnit` (unidade na biblioteca) NÃO existe mais no hook;
+  //    - o fonte do hook não referencia o ajuste de unidade da biblioteca.
+  //
+  //    Expected: FAIL — o hook atual não tem os ajustes da entry e ainda
+  //    tem confirmLoadUnit. Hefesto fará GREEN sem mudar estes testes
+  //    (acessos via cast + import dinâmico mantêm o tsc verde no RED).
   // -------------------------------------------------------------------------
-  describe("6. confirmLoadUnit (unidade da carga escolhida uma vez, D10)", () => {
-    it("sucesso atualiza a série com o valor E chama setExerciseLoadUnit, recarregando as entradas", async () => {
+  describe("6. ajustes de modo/unidade da entry (TASK-010 — RED)", () => {
+    async function entradaStandalones(): Promise<{
+      setEntryModeStandalone: Mock;
+      setEntryLoadUnitStandalone: Mock;
+    }> {
+      const mod = (await import("@/lib/milon/db/workouts")) as unknown as {
+        setEntryModeStandalone: Mock;
+        setEntryLoadUnitStandalone: Mock;
+      };
+      mod.setEntryModeStandalone.mockReset();
+      mod.setEntryLoadUnitStandalone.mockReset();
+      return mod;
+    }
+
+    type HookComEntry = {
+      setEntryMode: (entryId: string, mode: "repeticao" | "tempo") => Promise<void>;
+      setEntryLoadUnit: (entryId: string, unit: "kg" | "libra") => Promise<void>;
+    };
+
+    function hookComEntry(result: { current: unknown }): HookComEntry {
+      return result.current as unknown as HookComEntry;
+    }
+
+    it("setEntryMode persiste via standalone e recarrega as entradas", async () => {
+      const { setEntryModeStandalone } = await entradaStandalones();
+      setEntryModeStandalone.mockResolvedValue(undefined);
       const { result } = await montarPadrao();
-      vi.mocked(updateSeriesFieldsStandalone).mockResolvedValue(
-        makeSerie({ id: "s-1", entryId: "ent-1", position: 1, load: 60 }),
-      );
 
-      await executar(() =>
-        result.current.confirmLoadUnit("ex-1", "kg", "s-1", 60),
-      );
+      await executar(() => hookComEntry(result).setEntryMode("ent-1", "tempo"));
 
-      expect(updateSeriesFieldsStandalone).toHaveBeenCalledWith("s-1", {
-        load: 60,
-      });
-      expect(setExerciseLoadUnitStandalone).toHaveBeenCalledWith("ex-1", "kg");
+      expect(setEntryModeStandalone).toHaveBeenCalledWith("ent-1", "tempo");
       await waitFor(() =>
         expect(listEntriesByProgramStandalone).toHaveBeenCalledTimes(2),
       );
@@ -930,21 +968,71 @@ describe("Mílon #3 — useWorkoutDetail (contrato RED, TASK-007)", () => {
       expect(result.current.errorOrigin).toBeNull();
     });
 
-    it("falha ao gravar vira origem 'operacao' SEM recarregar", async () => {
+    it("setEntryMode em falha vira origem 'operacao' SEM recarregar", async () => {
+      const { setEntryModeStandalone } = await entradaStandalones();
+      setEntryModeStandalone.mockRejectedValueOnce(
+        new Error("Falha de rede no modo"),
+      );
       const { result } = await montarPadrao();
-      vi.mocked(setExerciseLoadUnitStandalone).mockRejectedValueOnce(
-        new Error("Erro ao salvar unidade da carga"),
-      );
 
-      await executar(() =>
-        result.current.confirmLoadUnit("ex-1", "kg", "s-1", 60),
-      );
+      await executar(() => hookComEntry(result).setEntryMode("ent-1", "tempo"));
 
-      expect(result.current.errorMsg).toContain(
-        "Erro ao salvar unidade da carga",
-      );
+      expect(result.current.errorMsg).toContain("Falha de rede no modo");
       expect(result.current.errorOrigin).toBe("operacao");
       expect(listEntriesByProgramStandalone).toHaveBeenCalledTimes(1);
+    });
+
+    it("setEntryLoadUnit persiste via standalone e recarrega as entradas", async () => {
+      const { setEntryLoadUnitStandalone } = await entradaStandalones();
+      setEntryLoadUnitStandalone.mockResolvedValue(undefined);
+      const { result } = await montarPadrao();
+
+      await executar(() =>
+        hookComEntry(result).setEntryLoadUnit("ent-1", "libra"),
+      );
+
+      expect(setEntryLoadUnitStandalone).toHaveBeenCalledWith(
+        "ent-1",
+        "libra",
+      );
+      await waitFor(() =>
+        expect(listEntriesByProgramStandalone).toHaveBeenCalledTimes(2),
+      );
+      expect(result.current.errorMsg).toBeNull();
+      expect(result.current.errorOrigin).toBeNull();
+    });
+
+    it("setEntryLoadUnit em falha vira origem 'operacao' SEM recarregar", async () => {
+      const { setEntryLoadUnitStandalone } = await entradaStandalones();
+      setEntryLoadUnitStandalone.mockRejectedValueOnce(
+        new Error("Falha de rede na unidade"),
+      );
+      const { result } = await montarPadrao();
+
+      await executar(() =>
+        hookComEntry(result).setEntryLoadUnit("ent-1", "libra"),
+      );
+
+      expect(result.current.errorMsg).toContain("Falha de rede na unidade");
+      expect(result.current.errorOrigin).toBe("operacao");
+      expect(listEntriesByProgramStandalone).toHaveBeenCalledTimes(1);
+    });
+
+    it("confirmLoadUnit (unidade na biblioteca) não existe mais no hook (D33)", async () => {
+      const { result } = await montarPadrao();
+
+      expect(
+        (result.current as unknown as Record<string, unknown>).confirmLoadUnit,
+      ).toBeUndefined();
+    });
+
+    it("código vivo sem o ajuste de unidade da biblioteca no hook (substituição, D33)", () => {
+      const src = fs.readFileSync(
+        path.resolve(__dirname, "../../../../lib/milon/hooks/useWorkoutDetail.ts"),
+        "utf8",
+      );
+      expect(src).not.toMatch(/confirmLoadUnit/);
+      expect(src).not.toMatch(/setExerciseLoadUnitStandalone/);
     });
   });
 

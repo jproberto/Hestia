@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import SeriesEditModal from "@/components/milon/SeriesEditModal";
+import { createFakeWorkoutRepository } from "@/lib/milon/repositories/fakes/fakeWorkoutRepository";
 import type { LoadUnit, WorkoutSeries } from "@/lib/milon/types";
 
 /**
@@ -534,5 +535,67 @@ describe("SeriesEditModal — campo único pelo modo do exercício (TASK-006 —
       reps: null,
       durationSeconds: 60,
     });
+  });
+});
+
+/**
+ * Contrato RED da TASK-010 (Mílon #5, Aditamento 2026-10-09 "0012 CORRETA").
+ *
+ * Fonte: tasks.json TASK-010 (SeriesEditModal: rótulo e unidade vindos da
+ * entry) + plan.md Aditamento 0012 CORRETA §3 (Modal de execução: mesmos
+ * nomes de props, agora alimentadas pela entry) + D32 + spec §3 (modal com
+ * campo único rotulado pelo modo da entry + Carga com a unidade da entry ao
+ * lado como texto).
+ *
+ * CONTRATO FIXADO AQUI: a FONTE dos valores do modal é a entry do treino —
+ * a entry criada pelo repositório já nasce com modo repeticao e unidade kg
+ * (padrões da 0012), e o modal renderizado com esses valores rotula o campo
+ * único pelo modo da entry com a unidade da entry ao lado de Carga.
+ *
+ * Expected: FAIL nos casos de fonte (a entry atual não nasce com os
+ * valores); o caso de render trava o mapeamento entry → props e passa nas
+ * duas fases. Hefesto fará GREEN na TASK-011 (fonte) sem mudar estes testes.
+ */
+describe("SeriesEditModal — valores vindos da entry (TASK-010 — RED)", () => {
+  const EMAIL = "entry@hestia.lan";
+
+  it("entry criada já nasce com modo repeticao (fonte do rótulo do modal)", async () => {
+    const repo = createFakeWorkoutRepository();
+    const entry = (await repo.addEntry(
+      "w-1",
+      "p-1",
+      "ex-1",
+      EMAIL,
+    )) as unknown as Record<string, unknown>;
+
+    expect(entry.mode).toBe("repeticao");
+  });
+
+  it("entry criada já nasce com unidade kg (fonte da unidade do modal)", async () => {
+    const repo = createFakeWorkoutRepository();
+    const entry = (await repo.addEntry(
+      "w-1",
+      "p-1",
+      "ex-1",
+      EMAIL,
+    )) as unknown as Record<string, unknown>;
+
+    expect(entry.loadUnit).toBe("kg");
+  });
+
+  it("modal alimentado pela entry: rótulo pelo modo da entry + Carga com a unidade da entry", () => {
+    const entry = {
+      mode: "tempo",
+      loadUnit: "libra",
+    } as unknown as { mode: "tempo"; loadUnit: "libra" };
+    const props = {
+      ...base({ series: makeSeries({ reps: 10, durationSeconds: null, load: 50 }) }),
+      exerciseMode: entry.mode,
+      loadUnit: entry.loadUnit,
+    } as unknown as Parameters<typeof SeriesEditModal>[0];
+    render(<SeriesEditModal {...props} />);
+
+    expect(screen.getByLabelText(/tempo/i)).toBeInTheDocument();
+    expect(screen.getByText(/carga \(libra\)/i)).toBeInTheDocument();
   });
 });

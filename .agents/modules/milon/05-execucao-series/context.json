@@ -9,7 +9,9 @@
     "Edicao atualiza o planejado (nova meta permanente)",
     "D17: sem botao aplicar-a-todas na execucao (modal resolve)",
     "D18: unidade do modal aplica somente no salvar",
-    "Paridade total com manutencao (card + modal + chrome) + marcacao por fundo do modulo"
+    "Paridade total com manutencao (card + modal + chrome) + marcacao por fundo do modulo",
+    "Foto/snapshot REMOVIDA (valores reais ficam p/ #7); display = template ao vivo",
+    "Migrations DEV: 0011 APLICADA (ok, mantem — tabelas finais); 0012 aplicada e REVERTIDA via script dev-only (arquivo removido apos uso 2026-10-08)"
   ],
   "history": [
     { "phase": "SPEC_DRAFT", "timestamp": "2026-10-08T10:03:00.000Z", "action": "dir created" },

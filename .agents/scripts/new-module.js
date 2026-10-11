@@ -742,4 +742,24 @@ function getNextModuleNumber(backlogContent) {
   return maxNum + 1;
 }
 
+function validateMigrationSequence(moduleMigrations) {
+  const migrationsDir = path.join(ROOT_DIR, "utils", "migrations");
+  if (!fs.existsSync(migrationsDir)) {
+    logWarn("Diretório de migrações não existe, pulando validação");
+    return;
+  }
+  const existing = fs.readdirSync(migrationsDir)
+    .filter(f => f.startsWith("migration-") && f.endsWith(".sql"))
+    .map(f => parseInt(f.match(/migration-(\d+)-/)?.[1] || "0", 10))
+    .filter(n => n > 0);
+  const maxId = existing.length > 0 ? Math.max(...existing) : 0;
+  
+  for (const m of moduleMigrations) {
+    const id = parseInt(m.id, 10);
+    if (id <= maxId) {
+      throw new Error(`Migração ${m.id} conflita com existente (max: ${maxId}). Use ${maxId + 1}.`);
+    }
+  }
+}
+
 main();

@@ -13,7 +13,17 @@ export interface ExerciseRow {
   created_by: string;
 }
 
-export type LoadUnit = 'kg' | 'libra';
+export type LoadUnit = 'kg' | 'lb';
+
+// Modo do exercício (Mílon #5, aditamento 2026-10-09): mantido como tipo para
+// os cards/modais que ainda derivam o rótulo por propriedade (a fonte passa a
+// ser a entry na TASK-012). A coluna de modo na biblioteca foi revertida (D33)
+// e o domínio do exercício não a carrega mais.
+export type ExerciseMode = 'repeticao' | 'tempo';
+
+// Modo da entry do treino (Mílon #5, aditamento 2026-10-09 "0012 CORRETA",
+// D29): o modo e a unidade pertencem ao exercício NO TREINO (entry).
+export type EntryMode = 'repeticao' | 'tempo';
 
 export interface Exercise {
   id: string;
@@ -21,6 +31,10 @@ export interface Exercise {
   muscle: string;
   videoLink: string | null;
   loadUnit: LoadUnit | null;
+  // Biblioteca sem modo (D33, reversão do modo-na-biblioteca): a chave segue
+  // ausente em leitura nova. Mantida opcional e transitória porque o modal da
+  // biblioteca ainda a lê até a TASK-012; nunca escrita pelo repositório.
+  mode?: ExerciseMode | null;
   deletedAt: string | null;
   createdAt: string;
   created_by: string;
@@ -96,6 +110,11 @@ export interface WorkoutEntryRow {
   exercise_id: string;
   position: number;
   rest_seconds: number | null;
+  // Modo e unidade da entry (Mílon #5, aditamento 2026-10-09 "0012 CORRETA",
+  // D29): colunas da migração 0012 nova; opcionais para linhas anteriores
+  // à migração (leitura com fallback repetição/kg).
+  mode?: string | null;
+  load_unit?: string | null;
   created_at: string;
   created_by: string;
 }
@@ -107,6 +126,10 @@ export interface WorkoutEntry {
   exerciseId: string;
   position: number;
   restSeconds: number | null;
+  // Opcionais com fallback de leitura (repetição/kg) para não quebrar
+  // fixtures pré-0012; novas entries nascem com repetição+kg.
+  mode?: EntryMode | null;
+  loadUnit?: LoadUnit | null;
   createdAt: string;
   created_by: string;
 }
@@ -115,8 +138,9 @@ export interface WorkoutSeriesRow {
   id: string;
   entry_id: string;
   position: number;
-  reps: number | null;
-  duration_seconds: number | null;
+  // Valor único da série (Mílon #5, aditamento 2026-10-10, D34): coluna value
+  // da migração 0013 (nulo = vazio); o significado vem do modo da entry.
+  value: number | null;
   load: number | null;
   created_at: string;
   created_by: string;
@@ -126,8 +150,7 @@ export interface WorkoutSeries {
   id: string;
   entryId: string;
   position: number;
-  reps: number | null;
-  durationSeconds: number | null;
+  value: number | null;
   load: number | null;
   createdAt: string;
   created_by: string;
@@ -145,6 +168,67 @@ export interface CreateWorkoutInput {
 
 export interface UpdateWorkoutInput {
   name: string;
+}
+
+// ----------------------------------------------------------------------------
+// Execução série a série (Mílon #5, D1/D2/D3): instância do treino + séries
+// realizadas. finishedAt nulo = execução aberta. O Treino do Dia exibe o
+// template ao vivo com marcadores de feito por série (sem foto; valores reais
+// ficam para o encerrar #7).
+// ----------------------------------------------------------------------------
+
+export interface WorkoutExecutionRow {
+  id: string;
+  workout_id: string;
+  program_id: string;
+  started_at: string;
+  finished_at: string | null;
+  created_at: string;
+  created_by: string;
+}
+
+export interface WorkoutExecution {
+  id: string;
+  workoutId: string;
+  programId: string;
+  startedAt: string;
+  finishedAt: string | null;
+  createdAt: string;
+  created_by: string;
+}
+
+export interface WorkoutExecutionSeriesRow {
+  id: string;
+  execution_id: string;
+  entry_id: string;
+  series_id: string;
+  position: number;
+  // Retrato com valor único (D34): acompanha a coluna value do template.
+  value: number | null;
+  load: number | null;
+  created_at: string;
+  created_by: string;
+}
+
+export interface WorkoutExecutionSeries {
+  id: string;
+  executionId: string;
+  entryId: string;
+  seriesId: string;
+  position: number;
+  value: number | null;
+  load: number | null;
+  createdAt: string;
+  created_by: string;
+}
+
+export interface MarkExecutionSeriesInput {
+  executionId: string;
+  entryId: string;
+  seriesId: string;
+  position: number;
+  value: number | null;
+  load: number | null;
 }
 
 // ----------------------------------------------------------------------------

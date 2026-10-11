@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import WorkoutPage from "@/app/milon/programs/[id]/workouts/[workoutId]/page";
 
@@ -65,12 +65,19 @@ vi.mock("@/components/milon/WorkoutDetailSection", () => ({
   WorkoutDetailSection: vi.fn(() => null),
 }));
 
+// Barrel de execuções mockado (replano 2ª volta): a página carrega a execução
+// aberta do treino e repassa executionBlocked à seção.
+vi.mock("@/lib/milon/db/executions", () => ({
+  findOpenExecutionByWorkoutStandalone: vi.fn(),
+}));
+
 import { WorkoutDetailSection as MockedSection } from "@/components/milon/WorkoutDetailSection";
+import { findOpenExecutionByWorkoutStandalone } from "@/lib/milon/db/executions";
 
 function renderedProps() {
   const mock = MockedSection as unknown as ReturnType<typeof vi.fn>;
   const last = mock.mock.calls.at(-1) as
-    | [{ workoutId?: string; backTarget?: unknown }]
+    | [{ workoutId?: string; backTarget?: unknown; executionBlocked?: boolean }]
     | undefined;
   return last?.[0] ?? {};
 }
@@ -211,5 +218,80 @@ describe("TASK-004 — wrapper da manutenção com MilonLayout (fonte, contrato 
 
   it("o wrapper declara MilonLayout com título (1 layout por rota)", () => {
     expect(workoutPageSource()).toMatch(/<MilonLayout/);
+  });
+});
+
+/**
+ * Replano 2ª volta — carregamento da execução aberta e executionBlocked.
+ *
+ * Fonte: spec §3 (enquanto houver execução aberta, o template daquele treino
+ * específico fica bloqueado para edição na manutenção) + plan.md §1
+ * (Mudança 3: a página carrega a execução aberta via
+ * findOpenExecutionByWorkoutStandalone e passa executionBlocked à seção) +
+ * tasks.json TASK-001.
+ *
+ * Expected: FAIL — a página ainda não carrega a execução aberta (o mock do
+ * barrel nunca é chamado e executionBlocked não é passado). Hefesto fará
+ * GREEN na TASK-004 sem mudar estes testes.
+ */
+describe("TASK-001 (2ª volta) — execução aberta e executionBlocked (RED)", () => {
+  const mockFindOpen = findOpenExecutionByWorkoutStandalone as unknown as ReturnType<
+    typeof vi.fn
+  >;
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    mockUseParams.mockReturnValue({ id: "prog-1", workoutId: "wout-1" });
+  });
+
+  function makeExecution() {
+    return {
+      id: "exec-1",
+      workoutId: "wout-1",
+      programId: "prog-1",
+      startedAt: "2026-10-08T10:00:00.000Z",
+      finishedAt: null,
+      createdAt: "2026-10-08T10:00:00.000Z",
+      created_by: "ana@hestia.lan",
+    };
+  }
+
+  it("carrega a execução aberta do treino (findOpenExecutionByWorkoutStandalone com workoutId)", async () => {
+    mockFindOpen.mockResolvedValue(null);
+
+    render(<WorkoutPage />);
+
+    await waitFor(() =>
+      expect(mockFindOpen).toHaveBeenCalledWith("wout-1"),
+    );
+  });
+
+  it("com execução aberta, passa executionBlocked=true à WorkoutDetailSection", async () => {
+    mockFindOpen.mockResolvedValue(makeExecution());
+
+    render(<WorkoutPage />);
+
+    await waitFor(() => expect(mockFindOpen).toHaveBeenCalled());
+    expect(renderedProps().executionBlocked).toBe(true);
+  });
+
+  it("sem execução aberta, passa executionBlocked=false à WorkoutDetailSection", async () => {
+    mockFindOpen.mockResolvedValue(null);
+
+    render(<WorkoutPage />);
+
+    await waitFor(() => expect(mockFindOpen).toHaveBeenCalled());
+    expect(renderedProps().executionBlocked).toBe(false);
+  });
+});
+
+describe("TASK-001 (2ª volta) — fonte: carregamento da execução aberta (RED)", () => {
+  it("a página importa findOpenExecutionByWorkoutStandalone de db/executions", () => {
+    expect(workoutPageSource()).toMatch(/findOpenExecutionByWorkoutStandalone/);
+  });
+
+  it("a página passa executionBlocked à WorkoutDetailSection", () => {
+    expect(workoutPageSource()).toMatch(/executionBlocked/);
   });
 });

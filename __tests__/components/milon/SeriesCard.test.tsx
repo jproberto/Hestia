@@ -1,12 +1,13 @@
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import SeriesCard from "@/components/milon/SeriesCard";
+import ExerciseEntryCard from "@/components/milon/ExerciseEntryCard";
 import {
   MSG_CARGA_NEGATIVA,
   MSG_CARGA_NAO_NUMERICA,
   formatarCargaComSecundaria,
 } from "@/lib/milon/workout-utils";
-import type { LoadUnit, WorkoutSeries } from "@/lib/milon/types";
+import type { Exercise, LoadUnit, WorkoutEntry, WorkoutEntryView, WorkoutSeries } from "@/lib/milon/types";
 
 /**
  * Contrato (plan.md §3 "SeriesCard (props)" + tasks.json TASK-013/TASK-022 +
@@ -27,7 +28,7 @@ import type { LoadUnit, WorkoutSeries } from "@/lib/milon/types";
  * - readOnly (Programa inativo) oculta campos e ações (TASK-014 AC5).
  */
 
-type SerieField = "reps" | "durationSeconds" | "load";
+type SerieField = "value" | "load";
 
 interface SeriesCardProps {
   series: WorkoutSeries;
@@ -47,8 +48,7 @@ function makeSeries(overrides: Partial<WorkoutSeries> = {}): WorkoutSeries {
     id: "s1",
     entryId: "entry-1",
     position: 1,
-    reps: null,
-    durationSeconds: null,
+    value: null,
     load: null,
     createdAt: CRIADO_EM,
     created_by: DONO,
@@ -110,15 +110,15 @@ describe("SeriesCard", () => {
   });
 
   describe("validações de inteiro (repetições e tempo)", () => {
-    it("repetições válidas commitam ('reps', número) e vazio commita null", () => {
+    it("repetições válidas commitam ('value', número) e vazio commita null", () => {
       const onCommit = vi.fn();
       render(<SeriesCard {...base({ onCommit })} />);
 
       digitarEComapitar(/repetições/i, "8");
-      expect(onCommit).toHaveBeenCalledWith("reps", 8);
+      expect(onCommit).toHaveBeenCalledWith("value", 8);
 
       digitarEComapitar(/repetições/i, "");
-      expect(onCommit).toHaveBeenLastCalledWith("reps", null);
+      expect(onCommit).toHaveBeenLastCalledWith("value", null);
     });
 
     it.each(["abc", "-1", "2.5"])(
@@ -138,14 +138,20 @@ describe("SeriesCard", () => {
       },
     );
 
-    it("tempo válido commita ('durationSeconds', número); inválido mostra a mensagem exata do rótulo 'tempo'", () => {
+    it("tempo válido commita ('value', número); inválido mostra a mensagem exata do rótulo 'tempo'", () => {
       const onCommit = vi.fn();
-      render(<SeriesCard {...base({ onCommit })} />);
+      // D27: modo pertence ao exercício (prop exerciseMode), sem alternância no card.
+      const props = {
+        ...base({ onCommit }),
+        exerciseMode: "tempo",
+      } as unknown as Parameters<typeof SeriesCard>[0];
+      render(<SeriesCard {...props} />);
 
-      // Alternar para modo tempo (o campo único reps/tempo tem toggle)
-      fireEvent.click(screen.getByRole("button", { name: /alternar para tempo/i }));
+      expect(
+        screen.queryByRole("button", { name: /alternar para (tempo|repetições)/i }),
+      ).not.toBeInTheDocument();
       digitarEComapitar(/tempo/i, "45");
-      expect(onCommit).toHaveBeenCalledWith("durationSeconds", 45);
+      expect(onCommit).toHaveBeenCalledWith("value", 45);
 
       digitarEComapitar(/tempo/i, "-1");
       expect(
@@ -261,14 +267,14 @@ describe("SeriesCard", () => {
   
 
   describe("toggle de unidade kg/lb abaixo da carga (CA-26)", () => {
-    it("clicar em lb dispara onChooseUnit('libra')", () => {
+    it("clicar em lb dispara onChooseUnit('lb')", () => {
       const onChooseUnit = vi.fn();
       render(<SeriesCard {...base({ onChooseUnit })} />);
 
       fireEvent.click(screen.getByRole("button", { name: /^lb$/i }));
 
       expect(onChooseUnit).toHaveBeenCalledTimes(1);
-      expect(onChooseUnit).toHaveBeenCalledWith("libra");
+      expect(onChooseUnit).toHaveBeenCalledWith("lb");
     });
 
     it("clicar em kg dispara onChooseUnit('kg')", () => {
@@ -295,5 +301,701 @@ describe("SeriesCard", () => {
       // O rótulo da série continua visível (conteúdo somente leitura).
       expect(screen.getByText("Série 1")).toBeInTheDocument();
     });
+  });
+
+  /**
+   * Contrato RED (correção 2026-10-08) — Mílon #5 Execução série a série:
+   * card inteiro clicável, SEM checkbox, SEM botão editar.
+   *
+   * Fonte: spec §3 alinhada (cada série é um card que é o próprio marcador;
+   * não há caixinha nem botão de editar; todo o card é área clicável; toque
+   * curto alterna na hora sem confirmação; toque longo abre o modal; marcada
+   * tem fundo na cor do módulo) + plan.md §3 (longo de 500ms sem alternar ao
+   * soltar; Enter/Espaço como alternativa por teclado; alvos ≥44px; readOnly
+   * não interage) + tasks.json TASK-005.
+   *
+   * CONTRATO FIXADO AQUI (nomes que a TASK-006 deve implementar, exportados
+   * pelo módulo do SeriesCard):
+   * - `export interface SeriesExecutionProps { doneBySeriesId:
+   *   Record<string, boolean>; onToggle: (seriesId: string) => void;
+   *   onOpenEditor: (seriesId: string) => void; }`
+   * - `SeriesCardProps` ganha `execution?: SeriesExecutionProps` (opt-in).
+   * - Em execução: card é `role="button"` (ou equivalente acessível) com o
+   *   nome da série; SEM `role="checkbox"`; SEM botão "Editar"; marcada usa
+   *   fundo na cor do módulo (#B7602B, MilonLayout).
+   *
+   * Expected: FAIL enquanto a produção ainda tem checkbox/botão e ainda não
+   * tem card-botão com fundo do módulo; o bloco "sem pacote" passa como trava
+   * de regressão. Hefesto fará GREEN na TASK-006.
+   */
+  describe("modo execução — card clicável (correção 2026-10-08 — RED)", () => {
+    interface SeriesExecutionProps {
+      doneBySeriesId: Record<string, boolean>;
+      onToggle: (seriesId: string) => void;
+      onOpenEditor: (seriesId: string) => void;
+    }
+
+    function exec(
+      overrides: Partial<SeriesExecutionProps> = {},
+    ): SeriesExecutionProps {
+      return {
+        doneBySeriesId: {},
+        onToggle: vi.fn(),
+        onOpenEditor: vi.fn(),
+        ...overrides,
+      };
+    }
+
+    /** Repassa `execution` sem erro de tipo (prop ainda não existe). */
+    function comExecucao(
+      props: Partial<SeriesCardProps> = {},
+      execution: SeriesExecutionProps,
+    ) {
+      return {
+        ...base(props),
+        ...( { execution } as unknown as Record<string, unknown> ),
+      };
+    }
+
+    function cartaoDaSerie(): HTMLElement {
+      return screen.getByRole("button", { name: /^série 1/i });
+    }
+
+    function temFundoDoModulo(el: HTMLElement): boolean {
+      const alvo = `${el.className} ${(el.getAttribute("style") ?? "")}`.toLowerCase();
+      return (
+        alvo.includes("b7602b") ||
+        alvo.includes("183, 96, 43") ||
+        alvo.includes("183,96,43")
+      );
+    }
+
+    it("com pacote exibe card clicável bloqueado (sem inputs de edição)", () => {
+      render(
+        <SeriesCard {...comExecucao({}, exec())} />,
+      );
+
+      expect(cartaoDaSerie()).toBeInTheDocument();
+      expect(screen.getByText("Série 1")).toBeInTheDocument();
+      expect(screen.queryByLabelText(/repetições/i)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/carga/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /aplicar a todas/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("com pacote não há checkbox nem botão de editar (card é o próprio marcador)", () => {
+      render(
+        <SeriesCard {...comExecucao({}, exec())} />,
+      );
+
+      expect(cartaoDaSerie()).toBeInTheDocument();
+      expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+      expect(
+        screen.queryByRole("button", { name: /editar/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("marcada tem fundo na cor do módulo; desmarcada não tem", () => {
+      const { unmount } = render(
+        <SeriesCard {...comExecucao({}, exec({ doneBySeriesId: { s1: true } }))} />,
+      );
+      expect(temFundoDoModulo(cartaoDaSerie())).toBe(true);
+      unmount();
+
+      render(
+        <SeriesCard {...comExecucao({}, exec({ doneBySeriesId: {} }))} />,
+      );
+      expect(temFundoDoModulo(cartaoDaSerie())).toBe(false);
+    });
+
+    it("toque curto no card alterna na hora (onToggle com o id)", () => {
+      const onToggle = vi.fn();
+      render(
+        <SeriesCard {...comExecucao({}, exec({ onToggle }))} />,
+      );
+
+      fireEvent.click(cartaoDaSerie());
+
+      expect(onToggle).toHaveBeenCalledTimes(1);
+      expect(onToggle).toHaveBeenCalledWith("s1");
+    });
+
+    it("toque longo de 500ms abre o editor sem disparar a alternância ao soltar", () => {
+      vi.useFakeTimers();
+      try {
+        const onToggle = vi.fn();
+        const onOpenEditor = vi.fn();
+        render(
+          <SeriesCard {...comExecucao({}, exec({ onToggle, onOpenEditor }))} />,
+        );
+
+        const alvo = cartaoDaSerie();
+        fireEvent.pointerDown(alvo, { pointerType: "touch" });
+        vi.advanceTimersByTime(500);
+        fireEvent.pointerUp(alvo, { pointerType: "touch" });
+
+        expect(onOpenEditor).toHaveBeenCalledTimes(1);
+        expect(onOpenEditor).toHaveBeenCalledWith("s1");
+        expect(onToggle).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("teclado (Enter/Espaço) no card focado equivale ao toque curto", () => {
+      const onToggle = vi.fn();
+      render(
+        <SeriesCard {...comExecucao({}, exec({ onToggle }))} />,
+      );
+
+      cartaoDaSerie().focus();
+      fireEvent.keyDown(document.activeElement as HTMLElement, { key: "Enter" });
+      expect(onToggle).toHaveBeenCalledTimes(1);
+
+      fireEvent.keyDown(document.activeElement as HTMLElement, { key: " " });
+      expect(onToggle).toHaveBeenCalledTimes(2);
+      expect(onToggle).toHaveBeenLastCalledWith("s1");
+    });
+
+    it("toque curto (<500ms) não abre o editor, só alterna", () => {
+      vi.useFakeTimers();
+      try {
+        const onToggle = vi.fn();
+        const onOpenEditor = vi.fn();
+        render(
+          <SeriesCard {...comExecucao({}, exec({ onToggle, onOpenEditor }))} />,
+        );
+
+        const alvo = cartaoDaSerie();
+        fireEvent.pointerDown(alvo, { pointerType: "touch" });
+        vi.advanceTimersByTime(200);
+        fireEvent.pointerUp(alvo, { pointerType: "touch" });
+        fireEvent.click(alvo);
+
+        expect(onOpenEditor).not.toHaveBeenCalled();
+        expect(onToggle).toHaveBeenCalledTimes(1);
+        expect(onToggle).toHaveBeenCalledWith("s1");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("alvos de toque com pelo menos 44px (mão suada)", () => {
+      render(
+        <SeriesCard {...comExecucao({}, exec())} />,
+      );
+
+      expect(cartaoDaSerie().className).toMatch(/44/);
+    });
+
+    it("programa inativo (readOnly) não interage mesmo com pacote", () => {
+      const onToggle = vi.fn();
+      const onOpenEditor = vi.fn();
+      render(
+        <SeriesCard
+          {...comExecucao({ readOnly: true }, exec({ onToggle, onOpenEditor }))}
+        />,
+      );
+
+      expect(
+        screen.queryByRole("button", { name: /^série 1/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+      expect(
+        screen.queryByRole("button", { name: /editar/i }),
+      ).not.toBeInTheDocument();
+      fireEvent.click(screen.getByText("Série 1"));
+
+      expect(onToggle).not.toHaveBeenCalled();
+      expect(onOpenEditor).not.toHaveBeenCalled();
+    });
+
+    it("sem pacote renderiza idêntico a hoje (trava de regressão — passa no RED)", () => {
+      render(<SeriesCard {...base()} />);
+
+      expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+      expect(
+        screen.queryByRole("button", { name: /^série 1/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByLabelText(/repetições/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /aplicar a todas/i }),
+      ).toBeInTheDocument();
+    });
+  });
+});
+
+/**
+ * Correção humana 2026-10-08 (verdade) — Mílon #5 Execução série a série:
+ * (1) toggles de tempo/repetições e kg/lb aparecem SOMENTE no modal
+ * (SeriesEditModal, inalterado); no card do Treino do Dia mostra-se SOMENTE
+ * o que está valendo (rótulos + valores + unidade vigentes, sem botões
+ * alternar/kg/lb no card em execução). (2) Texto cinza sobre fundo marrom
+ * da marcada → cinza mais claro (contraste).
+ *
+ * Fonte: correção humana delegada via Zeus (spec §3 "mesma cara" lida com a
+ * correção: rótulos e valores mantidos, toggles só no modal) + manutenção
+ * inalterada (com toggles — trava de regressão no bloco acima).
+ *
+ * Expected: FAIL — o ramo de execução ainda renderiza os toggles
+ * (alternar + kg/lb + linha "Unidade:") e ainda usa text-muted-foreground
+ * sobre o fundo #B7602B. Hefesto fará GREEN removendo os toggles do card
+ * e clareando o cinza da marcada, sem mudar estes testes.
+ */
+describe("SeriesCard — execução somente leitura vigente (correção 2026-10-08 — RED)", () => {
+  interface ExecPkg {
+    doneBySeriesId: Record<string, boolean>;
+    onToggle: (seriesId: string) => void;
+    onOpenEditor: (seriesId: string) => void;
+  }
+
+  function execPkg(overrides: Partial<ExecPkg> = {}): ExecPkg {
+    return {
+      doneBySeriesId: {},
+      onToggle: vi.fn(),
+      onOpenEditor: vi.fn(),
+      ...overrides,
+    };
+  }
+
+  function renderExecucao(
+    seriesOverrides: Partial<WorkoutSeries> = {},
+    loadUnit: LoadUnit | null = "kg",
+    pkgOverrides: Partial<ExecPkg> = {},
+  ) {
+    const props = {
+      ...base({
+        series: makeSeries({ value: 10, load: 50, ...seriesOverrides }),
+        loadUnit,
+      }),
+      execution: execPkg(pkgOverrides),
+    } as unknown as Parameters<typeof SeriesCard>[0];
+    render(<SeriesCard {...props} />);
+  }
+
+  it("com valor exibe o rótulo Repetições (não só números)", () => {
+    renderExecucao({ value: 10 });
+
+    expect(screen.getByText("Repetições")).toBeInTheDocument();
+  });
+
+  it("com tempo exibe o rótulo Tempo (s) conforme o modo", () => {
+    // D27: rótulo deriva de exerciseMode (fallback repetições) — passa o modo tempo.
+    const props = {
+      ...base({
+        series: makeSeries({ value: 45, load: 50 }),
+        loadUnit: "kg" as LoadUnit,
+      }),
+      execution: execPkg({}),
+      exerciseMode: "tempo",
+    } as unknown as Parameters<typeof SeriesCard>[0];
+    render(<SeriesCard {...props} />);
+
+    expect(screen.getByText("Tempo (s)")).toBeInTheDocument();
+  });
+
+  it("exibe o rótulo Carga com a unidade visível", () => {
+    renderExecucao({ load: 50 }, "kg");
+
+    expect(screen.getByText("Carga")).toBeInTheDocument();
+    expect(screen.getByText(/kg/)).toBeInTheDocument();
+  });
+
+  it("exibe a conversão secundária de carga da manutenção", () => {
+    renderExecucao({ load: 50 }, "kg");
+
+    const { secundaria } = formatarCargaComSecundaria(50, "kg");
+    expect(secundaria).toBe("110.2");
+    expect(screen.getByText(new RegExp(secundaria ?? ""))).toBeInTheDocument();
+  });
+
+  it("NÃO expõe botão de alternar repetição/tempo no card em execução (só no modal)", () => {
+    renderExecucao();
+
+    expect(
+      screen.queryByRole("button", { name: /alternar para (tempo|repetições)/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("NÃO expõe botões kg/lb no card em execução (só no modal)", () => {
+    renderExecucao();
+
+    expect(screen.queryByRole("button", { name: /^kg$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^lb$/i })).not.toBeInTheDocument();
+  });
+
+  it("NÃO exibe linha de Unidade: no card em execução", () => {
+    renderExecucao({ load: 50 }, "kg");
+
+    expect(screen.queryByText(/unidade:/i)).not.toBeInTheDocument();
+  });
+
+  it("marcada tem fundo na cor do módulo (#B7602B)", () => {
+    const props = {
+      ...base({ series: makeSeries({ value: 10, load: 50 }) }),
+      execution: execPkg({ doneBySeriesId: { s1: true } }),
+    } as unknown as Parameters<typeof SeriesCard>[0];
+    render(<SeriesCard {...props} />);
+
+    const cartao = screen.getByRole("button", { name: /^série 1/i });
+    const alvo = `${cartao.className} ${(cartao.getAttribute("style") ?? "")}`.toLowerCase();
+    expect(alvo).toMatch(/b7602b/);
+  });
+
+  it("não há checkbox nem botão de marcar (o card é o próprio marcador)", () => {
+    renderExecucao();
+
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    expect(
+      screen.queryByRole("button", { name: /marcar/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("D17: sem botão Aplicar a todas em execução", () => {
+    renderExecucao();
+
+    expect(
+      screen.queryByRole("button", { name: /aplicar a todas/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("exibe somente o valor vigente como texto (card somente leitura, sem inputs)", () => {
+    renderExecucao({ value: 10, load: 50 }, "kg");
+
+    expect(screen.getByText("Repetições")).toBeInTheDocument();
+    expect(screen.getByText("10")).toBeInTheDocument();
+    expect(screen.getByText("Carga")).toBeInTheDocument();
+    expect(screen.getByText("50")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  it("marcada usa cinza claro na conversão secundária (contraste sobre #B7602B, sem muted-foreground)", () => {
+    const props = {
+      ...base({ series: makeSeries({ value: 10, load: 50 }) }),
+      execution: execPkg({ doneBySeriesId: { s1: true } }),
+    } as unknown as Parameters<typeof SeriesCard>[0];
+    render(<SeriesCard {...props} />);
+
+    const { secundaria } = formatarCargaComSecundaria(50, "kg");
+    const convertido = screen.getByText(new RegExp(secundaria ?? ""));
+    expect(convertido.className).not.toMatch(/muted-foreground/);
+    expect(convertido.className).toMatch(
+      /text-(white|stone-(100|200)|neutral-(100|200)|zinc-(100|200)|slate-(100|200)|gray-(100|200))/,
+    );
+  });
+});
+
+/**
+ * Contrato RED da TASK-006 (Mílon #5, aditamento 2026-10-09 dos 3 achados).
+ *
+ * Fonte: tasks.json TASK-006 (SeriesCard: rótulo pelo modo nos dois modos
+ * + fallback repetição quando nulo) + plan.md Aditamento §1 Mudança B +
+ * §3 (Card: recebe o modo como propriedade no mesmo padrão da unidade;
+ * rótulo deriva do modo; sem alternância; ramo de execução só leitura
+ * com fundo do módulo quando feita; controle de unidade da manutenção
+ * inalterado) + spec §3 (rótulo conforme o modo do exercício) + D27.
+ *
+ * Contrato fixado aqui (nomes que a TASK-008 deve implementar):
+ * - SeriesCardProps ganha `exerciseMode: "repeticao" | "tempo" | null`
+ *   (mesmo padrão do `loadUnit` vigente; nulo = fallback repetições);
+ * - o rótulo do valor deriva do MODO DO EXERCÍCIO, nunca do dado da
+ *   série, nos dois ramos (manutenção e execução);
+ * - SEM botão de alternância repetição/tempo no card (modo pertence ao
+ *   exercício); o controle de unidade kg/lb da manutenção permanece
+ *   inalterado (trava verde).
+ *
+ * Expected: FAIL — o card atual deriva do dado da série e tem a
+ * alternância local. Hefesto fará GREEN na TASK-008 sem mudar estes
+ * testes. Props novas via cast para o tsc seguir verde no RED.
+ */
+describe("SeriesCard — rótulo pelo modo do exercício (TASK-006 — RED)", () => {
+  type CardProps = Parameters<typeof SeriesCard>[0];
+
+  function renderManutencao(
+    seriesOverrides: Partial<WorkoutSeries> = {},
+    exerciseMode: "repeticao" | "tempo" | null = "repeticao",
+  ) {
+    const props = {
+      ...base({
+        series: makeSeries({ value: null, load: null, ...seriesOverrides }),
+        loadUnit: "kg",
+      }),
+      exerciseMode,
+    } as unknown as CardProps;
+    render(<SeriesCard {...props} />);
+  }
+
+  function renderExecucao(
+    seriesOverrides: Partial<WorkoutSeries> = {},
+    exerciseMode: "repeticao" | "tempo" | null = "repeticao",
+  ) {
+    const props = {
+      ...base({
+        series: makeSeries({ value: null, load: null, ...seriesOverrides }),
+        loadUnit: "kg",
+      }),
+      exerciseMode,
+      execution: {
+        doneBySeriesId: {},
+        onToggle: vi.fn(),
+        onOpenEditor: vi.fn(),
+      },
+    } as unknown as CardProps;
+    render(<SeriesCard {...props} />);
+  }
+
+  it("manutenção modo repeticao rotula Repetições mesmo com série de tempo", () => {
+    renderManutencao({ value: 45 }, "repeticao");
+
+    expect(screen.getByText("Repetições")).toBeInTheDocument();
+    expect(screen.queryByText("Tempo (s)")).not.toBeInTheDocument();
+  });
+
+  it("manutenção modo tempo rotula Tempo (s) mesmo com série de valor", () => {
+    renderManutencao({ value: 10 }, "tempo");
+
+    expect(screen.getByText("Tempo (s)")).toBeInTheDocument();
+    expect(screen.queryByText("Repetições")).not.toBeInTheDocument();
+  });
+
+  it("manutenção modo nulo usa fallback repetições mesmo com série de tempo", () => {
+    renderManutencao({ value: 45 }, null);
+
+    expect(screen.getByText("Repetições")).toBeInTheDocument();
+    expect(screen.queryByText("Tempo (s)")).not.toBeInTheDocument();
+  });
+
+  it("execução modo tempo rotula Tempo (s) mesmo com série de valor", () => {
+    renderExecucao({ value: 10, load: 50 }, "tempo");
+
+    expect(screen.getByText("Tempo (s)")).toBeInTheDocument();
+    expect(screen.queryByText("Repetições")).not.toBeInTheDocument();
+  });
+
+  it("execução modo repeticao rotula Repetições mesmo com série de tempo", () => {
+    renderExecucao({ value: 45, load: 50 }, "repeticao");
+
+    expect(screen.getByText("Repetições")).toBeInTheDocument();
+    expect(screen.queryByText("Tempo (s)")).not.toBeInTheDocument();
+  });
+
+  it("NÃO expõe alternância de modo no card de manutenção (modo pertence ao exercício)", () => {
+    renderManutencao({ value: 10 }, "repeticao");
+
+    expect(
+      screen.queryByRole("button", {
+        name: /alternar para (tempo|repetições)/i,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("trava: controle de unidade kg/lb da manutenção permanece inalterado", () => {
+    renderManutencao({ value: 10, load: 20 }, "repeticao");
+
+    expect(
+      screen.getByRole("button", { name: /^kg$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^lb$/i }),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+ * Contrato RED da TASK-010 (Mílon #5, Aditamento 2026-10-09 "0012 CORRETA").
+ *
+ * Fonte: tasks.json TASK-010 (SeriesCard: rótulo e unidade vindos da entry)
+ * + plan.md Aditamento 0012 CORRETA §1 Mudança C + §3 (Card de série: mesmos
+ * nomes de props, fonte trocada para a entry) + D32 + spec §3.
+ *
+ * CONTRATO FIXADO AQUI: o SeriesCard continua recebendo `exerciseMode` /
+ * `loadUnit` (D32 — sem rename), mas os chamadores (ExerciseEntryCard via
+ * WorkoutEntriesList/WorkoutDetailSection) passam a alimentar com os valores
+ * DA ENTRY. A divergência biblioteca × entry prova a fonte: entry em tempo
+ * + biblioteca sem modo exibe "Tempo (s)"; entry em lb + biblioteca em kg
+ * exibe a unidade "lb" como texto (ramo de execução, somente leitura).
+ *
+ * Expected: FAIL — a entry card atual repassa valores da biblioteca.
+ * Hefesto fará GREEN na TASK-012 sem mudar estes testes (os callbacks novos
+ * da entry vão por spread com cast para compilar antes e depois).
+ */
+describe("SeriesCard — valores vindos da entry (TASK-010 — RED)", () => {
+  function viewDivergente(): WorkoutEntryView {
+    const exercise: Exercise = {
+      id: "ex-1",
+      name: "Supino reto",
+      muscle: "Peito",
+      videoLink: null,
+      loadUnit: "kg",
+      deletedAt: null,
+      createdAt: CRIADO_EM,
+      created_by: DONO,
+    };
+    const entry = {
+      id: "entry-1",
+      workoutId: "wout-1",
+      programId: "prog-1",
+      exerciseId: "ex-1",
+      position: 1,
+      restSeconds: null,
+      createdAt: CRIADO_EM,
+      created_by: DONO,
+      mode: "tempo",
+      loadUnit: "lb",
+    } as unknown as WorkoutEntry;
+    return {
+      entry,
+      exercise,
+      series: [makeSeries({ id: "s1", entryId: "entry-1", position: 1, load: 50 })],
+    };
+  }
+
+  function renderPelaEntry() {
+    const props = {
+      entryView: viewDivergente(),
+      readOnly: false,
+      unitPromptValue: null,
+      saving: false,
+      onQuantityCommit: vi.fn(),
+      onRequestReduce: vi.fn(),
+      onRestCommit: vi.fn(),
+      onSeriesCommit: vi.fn(),
+      onApplyAll: vi.fn(),
+      onEditExercise: vi.fn(),
+      onRemoveEntry: vi.fn(),
+      onChooseUnit: vi.fn(),
+      ...({ onModeCommit: vi.fn(), onUnitCommit: vi.fn() } as unknown as Record<
+        string,
+        unknown
+      >),
+      execution: {
+        doneBySeriesId: {},
+        onToggle: vi.fn(),
+        onOpenEditor: vi.fn(),
+      },
+    } as unknown as Parameters<typeof ExerciseEntryCard>[0];
+    render(<ExerciseEntryCard {...props} />);
+  }
+
+  function elementoDaEntry(): HTMLElement {
+    const el = document.querySelector('[data-entry-id="entry-1"]');
+    if (!el) throw new Error("Card da entry não renderizado");
+    return el as HTMLElement;
+  }
+
+  it("rótulo do card vem DA ENTRY (Tempo (s) com biblioteca sem modo)", () => {
+    renderPelaEntry();
+
+    expect(
+      within(elementoDaEntry()).getByText("Tempo (s)"),
+    ).toBeInTheDocument();
+  });
+
+  it("unidade do card vem DA ENTRY (lb como texto com biblioteca em kg)", () => {
+    renderPelaEntry();
+
+    // A unidade da entry aparece no card de série em execução (biblioteca em
+    // kg não vaza para o treino); o seletor de unidade da entry também exibe
+    // lb, então a asserção é escopada ao card da série.
+    const cartao = within(elementoDaEntry()).getByRole("button", {
+      name: /^série 1/i,
+    });
+    expect(within(cartao).getByText("lb")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-013 (Mílon #5, Aditamento 2026-10-10 "valor único +
+// lb") — consumido pela TASK-015.
+// Fonte: tasks.json TASK-013 + spec §3 (campo único com rótulo pelo modo da
+// entry; unidade abreviada kg/lb exibida direta) + plan.md Aditamento
+// 2026-10-10 §1 (Mudanças A/B), §3 e D34/D38.
+// Expected: FAIL (card atual lê value legado, commita campo antigo e
+// commita/exibe unidade por extenso).
+// Convenção: `value` via cast — o tipo ainda não tem o campo (RED inclui os
+// tipos); em runtime o objeto o carrega.
+// ---------------------------------------------------------------------------
+
+describe("Milon 05 TASK-013 RED — SeriesCard com valor único + lb (D34/D38)", () => {
+  type SerieComValor = WorkoutSeries & { value: number | null };
+
+  function serieValorRed(overrides: Partial<SerieComValor> = {}): SerieComValor {
+    return {
+      id: "s1",
+      entryId: "entry-1",
+      position: 1,
+      load: null,
+      value: null,
+      createdAt: CRIADO_EM,
+      created_by: DONO,
+      ...overrides,
+    } as SerieComValor;
+  }
+
+  function renderCardRed(props: {
+    series: WorkoutSeries;
+    loadUnit: LoadUnit | null;
+    exerciseMode: "repeticao" | "tempo";
+    onCommit?: (field: string, value: number | null) => void;
+    onChooseUnit?: (unit: LoadUnit) => void;
+  }) {
+    render(
+      <SeriesCard
+        series={props.series}
+        index={0}
+        loadUnit={props.loadUnit}
+        exerciseMode={props.exerciseMode}
+        readOnly={false}
+        onCommit={(props.onCommit ?? vi.fn()) as (field: "value" | "load", value: number | null) => void}
+        onApplyAll={vi.fn()}
+        onChooseUnit={(props.onChooseUnit ?? vi.fn()) as (unit: LoadUnit) => void}
+      />,
+    );
+  }
+
+  it("exibe o valor único no campo único (modo repetições da entry)", () => {
+    renderCardRed({
+      series: serieValorRed({ value: 12 }) as unknown as WorkoutSeries,
+      loadUnit: "kg",
+      exerciseMode: "repeticao",
+    });
+    expect(screen.getByDisplayValue("12")).toBeInTheDocument();
+  });
+
+  it("campo único commita value (não reps/durationSeconds)", () => {
+    const onCommit = vi.fn();
+    renderCardRed({
+      series: serieValorRed() as unknown as WorkoutSeries,
+      loadUnit: "kg",
+      exerciseMode: "repeticao",
+      onCommit,
+    });
+    const campo = screen.getByLabelText(/repetições/i);
+    fireEvent.blur(campo, { target: { value: "9" } });
+    expect(onCommit).toHaveBeenCalledWith("value", 9);
+  });
+
+  it("alternador de unidade commita lb com rótulo lb", () => {
+    const onChooseUnit = vi.fn();
+    renderCardRed({
+      series: serieValorRed() as unknown as WorkoutSeries,
+      loadUnit: null,
+      exerciseMode: "repeticao",
+      onChooseUnit,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "lb" }));
+    expect(onChooseUnit).toHaveBeenCalledWith("lb");
+  });
+
+  it("unidade secundária convertida usa lb direto (sem extenso)", () => {
+    renderCardRed({
+      series: serieValorRed({ value: 10, load: 100 }) as unknown as WorkoutSeries,
+      loadUnit: "kg",
+      exerciseMode: "repeticao",
+    });
+    // 100 kg ≈ 220.5 lb na secundária; rótulo direto "lb", nunca "libra".
+    expect(screen.getByText(/220\.5 lb/)).toBeInTheDocument();
+    expect(screen.queryByText(/libra/i)).toBeNull();
   });
 });

@@ -14,6 +14,8 @@ import {
 } from "../../workout-utils";
 import type {
   CreateWorkoutInput,
+  EntryMode,
+  LoadUnit,
   UpdateWorkoutInput,
   Workout,
   WorkoutEntry,
@@ -24,6 +26,16 @@ export interface WorkoutSeed {
   workouts?: Workout[];
   entries?: WorkoutEntry[];
   series?: WorkoutSeries[];
+}
+
+function withEntryDefaults(entry: WorkoutEntry): WorkoutEntry {
+  return {
+    ...entry,
+    // Seeds pré-0012 (sem os campos): nulo tratado como repetição/kg,
+    // mesmo fallback do repository real.
+    mode: entry.mode ?? "repeticao",
+    loadUnit: entry.loadUnit ?? "kg",
+  };
 }
 
 function sortWorkouts(workouts: Workout[]): Workout[] {
@@ -137,13 +149,14 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
   async listEntriesByWorkout(workoutId: string): Promise<WorkoutEntry[]> {
     return [...this.entries.values()]
       .filter((e) => e.workoutId === workoutId)
-      .sort((a, b) => a.position - b.position);
+      .sort((a, b) => a.position - b.position)
+      .map(withEntryDefaults);
   }
 
   async listEntriesByProgram(programId: string): Promise<WorkoutEntry[]> {
-    return [...this.entries.values()].filter(
-      (e) => e.programId === programId,
-    );
+    return [...this.entries.values()]
+      .filter((e) => e.programId === programId)
+      .map(withEntryDefaults);
   }
 
   async addEntry(
@@ -167,6 +180,9 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
       exerciseId,
       position,
       restSeconds: null,
+      // Novas entries nascem com os padrões repetição+kg (D29).
+      mode: "repeticao",
+      loadUnit: "kg",
       createdAt: new Date().toISOString(),
       created_by: email,
     };
@@ -212,6 +228,18 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
     this.entries.set(entryId, { ...entry, restSeconds: seconds });
   }
 
+  async setEntryMode(entryId: string, mode: EntryMode): Promise<void> {
+    const entry = this.entries.get(entryId);
+    if (!entry) throw new Error("Exercício do treino não encontrado.");
+    this.entries.set(entryId, { ...entry, mode });
+  }
+
+  async setEntryLoadUnit(entryId: string, unit: LoadUnit): Promise<void> {
+    const entry = this.entries.get(entryId);
+    if (!entry) throw new Error("Exercício do treino não encontrado.");
+    this.entries.set(entryId, { ...entry, loadUnit: unit });
+  }
+
   async listSeriesByEntry(entryId: string): Promise<WorkoutSeries[]> {
     return [...this.series.values()]
       .filter((s) => s.entryId === entryId)
@@ -246,8 +274,7 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
         id: this.nextId("s"),
         entryId,
         position,
-        reps: null,
-        durationSeconds: null,
+        value: null,
         load: null,
         createdAt: new Date().toISOString(),
         created_by: email,
@@ -265,11 +292,7 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
     if (!atual) throw new Error("Série não encontrada.");
     const updated: WorkoutSeries = {
       ...atual,
-      reps: "reps" in fields ? (fields.reps ?? null) : atual.reps,
-      durationSeconds:
-        "durationSeconds" in fields
-          ? (fields.durationSeconds ?? null)
-          : atual.durationSeconds,
+      value: "value" in fields ? (fields.value ?? null) : atual.value,
       load: "load" in fields ? (fields.load ?? null) : atual.load,
     };
     this.series.set(seriesId, updated);
@@ -287,8 +310,25 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
       if (serie.id === originSeriesId) continue;
       this.series.set(serie.id, {
         ...serie,
-        reps: origem.reps,
-        durationSeconds: origem.durationSeconds,
+        value: origem.value,
+        load: origem.load,
+      });
+    }
+    return await this.listSeriesByEntry(entryId);
+  }
+
+  async applySeriesToFollowing(
+    entryId: string,
+    originSeriesId: string,
+  ): Promise<WorkoutSeries[]> {
+    const series = await this.listSeriesByEntry(entryId);
+    const origem = series.find((s) => s.id === originSeriesId);
+    if (!origem) throw new Error("Série de origem não encontrada.");
+    for (const serie of series) {
+      if (serie.position <= origem.position) continue;
+      this.series.set(serie.id, {
+        ...serie,
+        value: origem.value,
         load: origem.load,
       });
     }

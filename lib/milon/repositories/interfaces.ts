@@ -1,7 +1,9 @@
 // Contratos de repositório do módulo Mílon (DIP: consumidos via interfaces).
 import type {
+  EntryMode,
   Exercise,
   CreateExerciseInput,
+  LoadUnit,
   UpdateExerciseInput,
   MilonItem,
   CreateMilonInput,
@@ -11,6 +13,9 @@ import type {
   Workout,
   WorkoutEntry,
   WorkoutSeries,
+  WorkoutExecution,
+  WorkoutExecutionSeries,
+  MarkExecutionSeriesInput,
   CreateWorkoutInput,
   UpdateWorkoutInput,
 } from "../types";
@@ -39,8 +44,7 @@ export interface IProgramRepository {
 }
 
 export interface UpdateSeriesFieldsInput {
-  reps?: number | null;
-  durationSeconds?: number | null;
+  value?: number | null;
   load?: number | null;
 }
 
@@ -70,6 +74,10 @@ export interface IWorkoutRepository {
   removeEntry(entryId: string): Promise<void>;
   reorderEntries(workoutId: string, orderedEntryIds: string[]): Promise<void>;
   setEntryRestSeconds(entryId: string, seconds: number | null): Promise<void>;
+  // Ajustes de modo/unidade da entry (Mílon #5, aditamento 2026-10-09 "0012
+  // CORRETA", D29): persistem o modo e a unidade do exercício NO TREINO.
+  setEntryMode(entryId: string, mode: EntryMode): Promise<void>;
+  setEntryLoadUnit(entryId: string, unit: LoadUnit): Promise<void>;
   listSeriesByEntry(entryId: string): Promise<WorkoutSeries[]>;
   setSeriesQuantity(
     entryId: string,
@@ -84,4 +92,28 @@ export interface IWorkoutRepository {
     entryId: string,
     originSeriesId: string,
   ): Promise<WorkoutSeries[]>;
+  applySeriesToFollowing(
+    entryId: string,
+    originSeriesId: string,
+  ): Promise<WorkoutSeries[]>;
+}
+
+// Execução série a série (Mílon #5): feito vive nas realizadas, nunca no template.
+// MarkExecutionSeriesInput vive na fonte única (../types) e é reusado aqui.
+export { type MarkExecutionSeriesInput } from "../types";
+
+export interface IWorkoutExecutionRepository {
+  findOpenExecutionByWorkout(workoutId: string): Promise<WorkoutExecution | null>;
+  startExecution(
+    workoutId: string,
+    programId: string,
+    email: string,
+  ): Promise<WorkoutExecution>;
+  clearExecution(executionId: string): Promise<void>;
+  listDoneByExecution(executionId: string): Promise<WorkoutExecutionSeries[]>;
+  markSeriesDone(
+    input: MarkExecutionSeriesInput,
+    email: string,
+  ): Promise<WorkoutExecutionSeries>;
+  unmarkSeries(executionId: string, seriesId: string): Promise<void>;
 }

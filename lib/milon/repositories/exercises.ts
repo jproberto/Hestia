@@ -20,6 +20,7 @@ function toDomain(row: ExerciseRow): Exercise {
     name: row.name,
     muscle: row.muscle,
     videoLink: row.video_link,
+    // Unidade legada da biblioteca (0009, D30): lida, ignorada no treino.
     loadUnit: (row.load_unit as LoadUnit | null) ?? null,
     deletedAt: row.deleted_at,
     createdAt: row.created_at,
@@ -77,6 +78,8 @@ export async function createExercise(
 ): Promise<Exercise> {
   await assertNoDuplicate(db, input.name, input.muscle);
 
+  // Biblioteca com só nome, músculo e vídeo (D33, reversão do
+  // modo-na-biblioteca): extras de modo/unidade são ignorados.
   const { data, error } = await db
     .from<ExerciseRow>("exercises")
     .insert({
@@ -127,18 +130,6 @@ export async function deleteExercise(
   if (error) throw error;
 }
 
-export async function setExerciseLoadUnit(
-  db: IDatabaseClient,
-  id: string,
-  unit: LoadUnit,
-): Promise<void> {
-  const { error } = await db
-    .from<ExerciseRow>("exercises")
-    .update({ load_unit: unit })
-    .eq("id", id);
-  if (error) throw error;
-}
-
 // Standalones p/ hooks (criam o próprio client, singleton por aba).
 export async function listExercisesStandalone(): Promise<Exercise[]> {
   return listExercises(createBrowserDatabaseClient());
@@ -164,11 +155,4 @@ export async function updateExerciseStandalone(
 
 export async function deleteExerciseStandalone(id: string): Promise<void> {
   return deleteExercise(createBrowserDatabaseClient(), id);
-}
-
-export async function setExerciseLoadUnitStandalone(
-  id: string,
-  unit: LoadUnit,
-): Promise<void> {
-  return setExerciseLoadUnit(createBrowserDatabaseClient(), id, unit);
 }

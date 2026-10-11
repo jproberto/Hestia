@@ -9,9 +9,7 @@ import {
   createExercise,
   updateExercise,
   deleteExercise,
-  setExerciseLoadUnit,
   listExercisesAllStandalone,
-  setExerciseLoadUnitStandalone,
   EXERCISE_DUPLICATE_MESSAGE,
 } from "@/lib/milon/db/exercises";
 
@@ -24,9 +22,11 @@ import {
 //   - `listExercisesAll` NÃO aplica esse filtro (renderização de treino);
 //   - `deleteExercise` vira SOFT DELETE: `update({ deleted_at: <ISO> })` em vez
 //     de `.delete()` — a linha nunca é removida;
-//   - `setExerciseLoadUnit(db, id, unit)` grava só `load_unit`;
-//   - standalones `listExercisesAllStandalone()` / `setExerciseLoadUnitStandalone(id, unit)`;
-//   - `toDomain` mapeia `load_unit`→`loadUnit` e `deleted_at`→`deletedAt`.
+//   - standalones `listExercisesAllStandalone()`;
+//   - `toDomain` mapeia `load_unit`→`loadUnit` e `deleted_at`→`deletedAt`
+//     (D33: sem `mode` na leitura nova).
+// (D33, reversão biblioteca: `setExerciseLoadUnit[Standalone]` REMOVIDOS do
+// repository — ausência asserida em contract-exercises TASK-010.)
 // ---------------------------------------------------------------------------
 
 const EMAIL = "barrel@hestia.lan";
@@ -173,15 +173,14 @@ describe("lib/milon/db/exercises (barrel oficial da UI, TASK-004)", () => {
 
   it("re-exporta as funções novas do contrato da #3 como funções do barrel", () => {
     // typeof primeiro: sem isso, undefined === undefined passaria falso-verde.
+    // D33 (reversão biblioteca): setExerciseLoadUnit[Standalone] REMOVIDOS do
+    // repository — ausência asserida em contract-exercises (TASK-010); aqui só
+    // o listAll permanece como função do barrel.
     expect(typeof listExercisesAll).toBe("function");
-    expect(typeof setExerciseLoadUnit).toBe("function");
     expect(typeof listExercisesAllStandalone).toBe("function");
-    expect(typeof setExerciseLoadUnitStandalone).toBe("function");
 
     expect(listExercisesAll).toBe(exerciseRepository.listExercisesAll);
-    expect(setExerciseLoadUnit).toBe(exerciseRepository.setExerciseLoadUnit);
     expect(listExercisesAllStandalone).toBe(exerciseRepository.listExercisesAllStandalone);
-    expect(setExerciseLoadUnitStandalone).toBe(exerciseRepository.setExerciseLoadUnitStandalone);
   });
 
   it("lista via barrel só ativos (.is deleted_at null) ordenando por músculo e nome", async () => {
@@ -203,6 +202,8 @@ describe("lib/milon/db/exercises (barrel oficial da UI, TASK-004)", () => {
         created_by: EMAIL,
       },
     ]);
+    // D33 (biblioteca sem modo): a chave nem existe na leitura nova.
+    expect(listed[0].mode).toBeUndefined();
   });
 
   it("listExercisesAll lista tudo SEM o filtro de deleted_at (contexto de treino)", async () => {
@@ -280,16 +281,10 @@ describe("lib/milon/db/exercises (barrel oficial da UI, TASK-004)", () => {
     expect(recorded.payload?.deleted_at).not.toBeNull();
   });
 
-  it("setExerciseLoadUnit grava só a unidade de carga no exercício", async () => {
-    const recorded: WriteRecorded = {};
-    await expect(
-      setExerciseLoadUnit(stubWriteDb(recorded), "ex-1", "kg"),
-    ).resolves.toBeUndefined();
-
-    expect(recorded.kind).toBe("update");
-    expect(recorded.eq).toEqual(["id", "ex-1"]);
-    expect(recorded.payload).toEqual({ load_unit: "kg" });
-  });
+  // D33 (reversão biblioteca): setExerciseLoadUnit removido do repository —
+  // sem teste de gravação de unidade aqui (ausência asserida em
+  // contract-exercises TASK-010). Shim transitório em db/exercises.ts cai na
+  // TASK-012 junto aos chamadores do treino.
 
   it("bloqueia duplicado via barrel com a mensagem fixa do repository", async () => {
     const recorded: { payload?: Record<string, unknown> } = {};

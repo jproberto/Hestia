@@ -78,7 +78,11 @@ export default function ExerciseModal({
     setValidationError(null);
     try {
       await onSave(
-        { name: trimmedName, muscle: trimmedMuscle, videoLink: trimmedLink || null },
+        {
+          name: trimmedName,
+          muscle: trimmedMuscle,
+          videoLink: trimmedLink || null,
+        },
         action,
       );
       if (action === "salvar") {

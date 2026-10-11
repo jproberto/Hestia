@@ -286,6 +286,7 @@ function renderedSectionProps(): {
   headerActions?: unknown;
   entryFooter?: unknown;
   footer?: unknown;
+  executionEnabled?: unknown;
 } {
   const mock = MockedSection as unknown as ReturnType<typeof vi.fn>;
   const last = mock.mock.calls.at(-1) as
@@ -296,6 +297,7 @@ function renderedSectionProps(): {
           headerActions?: unknown;
           entryFooter?: unknown;
           footer?: unknown;
+          executionEnabled?: unknown;
         },
       ]
     | undefined;
@@ -750,5 +752,46 @@ describe("Treino do Dia — layout único (contrato layout-único — RED)", () 
 
   it("a seção não traz layout próprio (0 ocorrências de MilonLayout na seção — sem duplicata)", () => {
     expect(sectionSourceFromToday().split("MilonLayout").length - 1).toBe(0);
+  });
+});
+
+/**
+ * Contrato RED — Mílon #5 Execução série a série (TASK-005):
+ * a página do Treino do Dia liga a flag de execução.
+ *
+ * Fonte: plan.md §1 (a página passa a ligar a flag de execução na seção)
+ * + §2 (app/milon/today/page.tsx passa executionEnabled ligada; resto
+ * idêntico) + tasks.json TASK-005 (expectativa nova: seção recebe
+ * executionEnabled ligada).
+ *
+ * Expected: FAIL (página ainda não passa a flag — prop undefined);
+ * Hefesto fará GREEN na TASK-006 sem outra mudança na página.
+ */
+describe("Treino do Dia — flag de execução (Mílon #5 — RED)", () => {
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    mockUsePathname.mockReturnValue("/milon/today");
+  });
+
+  it("seção recebe executionEnabled ligada", () => {
+    conteudoComTreinos();
+
+    render(<TodayPage />);
+
+    expect(screen.getByTestId("secao-detalhe")).toBeInTheDocument();
+    expect(renderedSectionProps().executionEnabled).toBe(true);
+  });
+
+  it("wiring restante intacto (backTarget none + slots nulos da v1)", () => {
+    conteudoComTreinos();
+
+    render(<TodayPage />);
+
+    const props = renderedSectionProps();
+    expect(props.backTarget).toEqual({ kind: "none" });
+    expect(props.headerActions ?? null).toBeNull();
+    expect(props.entryFooter ?? null).toBeNull();
+    expect(props.footer ?? null).toBeNull();
   });
 });

@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Pencil, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { LoadUnit, WorkoutEntryView } from "@/lib/milon/types";
+import type { EntryMode, LoadUnit, WorkoutEntryView } from "@/lib/milon/types";
 import {
   MSG_QUANTIDADE_SERIES_INVALIDA,
   hasSeriePreenchida,
   interpretarQuantidadeSeries,
   validarInteiroCampo,
 } from "@/lib/milon/workout-utils";
-import SeriesCard, { type SerieField } from "./SeriesCard";
+import SeriesCard, { type SerieField, type SeriesExecutionProps } from "./SeriesCard";
 
 export interface ExerciseEntryCardProps {
   entryView: WorkoutEntryView;
@@ -32,16 +32,26 @@ export interface ExerciseEntryCardProps {
   onEditExercise: () => void;
   onRemoveEntry: () => void;
   onChooseUnit: (unit: LoadUnit) => void;
+  /** Pacote de execução (Mílon #5, opt-in): repassado sem interpretar. */
+  execution?: SeriesExecutionProps;
+  /** Ajuste de modo da entry (Mílon #5, D31): seletor no chrome de manutenção. */
+  onModeCommit?: (mode: EntryMode) => void;
+  /** Ajuste de unidade da entry (Mílon #5, D31): seletor no chrome de manutenção. */
+  onUnitCommit?: (unit: LoadUnit) => void;
 }
 
 /**
- * Card do exercício no treino (Mílon #3, CA-25).
+ * Card do exercício no treino (Mílon #3, CA-25; Mílon #5 replano: chrome
+ * sempre visível).
  * Quantidade e descanso são campos não-controlados (key + defaultValue, o
  * commit lê o valor atual no blur/Enter): aumento commita direto, redução com
  * série preenchida pede confirmação via onRequestReduce; descanso é campo
  * único (D4). Unidade da carga (D10) via toggle kg/lb do SeriesCard
  * (fonte de verdade, default kg) — sem prompt separado. readOnly
- * (Programa inativo) oculta handle, campos e ações.
+ * (programa inativo) oculta handle, campos e ações; em execução (Mílon #5)
+ * o chrome de manutenção (quantidade, descanso, editar/excluir, handle)
+ * permanece visível e o pacote de execução governa somente o comportamento
+ * dos cards de série (repassado sem interpretar).
  * isDragging: quando true, o card fica invisível (o ghost card é mostrado em seu lugar)
  * e os demais cards animam suavemente para preencher o espaço.
  */
@@ -58,8 +68,24 @@ export default function ExerciseEntryCard({
   onEditExercise,
   onRemoveEntry,
   onChooseUnit,
+  execution,
+  onModeCommit,
+  onUnitCommit,
 }: ExerciseEntryCardProps) {
   const { entry, exercise, series } = entryView;
+
+  // Modo e unidade pertencem ao exercício NO TREINO (entry — Mílon #5, D31):
+  // a entry é a fonte; a biblioteca entra só como fallback para linhas
+  // anteriores à migração. Séries e modal derivam destes valores.
+  const entryMode = entry.mode ?? exercise.mode ?? null;
+  const entryUnit = entry.loadUnit ?? exercise.loadUnit ?? null;
+  const modeValue: EntryMode = entryMode ?? "repeticao";
+  const unitValue: LoadUnit = entryUnit ?? "kg";
+
+  // Replano Mílon #5 (D14): chrome de manutenção sempre visível em execução —
+  // a visibilidade depende somente de programa inativo; o pacote de execução
+  // governa apenas o comportamento dos SeriesCards (repassado sem interpretar).
+  const maintenanceVisible = !readOnly;
 
   const [quantityError, setQuantityError] = useState<string | null>(null);
   const [restError, setRestError] = useState<string | null>(null);
@@ -122,7 +148,7 @@ export default function ExerciseEntryCard({
       style={{ minHeight: isDragging ? "200px" : undefined }}
     >
       <div className="flex items-center gap-2">
-        {readOnly ? null : (
+        {maintenanceVisible ? (
           <button
             type="button"
             aria-label="Arrastar para reordenar"
@@ -132,35 +158,37 @@ export default function ExerciseEntryCard({
           >
             <span aria-hidden="true">⠿</span>
           </button>
-        )}
+        ) : null}
         <h3 className="font-display text-sm leading-snug tracking-wider truncate flex-1">
           {exercise.name}
         </h3>
-        {readOnly ? null : (
+        {maintenanceVisible ? (
           <div className="flex items-center gap-1 shrink-0">
-            <Button
+            <button
               type="button"
-              size="sm"
-              variant="outline"
-              disabled={saving}
               onClick={onEditExercise}
-            >
-              Editar
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
               disabled={saving}
-              onClick={onRemoveEntry}
+              aria-label={`Editar ${exercise.name}`}
+              title="Editar exercício"
+              className="p-2 min-h-10 min-w-10 inline-flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:pointer-events-none disabled:opacity-50"
             >
-              Excluir
-            </Button>
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={onRemoveEntry}
+              disabled={saving}
+              aria-label={`Excluir ${exercise.name}`}
+              title="Excluir exercício"
+              className="p-2 min-h-10 min-w-10 inline-flex items-center justify-center rounded hover:bg-rose-100 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 transition-colors disabled:pointer-events-none disabled:opacity-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </div>
-        )}
+        ) : null}
       </div>
 
-      {readOnly ? null : (
+      {maintenanceVisible ? (
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={`${entry.id}-qtd`} className="text-xs font-semibold">
             Séries
@@ -184,9 +212,9 @@ export default function ExerciseEntryCard({
             </p>
           ) : null}
         </div>
-      )}
+      ) : null}
 
-      {readOnly ? null : (
+      {maintenanceVisible ? (
         <div className="flex flex-col gap-1.5">
           <Label
             htmlFor={`${entry.id}-descanso`}
@@ -214,7 +242,54 @@ export default function ExerciseEntryCard({
             </p>
           ) : null}
         </div>
-      )}
+      ) : null}
+
+      {maintenanceVisible ? (
+        <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label
+              htmlFor={`${entry.id}-mode`}
+              className="text-xs font-semibold"
+            >
+              Modo
+            </Label>
+            <select
+              id={`${entry.id}-mode`}
+              aria-label="Modo"
+              className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none"
+              value={modeValue}
+              onChange={(event) =>
+                onModeCommit?.(event.currentTarget.value as EntryMode)
+              }
+              disabled={saving}
+            >
+              <option value="repeticao">Repetições</option>
+              <option value="tempo">Tempo</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label
+              htmlFor={`${entry.id}-unit`}
+              className="text-xs font-semibold"
+            >
+              Unidade
+            </Label>
+            <select
+              id={`${entry.id}-unit`}
+              aria-label="Unidade"
+              className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none"
+              value={unitValue}
+              onChange={(event) =>
+                onUnitCommit?.(event.currentTarget.value as LoadUnit)
+              }
+              disabled={saving}
+            >
+              <option value="kg">kg</option>
+              <option value="lb">lb</option>
+            </select>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
         {series.map((serie, idx) => (
@@ -222,13 +297,15 @@ export default function ExerciseEntryCard({
             key={serie.id}
             series={serie}
             index={idx}
-            loadUnit={exercise.loadUnit}
+            loadUnit={entryUnit}
+            exerciseMode={entryMode}
             readOnly={readOnly}
             onCommit={(field, value) =>
               handleSeriesCommit(serie.id, field, value)
             }
             onApplyAll={() => onApplyAll(serie.id)}
             onChooseUnit={onChooseUnit}
+            execution={execution}
           />
         ))}
       </div>

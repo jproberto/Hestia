@@ -209,4 +209,119 @@ describe("WorkoutConfirmModal", () => {
       expect(screen.getByRole("button", { name: "Cancelar" })).toBeEnabled();
     });
   });
+
+  /**
+   * Contrato RED — Mílon #5 Execução série a série (TASK-005):
+   * variante nova `limpar-execucao` da confirmação de limpeza.
+   *
+   * Fonte: spec §3 (pergunta "nenhuma série marcada, deseja limpar essa
+   * execução") + plan.md §3 (variante nova limpar-execucao; título "Limpar
+   * execução"; texto contendo a pergunta; botão de confirmação "Limpar" e
+   * cancelamento "Cancelar"; processing desabilita os botões; falha ao
+   * confirmar mostra o erro no banner com origem operacao e mantém a
+   * pergunta aberta; cancelar sempre só fecha) + tasks.json TASK-005.
+   *
+   * CONTRATO FIXADO AQUI: `WorkoutConfirmVariant` ganha
+   * `"limpar-execucao"` (sem mudar as props existentes).
+   *
+   * Expected: FAIL (variante ainda não existe — título/pergunta/botões
+   * divergem); Hefesto fará GREEN na TASK-006.
+   */
+  describe("variante limpar-execucao (Mílon #5 — RED)", () => {
+    type LimparVariant = "limpar-execucao";
+    function limpar(
+      overrides: Partial<WorkoutConfirmModalProps> = {},
+    ): WorkoutConfirmModalProps {
+      return base({
+        variant: "limpar-execucao" as unknown as Variant,
+        ...overrides,
+      }) as WorkoutConfirmModalProps;
+    }
+    void (null as unknown as LimparVariant);
+
+    it("título exato 'Limpar execução' e botões exatos 'Cancelar' e 'Limpar'", () => {
+      render(
+        <WorkoutConfirmModal
+          {...(limpar() as unknown as WorkoutConfirmModalProps)}
+        />,
+      );
+
+      expect(screen.getByText("Limpar execução")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Cancelar" }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Limpar" })).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Remover" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Reduzir" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("texto exato 'Todas as séries foram desmarcada. Deseja cancelar a execução desse treino?' (2ª volta)", () => {
+      render(
+        <WorkoutConfirmModal
+          {...(limpar() as unknown as WorkoutConfirmModalProps)}
+        />,
+      );
+
+      expect(
+        screen.getByText(
+          "Todas as séries foram desmarcada. Deseja cancelar a execução desse treino?",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("confirmar dispara onConfirm e cancelar dispara onCancel (sem cruzar)", () => {
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+      render(
+        <WorkoutConfirmModal
+          {...(limpar({ onConfirm, onCancel }) as unknown as WorkoutConfirmModalProps)}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Limpar" }));
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+      expect(onCancel).not.toHaveBeenCalled();
+    });
+
+    it("cancelar dispara onCancel e não onConfirm", () => {
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+      render(
+        <WorkoutConfirmModal
+          {...(limpar({ onConfirm, onCancel }) as unknown as WorkoutConfirmModalProps)}
+        />,
+      );
+
+      expect(screen.getByText("Limpar execução")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it("processing desabilita Limpar e Cancelar e não confirma", () => {
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+      render(
+        <WorkoutConfirmModal
+          {...(limpar({
+            processing: true,
+            onConfirm,
+            onCancel,
+          }) as unknown as WorkoutConfirmModalProps)}
+        />,
+      );
+
+      expect(screen.getByRole("button", { name: "Limpar" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Cancelar" })).toBeDisabled();
+
+      fireEvent.click(screen.getByRole("button", { name: "Limpar" }));
+      fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+      expect(onConfirm).not.toHaveBeenCalled();
+      expect(onCancel).not.toHaveBeenCalled();
+    });
+  });
 });

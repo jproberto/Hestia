@@ -19,8 +19,7 @@ function serie(overrides: Partial<WorkoutSeries> = {}): WorkoutSeries {
     id: "s1",
     entryId: "entry-1",
     position: 1,
-    reps: 10,
-    durationSeconds: null,
+    value: 10,
     load: 40,
     createdAt: CRIADO_EM,
     created_by: DONO,
@@ -43,7 +42,7 @@ export const Padrao: Story = {
 export const Vazia: Story = {
   args: {
     ...base,
-    series: serie({ id: "s2", reps: null, durationSeconds: null, load: null }),
+    series: serie({ id: "s2", value: null, load: null }),
     index: 1,
   },
 };
@@ -54,4 +53,30 @@ export const CargaZero: Story = {
 
 export const SomenteLeitura: Story = {
   args: { ...base, series: serie(), index: 0, readOnly: true },
+};
+
+export const ExecucaoParidade: Story = {
+  args: {
+    ...base,
+    series: serie(),
+    index: 0,
+    execution: {
+      doneBySeriesId: {},
+      onToggle: fn(),
+      onOpenEditor: fn(),
+    },
+  },
+};
+
+export const ExecucaoMarcada: Story = {
+  args: {
+    ...base,
+    series: serie(),
+    index: 0,
+    execution: {
+      doneBySeriesId: { s1: true },
+      onToggle: fn(),
+      onOpenEditor: fn(),
+    },
+  },
 };

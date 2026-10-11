@@ -1,6 +1,10 @@
 // Regras puras de treinos e séries do módulo Mílon (sem I/O, sem repositório).
 // Ver Mapa de Camadas no AGENTS.md + plan.md §3 (contrato textual das utilidades).
-import type { LoadUnit, WorkoutSeries } from "@/lib/milon/types";
+import type {
+  LoadUnit,
+  WorkoutExecutionSeries,
+  WorkoutSeries,
+} from "@/lib/milon/types";
 
 export const MSG_TREINO_COM_EXERCICIOS =
   "Este treino possui exercícios. Remova-os antes de excluir o treino.";
@@ -25,12 +29,12 @@ export const MSG_QUANTIDADE_SERIES_INVALIDA =
 export const MSG_CARGA_NEGATIVA = "A carga não pode ser negativa.";
 
 export const MSG_UNIDADE_OBRIGATORIA =
-  "Escolha a unidade da carga: kg ou libra.";
+  "Escolha a unidade da carga: kg ou lb.";
 
 export const MSG_CARGA_NAO_NUMERICA =
   "Informe um valor numérico válido para a carga.";
 
-const FATOR_LIBRA_PARA_KG = 0.45359237;
+const FATOR_LB_PARA_KG = 0.45359237;
 
 export function normalizarNomeTreino(valor: string): string {
   return valor.trim().replace(/\s+/g, " ");
@@ -147,9 +151,7 @@ export function validarCarga(
 }
 
 export function hasSeriePreenchida(series: WorkoutSeries[]): boolean {
-  return series.some(
-    (s) => s.reps != null || s.durationSeconds != null || s.load != null,
-  );
+  return series.some((s) => s.value != null || s.load != null);
 }
 
 export function aplicarSerieOrigemEmTodas(
@@ -164,11 +166,16 @@ export function aplicarSerieOrigemEmTodas(
     if (s.id === origemId) {
       return { ...s };
     }
+    // Construção explícita com valor único + carga (D34): o resultado nunca
+    // carrega as colunas antigas (removidas na migração 0013).
     return {
-      ...s,
-      reps: origem.reps,
-      durationSeconds: origem.durationSeconds,
+      id: s.id,
+      entryId: s.entryId,
+      position: s.position,
+      value: origem.value,
       load: origem.load,
+      createdAt: s.createdAt,
+      created_by: s.created_by,
     };
   });
 }
@@ -181,10 +188,10 @@ export function converterCarga(
   if (de === para) {
     return valor;
   }
-  if (de === "libra") {
-    return valor * FATOR_LIBRA_PARA_KG;
+  if (de === "lb") {
+    return valor * FATOR_LB_PARA_KG;
   }
-  return valor / FATOR_LIBRA_PARA_KG;
+  return valor / FATOR_LB_PARA_KG;
 }
 
 export function formatarCargaComSecundaria(
@@ -194,7 +201,24 @@ export function formatarCargaComSecundaria(
   if (unidade === null) {
     return { principal: String(valor), secundaria: null };
   }
-  const secundariaUnidade: LoadUnit = unidade === "kg" ? "libra" : "kg";
+  // Exibição direta do valor do banco (D38): sem transformação, sem abreviação.
+  const secundariaUnidade: LoadUnit = unidade === "kg" ? "lb" : "kg";
   const secundaria = converterCarga(valor, unidade, secundariaUnidade).toFixed(1);
   return { principal: `${valor} ${unidade}`, secundaria };
+}
+
+// Execução série a série (Mílon #5, D1): o feito de uma série é a existência
+// da linha realizada correspondente na execução aberta — nunca coluna do
+// template. As duas regras abaixo operam só sobre essa lista de realizadas.
+export function contarMarcadasNaExecucao(
+  realizadas: WorkoutExecutionSeries[],
+): number {
+  return realizadas.length;
+}
+
+export function ehUltimaMarcada(
+  realizadas: WorkoutExecutionSeries[],
+  seriesId: string,
+): boolean {
+  return realizadas.length === 1 && realizadas[0].seriesId === seriesId;
 }

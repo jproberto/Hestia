@@ -83,7 +83,11 @@ describe("ExerciseModal", () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave).toHaveBeenCalledWith(
-      { name: "Panturrilha em pé", muscle: "Panturrilha", videoLink: null },
+      {
+        name: "Panturrilha em pé",
+        muscle: "Panturrilha",
+        videoLink: null,
+      },
       "salvar",
     );
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
@@ -99,13 +103,17 @@ describe("ExerciseModal", () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave).toHaveBeenCalledWith(
-      { name: "Rosca direta", muscle: "Braço", videoLink: "https://video.exemplo/rosca" },
+      {
+        name: "Rosca direta",
+        muscle: "Braço",
+        videoLink: "https://video.exemplo/rosca",
+      },
       "salvar",
     );
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
 
-  it("salvar não envia loadUnit/deletedAt (unidade e exclusão ficam fora do form)", async () => {
+  it("salvar não envia deletedAt (exclusão fora do form) nem modo/unidade (só biblioteca)", async () => {
     const onSave = vi.fn(
       async (_fields: ExerciseModalFields, _action: "salvar" | "salvar-e-outro") => {},
     );
@@ -124,8 +132,8 @@ describe("ExerciseModal", () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
 
     const payload = onSave.mock.calls[0][0];
-    // A edição da biblioteca não ressuscita exercício excluído nem redefine a unidade.
-    expect(payload).not.toHaveProperty("loadUnit");
+    // A edição da biblioteca não ressuscita exercício excluído; modo e
+    // unidade pertencem à entry do treino e NÃO viajam no payload.
     expect(payload).not.toHaveProperty("deletedAt");
     expect(payload).toEqual({
       name: "Supino reto",
@@ -144,7 +152,11 @@ describe("ExerciseModal", () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave).toHaveBeenCalledWith(
-      { name: "Tríceps testa", muscle: "Braço", videoLink: "https://video.exemplo/triceps" },
+      {
+        name: "Tríceps testa",
+        muscle: "Braço",
+        videoLink: "https://video.exemplo/triceps",
+      },
       "salvar-e-outro",
     );
     expect(onClose).not.toHaveBeenCalled();
@@ -229,5 +241,85 @@ describe("ExerciseModal", () => {
     const savingButtons = screen.getAllByRole("button", { name: /salvando/i });
     expect(savingButtons).toHaveLength(2);
     savingButtons.forEach((button) => expect(button).toBeDisabled());
+  });
+});
+
+/**
+ * Contrato RED da TASK-010 (Mílon #5, Aditamento 2026-10-09 "0012 CORRETA").
+ * SUBSTITUI o bloco TASK-006 (seletores de modo/unidade na biblioteca,
+ * superseded pela reversão D33 — removido, não apenas comentado).
+ *
+ * Fonte: tasks.json TASK-010 (ExerciseModal: ausência dos seletores) +
+ * plan.md Aditamento 0012 CORRETA §1 Mudança B + §3 (Modal da biblioteca:
+ * só nome/músculo/vídeo; sem seletores) + spec §3 (biblioteca sem
+ * Modo/Unidade; modo e unidade configurados na entry do treino).
+ *
+ * Contrato fixado aqui (o que a TASK-012 deve implementar):
+ * - ExerciseModalFields volta a ter SÓ nome/músculo/vídeo;
+ * - NENHUM seletor de Modo e NENHUM seletor de Unidade no modal.
+ *
+ * Expected: FAIL — o modal atual tem os seletores e devolve modo/unidade.
+ * Hefesto fará GREEN na TASK-012 sem mudar estes testes.
+ */
+describe("ExerciseModal — biblioteca sem seletores (TASK-010 — RED)", () => {
+  it("não exibe seletor de Modo", () => {
+    render(<ExerciseModal {...defaultProps()} />);
+
+    expect(
+      screen.queryByRole("radiogroup", { name: /modo/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/modo/i)).not.toBeInTheDocument();
+  });
+
+  it("não exibe seletor de Unidade", () => {
+    render(<ExerciseModal {...defaultProps()} />);
+
+    expect(
+      screen.queryByRole("radiogroup", { name: /unidade/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/unidade/i)).not.toBeInTheDocument();
+  });
+
+  it("salvar entrega SOMENTE nome, músculo e vídeo", async () => {
+    const onSave = vi.fn(
+      async (_fields: ExerciseModalFields, _action: "salvar" | "salvar-e-outro") => {},
+    );
+    const onClose = vi.fn();
+    render(<ExerciseModal {...defaultProps({ onSave, onClose })} />);
+
+    fillCreateForm("Agachamento", "Perna");
+    fireEvent.click(screen.getByRole("button", { name: /^salvar$/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const payload = onSave.mock.calls[0]?.[0] as unknown as Record<string, unknown>;
+    expect(payload).toEqual({
+      name: "Agachamento",
+      muscle: "Perna",
+      videoLink: null,
+    });
+  });
+
+  it("editar entrega SOMENTE nome, músculo e vídeo", async () => {
+    const onSave = vi.fn(
+      async (_fields: ExerciseModalFields, _action: "salvar" | "salvar-e-outro") => {},
+    );
+    render(
+      <ExerciseModal
+        {...defaultProps({
+          editingExercise: makeExercise({ loadUnit: "lb" }),
+          onSave,
+        })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^salvar$/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const payload = onSave.mock.calls[0]?.[0] as unknown as Record<string, unknown>;
+    expect(payload).toEqual({
+      name: "Supino reto",
+      muscle: "Peito",
+      videoLink: "https://video.exemplo/supino",
+    });
   });
 });

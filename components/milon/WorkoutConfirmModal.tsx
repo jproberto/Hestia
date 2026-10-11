@@ -2,7 +2,10 @@
 
 import { Button } from "@/components/ui/button";
 
-export type WorkoutConfirmVariant = "remover-exercicio" | "reduzir-series";
+export type WorkoutConfirmVariant =
+  | "remover-exercicio"
+  | "reduzir-series"
+  | "limpar-execucao";
 
 export interface WorkoutConfirmModalProps {
   open: boolean;
@@ -36,8 +39,13 @@ export default function WorkoutConfirmModal({
   if (!open) return null;
 
   const isRemover = variant === "remover-exercicio";
-  const titulo = isRemover ? "Remover exercício?" : "Reduzir séries?";
-  const confirmLabel = isRemover ? "Remover" : "Reduzir";
+  const isLimpar = variant === "limpar-execucao";
+  const titulo = isRemover
+    ? "Remover exercício?"
+    : isLimpar
+      ? "Limpar execução"
+      : "Reduzir séries?";
+  const confirmLabel = isRemover ? "Remover" : isLimpar ? "Limpar" : "Reduzir";
   const serieWord = seriesCount === 1 ? "série" : "séries";
 
   return (
@@ -53,6 +61,11 @@ export default function WorkoutConfirmModal({
               : `suas ${seriesCount} séries`}{" "}
             ({seriesCount} {serieWord}) do treino? As repetições, o tempo, a
             carga e o descanso informados serão perdidos.
+          </p>
+        ) : isLimpar ? (
+          <p className="text-sm text-muted-foreground">
+            Todas as séries foram desmarcada. Deseja cancelar a execução desse
+            treino?
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">

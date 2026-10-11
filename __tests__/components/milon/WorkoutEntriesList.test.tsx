@@ -98,8 +98,7 @@ function makeSeries(overrides: Partial<WorkoutSeries> = {}): WorkoutSeries {
     id: "serie-1",
     entryId: "entry-1",
     position: 1,
-    reps: null,
-    durationSeconds: null,
+    value: null,
     load: null,
     createdAt: CRIADO_EM,
     created_by: DONO,
@@ -124,9 +123,9 @@ const ROSCA = makeExercise({ id: "ex-2", name: "Rosca direta", muscle: "Braço" 
 const ENTRADA_1 = makeEntry({ id: "entry-1", exerciseId: "ex-1", position: 1 });
 const ENTRADA_2 = makeEntry({ id: "entry-2", exerciseId: "ex-2", position: 2 });
 
-const SERIE_1A = makeSeries({ id: "s1", entryId: "entry-1", position: 1, reps: 10, load: 40 });
+const SERIE_1A = makeSeries({ id: "s1", entryId: "entry-1", position: 1, value: 10, load: 40 });
 const SERIE_1B = makeSeries({ id: "s2", entryId: "entry-1", position: 2 });
-const SERIE_2A = makeSeries({ id: "s3", entryId: "entry-2", position: 1, reps: 12 });
+const SERIE_2A = makeSeries({ id: "s3", entryId: "entry-2", position: 1, value: 12 });
 const SERIE_2B = makeSeries({ id: "s4", entryId: "entry-2", position: 2 });
 
 const ENTRADAS: WorkoutEntryView[] = [
@@ -478,7 +477,7 @@ describe("WorkoutEntriesList", () => {
       // Assinatura do card é (seriesId, field, value); a lista pode repassar
       // direto ou embrulhar com a entrada — os 3 argumentos fixados pelo plano
       // têm de aparecer de qualquer forma.
-      expect(chamadaContemTodos(onSeriesCommit, ["s3", "reps", 8])).toBe(true);
+      expect(chamadaContemTodos(onSeriesCommit, ["s3", "value", 8])).toBe(true);
     });
 
     it("'Aplicar a todas' dispara onApplyAll com a entrada e a série de origem", () => {
@@ -531,7 +530,7 @@ describe("WorkoutEntriesList", () => {
 
       // Carga commita direto (sem prompt âmbar na UI).
       expect(
-        within(card).queryByText("Escolha a unidade da carga: kg ou libra."),
+        within(card).queryByText("Escolha a unidade da carga: kg ou lb."),
       ).not.toBeInTheDocument();
       expect(onSeriesCommit).toHaveBeenCalled();
       expect(
@@ -546,7 +545,90 @@ describe("WorkoutEntriesList", () => {
       // O plan.md §3 não fixa a lista de argumentos de onConfirmUnit (só o
       // nome); o que é inegociável é que a unidade escolhida e a entrada
       // cheguem ao callback.
-      expect(chamadaContemTodos(onConfirmUnit, ["entry-2", "libra"])).toBe(true);
+      expect(chamadaContemTodos(onConfirmUnit, ["entry-2", "lb"])).toBe(true);
+    });
+  });
+
+  /**
+   * Contrato RED (correção 2026-10-08) — Mílon #5 Execução série a série:
+   * repasse do pacote de execução com card clicável.
+   *
+   * Fonte: plan.md §2 (WorkoutEntriesList repassa o pacote para cada
+   * ExerciseEntryCard; sem ele renderiza idêntico a hoje) + §3 (aceita o
+   * pacote como prop opcional e o repassa sem interpretar) + spec §3
+   * alinhada (card é o próprio marcador; SEM checkbox; SEM botão de editar;
+   * marcada com fundo na cor do módulo) + tasks.json TASK-005.
+   *
+   * CONTRATO FIXADO AQUI (mesmo da SeriesCard): prop opcional
+   * `execution?: { doneBySeriesId: Record<string, boolean>;
+   * onToggle: (seriesId: string) => void;
+   * onOpenEditor: (seriesId: string) => void }`.
+   * Em execução cada série é um `role="button"` ("Série N"), sem checkbox e
+   * sem botão "Editar".
+   *
+   * Expected: FAIL enquanto a produção ainda tem checkbox/botão; o bloco sem
+   * pacote passa como trava de regressão. Hefesto fará GREEN na TASK-006.
+   */
+  describe("repasse do pacote de execução (Mílon #5 — card clicável — RED)", () => {
+    interface SeriesExecutionProps {
+      doneBySeriesId: Record<string, boolean>;
+      onToggle: (seriesId: string) => void;
+      onOpenEditor: (seriesId: string) => void;
+    }
+
+    function exec(
+      overrides: Partial<SeriesExecutionProps> = {},
+    ): SeriesExecutionProps {
+      return {
+        doneBySeriesId: {},
+        onToggle: vi.fn(),
+        onOpenEditor: vi.fn(),
+        ...overrides,
+      };
+    }
+
+    it("sem pacote renderiza idêntico a hoje (sem cards clicáveis)", () => {
+      render(<WorkoutEntriesList {...base()} />);
+
+      expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+      expect(
+        screen.queryByRole("button", { name: /^série [12]/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText("Supino reto")).toBeInTheDocument();
+    });
+
+    it("com pacote cada série é um card clicável, sem checkbox, com chrome de manutenção visível (replano D14)", () => {
+      render(
+        <WorkoutEntriesList
+          {...( {
+            ...base(),
+            execution: exec(),
+          } as unknown as WorkoutEntriesListProps )}
+        />,
+      );
+
+      // 2 entradas × 2 séries = 4 cards clicáveis.
+      expect(screen.getAllByRole("button", { name: /^série [12]/i })).toHaveLength(4);
+      expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+      expect(screen.getAllByRole("button", { name: /editar/i })).toHaveLength(2);
+      expect(screen.getAllByRole("button", { name: /excluir/i })).toHaveLength(2);
+    });
+
+    it("com pacote o toque curto no card chega ao onToggle com o id da série", () => {
+      const onToggle = vi.fn();
+      render(
+        <WorkoutEntriesList
+          {...( {
+            ...base(),
+            execution: exec({ onToggle }),
+          } as unknown as WorkoutEntriesListProps )}
+        />,
+      );
+
+      fireEvent.click(screen.getAllByRole("button", { name: /^série [12]/i })[2]);
+
+      expect(onToggle).toHaveBeenCalledTimes(1);
+      expect(onToggle).toHaveBeenCalledWith("s3");
     });
   });
 });

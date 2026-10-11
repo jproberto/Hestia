@@ -50,6 +50,7 @@ export default function TodayPage() {
             <WorkoutDetailSection
               workoutId={selectedWorkoutId}
               backTarget={{ kind: "none" }}
+              executionEnabled
             />
           </div>
         ) : null}

@@ -13,19 +13,26 @@ import ExerciseModal, {
 import WorkoutConfirmModal, {
   type WorkoutConfirmVariant,
 } from "@/components/milon/WorkoutConfirmModal";
+import SeriesEditModal, {
+  type SeriesEditFields,
+} from "@/components/milon/SeriesEditModal";
 import { useWorkoutDetail } from "@/lib/milon/hooks/useWorkoutDetail";
-import { setExerciseLoadUnitStandalone } from "@/lib/milon/db/exercises";
+import { useWorkoutExecution } from "@/lib/milon/hooks/useWorkoutExecution";
 import {
   compareExercisesByMuscleThenName,
   normalizeExerciseText,
 } from "@/lib/milon/utils";
 import type {
+  EntryMode,
   Exercise,
+  ExerciseMode,
   LoadUnit,
   WorkoutEntry,
   WorkoutEntryView,
+  WorkoutExecution,
+  WorkoutSeries,
 } from "@/lib/milon/types";
-import type { SerieField } from "@/components/milon/SeriesCard";
+import type { SerieField, SeriesExecutionProps } from "@/components/milon/SeriesCard";
 
 export type WorkoutDetailBackTarget =
   | { kind: "program"; programId: string }
@@ -38,6 +45,20 @@ export interface WorkoutDetailSectionProps {
   headerActions?: ReactNode | null;
   entryFooter?: ((view: WorkoutEntryView) => ReactNode) | ReactNode | null;
   footer?: ReactNode | null;
+  /**
+   * Execução série a série (Mílon #5, opt-in, default desligado): quando
+   * ligada compõe `useWorkoutExecution`, monta o pacote de execução e
+   * hospeda o SeriesEditModal + a confirmação de limpeza. Desligada, o
+   * comportamento é idêntico ao atual (manutenção intacta por construção).
+   */
+  executionEnabled?: boolean;
+  /**
+   * Bloqueio do template por treino (Mílon #5, 2ª volta D21): quando true,
+   * o chrome de manutenção é desabilitado (readOnly efetivo =
+   * readOnly || executionBlocked). A página de manutenção carrega a
+   * execução aberta e passa `executionBlocked={execution !== null}`.
+   */
+  executionBlocked?: boolean;
 }
 
 function toMessage(err: unknown, fallback: string): string {
@@ -64,12 +85,186 @@ interface ConfirmState {
   newQuantity: number;
 }
 
+interface EditingTarget {
+  entry: WorkoutEntry;
+  serie: WorkoutSeries;
+  loadUnit: LoadUnit | null;
+  exerciseMode: ExerciseMode | null;
+}
+
+interface ExecutionListContext {
+  executionPackage: SeriesExecutionProps | undefined;
+  execErrorMsg: string | null;
+  clearConfirmOpen: boolean;
+  clearProcessing: boolean;
+  confirmClear: () => void;
+  cancelClear: () => void;
+  editing: EditingTarget | null;
+  editorSaving: boolean;
+  editorError: string | null;
+  closeEditor: () => void;
+  saveEditor: (fields: SeriesEditFields) => Promise<void>;
+  displayEntries: WorkoutEntryView[];
+  execExecution: WorkoutExecution | null;
+}
+
+/**
+ * Dono da execução série a série (Mílon #5). Montado SOMENTE quando a flag
+ * `executionEnabled` está ligada — por isso o hook de execução nunca é
+ * chamado na manutenção (sem hooks condicionais no corpo da seção). Detém o
+ * estado do editor, monta o pacote a partir de `doneSeriesIds` e expõe tudo
+ * via render prop para o corpo da seção compor lista + modal + confirmação.
+ */
+function ExecutionHost({
+  workoutId,
+  entries,
+  onTemplateChanged,
+  children,
+}: {
+  workoutId: string;
+  entries: WorkoutEntryView[];
+  onTemplateChanged: () => void;
+  children: (ctx: ExecutionListContext) => ReactNode;
+}) {
+  const exec = useWorkoutExecution(workoutId, entries);
+  const [editing, setEditing] = useState<EditingTarget | null>(null);
+  const [editorSaving, setEditorSaving] = useState(false);
+  const [editorError, setEditorError] = useState<string | null>(null);
+  const [clearProcessing, setClearProcessing] = useState(false);
+  // Releitura da execução após cada alternância (o hook real já se atualiza
+  // sozinho; o sinal garante a composição com o estado mais recente, ex.: a
+  // confirmação de limpeza da última série desmarcada).
+  const [, bumpExecution] = useState(0);
+
+  // Template ao vivo (spec alinhada §3): o que se exibe é sempre o valor atual
+  // do template, com marcadores de feito por série vindos da execução. A
+  // edição no Treino do Dia aparece na hora (sem foto; valores reais ficam
+  // para o encerrar #7).
+  const displayEntries: WorkoutEntryView[] = entries;
+
+  function findTarget(seriesId: string): EditingTarget | null {
+    for (const view of displayEntries) {
+      const serie = view.series.find((item) => item.id === seriesId);
+      if (serie) {
+        return {
+          entry: view.entry,
+          serie,
+          loadUnit: view.entry.loadUnit ?? view.exercise.loadUnit ?? null,
+          exerciseMode: (view.entry.mode ?? view.exercise.mode ?? null) as ExerciseMode | null,
+        };
+      }
+    }
+    return null;
+  }
+
+  async function handleToggle(seriesId: string): Promise<void> {
+    const target = findTarget(seriesId);
+    if (!target) return;
+    try {
+      await exec.toggleSeries(target.entry, target.serie);
+    } catch {
+      // O banner já foi alimentado pelo hook (origem operacao) e o estado
+      // anterior é mantido; aqui só se evita rejeição não tratada.
+    } finally {
+      // Releitura do estado da execução após a alternância: o hook real já
+      // se atualiza sozinho, e o sinal garante a composição atualizada (ex.:
+      // a confirmação de limpeza da última desmarcada).
+      bumpExecution((tick) => tick + 1);
+    }
+  }
+
+  function handleOpenEditor(seriesId: string): void {
+    const target = findTarget(seriesId);
+    if (!target) return;
+    setEditorError(null);
+    setEditing(target);
+  }
+
+  function closeEditor(): void {
+    if (!editorSaving) {
+      setEditing(null);
+      setEditorError(null);
+    }
+  }
+
+  async function saveEditor(fields: SeriesEditFields): Promise<void> {
+    const target = editing;
+    if (!target) return;
+    setEditorSaving(true);
+    setEditorError(null);
+    try {
+      // Comportamento único (D4): origem + seguintes, feito preservado —
+      // decisão do hook, sem indicador de cópia.
+      await exec.saveSeriesExecution(target.entry, target.serie, fields);
+      setEditing(null);
+      setEditorError(null);
+      onTemplateChanged();
+    } catch (err: unknown) {
+      // Modal nunca fecha no erro: registra local, exibe via prop e relança
+      // para o modal preservar o digitado.
+      const message = toMessage(err, "Erro ao salvar série");
+      setEditorError(message);
+      throw err instanceof Error ? err : new Error(message);
+    } finally {
+      setEditorSaving(false);
+    }
+  }
+
+  function confirmClear(): void {
+    setClearProcessing(true);
+    void exec.confirmClearExecution().then(
+      () => setClearProcessing(false),
+      () => setClearProcessing(false),
+    );
+  }
+
+  function cancelClear(): void {
+    if (!clearProcessing) exec.cancelClearExecution();
+  }
+
+  const doneBySeriesId: Record<string, boolean> = {};
+  for (const id of exec.doneSeriesIds) doneBySeriesId[id] = true;
+
+  // Com o editor aberto o modal em tela cheia cobre a lista; o pacote é
+  // suspenso para que nenhum marcador concorra com o formulário.
+  const executionPackage: SeriesExecutionProps | undefined =
+    editing !== null
+      ? undefined
+      : {
+          doneBySeriesId,
+          onToggle: handleToggle,
+          onOpenEditor: handleOpenEditor,
+        };
+
+  return (
+    <>
+      {children({
+        executionPackage,
+        execErrorMsg: exec.errorMsg,
+        clearConfirmOpen: exec.clearConfirmOpen,
+        clearProcessing,
+        confirmClear,
+        cancelClear,
+        editing,
+        editorSaving,
+        editorError,
+        closeEditor,
+        saveEditor,
+        displayEntries,
+        execExecution: exec.execution,
+      })}
+    </>
+  );
+}
+
 export function WorkoutDetailSection({
   workoutId,
   backTarget,
   headerActions = null,
   entryFooter = null,
   footer = null,
+  executionEnabled = false,
+  executionBlocked = false,
 }: WorkoutDetailSectionProps) {
   const router = useRouter();
 
@@ -92,6 +287,8 @@ export function WorkoutDetailSection({
     applyToAll,
     saveExercise,
     createExerciseAndAdd,
+    setEntryMode,
+    setEntryLoadUnit,
   } = useWorkoutDetail(workoutId);
 
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -110,66 +307,28 @@ export function WorkoutDetailSection({
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [confirmProcessing, setConfirmProcessing] = useState(false);
 
-  // Toggle kg/lb otimista (sem reload): a troca visual acontece na hora via
-  // estado local do SeriesCard + override por exercício aqui na seção; a
-  // persistência roda em background sem refetch cheio (sem setLoading/retry).
-  const [unitOverrides, setUnitOverrides] = useState<Record<string, LoadUnit>>(
-    {},
-  );
-  const [unitError, setUnitError] = useState<string | null>(null);
-
   const readOnly = program?.status === "inativo";
+  const effectiveReadOnly = (readOnly ?? false) || executionBlocked;
   const backProgramId =
     backTarget.kind === "program" ? backTarget.programId : "";
   const programId = program?.id ?? backProgramId;
 
-  // Entradas/exercícios com a unidade otimista aplicada: todos os cards do
-  // mesmo exercício passam a exibir a nova unidade (principal + secundária
-  // convertida) na hora, sem remontar inputs (keys por carga intactas).
-  const entriesWithUnit = useMemo(
-    () =>
-      unitOverrides && Object.keys(unitOverrides).length === 0
-        ? entries
-        : entries.map((view) => {
-            const override = unitOverrides[view.exercise.id];
-            if (!override || view.exercise.loadUnit === override) return view;
-            return {
-              ...view,
-              exercise: { ...view.exercise, loadUnit: override },
-            };
-          }),
-    [entries, unitOverrides],
-  );
-
-  const exercisesWithUnit = useMemo(
-    () =>
-      unitOverrides && Object.keys(unitOverrides).length === 0
-        ? exercises
-        : exercises.map((exercise) => {
-            const override = unitOverrides[exercise.id];
-            if (!override || exercise.loadUnit === override) return exercise;
-            return { ...exercise, loadUnit: override };
-          }),
-    [exercises, unitOverrides],
-  );
-
   const muscleOptions = useMemo(
-    () => deriveMuscleOptions(exercisesWithUnit),
-    [exercisesWithUnit],
+    () => deriveMuscleOptions(exercises),
+    [exercises],
   );
 
   const pickerExercises = useMemo(
     () =>
-      [...exercisesWithUnit]
+      [...exercises]
         .filter((exercise) => exercise.deletedAt === null)
         .sort(compareExercisesByMuscleThenName),
-    [exercisesWithUnit],
+    [exercises],
   );
 
   const findView = useCallback(
-    (entryId: string) =>
-      entriesWithUnit.find((view) => view.entry.id === entryId),
-    [entriesWithUnit],
+    (entryId: string) => entries.find((view) => view.entry.id === entryId),
+    [entries],
   );
 
   const handleBackToProgram = useCallback(() => {
@@ -331,7 +490,7 @@ export function WorkoutDetailSection({
   const handleSeriesCommit = useCallback(
     (entryId: string, seriesId: string, field: SerieField, value: number | null) => {
       void entryId;
-      // Carga commita direto; unidade via toggle kg/lb (handleConfirmUnit).
+      // Carga commita direto; unidade via toggle kg/lb (handleUnitCommit).
       void updateSeries(seriesId, field, value).catch(() => {
         // O erro fica visível na página via hook (banner).
       });
@@ -348,37 +507,26 @@ export function WorkoutDetailSection({
     [applyToAll],
   );
 
-  const handleConfirmUnit = useCallback(
-    (entryId: string, unit: LoadUnit) => {
-      // Toggle kg/lb instantâneo (como o toggle Repetições/Tempo): atualiza
-      // o visual na hora via override otimista + estado local do SeriesCard
-      // e persiste em background sem refetch cheio (sem setLoading/retry, sem
-      // remontar a lista). Só a unidade é persistida (D10); a carga segue
-      // intacta (D7: vazio ≠ 0). Falha reverte o override e comunica via
-      // banner local (origem operacao: sem retry, norma D27/R31).
-      const view = findView(entryId);
-      if (!view) return;
-      const exerciseId = view.exercise.id;
-      const previous: LoadUnit | null = view.exercise.loadUnit;
-      if (previous === unit) return;
-      setUnitOverrides((prev) => ({ ...prev, [exerciseId]: unit }));
-      setUnitError(null);
-      void setExerciseLoadUnitStandalone(exerciseId, unit).catch(
-        (err: unknown) => {
-          setUnitOverrides((prev) => {
-            const next = { ...prev };
-            if (previous === null) {
-              delete next[exerciseId];
-            } else {
-              next[exerciseId] = previous;
-            }
-            return next;
-          });
-          setUnitError(toMessage(err, "Não foi possível salvar a unidade."));
-        },
-      );
+  const handleModeCommit = useCallback(
+    (entryId: string, mode: EntryMode) => {
+      // Modo pertence à entry (Mílon #5, D31): persiste via hook; o erro
+      // fica visível na página via hook (banner).
+      void setEntryMode?.(entryId, mode)?.catch(() => {
+        // O erro fica visível na página via hook (banner).
+      });
     },
-    [findView],
+    [setEntryMode],
+  );
+
+  const handleUnitCommit = useCallback(
+    (entryId: string, unit: LoadUnit) => {
+      // Unidade pertence à entry (Mílon #5, D31): o alternador de unidade
+      // da manutenção persiste na entry; o erro fica visível via hook.
+      void setEntryLoadUnit?.(entryId, unit)?.catch(() => {
+        // O erro fica visível na página via hook (banner).
+      });
+    },
+    [setEntryLoadUnit],
   );
 
   const handleReorder = useCallback(
@@ -425,66 +573,165 @@ export function WorkoutDetailSection({
       >
         {workout ? (
           <div className="flex flex-col gap-4">
-            <section
-              aria-label="Cabeçalho do treino"
-              className="rounded-lg border bg-card p-6 shadow-sm flex flex-col gap-2"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="font-display text-2xl leading-snug text-[#B7602B] tracking-wider flex-1">
-                  {workout.name}
-                </h2>
-                {headerActions ?? null}
-                {backTarget.kind === "program" ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleBackToProgram}
-                    aria-label="Voltar ao programa"
-                  >
-                    Voltar ao programa
-                  </Button>
-                ) : null}
-              </div>
-            </section>
-
-            {successNotice ? (
-              <div className="rounded border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                {successNotice}
-              </div>
-            ) : null}
-
-            {unitError ? (
-              <div
-                role="alert"
-                className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-700 dark:text-rose-300 font-medium"
+            {executionEnabled ? (
+              <ExecutionHost
+                workoutId={workoutId}
+                entries={entries}
+                onTemplateChanged={() => void retry()}
               >
-                {unitError}
-              </div>
-            ) : null}
+                {(ctx) => (
+                  <>
+                    <section
+                      aria-label="Cabeçalho do treino"
+                      className="rounded-lg border bg-card p-6 shadow-sm flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <h2 className="font-display text-2xl leading-snug text-[#B7602B] tracking-wider flex-1">
+                          {workout.name}
+                        </h2>
+                        {ctx.execExecution !== null ? (
+                          <span className="rounded-full border border-[#B7602B] text-[#B7602B] px-2 py-0.5 text-xs font-semibold">
+                            Em execução
+                          </span>
+                        ) : null}
+                        {headerActions ?? null}
+                        {backTarget.kind === "program" ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleBackToProgram}
+                            aria-label="Voltar ao programa"
+                          >
+                            Voltar ao programa
+                          </Button>
+                        ) : null}
+                      </div>
+                    </section>
 
-            <WorkoutEntriesList
-              entries={entriesWithUnit}
-              programId={programId}
-              readOnly={readOnly ?? false}
-              empty={entriesWithUnit.length === 0}
-              errorMsg={errorMsg}
-              errorOrigin={errorOrigin}
-              onAdd={openPicker}
-              onRetry={() => void retry()}
-              onReorder={handleReorder}
-              onQuantityCommit={handleQuantityCommit}
-              onRequestReduce={handleRequestReduce}
-              onRestCommit={handleRestCommit}
-              onSeriesCommit={handleSeriesCommit}
-              onApplyAll={handleApplyAll}
-              onEditExercise={handleEditExercise}
-              onRemoveEntry={handleRemoveEntry}
-              onConfirmUnit={handleConfirmUnit}
-            />
+                    {ctx.execErrorMsg ? (
+                      <div
+                        role="alert"
+                        className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-700 dark:text-rose-300 font-medium"
+                      >
+                        {ctx.execErrorMsg}
+                      </div>
+                    ) : null}
+
+                    <WorkoutEntriesList
+                      entries={ctx.displayEntries}
+                      programId={programId}
+                      readOnly={effectiveReadOnly}
+                      empty={ctx.displayEntries.length === 0}
+                      errorMsg={errorMsg}
+                      errorOrigin={errorOrigin}
+                      onAdd={openPicker}
+                      onRetry={() => void retry()}
+                      onReorder={handleReorder}
+                      onQuantityCommit={handleQuantityCommit}
+                      onRequestReduce={handleRequestReduce}
+                      onRestCommit={handleRestCommit}
+                      onSeriesCommit={handleSeriesCommit}
+                      onApplyAll={handleApplyAll}
+                      onEditExercise={handleEditExercise}
+                      onRemoveEntry={handleRemoveEntry}
+                      onConfirmUnit={handleUnitCommit}
+                      onModeCommit={handleModeCommit}
+                      onUnitCommit={handleUnitCommit}
+                      execution={ctx.executionPackage}
+                    />
+
+                    <SeriesEditModal
+                      open={ctx.editing !== null}
+                      series={ctx.editing?.serie ?? null}
+                      loadUnit={ctx.editing?.loadUnit ?? null}
+                      exerciseMode={ctx.editing?.exerciseMode ?? null}
+                      saving={ctx.editorSaving}
+                      error={ctx.editorError}
+                      onClose={ctx.closeEditor}
+                      onSave={ctx.saveEditor}
+                    />
+
+                    <WorkoutConfirmModal
+                      open={ctx.clearConfirmOpen}
+                      variant="limpar-execucao"
+                      exerciseName=""
+                      seriesCount={0}
+                      currentQuantity={0}
+                      newQuantity={0}
+                      processing={ctx.clearProcessing}
+                      onConfirm={ctx.confirmClear}
+                      onCancel={ctx.cancelClear}
+                    />
+                  </>
+                )}
+              </ExecutionHost>
+            ) : (
+              <>
+                <section
+                  aria-label="Cabeçalho do treino"
+                  className="rounded-lg border bg-card p-6 shadow-sm flex flex-col gap-2"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <h2 className="font-display text-2xl leading-snug text-[#B7602B] tracking-wider flex-1">
+                      {workout.name}
+                    </h2>
+                    {headerActions ?? null}
+                    {backTarget.kind === "program" ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleBackToProgram}
+                        aria-label="Voltar ao programa"
+                      >
+                        Voltar ao programa
+                      </Button>
+                    ) : null}
+                  </div>
+                </section>
+
+                {successNotice ? (
+                  <div className="rounded border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    {successNotice}
+                  </div>
+                ) : null}
+
+                {executionBlocked ? (
+                  <div
+                    role="alert"
+                    className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-700 dark:text-rose-300 font-medium"
+                  >
+                    Este treino não pode ser editado pois está em execução.
+                  </div>
+                ) : null}
+
+                <WorkoutEntriesList
+                  entries={entries}
+                  programId={programId}
+                  readOnly={effectiveReadOnly}
+                  empty={entries.length === 0}
+                  errorMsg={errorMsg}
+                  errorOrigin={errorOrigin}
+                  onAdd={openPicker}
+                  onRetry={() => void retry()}
+                  onReorder={handleReorder}
+                  onQuantityCommit={handleQuantityCommit}
+                  onRequestReduce={handleRequestReduce}
+                  onRestCommit={handleRestCommit}
+                  onSeriesCommit={handleSeriesCommit}
+                  onApplyAll={handleApplyAll}
+                  onEditExercise={handleEditExercise}
+                  onRemoveEntry={handleRemoveEntry}
+                  onConfirmUnit={handleUnitCommit}
+                  onModeCommit={handleModeCommit}
+                  onUnitCommit={handleUnitCommit}
+                />
+              </>
+            )}
 
             {entryFooter
-              ? entriesWithUnit.map((view) => (
+              ? entries.map((view) => (
                   <Fragment key={view.entry.id}>
                     {typeof entryFooter === "function"
                       ? entryFooter(view)

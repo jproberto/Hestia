@@ -14,6 +14,8 @@ import {
 } from "../workout-utils";
 import type {
   CreateWorkoutInput,
+  EntryMode,
+  LoadUnit,
   UpdateWorkoutInput,
   Workout,
   WorkoutEntry,
@@ -41,6 +43,9 @@ function toEntryDomain(row: WorkoutEntryRow): WorkoutEntry {
     exerciseId: row.exercise_id,
     position: row.position,
     restSeconds: row.rest_seconds,
+    // Linhas anteriores à migração 0012 nova: nulo tratado como repetição/kg.
+    mode: (row.mode as EntryMode | null) ?? "repeticao",
+    loadUnit: (row.load_unit as LoadUnit | null) ?? "kg",
     createdAt: row.created_at,
     created_by: row.created_by,
   };
@@ -51,8 +56,7 @@ function toSeriesDomain(row: WorkoutSeriesRow): WorkoutSeries {
     id: row.id,
     entryId: row.entry_id,
     position: row.position,
-    reps: row.reps,
-    durationSeconds: row.duration_seconds,
+    value: row.value,
     load: row.load,
     createdAt: row.created_at,
     created_by: row.created_by,
@@ -241,6 +245,9 @@ export async function addEntry(
         exercise_id: exerciseId,
         position,
         rest_seconds: null,
+        // Novas entries nascem com os padrões repetição+kg (D29).
+        mode: "repeticao",
+        load_unit: "kg",
         created_by: email,
       })
       .select()
@@ -313,6 +320,34 @@ export async function setEntryRestSeconds(
   if (error) throw error;
 }
 
+// Ajuste de modo da entry (Mílon #5, aditamento 2026-10-09 "0012 CORRETA",
+// D29): persiste o modo do exercício NO TREINO sem mexer nos demais campos.
+export async function setEntryMode(
+  db: IDatabaseClient,
+  entryId: string,
+  mode: EntryMode,
+): Promise<void> {
+  const { error } = await db
+    .from<WorkoutEntryRow>("workout_entries")
+    .update({ mode })
+    .eq("id", entryId);
+  if (error) throw error;
+}
+
+// Ajuste de unidade da entry (Mílon #5, aditamento 2026-10-09 "0012 CORRETA",
+// D29): persiste a unidade da carga do exercício NO TREINO.
+export async function setEntryLoadUnit(
+  db: IDatabaseClient,
+  entryId: string,
+  unit: LoadUnit,
+): Promise<void> {
+  const { error } = await db
+    .from<WorkoutEntryRow>("workout_entries")
+    .update({ load_unit: unit })
+    .eq("id", entryId);
+  if (error) throw error;
+}
+
 export async function listSeriesByEntry(
   db: IDatabaseClient,
   entryId: string,
@@ -361,8 +396,7 @@ export async function setSeriesQuantity(
       .insert({
         entry_id: entryId,
         position,
-        reps: null,
-        duration_seconds: null,
+        value: null,
         load: null,
         created_by: email,
       });
@@ -377,9 +411,7 @@ export async function updateSeriesFields(
   fields: UpdateSeriesFieldsInput,
 ): Promise<WorkoutSeries> {
   const payload: Record<string, unknown> = {};
-  if ("reps" in fields) payload.reps = fields.reps;
-  if ("durationSeconds" in fields)
-    payload.duration_seconds = fields.durationSeconds;
+  if ("value" in fields) payload.value = fields.value;
   if ("load" in fields) payload.load = fields.load;
 
   const { data, error } = await db
@@ -406,24 +438,56 @@ export async function applySeriesToAll(
 
   for (const serie of series) {
     if (serie.id === originSeriesId) continue;
-    if (
-      serie.reps === origem.reps &&
-      serie.durationSeconds === origem.durationSeconds &&
-      serie.load === origem.load
-    ) {
+    if (serie.value === origem.value && serie.load === origem.load) {
       continue;
     }
     const { error } = await db
       .from<WorkoutSeriesRow>("workout_series")
       .update({
-        reps: origem.reps,
-        duration_seconds: origem.durationSeconds,
+        value: origem.value,
         load: origem.load,
       })
       .eq("id", serie.id);
     if (error) throw error;
   }
   return await listSeriesByEntry(db, entryId);
+}
+
+// Replicação incondicional (Mílon #5, D4): comportamento único de todo
+// salvamento do modal — origem mais as seguintes (posição maior) da mesma
+// entrada, incluindo as já marcadas; anteriores nunca mudam; execução e
+// realizadas nunca são tocadas.
+export async function applySeriesToFollowing(
+  db: IDatabaseClient,
+  entryId: string,
+  originSeriesId: string,
+): Promise<WorkoutSeries[]> {
+  const series = await listSeriesByEntry(db, entryId);
+  const origem = series.find((s) => s.id === originSeriesId);
+  if (!origem) throw new Error("Série de origem não encontrada.");
+
+  for (const serie of series) {
+    if (serie.position <= origem.position) continue;
+    const { error } = await db
+      .from<WorkoutSeriesRow>("workout_series")
+      .update({
+        value: origem.value,
+        load: origem.load,
+      })
+      .eq("id", serie.id);
+    if (error) throw error;
+  }
+  return series
+    .map((serie) =>
+      serie.position > origem.position
+        ? {
+            ...serie,
+            value: origem.value,
+            load: origem.load,
+          }
+        : serie,
+    )
+    .sort((a, b) => a.position - b.position);
 }
 
 // Standalones p/ hooks (criam o próprio client, singleton por aba).
@@ -519,6 +583,20 @@ export async function setEntryRestSecondsStandalone(
   return setEntryRestSeconds(createBrowserDatabaseClient(), entryId, seconds);
 }
 
+export async function setEntryModeStandalone(
+  entryId: string,
+  mode: EntryMode,
+): Promise<void> {
+  return setEntryMode(createBrowserDatabaseClient(), entryId, mode);
+}
+
+export async function setEntryLoadUnitStandalone(
+  entryId: string,
+  unit: LoadUnit,
+): Promise<void> {
+  return setEntryLoadUnit(createBrowserDatabaseClient(), entryId, unit);
+}
+
 export async function listSeriesByEntryStandalone(
   entryId: string,
 ): Promise<WorkoutSeries[]> {
@@ -545,4 +623,11 @@ export async function applySeriesToAllStandalone(
   originSeriesId: string,
 ): Promise<WorkoutSeries[]> {
   return applySeriesToAll(createBrowserDatabaseClient(), entryId, originSeriesId);
+}
+
+export async function applySeriesToFollowingStandalone(
+  entryId: string,
+  originSeriesId: string,
+): Promise<WorkoutSeries[]> {
+  return applySeriesToFollowing(createBrowserDatabaseClient(), entryId, originSeriesId);
 }

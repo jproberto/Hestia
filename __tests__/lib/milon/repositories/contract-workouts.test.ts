@@ -68,8 +68,7 @@ function makeSeries(
   entryId: string,
   position: number,
   fields: {
-    reps?: number | null;
-    durationSeconds?: number | null;
+    value?: number | null;
     load?: number | null;
   } = {},
 ): WorkoutSeries {
@@ -77,8 +76,7 @@ function makeSeries(
     id,
     entryId,
     position,
-    reps: fields.reps ?? null,
-    durationSeconds: fields.durationSeconds ?? null,
+    value: fields.value ?? null,
     load: fields.load ?? null,
     createdAt: "2026-10-01T10:00:00.000Z",
     created_by: EMAIL,
@@ -507,9 +505,9 @@ function defineWorkoutRepositoryContract(
             makeEntry("e-2", "w-1", PROGRAM_A, "ex-2", 2),
           ],
           series: [
-            makeSeries("s-1", "e-1", 1, { reps: 10 }),
-            makeSeries("s-2", "e-1", 2, { reps: 12 }),
-            makeSeries("s-3", "e-2", 1, { reps: 8 }),
+            makeSeries("s-1", "e-1", 1, { value: 10 }),
+            makeSeries("s-2", "e-1", 2, { value: 12 }),
+            makeSeries("s-3", "e-2", 1, { value: 8 }),
           ],
         });
 
@@ -599,8 +597,7 @@ function defineWorkoutRepositoryContract(
         expect(created.map((s) => s.position)).toEqual([1, 2, 3]);
         for (const serie of created) {
           expect(serie.entryId).toBe("e-1");
-          expect(serie.reps).toBeNull();
-          expect(serie.durationSeconds).toBeNull();
+          expect(serie.value).toBeNull();
           expect(serie.load).toBeNull();
         }
         expect(await seeded.listSeriesByEntry("e-1")).toHaveLength(3);
@@ -614,9 +611,9 @@ function defineWorkoutRepositoryContract(
             makeEntry("e-2", "w-1", PROGRAM_A, "ex-2", 2),
           ],
           series: [
-            makeSeries("s-1", "e-1", 1, { reps: 10 }),
+            makeSeries("s-1", "e-1", 1, { value: 10 }),
             makeSeries("s-2", "e-1", 2, { load: 40 }),
-            makeSeries("s-3", "e-2", 1, { reps: 8 }),
+            makeSeries("s-3", "e-2", 1, { value: 8 }),
           ],
         });
 
@@ -633,8 +630,8 @@ function defineWorkoutRepositoryContract(
           workouts: [makeWorkout("w-1", PROGRAM_A, "Push", "2026-10-01T09:00:00.000Z")],
           entries: [makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1)],
           series: [
-            makeSeries("s-1", "e-1", 1, { reps: 10, load: 40 }),
-            makeSeries("s-2", "e-1", 2, { reps: 12, load: 45 }),
+            makeSeries("s-1", "e-1", 1, { value: 10, load: 40 }),
+            makeSeries("s-2", "e-1", 2, { value: 12, load: 45 }),
           ],
         });
 
@@ -643,12 +640,11 @@ function defineWorkoutRepositoryContract(
         expect(result).toHaveLength(5);
         expect(result.map((s) => s.position)).toEqual([1, 2, 3, 4, 5]);
         // Existentes preservadas.
-        expect(result[0]).toMatchObject({ id: "s-1", reps: 10, load: 40 });
-        expect(result[1]).toMatchObject({ id: "s-2", reps: 12, load: 45 });
+        expect(result[0]).toMatchObject({ id: "s-1", value: 10, load: 40 });
+        expect(result[1]).toMatchObject({ id: "s-2", value: 12, load: 45 });
         // Novas vazias ao final.
         for (const nova of result.slice(2)) {
-          expect(nova.reps).toBeNull();
-          expect(nova.durationSeconds).toBeNull();
+          expect(nova.value).toBeNull();
           expect(nova.load).toBeNull();
         }
         expect(await seeded.listSeriesByEntry("e-1")).toHaveLength(5);
@@ -659,11 +655,11 @@ function defineWorkoutRepositoryContract(
           workouts: [makeWorkout("w-1", PROGRAM_A, "Push", "2026-10-01T09:00:00.000Z")],
           entries: [makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1)],
           series: [
-            makeSeries("s-1", "e-1", 1, { reps: 10 }),
-            makeSeries("s-2", "e-1", 2, { reps: 12 }),
-            makeSeries("s-3", "e-1", 3, { reps: 14 }),
-            makeSeries("s-4", "e-1", 4, { reps: 16 }),
-            makeSeries("s-5", "e-1", 5, { reps: 18 }),
+            makeSeries("s-1", "e-1", 1, { value: 10 }),
+            makeSeries("s-2", "e-1", 2, { value: 12 }),
+            makeSeries("s-3", "e-1", 3, { value: 14 }),
+            makeSeries("s-4", "e-1", 4, { value: 16 }),
+            makeSeries("s-5", "e-1", 5, { value: 18 }),
           ],
         });
 
@@ -700,17 +696,16 @@ function defineWorkoutRepositoryContract(
         const seeded = build({
           entries: [makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1)],
           series: [
-            makeSeries("s-1", "e-1", 1, { reps: 10, durationSeconds: 30, load: 40 }),
+            makeSeries("s-1", "e-1", 1, { value: 10, load: 40 }),
           ],
         });
 
-        const semReps = await seeded.updateSeriesFields("s-1", { reps: 12 });
+        const semValue = await seeded.updateSeriesFields("s-1", { value: 12 });
 
-        expect(semReps).toMatchObject({
+        expect(semValue).toMatchObject({
           id: "s-1",
           position: 1,
-          reps: 12,
-          durationSeconds: 30, // intocado
+          value: 12,
           load: 40, // intocado
         });
       });
@@ -719,14 +714,13 @@ function defineWorkoutRepositoryContract(
         const seeded = build({
           entries: [makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1)],
           series: [
-            makeSeries("s-1", "e-1", 1, { reps: 10, durationSeconds: 30, load: 40 }),
+            makeSeries("s-1", "e-1", 1, { value: 10, load: 40 }),
           ],
         });
 
-        const limpo = await seeded.updateSeriesFields("s-1", { durationSeconds: null });
+        const limpo = await seeded.updateSeriesFields("s-1", { value: null });
 
-        expect(limpo.durationSeconds).toBeNull();
-        expect(limpo.reps).toBe(10);
+        expect(limpo.value).toBeNull();
         expect(limpo.load).toBe(40);
       });
 
@@ -744,33 +738,33 @@ function defineWorkoutRepositoryContract(
     });
 
     describe("applySeriesToAll", () => {
-      it("copia reps/tempo/carga da origem para as demais séries", async () => {
+      it("copia valor/carga da origem para as demais séries", async () => {
         const seeded = build({
           entries: [makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1)],
           series: [
-            makeSeries("s-1", "e-1", 1, { reps: 10, durationSeconds: 45, load: 40 }),
+            makeSeries("s-1", "e-1", 1, { value: 10, load: 40 }),
             makeSeries("s-2", "e-1", 2),
-            makeSeries("s-3", "e-1", 3, { reps: 99, load: 99 }),
+            makeSeries("s-3", "e-1", 3, { value: 99, load: 99 }),
           ],
         });
 
         const result = await seeded.applySeriesToAll("e-1", "s-1");
 
         expect(result).toHaveLength(3);
-        expect(result[0]).toMatchObject({ id: "s-1", position: 1, reps: 10, durationSeconds: 45, load: 40 });
-        expect(result[1]).toMatchObject({ id: "s-2", position: 2, reps: 10, durationSeconds: 45, load: 40 });
+        expect(result[0]).toMatchObject({ id: "s-1", position: 1, value: 10, load: 40 });
+        expect(result[1]).toMatchObject({ id: "s-2", position: 2, value: 10, load: 40 });
         // Sobrescreve o que já tinha outro valor (re-executável).
-        expect(result[2]).toMatchObject({ id: "s-3", position: 3, reps: 10, durationSeconds: 45, load: 40 });
+        expect(result[2]).toMatchObject({ id: "s-3", position: 3, value: 10, load: 40 });
         // A origem não muda; só as demais recebem a cópia.
-        expect((await seeded.listSeriesByEntry("e-1"))[0].reps).toBe(10);
+        expect((await seeded.listSeriesByEntry("e-1"))[0].value).toBe(10);
       });
 
       it("é re-executável: acionada de novo a partir de outra série, sobrescreve a cópia anterior", async () => {
         const seeded = build({
           entries: [makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1)],
           series: [
-            makeSeries("s-1", "e-1", 1, { reps: 10, load: 40 }),
-            makeSeries("s-2", "e-1", 2, { reps: 8, load: 35 }),
+            makeSeries("s-1", "e-1", 1, { value: 10, load: 40 }),
+            makeSeries("s-2", "e-1", 2, { value: 8, load: 35 }),
           ],
         });
 
@@ -779,7 +773,7 @@ function defineWorkoutRepositoryContract(
         // 2º apply: origem agora é s-2, cujos valores ATUAIS são (10, 40).
         const deNovo = await seeded.applySeriesToAll("e-1", "s-2");
 
-        expect(deNovo.map((s) => [s.reps, s.load])).toEqual([
+        expect(deNovo.map((s) => [s.value, s.load])).toEqual([
           [10, 40],
           [10, 40],
         ]);
@@ -791,7 +785,7 @@ function defineWorkoutRepositoryContract(
             { ...makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1), restSeconds: 90 },
           ],
           series: [
-            makeSeries("s-1", "e-1", 1, { reps: 10 }),
+            makeSeries("s-1", "e-1", 1, { value: 10 }),
             makeSeries("s-2", "e-1", 2),
           ],
         });
@@ -836,6 +830,94 @@ function defineWorkoutRepositoryContract(
         expect(entrada.restSeconds).toBeNull();
       });
     });
+
+    // ---------------------------------------------------------------------
+    // applySeriesToFollowing — replicação incondicional (Mílon #5, D4)
+    // Comportamento único de todo salvamento do modal: atualiza a origem e
+    // replica para as seguintes (posição maior) incluindo as já marcadas,
+    // preservando o feito; série anterior à origem nunca muda; na última
+    // série só a origem permanece. Não toca em execução nem realizadas.
+    // Ainda NÃO existe no fake: estes blocos falham até Hefesto entregá-lo.
+    // ---------------------------------------------------------------------
+    describe("applySeriesToFollowing", () => {
+      it("copia origem para ela mais as seguintes, sem tocar nas anteriores", async () => {
+        const seeded = build({
+          entries: [makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1)],
+          series: [
+            makeSeries("s-1", "e-1", 1, { value: 8, load: 30 }),
+            makeSeries("s-2", "e-1", 2, { value: 10, load: 40 }),
+            makeSeries("s-3", "e-1", 3, { value: 99, load: 99 }),
+            makeSeries("s-4", "e-1", 4),
+          ],
+        });
+
+        const result = await seeded.applySeriesToFollowing("e-1", "s-2");
+
+        expect(result.map((s: { position: number }) => s.position)).toEqual([1, 2, 3, 4]);
+        // Anterior intacta.
+        expect(result[0]).toMatchObject({ id: "s-1", value: 8, load: 30 });
+        // Origem preservada.
+        expect(result[1]).toMatchObject({
+          id: "s-2",
+          position: 2,
+          value: 10,
+          load: 40,
+        });
+        // Seguintes sobrescritas com os valores da origem (incondicional,
+        // mesmo as já marcadas — o feito nunca é tocado, só o planejado).
+        expect(result[2]).toMatchObject({
+          id: "s-3",
+          position: 3,
+          value: 10,
+          load: 40,
+        });
+        expect(result[3]).toMatchObject({
+          id: "s-4",
+          position: 4,
+          value: 10,
+          load: 40,
+        });
+      });
+
+      it("na última série da entrada atualiza somente a origem", async () => {
+        const seeded = build({
+          entries: [makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1)],
+          series: [
+            makeSeries("s-1", "e-1", 1, { value: 8, load: 30 }),
+            makeSeries("s-2", "e-1", 2, { value: 10, load: 40 }),
+          ],
+        });
+
+        const result = await seeded.applySeriesToFollowing("e-1", "s-2");
+
+        expect(result.map((s: { id: string }) => s.id)).toEqual(["s-1", "s-2"]);
+        expect(result[0]).toMatchObject({ id: "s-1", value: 8, load: 30 });
+        expect(result[1]).toMatchObject({ id: "s-2", value: 10, load: 40 });
+      });
+
+      it("não vaza para outra entrada do mesmo treino", async () => {
+        const seeded = build({
+          entries: [
+            makeEntry("e-1", "w-1", PROGRAM_A, "ex-1", 1),
+            makeEntry("e-2", "w-1", PROGRAM_A, "ex-2", 2),
+          ],
+          series: [
+            makeSeries("s-1", "e-1", 1, { value: 10, load: 40 }),
+            makeSeries("s-2", "e-1", 2, { value: 5, load: 20 }),
+            makeSeries("s-9", "e-2", 1, { value: 7, load: 25 }),
+          ],
+        });
+
+        await seeded.applySeriesToFollowing("e-1", "s-1");
+
+        expect(
+          (await seeded.listSeriesByEntry("e-2")).map((s: { id: string; value: number | null }) => [
+            s.id,
+            s.value,
+          ]),
+        ).toEqual([["s-9", 7]]);
+      });
+    });
   });
 }
 
@@ -843,3 +925,185 @@ defineWorkoutRepositoryContract(
   "fake em memória",
   (seed: WorkoutSeed = {}) => createFakeWorkoutRepository(seed),
 );
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-010 (Mílon #5, Aditamento 2026-10-09 "0012 CORRETA").
+// Fonte: tasks.json TASK-010 (contract-workouts: criação com padrões +
+// ajustes da entry) + plan.md Aditamento 0012 CORRETA §1 Mudanças A/B +
+// §3 (Modo/Unidade da entry + Ajustes de modo/unidade da entry) + D29/D33.
+//
+// Contrato fixado aqui (nomes que a TASK-011 deve implementar):
+// - WorkoutEntryRow/WorkoutEntry ganham `mode` (repeticao|tempo) e
+//   `loadUnit` (kg|lb), OPCIONAIS com fallback de leitura
+//   (repeticao/kg) para não quebrar fixtures pré-0012 — mesmo padrão do
+//   `mode?` do exercício; novas entries nascem com repeticao+kg;
+// - novas operações `setEntryMode(entryId, mode)` +
+//   `setEntryModeStandalone(entryId, mode)` e
+//   `setEntryLoadUnit(entryId, unit)` +
+//   `setEntryLoadUnitStandalone(entryId, unit)` no repositório de treinos,
+//   espelhadas no fake e no contrato IWorkoutRepository;
+// - leitura de entry pré-migração (sem os campos) trata nulo como
+//   repeticao/kg.
+//
+// Expected: FAIL — o repository e o fake ainda não têm modo/unidade na
+// entry nem os ajustes. Hefesto fará GREEN na TASK-011 sem mudar estes
+// testes. Casts `as unknown as` mantêm o tsc verde no RED (a falha é em
+// runtime, não em tipo).
+// ---------------------------------------------------------------------------
+describe("modo e unidade da entry (TASK-010 — RED)", () => {
+  type EntryComModo = WorkoutEntry & {
+    mode?: "repeticao" | "tempo" | null;
+    loadUnit?: "kg" | "lb" | null;
+  };
+
+  function entryComoRegistro(entry: WorkoutEntry): Record<string, unknown> {
+    return entry as unknown as Record<string, unknown>;
+  }
+
+  it("addEntry devolve a entry com padrões repeticao e kg", async () => {
+    const repo = createFakeWorkoutRepository();
+
+    const entry = (await repo.addEntry(
+      "w-1",
+      PROGRAM_A,
+      "ex-1",
+      EMAIL,
+    )) as unknown as EntryComModo;
+
+    expect(entry.mode).toBe("repeticao");
+    expect(entry.loadUnit).toBe("kg");
+  });
+
+  it("setEntryMode existe e persiste com reflexo em leitura", async () => {
+    const repo = createFakeWorkoutRepository();
+    const entry = await repo.addEntry("w-1", PROGRAM_A, "ex-1", EMAIL);
+
+    const api = repo as unknown as {
+      setEntryMode: (entryId: string, mode: "repeticao" | "tempo") => Promise<void>;
+    };
+    expect(typeof api.setEntryMode).toBe("function");
+    await api.setEntryMode(entry.id, "tempo");
+
+    const lidas = (await repo.listEntriesByWorkout(
+      "w-1",
+    )) as unknown as EntryComModo[];
+    expect(lidas).toHaveLength(1);
+    expect(lidas[0].mode).toBe("tempo");
+    // O ajuste de modo não mexe na unidade.
+    expect(lidas[0].loadUnit).toBe("kg");
+  });
+
+  it("setEntryLoadUnit existe e persiste com reflexo em leitura", async () => {
+    const repo = createFakeWorkoutRepository();
+    const entry = await repo.addEntry("w-1", PROGRAM_A, "ex-1", EMAIL);
+
+    const api = repo as unknown as {
+      setEntryLoadUnit: (entryId: string, unit: "kg" | "lb") => Promise<void>;
+    };
+    expect(typeof api.setEntryLoadUnit).toBe("function");
+    await api.setEntryLoadUnit(entry.id, "lb");
+
+    const lidas = (await repo.listEntriesByWorkout(
+      "w-1",
+    )) as unknown as EntryComModo[];
+    expect(lidas).toHaveLength(1);
+    expect(lidas[0].loadUnit).toBe("lb");
+    // O ajuste de unidade não mexe no modo.
+    expect(lidas[0].mode).toBe("repeticao");
+  });
+
+  it("leitura de entry pré-migração (sem os campos) trata nulo como repeticao/kg", async () => {
+    const repo = createFakeWorkoutRepository({
+      entries: [makeEntry("e-pre", "w-1", PROGRAM_A, "ex-1", 1)],
+    });
+
+    const lidas = await repo.listEntriesByWorkout("w-1");
+    expect(lidas).toHaveLength(1);
+    expect(entryComoRegistro(lidas[0]).mode).toBe("repeticao");
+    expect(entryComoRegistro(lidas[0]).loadUnit).toBe("kg");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-013 (Mílon #5, Aditamento 2026-10-10 "valor único +
+// lb") — consumido pelas TASK-014/015.
+// Fonte: tasks.json TASK-013 + plan.md Aditamento 2026-10-10 §3 (entrada de
+// atualização com valor único + carga; replicação copiando value + carga;
+// unidade da entry com lb) + spec §3.
+// Expected: FAIL nos blocos de valor único (fake atual ignora `value`).
+// O bloco lb é guarda (a fake repassa a unidade sem validar — passa antes e
+// depois; a restrição real vive na migração 0014).
+// Convenção: `value`/`lb` via cast — os tipos ainda não têm o novo contrato
+// (RED inclui os tipos); em runtime os objetos os carregam.
+// ---------------------------------------------------------------------------
+
+describe("Milon 05 TASK-013 RED — contrato de treinos com valor único + lb (D34/D38)", () => {
+  const CRIADO_EM_RED = "2026-10-01T10:00:00.000Z";
+
+  function serieValorada(
+    id: string,
+    entryId: string,
+    position: number,
+    extra: Record<string, unknown> = {},
+  ): WorkoutSeries {
+    return {
+      id,
+      entryId,
+      position,
+      value: null,
+      load: null,
+      createdAt: CRIADO_EM_RED,
+      created_by: EMAIL,
+      ...extra,
+    } as unknown as WorkoutSeries;
+  }
+
+  it("updateSeriesFields persiste o valor único e devolve a série com value", async () => {
+    const repo = createFakeWorkoutRepository({
+      series: [serieValorada("s1", "e1", 1)],
+    });
+
+    const atualizada = (await repo.updateSeriesFields("s1", {
+      value: 12,
+      load: 60,
+    } as unknown as Parameters<
+      IWorkoutRepository["updateSeriesFields"]
+    >[1])) as unknown as Record<string, unknown>;
+    expect(atualizada.value).toBe(12);
+    expect(atualizada.load).toBe(60);
+  });
+
+  it("applySeriesToFollowing replica value + carga para as seguintes", async () => {
+    const repo = createFakeWorkoutRepository({
+      series: [serieValorada("s1", "e1", 1), serieValorada("s2", "e1", 2)],
+    });
+    await repo.updateSeriesFields("s1", {
+      value: 8,
+      load: 40,
+    } as unknown as Parameters<IWorkoutRepository["updateSeriesFields"]>[1]);
+
+    const refletidas = (await repo.applySeriesToFollowing(
+      "e1",
+      "s1",
+    )) as unknown as Array<Record<string, unknown>>;
+    const segunda = refletidas.find((s) => s.id === "s2");
+    expect(segunda?.value).toBe(8);
+    expect(segunda?.load).toBe(40);
+  });
+
+  it("setEntryLoadUnit persiste lb com reflexo em leitura (guarda D38)", async () => {
+    const repo = createFakeWorkoutRepository({
+      workouts: [makeWorkout("w-1", PROGRAM_A, "Push", CRIADO_EM_RED)],
+      entries: [makeEntry("e-lb", "w-1", PROGRAM_A, "ex-1", 1)],
+    });
+
+    await repo.setEntryLoadUnit(
+      "e-lb",
+      "lb" as unknown as Parameters<IWorkoutRepository["setEntryLoadUnit"]>[1],
+    );
+
+    const lidas = await repo.listEntriesByWorkout("w-1");
+    expect(lidas).toHaveLength(1);
+    expect(lidas[0].loadUnit).toBe("lb");
+  });
+});

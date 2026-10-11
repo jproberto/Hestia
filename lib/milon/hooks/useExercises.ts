@@ -17,7 +17,7 @@ import {
   normalizeExerciseText,
   type ExerciseSortOrder,
 } from "@/lib/milon/utils";
-import type { CreateExerciseInput, Exercise } from "@/lib/milon/types";
+import type { CreateExerciseInput, Exercise, UpdateExerciseInput } from "@/lib/milon/types";
 
 export interface SaveExerciseInput {
   name: string;
@@ -215,6 +215,8 @@ export function useExercises(): UseExercisesReturn {
       // garante o item salvo visível (upsert idempotente — sem efeito quando
       // a recarga já contém o salvo).
       try {
+        // Biblioteca com só nome, músculo e vídeo (D33, reversão do
+        // modo-na-biblioteca): sem repasse de modo/unidade.
         const payload: CreateExerciseInput = {
           name: input.name,
           muscle: input.muscle,
@@ -222,11 +224,12 @@ export function useExercises(): UseExercisesReturn {
         };
         let saved: Exercise;
         if (id) {
-          saved = await updateExerciseStandalone(id, {
+          const updatePayload: UpdateExerciseInput = {
             name: payload.name,
             muscle: payload.muscle,
             videoLink: payload.videoLink ?? null,
-          });
+          };
+          saved = await updateExerciseStandalone(id, updatePayload);
         } else {
           saved = await createExerciseStandalone(payload, await resolveEmail());
         }

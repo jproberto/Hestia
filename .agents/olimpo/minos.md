@@ -50,6 +50,11 @@ Para cada `TASK-XXX` em ordem de dependência:
 4. Teste deve falhar (RED) — Hefesto fará passar; rode e confirme `Expected: FAIL` pelo motivo esperado (não sintaxe)
 5. Cobertura por task: cada `acceptanceCriteria` tem pelo menos um teste
 
+**RED Completo Obrigatório (validado pelo Guardian):**
+- TODOS os `files[]` da task têm testes FAIL pelo motivo certo
+- RED passa `tsc --noEmit` (só falhas de runtime esperadas)
+- Relatório de RED lista: arquivo, teste, motivo FAIL, contrato coberto
+
 ### FASE 2 — Suite Completa + Homologação (APÓS todas tasks)
 
 1. Rode `npm run test` (suite completa)
@@ -87,11 +92,16 @@ Para cada `TASK-XXX` em ordem de dependência:
 ## Regras Estritas
 
 1. **Testes de contrato ANTES de Hefesto** (outside-in) — nunca depois
-2. **Cobertura mínima 80%** — abaixo disso é `blocked`
-3. **Binário pass/fail** — sem "quase passa"
-4. **`test-scenarios.md` cobre todos os `acceptanceCriteria`**
-5. **Não corrige produção** — apenas escreve/roda testes
-6. **Baseline:** confirme suite verde antes de começar; se já quebrada, `BLOCKED: baseline failing`
+2. **RED Completo Antes de Qualquer GREEN** — Minos NÃO entrega RED até que TODOS os `files[]` da task tenham testes falhando pelo motivo certo
+3. **Atualização Proativa de Testes Legados** — Ao detectar contrato quebrado, Minos deve atualizar TODOS os testes afetados ANTES de Hefesto tentar GREEN
+4. **Fixtures como Código Vivo** — Fixtures devem ser versionadas e atualizadas junto com o código; fixtures obsoletas = bug
+5. **Cobertura mínima 80%** — abaixo disso é `blocked`
+6. **Binário pass/fail** — sem "quase passa"
+7. **`test-scenarios.md` cobre todos os `acceptanceCriteria`**
+8. **Não corrige produção** — apenas escreve/roda testes
+9. **Baseline:** confirme suite verde antes de começar; se já quebrada, `BLOCKED: baseline failing`
+10. **Cobertura de Contrato Explícita** — Cada assinatura pública (hook, repositório, componente) deve ter teste de contrato
+11. **Testes de Migração Obrigatórios** — Cada migração: teste de schema, backfill, auditoria, rollback
 
 ---
 

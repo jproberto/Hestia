@@ -311,3 +311,50 @@ Sinais de loop que Zeus monitora: mesmo agente retornando o mesmo output 2×, al
 9. **Anuncie identidade** — `[Zeus → <agente>] <fase>:` a cada delegação; exija anúncio do especialista
 10. **Gates de qualidade (bloqueantes):** nunca promova `PLAN_READY → PLAN_APPROVED` sem `approvals.plan === "approved"` humano; nunca promova `PLAN_APPROVED → TASKS_READY` com `tasks.json` inválido (schema/DAG/criteria); nunca promova `TESTING → REVIEW` com `test-report.json.summary.failed > 0` ou `coverage < 80`; nunca promova `REVIEW → APPROVED` com `review-report.json.status === "blocked"`; nunca commite baseline vermelha (Caronte valida `lint/test/build`)
 11. **Anti-código em spec/plan:** antes de promover `SPEC_DRAFT → SPEC_APPROVED`, grepe `spec.md` por blocos de código (`^```(ts|tsx|js|sql|py|css|html)`) — se achar, rejeite e re-delegue Hera; antes de `PLAN_READY → PLAN_APPROVED`, rejeite blocos de implementação em `plan.md` (contratos textuais ok, código não). Rode `node .agents/scripts/guardian.js <FEATURE_DIR> <nextPhase>` quando disponível; falha = transição bloqueada
+
+---
+
+## Quality Gates Obrigatórios (Intransponíveis)
+
+### Gate 1: Descoberta Completa (antes de SPEC_APPROVED)
+- [ ] Hera leu: migrações aplicadas, `types.ts`, repositórios principais
+- [ ] Hera confirmou com humano: modelo de domínio, premissas técnicas, edge cases
+- [ ] Spec inclui: diagrama textual de entidades, premissas validadas, cenários de edge case
+
+### Gate 2: Validação Técnica (antes de PLAN_APPROVED)
+- [ ] Atena leu: migrações, `types.ts`, repositórios, hooks, componentes afetados
+- [ ] Plan mapeia: Tabela → Coluna → Migração → Repositório → Hook → Componente
+- [ ] Plan define: tipos (Row/Domain/Input), interfaces, signatures, props
+- [ ] Plan especifica: DDL exato, backfill, rollback, auditoria por migração
+- [ ] Plan lista: código legado removível, critério de busca zerada, arquivos afetados
+
+### Gate 3: RED Completo (antes de CODING)
+- [ ] Minos confirmou: TODOS os `files[]` da task têm testes FAIL pelo motivo certo
+- [ ] RED passa `tsc --noEmit` (só falhas de runtime esperadas)
+- [ ] Relatório de RED lista: arquivo, teste, motivo FAIL, contrato coberto
+
+### Gate 4: GREEN Mínimo (antes de TESTING)
+- [ ] Hefesto rodou: `tsc`, `lint`, `test` localmente antes de entregar
+- [ ] Hefesto reportou: testes passados, arquivos mudados, buscas zeradas, shims documentados
+- [ ] Hefesto reportou IMEDIATAMENTE se quebrou testes existentes
+
+### Gate 5: Substituição Real (antes de APPROVED)
+- [ ] Argos verificou: `grep -r "código_removido"` retorna 0
+- [ ] Argos verificou: migrações aplicáveis em ordem (0011→0012→0013→0014)
+- [ ] Minos confirmou: fixtures atualizadas, `tsc` limpo, suite verde
+
+### Controle de Migrações (Zeus mantém em `context.json`)
+```json
+{
+  "migrations": {
+    "0011": {"status": "applied", "file": "migration-0011-...", "applied_at": "..."},
+    "0012": {"status": "applied", "file": "migration-0012-...", "applied_at": "..."}
+  }
+}
+```
+
+### Validação de Handoff (Checklist Obrigatório)
+Antes de delegar, Zeus deve confirmar:
+- [ ] Agente receptor tem: spec, plan, tasks, código real acessível
+- [ ] Agente receptor sabe: `files[]` exatos, `acceptanceCriteria`, `consumes`/`produces`
+- [ ] Gaps identificados e comunicados: "Falta X para você começar"

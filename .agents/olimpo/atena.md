@@ -70,6 +70,8 @@ Regras: fronteiras claras, interfaces bem definidas, arquivos pequenos e focados
 - Camadas (Mapa de Camadas do AGENTS.md): para cada `Create`/`Modify`, declare a camada, o caminho de import permitido e a estratégia de teste da camada. Proibido criar `use-cases/`, `schemas/`, `mappers.ts`, `services/` ou factories `createXService` (removidos nas tasks 41/52) e proibido importar `@supabase/*` fora de `lib/shared/`.
 - Módulo novo: a primeira task executa o gerador `node .agents/scripts/new-module.js <key> "<Nome>" "/mascots/<key>.png" "#cor"` (scaffolda tipos, repositories+interfaces+fakes, db, hooks, utils, index, contract, story, testes espelho + registra o módulo nos backlogs) e segue `.agents/module-template.md` — inclui a convenção visual `font-display` para títulos (`h1/h2/h3` de conteúdo; `ModuleLayout` já aplica em nome do módulo e `pageTitle`).
 
+**Leitura Obrigatória de Código Real:** Antes de escrever `plan.md`, Atena DEVE ler: migrações aplicadas, `types.ts`, repositórios principais, hooks, componentes afetados. O plano deve mapear explicitamente: "Tabela X → coluna Y → migração Z → repositório W → hook V → componente U".
+
 ### 3) Dimensionar Tasks (menor unidade com valor verificável)
 Cada task:
 - tem ciclo de teste próprio
@@ -104,6 +106,15 @@ Dentro da task, passos de 2-5 min com comando exato e `Expected: FAIL/PASS`.
 ## 6. Riscos e Mitigações
 ```
 
+**Seções Obrigatórias (validadas pelo Guardian):**
+- **Mapeamento Schema → Código** — tabela com: Tabela | Coluna | Migração | Repositório | Hook | Componente
+- **Contratos Completos** — Tipos (Row/Domain/Input), Interfaces de Repositório, Signatures de Hooks, Props de Componentes
+- **Migrações** — por migração: DDL exato, backfill strategy, rollback strategy, auditoria (script_name idêntico)
+- **Código Legado/Removível** — item, critério de busca zerada (grep), arquivos afetados
+- **Tasks** — array com id, title, assignee, files[], acceptanceCriteria, consumes, produces, dependencies
+
+**Template de referência:** `.agents/templates/plan-template.md` — use como guia para as seções obrigatórias.
+
 **`tasks.json` schema:**
 ```json
 {
@@ -116,11 +127,14 @@ Dentro da task, passos de 2-5 min com comando exato e `Expected: FAIL/PASS`.
       "dependencies": [],
       "acceptanceCriteria": ["critério testável 1", "critério testável 2"],
       "files": ["app/pluto/.../page.tsx", "__tests__/app/pluto/...test.tsx"],
-      "status": "pending"
+      "consumes": [],
+      "produces": ["contrato X"]
     }
   ]
 }
 ```
+
+**Template de referência:** `.agents/templates/task-template.json` — use como guia para estrutura de task.
 
 **Regras estritas:**
 - ≥ 3 tasks; DAG acíclico; `acceptanceCriteria` não vazios e testáveis

@@ -11,6 +11,7 @@ import {
 import {
   clearExecutionStandalone,
   findOpenExecutionByWorkoutStandalone,
+  finishExecutionStandalone,
   listDoneByExecutionStandalone,
   markSeriesDoneStandalone,
   startExecutionStandalone,
@@ -18,7 +19,9 @@ import {
 } from "@/lib/milon/db/executions";
 import {
   contarMarcadasNaExecucao,
+  decidirCasoFinalizacao,
   ehUltimaMarcada,
+  type CasoFinalizacao,
 } from "@/lib/milon/workout-utils";
 import type { UpdateSeriesFieldsInput } from "@/lib/milon/repositories/interfaces";
 import type {
@@ -30,10 +33,14 @@ import type {
   WorkoutSeries,
 } from "@/lib/milon/types";
 
+export type FinishConfirmCase = "parcial" | "completa" | "vazio";
+
 export interface UseWorkoutExecutionReturn {
   execution: WorkoutExecution | null;
   doneSeriesIds: string[];
   markedCount: number;
+  totalSeriesCount: number;
+  finishCase: CasoFinalizacao | null;
   toggleSeries: (entry: WorkoutEntry, serie: WorkoutSeries) => Promise<void>;
   saveSeriesExecution: (
     entry: WorkoutEntry,
@@ -43,6 +50,17 @@ export interface UseWorkoutExecutionReturn {
   clearConfirmOpen: boolean;
   confirmClearExecution: () => Promise<void>;
   cancelClearExecution: () => void;
+  finishConfirmOpen: boolean;
+  finishConfirmCase: FinishConfirmCase | null;
+  cancelConfirmOpen: boolean;
+  finishProcessing: boolean;
+  cancelProcessing: boolean;
+  requestFinish: () => Promise<void>;
+  confirmFinish: () => Promise<void>;
+  cancelFinish: () => void;
+  requestCancel: () => void;
+  confirmCancelExecution: () => Promise<void>;
+  cancelCancelExecution: () => void;
   loading: boolean;
   errorMsg: string | null;
   errorOrigin: ErrorOrigin | null;
@@ -70,19 +88,19 @@ async function carregarCadeia(workoutId: string): Promise<LoadedExecution> {
   return { workout, execution: aberta, dones };
 }
 
-// Execução série a série do Treino do Dia (Mílon #5): orquestra a execução
-// aberta + realizadas sobre os barrels `db/*`, no padrão do módulo
-// (promise-chain + flag cancelled no mount; erro de operação no banner com
-// origem `operacao` + relançamento; modal nunca fecha no erro — o hook só
-// expõe o estado, quem fecha é a seção). O fim nunca é escrito aqui
-// (reservado à feature 7); o estado do editor mora na WorkoutDetailSection.
+// Execução série a série do Treino do Dia (Mílon #5) com encerramento
+// (Mílon #7): orquestra a execução aberta + realizadas sobre os barrels
+// `db/*`, no padrão do módulo (promise-chain + flag cancelled no mount; erro
+// de operação no banner com origem `operacao` + relançamento; modal nunca
+// fecha no erro — o hook só expõe o estado, quem fecha é a seção). O selamento
+// (Finalizar, via finishExecution) e o cancelamento com confirmação moram
+// aqui; o estado do editor mora na WorkoutDetailSection.
 // O Treino do Dia exibe sempre o template ao vivo com marcadores de feito
-// por série (sem foto; valores reais ficam para o encerrar #7).
+// por série (sem foto; o executado alimenta o selamento).
 export function useWorkoutExecution(
   workoutId: string,
-  // Template atual (mantido na assinatura: a seção compõe o hook com
-  // workoutId + template; o display ao vivo é o próprio template, sem foto).
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // Template atual (contagem do total planejado + gatilho do Caso 4; o
+  // display ao vivo é o próprio template, sem foto).
   entries: WorkoutEntryView[] = [],
 ): UseWorkoutExecutionReturn {
   const db = useMemo(() => createBrowserDatabaseClient(), []);
@@ -90,6 +108,12 @@ export function useWorkoutExecution(
   const [execution, setExecution] = useState<WorkoutExecution | null>(null);
   const [dones, setDones] = useState<WorkoutExecutionSeries[]>([]);
   const [clearConfirmOpen, setClearConfirmOpen] = useState<boolean>(false);
+  const [finishConfirmOpen, setFinishConfirmOpen] = useState<boolean>(false);
+  const [finishConfirmCase, setFinishConfirmCase] =
+    useState<FinishConfirmCase | null>(null);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState<boolean>(false);
+  const [finishProcessing, setFinishProcessing] = useState<boolean>(false);
+  const [cancelProcessing, setCancelProcessing] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [errorOrigin, setErrorOrigin] = useState<ErrorOrigin | null>(null);
@@ -103,6 +127,14 @@ export function useWorkoutExecution(
     [dones],
   );
   const markedCount = useMemo(() => contarMarcadasNaExecucao(dones), [dones]);
+  const totalSeriesCount = useMemo(
+    () =>
+      entries.reduce((acumulado, view) => acumulado + view.series.length, 0),
+    [entries],
+  );
+  const finishCase: CasoFinalizacao | null = execution
+    ? decidirCasoFinalizacao(markedCount, totalSeriesCount)
+    : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -195,6 +227,13 @@ export function useWorkoutExecution(
             email,
           );
           await recarregar();
+          // Caso 4 (Mílon #7, D5): a série clicada acabou de completar o
+          // template — abre a pergunta de todas-executadas em vez de selar
+          // direto (o gesto rápido do completo via botão segue em requestFinish).
+          if (totalSeriesCount > 0 && dones.length + 1 >= totalSeriesCount) {
+            setFinishConfirmCase("completa");
+            setFinishConfirmOpen(true);
+          }
           return;
         }
         const alvo =
@@ -215,7 +254,7 @@ export function useWorkoutExecution(
         throw err instanceof Error ? err : new Error(message);
       }
     },
-    [dones, execution, workout, workoutId, resolveEmail, recarregar],
+    [dones, totalSeriesCount, execution, workout, workoutId, resolveEmail, recarregar],
   );
 
   const saveSeriesExecution = useCallback(
@@ -269,15 +308,141 @@ export function useWorkoutExecution(
     setClearConfirmOpen(false);
   }, []);
 
+  // Encerramento do treino (Mílon #7, plan §3 + D4/D5/D8): Finalizar decide o
+  // caso sobre marcadas × total — completo sela direto sem confirmação,
+  // parcial e vazio abrem a pergunta correspondente sem selar. Cancelar abre
+  // a pergunta de exclusão. Confirmar grava, recarrega e fecha; desistir só
+  // fecha. Erro de operação alimenta o banner com origem `operacao` e
+  // relança (modal nunca fecha no erro). `processing` bloqueia duplo clique
+  // (segunda tentativa tardia encontra execução já selada e vira erro de
+  // operação, sem selo duplicado).
+  const requestFinish = useCallback(async (): Promise<void> => {
+    const aberta = execution;
+    if (!aberta) {
+      return;
+    }
+    const caso = decidirCasoFinalizacao(markedCount, totalSeriesCount);
+    if (caso === "completo") {
+      if (finishProcessing) {
+        return;
+      }
+      setFinishProcessing(true);
+      setErrorMsg(null);
+      setErrorOrigin(null);
+      try {
+        await finishExecutionStandalone(aberta.id);
+        await recarregar();
+      } catch (err: unknown) {
+        const message = toErrorMessage(err, "Erro ao finalizar treino");
+        setErrorMsg(message);
+        setErrorOrigin("operacao");
+        throw err instanceof Error ? err : new Error(message);
+      } finally {
+        setFinishProcessing(false);
+      }
+      return;
+    }
+    setFinishConfirmCase(caso === "parcial" ? "parcial" : "vazio");
+    setFinishConfirmOpen(true);
+  }, [execution, markedCount, totalSeriesCount, finishProcessing, recarregar]);
+
+  const confirmFinish = useCallback(async (): Promise<void> => {
+    if (finishProcessing) {
+      return;
+    }
+    const alvo = execution;
+    if (!alvo) {
+      setFinishConfirmOpen(false);
+      setFinishConfirmCase(null);
+      return;
+    }
+    setFinishProcessing(true);
+    setErrorMsg(null);
+    setErrorOrigin(null);
+    try {
+      if (finishConfirmCase === "vazio") {
+        // Vazio conduz ao cancelamento (D4): confirmar exclui a execução,
+        // sem criar registro selado vazio.
+        await clearExecutionStandalone(alvo.id);
+      } else {
+        await finishExecutionStandalone(alvo.id);
+      }
+      await recarregar();
+      setFinishConfirmOpen(false);
+      setFinishConfirmCase(null);
+    } catch (err: unknown) {
+      const message = toErrorMessage(err, "Erro ao finalizar treino");
+      setErrorMsg(message);
+      setErrorOrigin("operacao");
+      throw err instanceof Error ? err : new Error(message);
+    } finally {
+      setFinishProcessing(false);
+    }
+  }, [execution, finishConfirmCase, finishProcessing, recarregar]);
+
+  const cancelFinish = useCallback(() => {
+    // Só fecha a pergunta: execução segue aberta, sem nada selado.
+    setFinishConfirmOpen(false);
+    setFinishConfirmCase(null);
+  }, []);
+
+  const requestCancel = useCallback(() => {
+    setCancelConfirmOpen(true);
+  }, []);
+
+  const confirmCancelExecution = useCallback(async (): Promise<void> => {
+    if (cancelProcessing) {
+      return;
+    }
+    const alvo = execution;
+    if (!alvo) {
+      setCancelConfirmOpen(false);
+      return;
+    }
+    setCancelProcessing(true);
+    setErrorMsg(null);
+    setErrorOrigin(null);
+    try {
+      await clearExecutionStandalone(alvo.id);
+      await recarregar();
+      setCancelConfirmOpen(false);
+    } catch (err: unknown) {
+      const message = toErrorMessage(err, "Erro ao cancelar execução");
+      setErrorMsg(message);
+      setErrorOrigin("operacao");
+      throw err instanceof Error ? err : new Error(message);
+    } finally {
+      setCancelProcessing(false);
+    }
+  }, [execution, cancelProcessing, recarregar]);
+
+  const cancelCancelExecution = useCallback(() => {
+    // Só fecha a pergunta: execução segue aberta, início segue registrado.
+    setCancelConfirmOpen(false);
+  }, []);
+
   return {
     execution,
     doneSeriesIds,
     markedCount,
+    totalSeriesCount,
+    finishCase,
     toggleSeries,
     saveSeriesExecution,
     clearConfirmOpen,
     confirmClearExecution,
     cancelClearExecution,
+    finishConfirmOpen,
+    finishConfirmCase,
+    cancelConfirmOpen,
+    finishProcessing,
+    cancelProcessing,
+    requestFinish,
+    confirmFinish,
+    cancelFinish,
+    requestCancel,
+    confirmCancelExecution,
+    cancelCancelExecution,
     loading,
     errorMsg,
     errorOrigin,

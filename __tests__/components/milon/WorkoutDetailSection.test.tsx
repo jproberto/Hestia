@@ -1531,3 +1531,167 @@ describe("WorkoutDetailSection — ajustes de modo/unidade da entry (TASK-010 �
     expect(src).not.toMatch(/setExerciseLoadUnitStandalone/);
   });
 });
+
+/**
+ * Contrato RED — Mílon #7 Encerrar treino (TASK-003): hospedagem das
+ * confirmações novas + slots topo/rodapé no ramo de execução.
+ * Fonte: spec §2 (Cancelar no topo, Finalizar no final abaixo do último
+ * Adicionar; permanece no Treino do Dia) + §3 (quatro casos, vazio, efeitos,
+ * estados de tela) + §5 critérios 1/2/4/7/8/9/11 + plan §3 (seção sem props
+ * novas; topo renderiza headerActions ao lado do badge; rodapé renderiza
+ * footer após a lista; ExecutionHost hospeda os quatro modais com a mesma
+ * disciplina do clearConfirmOpen: erro não fecha, processing não fecha).
+ * Expected: FAIL — a seção ainda não hospeda as confirmações novas (textos
+ * ausentes) nem o gatilho do Caso 4. Hefesto fará GREEN na TASK-005.
+ * Convenção tsc: estado estendido do hook via overrides (cast); seção sem
+ * props novas (só slots existentes).
+ */
+describe("WorkoutDetailSection — encerrar treino (Milon 07 TASK-003 — RED)", () => {
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  function setupExec07(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      totalSeriesCount: 0,
+      finishCase: null,
+      finishConfirmOpen: false,
+      finishConfirmCase: null,
+      cancelConfirmOpen: false,
+      finishProcessing: false,
+      cancelProcessing: false,
+      requestFinish: vi.fn(),
+      confirmFinish: vi.fn(async () => {}),
+      cancelFinish: vi.fn(),
+      requestCancel: vi.fn(),
+      confirmCancelExecution: vi.fn(async () => {}),
+      cancelCancelExecution: vi.fn(),
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  function comExecucao(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backNone,
+      executionEnabled: true,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  function execAberta(): Record<string, unknown> {
+    return {
+      id: "exec-1",
+      workoutId: "wout-1",
+      programId: "prog-1",
+      startedAt: "2026-10-12T10:00:00.000Z",
+      finishedAt: null,
+      createdAt: "2026-10-12T10:00:00.000Z",
+      created_by: DONO,
+    };
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExec07();
+  });
+
+  it("parcial: finishConfirmOpen com caso parcial exibe o texto exato (critério 4)", () => {
+    conteudoComUmaEntrada();
+    setupExec07({
+      execution: execAberta(),
+      finishConfirmOpen: true,
+      finishConfirmCase: "parcial",
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(
+      screen.getByText(
+        "Ainda existem séries não executadas. Tem certeza que deseja finalizar o treino?",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("cancelar: cancelConfirmOpen exibe o texto exato de exclusão (critério 2)", () => {
+    conteudoComUmaEntrada();
+    setupExec07({ execution: execAberta(), cancelConfirmOpen: true });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(
+      screen.getByText(
+        "Tem certeza que deseja cancelar essa execução? Todas as informações serão excluídas.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("Caso 4: finishConfirmOpen com caso completa exibe a pergunta de todas-executadas (critério 7)", () => {
+    conteudoComUmaEntrada();
+    setupExec07({
+      execution: execAberta(),
+      doneSeriesIds: ["ser-1", "ser-2"],
+      markedCount: 2,
+      finishConfirmOpen: true,
+      finishConfirmCase: "completa",
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(
+      screen.getByText(
+        "Você executou todas as séries, deseja finalizar o treino?",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("vazio: finishConfirmOpen com caso vazio exibe a mensagem que conduz ao cancelamento (critério 8)", () => {
+    conteudoComUmaEntrada();
+    setupExec07({
+      execution: execAberta(),
+      finishConfirmOpen: true,
+      finishConfirmCase: "vazio",
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(
+      screen.getByText(
+        "O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino?",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("topo/rodapé: headerActions ao lado do badge e footer após a lista no ramo de execução (critério 1)", () => {
+    conteudoComUmaEntrada();
+    setupExec07({ execution: execAberta() });
+
+    render(
+      <WorkoutDetailSection
+        {...comExecucao({
+          headerActions: <div data-testid="slot-topo">topo</div>,
+          footer: <div data-testid="slot-rodape">rodape</div>,
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Em execução")).toBeInTheDocument();
+    expect(screen.getByTestId("slot-topo")).toBeInTheDocument();
+    expect(screen.getByTestId("slot-rodape")).toBeInTheDocument();
+  });
+});

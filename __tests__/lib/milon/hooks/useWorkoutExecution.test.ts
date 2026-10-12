@@ -70,6 +70,7 @@ import {
 import {
   findOpenExecutionByWorkoutStandalone,
   startExecutionStandalone,
+  finishExecutionStandalone,
   clearExecutionStandalone,
   listDoneByExecutionStandalone,
   markSeriesDoneStandalone,
@@ -137,6 +138,7 @@ vi.mock("@/lib/milon/db/executions", () => ({
   unmarkSeries: vi.fn(),
   findOpenExecutionByWorkoutStandalone: vi.fn(),
   startExecutionStandalone: vi.fn(),
+  finishExecutionStandalone: vi.fn(),
   clearExecutionStandalone: vi.fn(),
   listDoneByExecutionStandalone: vi.fn(),
   markSeriesDoneStandalone: vi.fn(),
@@ -338,6 +340,7 @@ const mocksDoArquivo = [
   findWorkoutByIdStandalone,
   findOpenExecutionByWorkoutStandalone,
   startExecutionStandalone,
+  finishExecutionStandalone,
   clearExecutionStandalone,
   listDoneByExecutionStandalone,
   markSeriesDoneStandalone,
@@ -1065,6 +1068,265 @@ describe("Milon 05 TASK-013 RED — useWorkoutExecution com valor único (D34)",
       }),
       EMAIL,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Contrato RED — Mílon #7 Encerrar treino (TASK-003): máquina Finalizar /
+// Cancelar + gatilho do Caso 4.
+// Fonte: `.agents/modules/milon/07-encerrar-treino/spec.md` §2 (posições,
+// jornada), §3 (quatro casos, vazio, efeitos, estados de tela) e §5
+// (critérios 1–11) + `plan.md` §3 (decisor, hook, variantes, botões).
+// Escrito ANTES da implementação (outside-in). Expected: FAIL — campos
+// `requestFinish`/`confirmFinish`/`requestCancel`/`finishCase` e o gatilho
+// do Caso 4 ainda não existem no hook (motivo certo: undefined, nunca
+// sintaxe). Hefesto fará GREEN na TASK-004 sem mudar estes testes.
+// Convenção tsc: novos campos via cast para Record (o tipo ainda não os
+// declara); `finishExecutionStandalone` já existe no barrel (TASK-002).
+// ---------------------------------------------------------------------------
+
+function viewComSeries(ids: string[]): WorkoutEntryView {
+  return makeView({
+    entry: makeEntry({ id: "ent-1" }),
+    exercise: makeExercise(),
+    series: ids.map((id, i) =>
+      makeSerie({ id, entryId: "ent-1", position: i + 1, value: 10, load: 40 }),
+    ),
+  });
+}
+
+function campoHook(
+  result: { current: unknown },
+  nome: string,
+): unknown {
+  return (result.current as unknown as Record<string, unknown>)[nome];
+}
+
+describe("Milon 07 TASK-003 RED — hook Finalizar/Cancelar + Caso 4", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    for (const mock of mocksDoArquivo) {
+      vi.mocked(mock).mockReset();
+    }
+    vi.useRealTimers();
+  });
+
+  it("expõe a máquina nova (requestFinish/confirmFinish/cancelFinish/requestCancel/confirmCancelExecution/cancelCancelExecution + flags)", async () => {
+    const sim: BancoSimulado = { execution: null, dones: [] };
+    instalarBanco(sim);
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(typeof campoHook(result, "requestFinish")).toBe("function");
+    expect(typeof campoHook(result, "confirmFinish")).toBe("function");
+    expect(typeof campoHook(result, "cancelFinish")).toBe("function");
+    expect(typeof campoHook(result, "requestCancel")).toBe("function");
+    expect(typeof campoHook(result, "confirmCancelExecution")).toBe(
+      "function",
+    );
+    expect(typeof campoHook(result, "cancelCancelExecution")).toBe("function");
+  });
+
+  it("deriva totalSeriesCount do template e finishCase vazio com zero marcadas (critério 8)", async () => {
+    const sim: BancoSimulado = {
+      execution: makeExecution(),
+      dones: [],
+    };
+    instalarBanco(sim);
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2", "s-3"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(campoHook(result, "totalSeriesCount")).toBe(3);
+    expect(campoHook(result, "finishCase")).toBe("vazio");
+  });
+
+  it("parcial (1 de 3): requestFinish abre finalizar-parcial sem selar (critérios 4–5)", async () => {
+    const sim: BancoSimulado = {
+      execution: makeExecution(),
+      dones: [makeDone({ seriesId: "s-1" })],
+    };
+    instalarBanco(sim);
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2", "s-3"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(campoHook(result, "finishCase")).toBe("parcial");
+
+    act(() => {
+      (campoHook(result, "requestFinish") as () => void)();
+    });
+
+    expect(campoHook(result, "finishConfirmOpen")).toBe(true);
+    expect(campoHook(result, "finishConfirmCase")).toBe("parcial");
+    expect(finishExecutionStandalone).not.toHaveBeenCalled();
+  });
+
+  it("vazio (0 de 3): requestFinish abre finalizar-vazio sem selar (critério 8)", async () => {
+    const sim: BancoSimulado = { execution: makeExecution(), dones: [] };
+    instalarBanco(sim);
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2", "s-3"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      (campoHook(result, "requestFinish") as () => void)();
+    });
+
+    expect(campoHook(result, "finishConfirmOpen")).toBe(true);
+    expect(campoHook(result, "finishConfirmCase")).toBe("vazio");
+    expect(finishExecutionStandalone).not.toHaveBeenCalled();
+  });
+
+  it("completo via botão (3 de 3): requestFinish sela direto sem confirmação (critério 6)", async () => {
+    const aberta = makeExecution();
+    const sim: BancoSimulado = {
+      execution: aberta,
+      dones: [
+        makeDone({ seriesId: "s-1" }),
+        makeDone({ seriesId: "s-2" }),
+        makeDone({ seriesId: "s-3" }),
+      ],
+    };
+    instalarBanco(sim);
+    vi.mocked(finishExecutionStandalone).mockImplementation(
+      async (id: string) => ({ ...aberta, id, finishedAt: "2026-10-12T11:00:00.000Z" }),
+    );
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2", "s-3"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(campoHook(result, "finishCase")).toBe("completo");
+
+    await executar(() =>
+      (campoHook(result, "requestFinish") as () => Promise<void>)(),
+    );
+
+    expect(finishExecutionStandalone).toHaveBeenCalledWith("exec-1");
+    expect(campoHook(result, "finishConfirmOpen")).toBe(false);
+  });
+
+  it("Caso 4: marcar a última pendente pelo card abre finalizar-completa em vez de selar (critério 7)", async () => {
+    const sim: BancoSimulado = {
+      execution: makeExecution(),
+      dones: [makeDone({ seriesId: "s-1" })],
+    };
+    instalarBanco(sim);
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await executar(() =>
+      result.current.toggleSeries(
+        makeEntry({ id: "ent-1" }),
+        makeSerie({ id: "s-2", entryId: "ent-1", position: 2 }),
+      ),
+    );
+
+    expect(finishExecutionStandalone).not.toHaveBeenCalled();
+    expect(campoHook(result, "finishConfirmOpen")).toBe(true);
+    expect(campoHook(result, "finishConfirmCase")).toBe("completa");
+  });
+
+  it("confirmFinish parcial sela com término, recarrega e fecha (critério 5); desistir mantém aberta", async () => {
+    const aberta = makeExecution();
+    const sim: BancoSimulado = {
+      execution: aberta,
+      dones: [makeDone({ seriesId: "s-1" })],
+    };
+    instalarBanco(sim);
+    vi.mocked(finishExecutionStandalone).mockImplementation(async () => {
+      sim.execution = null;
+      sim.dones = [];
+      return { ...aberta, finishedAt: "2026-10-12T11:00:00.000Z" };
+    });
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      (campoHook(result, "requestFinish") as () => void)();
+    });
+    expect(campoHook(result, "finishConfirmOpen")).toBe(true);
+
+    await executar(() =>
+      (campoHook(result, "confirmFinish") as () => Promise<void>)(),
+    );
+
+    expect(finishExecutionStandalone).toHaveBeenCalledWith("exec-1");
+    expect(campoHook(result, "finishConfirmOpen")).toBe(false);
+  });
+
+  it("requestCancel abre cancelar-execucao; confirmar exclui e limpa início (critérios 2–3)", async () => {
+    const sim: BancoSimulado = {
+      execution: makeExecution(),
+      dones: [makeDone({ seriesId: "s-1" })],
+    };
+    instalarBanco(sim);
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      (campoHook(result, "requestCancel") as () => void)();
+    });
+    expect(campoHook(result, "cancelConfirmOpen")).toBe(true);
+
+    await executar(() =>
+      (campoHook(result, "confirmCancelExecution") as () => Promise<void>)(),
+    );
+
+    expect(clearExecutionStandalone).toHaveBeenCalledWith("exec-1");
+    expect(campoHook(result, "cancelConfirmOpen")).toBe(false);
+    expect(result.current.execution).toBeNull();
+  });
+
+  it("falha ao selar alimenta operacao, relança e NÃO fecha o modal (critério 11)", async () => {
+    const sim: BancoSimulado = {
+      execution: makeExecution(),
+      dones: [makeDone({ seriesId: "s-1" })],
+    };
+    instalarBanco(sim);
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      (campoHook(result, "requestFinish") as () => void)();
+    });
+    vi.mocked(finishExecutionStandalone).mockRejectedValueOnce(
+      new Error("falha ao finalizar"),
+    );
+
+    await act(async () => {
+      await expect(
+        (campoHook(result, "confirmFinish") as () => Promise<void>)(),
+      ).rejects.toThrow("falha ao finalizar");
+    });
+
+    expect(result.current.errorMsg).toContain("falha ao finalizar");
+    expect(result.current.errorOrigin).toBe("operacao");
+    expect(campoHook(result, "finishConfirmOpen")).toBe(true);
+  });
+
+  it("processing existe e bloqueia duplo clique (critério 11 / D8)", async () => {
+    const sim: BancoSimulado = { execution: makeExecution(), dones: [] };
+    instalarBanco(sim);
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(campoHook(result, "finishProcessing")).toBe(false);
+    expect(campoHook(result, "cancelProcessing")).toBe(false);
   });
 });
 

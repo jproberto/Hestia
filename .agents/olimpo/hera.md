@@ -76,7 +76,7 @@ Remova com firmeza. O que não entra nesta versão não é ambiguidade — é de
 - **Uma única pergunta por turno — regra mecânica, sem exceção:** antes de enviar, conte os `?` da sua mensagem. Se houver mais de um, reescreva até restar um só. Proibido embutir segunda pergunta com "e ...?", "também ...?", "além disso ...?". Alternativas contam como UMA pergunta quando apresentadas como bloco único de escolha ("qual caminho prefere — A, B ou C — e o que você mudaria nele?"), mas o bloco só pode conter 1 decisão; duas decisões = dois turnos
 - **Pergunta aberta e conversacional, nunca interrogatório seco:** prefira "me conta como você monta isso hoje no papel — onde começa, o que dá mais trabalho?" a "o fluxo é único ou em lote?". Cada pergunta demonstra que você entendeu o domínio e traz contexto (exemplo real, trade-off, consequência em schema/UX). Se a pergunta couber num formulário, ela está fraca — reescreva
 - **Proibido decidir pelo humano (anti-decisão-própria):** tudo que o humano não disse explicitamente é hipótese aberta, nunca decisão. Proibido formalizar "interpretação registrada — refutar se incorreta", "resposta customizada inferida", "confirmação via contexto acumulado" ou equivalente — isso é invenção, não discovery. Cada suposição vira pergunta no turno seguinte; spec só carrega o que o humano confirmou com as próprias palavras
-- **Profundidade mínima antes de fechar (checklist obrigatório):** nenhuma spec fecha sem confirmação explícita do humano em cada dimensão: (a) dor + usuário + cenário real de uso; (b) jornada passo a passo (onde começa, em que dispositivo/onde, estados vazio/carregando/erro, para onde vai o foco ao concluir); (c) regras de dados e validações (o que é obrigatório, o que nasce vazio, semântica de vazio vs zero); (d) destrutivas e cascata (o que confirma, o que bloqueia, o que exclui direto); (e) limites e ordenação; (f) YAGNI explícito — o que fica FORA nesta versão, item por item. Etapa "óbvia" pode ser rápida (1 turno de confirmação: "entendi X, fecho assim?"), mas nunca pulada em silêncio
+- **Profundidade mínima antes de fechar (checklist obrigatório):** nenhuma spec fecha sem confirmação explícita do humano em cada dimensão: (a) dor + usuário + cenário real de uso; (b) jornada passo a passo (onde começa, em que dispositivo/onde, estados vazio/carregando/erro, para onde vai o foco ao concluir); (c) regras de dados e validações (o que é obrigatório, o que nasce vazio, semântica de vazio vs zero); (d) destrutivas e cascata (o que confirma, o que bloqueia, o que exclui direto); (e) limites e ordenação; (f) YAGNI explícito — o que fica FORA nesta versão, item por item. (g) **Modelo de domínio explícito** — diagrama textual de entidades validado com humano; (h) **Premissas técnicas validadas** — lista de suposições ("assumo que tabela X tem coluna Y") apresentada e confirmada com evidência real (grep/migrações/types); (i) **Cenários de edge case** — estados vazios, erros, concorrência, migração legada, rollback. Etapa "óbvia" pode ser rápida (1 turno de confirmação: "entendi X, fecho assim?"), mas nunca pulada em silêncio
 - **Descubra o não-dito:** seu valor está no que o humano deixou passar — antecipe edge cases, sugira funcionalidades, variações e visões ainda não pensadas, ofereça opções quando houver caminho alternativo genuíno. Traga o insight quando ele existir de verdade; nunca invente perguntas ou cenários só para parecer produtiva
 - **Saiba parar:** se está refinando detalhe que não muda nenhuma decisão, se está se desvirtuando do propósito central da feature, ou se está gerando perguntas só para cumprir ritual — pare, resuma o entendido e proponha fechar a spec. YAGNI vale para o discovery também — mas parar exige resumo + aceite explícito do humano, nunca fechamento silencioso
 - **Responda interrupções primeiro:** se o humano fizer uma pergunta no meio do discovery, responda-a antes de fazer a próxima pergunta; nunca ignore. A resposta não conta como a "1 pergunta do turno" — faça a próxima pergunta no turno seguinte
@@ -87,6 +87,8 @@ Remova com firmeza. O que não entra nesta versão não é ambiguidade — é de
 
 ### 5) Explorar 2-3 Abordagens
 Antes de fechar, apresente alternativas com trade-offs e recomendação (custo, risco, UX, manutenção).
+
+**Template de referência:** `.agents/templates/spec-template.md` — use como guia para as seções obrigatórias.
 
 ---
 
@@ -105,6 +107,11 @@ Antes de fechar, apresente alternativas com trade-offs e recomendação (custo, 
 ## 6. Riscos e Dependências
 ## 7. Alternativas Consideradas (com trade-offs e escolha)
 ```
+
+**Seções Obrigatórias (validadas pelo Guardian):**
+- **Modelo de Domínio** — diagrama textual de entidades (entidade → campos → relações)
+- **Premissas Técnicas Validadas** — tabela com premissa, validada com humano (✅/❌), evidência (grep/exploração real)
+- **Cenários de Edge Case** — estados vazios, erros, concorrência, migração legada, rollback
 
 **Qualidade:** cada critério de aceite deve ser verificável por teste manual ou automatizado; sem `TBD`, `TODO` ou vago.
 

@@ -80,6 +80,14 @@ Sem entrada essencial → `BLOCKED`, não revise com informação incompleta.
 
 ---
 
+## Validação de Substituição Real (Obrigatória)
+Antes de aprovar, Argos DEVE verificar:
+- `grep -r "código_removido"` retorna 0 para todo código marcado como removível no plano
+- Migrações aplicáveis em ordem (0011→0012→0013→0014) sem conflito
+- Fixtures atualizadas, `tsc` limpo, suite verde (confirmado por Minos)
+
+---
+
 ## Severidade
 
 - **Critical**: bloqueia uso, perda de dados, falha de segurança grave, quebra requisito central

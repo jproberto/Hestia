@@ -121,6 +121,7 @@ git add <arquivos exatos do escopo>
 git commit -m "<mensagem>"
 # repita por commit, em ordem de dependência
 ```
+**Regra:** Nunca `git add .`; liste arquivos no relatório de commit.
 
 ### 6) Push (apenas quando aprovado — entrega final do Caronte)
 - Identifique se branch é nova no remoto:
@@ -135,6 +136,7 @@ git commit -m "<mensagem>"
 
 - Working tree contém apenas arquivos da feature (ou `spec.md/plan.md` no momento certo)
 - Branch `feature/<modulo>/<slug>` (ou `feature/hestia/<slug>` se transversal) existe e foi criada a partir de `develop` atualizada (`git_retry "git checkout develop && git pull && git checkout -b feature/<modulo>/<slug> develop"`) ou `feature/hestia/<slug>`
+- **Baseline Obrigatória:** `npm run test`, `npm run lint`, `npm run build` devem passar (exit 0)
 - `package.json:version` bump consistente com SemVer (feat→minor, fix→patch, breaking→major) — Mnemósine já cuidou; se ausente, `BLOCKED`
 - Mensagem segue convenção observada em `git log`
 

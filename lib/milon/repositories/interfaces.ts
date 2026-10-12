@@ -109,6 +109,7 @@ export interface IWorkoutExecutionRepository {
     programId: string,
     email: string,
   ): Promise<WorkoutExecution>;
+  finishExecution(executionId: string): Promise<WorkoutExecution>;
   clearExecution(executionId: string): Promise<void>;
   listDoneByExecution(executionId: string): Promise<WorkoutExecutionSeries[]>;
   markSeriesDone(

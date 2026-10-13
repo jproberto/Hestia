@@ -272,6 +272,15 @@
 
 ---
 
+## Feature #7 — Encerrar treino com confirmação
+
+### REG-57: Finalizar treino completo direto + parcial com confirmação
+**Dado** o Treino do Dia com execução aberta
+**Quando** a pessoa finaliza com todas as séries marcadas (sela direto) ou confirma a pergunta de parcial/vazio
+**Então** a execução some da aberta, o badge apaga e a manutenção volta a ficar livre, sem navegar para fora
+
+---
+
 ## Execução de regressão
 
 ```bash
@@ -309,4 +318,4 @@ npm run build-storybook
 **Dado** exercício com séries
 **Então** grid responsivo (1/2/4 col), campo único com rótulo pelo modo da entry, toggle kg/lb abaixo da carga persistindo na entry
 
-**Critério de passagem:** 1476 testes passados, 0 falhas, coverage ≥ 80% (atual: 85.16% lines, 84.05% branch).
+**Critério de passagem:** 1519 testes passados, 0 falhas, coverage ≥ 80% (atual: 85.12% lines, 84.09% branch).

@@ -72,6 +72,10 @@ export default function WorkoutConfirmModal({
             : "Reduzir";
   // D4 (Mílon #7): vazio conduz ao cancelamento — desistência volta, sem sair.
   const dismissLabel = isVazio ? "Voltar" : "Cancelar";
+  // Homologação 2026-10-13 (cenário 4): selamento (parcial/completa) é ação
+  // primária — sem vermelho (sensação de exclusão). Demais confirmações
+  // seguem destrutivas (exclusão real).
+  const isFinalizar = isParcial || isCompleta;
   const serieWord = seriesCount === 1 ? "série" : "séries";
 
   return (
@@ -132,7 +136,7 @@ export default function WorkoutConfirmModal({
           </Button>
           <Button
             type="button"
-            variant="destructive"
+            variant={isFinalizar ? "default" : "destructive"}
             disabled={processing}
             onClick={() => {
               if (!processing) onConfirm();

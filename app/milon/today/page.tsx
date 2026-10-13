@@ -4,6 +4,7 @@ import { MilonLayout } from "@/components/milon/MilonLayout";
 import { TodayWorkoutSwitcher } from "@/components/milon/TodayWorkoutSwitcher";
 import { WorkoutDetailSection } from "@/components/milon/WorkoutDetailSection";
 import { AsyncState } from "@/components/ui/AsyncState";
+import { Button } from "@/components/ui/button";
 import { useTodayWorkout } from "@/lib/milon/hooks/useTodayWorkout";
 
 export default function TodayPage() {
@@ -24,6 +25,12 @@ export default function TodayPage() {
     program === null
       ? "Ativar ou criar um programa para ver o treino do dia."
       : "Adicionar o primeiro treino ao programa para começar.";
+  // Encerrar treino (Mílon #7, D6): Cancelar no topo (headerActions) e
+  // Finalizar no rodapé (footer) via slots existentes da seção. A seção
+  // exibe e aciona somente com execução aberta (branch de execução); aqui
+  // só se oculta no somente-leitura (programa inativo). A manutenção segue
+  // sem slots por construção (wrapper fino).
+  const somenteLeitura = program?.status === "inativo";
 
   return (
     <MilonLayout pageTitle="Treino do Dia">
@@ -51,6 +58,20 @@ export default function TodayPage() {
               workoutId={selectedWorkoutId}
               backTarget={{ kind: "none" }}
               executionEnabled
+              headerActions={
+                somenteLeitura ? null : (
+                  <Button type="button" variant="outline" size="sm">
+                    Cancelar
+                  </Button>
+                )
+              }
+              footer={
+                somenteLeitura ? null : (
+                  <Button type="button" size="sm">
+                    Finalizar
+                  </Button>
+                )
+              }
             />
           </div>
         ) : null}

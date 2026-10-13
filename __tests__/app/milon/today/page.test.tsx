@@ -625,15 +625,37 @@ describe("Treino do Dia — paridade por construção (TASK-003 — RED)", () =>
     ).not.toBeInTheDocument();
   });
 
-  it("slots de extensão nulos na v1 (headerActions/entryFooter/footer)", () => {
+  it("slots de extensão na v1+07 (headerActions=Cancelar top/ footer=Finalizar rodapé/ entryFooter nulo)", () => {
     conteudoComTreinos();
 
     render(<TodayPage />);
 
     const props = renderedSectionProps();
-    expect(props.headerActions ?? null).toBeNull();
+    function slotLabel(slot: unknown): string {
+      const el = slot as { props?: { children?: unknown } };
+      const children = el?.props?.children;
+      return String(
+        Array.isArray(children) ? children.join(" ") : (children ?? ""),
+      );
+    }
+    // Mílon #7 TASK-005: today preenche topo/rodapé com programa ativo
+    // (spec §2 posições + §5 critério 1; plan §3 slots).
+    expect(props.headerActions ?? null).not.toBeNull();
+    expect(slotLabel(props.headerActions)).toMatch(/cancelar/i);
+    expect(props.footer ?? null).not.toBeNull();
+    expect(slotLabel(props.footer)).toMatch(/finalizar/i);
     expect(props.entryFooter ?? null).toBeNull();
-    expect(props.footer ?? null).toBeNull();
+
+    // Somente-leitura (programa inativo) segue sem botões.
+    cleanup();
+    conteudoComTreinos({ program: makeProgram({ status: "inativo" }) });
+
+    render(<TodayPage />);
+
+    const somenteLeitura = renderedSectionProps();
+    expect(somenteLeitura.headerActions ?? null).toBeNull();
+    expect(somenteLeitura.footer ?? null).toBeNull();
+    expect(somenteLeitura.entryFooter ?? null).toBeNull();
   });
 
   it("carregando: indicador visível sem seção nem switcher", () => {
@@ -783,16 +805,27 @@ describe("Treino do Dia — flag de execução (Mílon #5 — RED)", () => {
     expect(renderedSectionProps().executionEnabled).toBe(true);
   });
 
-  it("wiring restante intacto (backTarget none + slots nulos da v1)", () => {
+  it("wiring restante intacto (backTarget none + slots 07 preenchidos)", () => {
     conteudoComTreinos();
 
     render(<TodayPage />);
 
     const props = renderedSectionProps();
+    function slotLabel(slot: unknown): string {
+      const el = slot as { props?: { children?: unknown } };
+      const children = el?.props?.children;
+      return String(
+        Array.isArray(children) ? children.join(" ") : (children ?? ""),
+      );
+    }
     expect(props.backTarget).toEqual({ kind: "none" });
-    expect(props.headerActions ?? null).toBeNull();
+    // Mílon #7 TASK-005: today preenche topo/rodapé com programa ativo
+    // (spec §2 posições + §5 critério 1; plan §3 slots).
+    expect(props.headerActions ?? null).not.toBeNull();
+    expect(slotLabel(props.headerActions)).toMatch(/cancelar/i);
     expect(props.entryFooter ?? null).toBeNull();
-    expect(props.footer ?? null).toBeNull();
+    expect(props.footer ?? null).not.toBeNull();
+    expect(slotLabel(props.footer)).toMatch(/finalizar/i);
   });
 });
 

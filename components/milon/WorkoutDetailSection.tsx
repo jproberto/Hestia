@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useMemo, useState, type ReactNode } from "react";
+import { Fragment, cloneElement, isValidElement, useCallback, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AsyncState } from "@/components/ui/AsyncState";
 import { Button } from "@/components/ui/button";
@@ -65,6 +65,32 @@ function toMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
 }
 
+/**
+ * Enxerto de ação nos slots (Mílon #7, D6): a página do Treino do Dia fornece
+ * os botões como ReactNode estático (só rótulo, sem acesso ao hook interno
+ * da seção); a seção injeta o disparador da máquina de estados preservando
+ * o onClick original quando existir. Nós não-elemento passam intactos.
+ */
+function comAcao(slot: ReactNode | null, acao: () => void): ReactNode {
+  if (!isValidElement(slot)) return slot ?? null;
+  const props = slot.props as { onClick?: (e: unknown) => void };
+  const original = props.onClick;
+  return cloneElement(slot, {
+    onClick: (e: unknown) => {
+      if (original) original(e);
+      acao();
+    },
+  } as Partial<unknown>);
+}
+
+function varianteFinish(
+  caso: "parcial" | "completa" | "vazio" | null,
+): WorkoutConfirmVariant {
+  if (caso === "completa") return "finalizar-completa";
+  if (caso === "vazio") return "finalizar-vazio";
+  return "finalizar-parcial";
+}
+
 function deriveMuscleOptions(items: Exercise[]): string[] {
   const seen = new Map<string, string>();
   for (const item of items) {
@@ -99,6 +125,17 @@ interface ExecutionListContext {
   clearProcessing: boolean;
   confirmClear: () => void;
   cancelClear: () => void;
+  finishConfirmOpen: boolean;
+  finishConfirmCase: "parcial" | "completa" | "vazio" | null;
+  finishProcessing: boolean;
+  confirmFinish: () => void;
+  cancelFinish: () => void;
+  cancelConfirmOpen: boolean;
+  cancelProcessing: boolean;
+  confirmCancel: () => void;
+  cancelCancel: () => void;
+  requestFinish: () => void;
+  requestCancel: () => void;
   editing: EditingTarget | null;
   editorSaving: boolean;
   editorError: string | null;
@@ -138,8 +175,8 @@ function ExecutionHost({
 
   // Template ao vivo (spec alinhada §3): o que se exibe é sempre o valor atual
   // do template, com marcadores de feito por série vindos da execução. A
-  // edição no Treino do Dia aparece na hora (sem foto; valores reais ficam
-  // para o encerrar #7).
+  // edição no Treino do Dia aparece na hora (sem foto; o executado alimenta
+  // o selamento).
   const displayEntries: WorkoutEntryView[] = entries;
 
   function findTarget(seriesId: string): EditingTarget | null {
@@ -222,6 +259,41 @@ function ExecutionHost({
     if (!clearProcessing) exec.cancelClearExecution();
   }
 
+  // Encerramento (Mílon #7, plan §3 + D3-D6): hospeda as confirmações novas
+  // com a mesma disciplina do clearConfirmOpen — erro nunca fecha (o hook
+  // relança e mantém aberto), processing nunca fecha (dismiss guardado aqui
+  // + botões desabilitados no modal).
+  function confirmFinish(): void {
+    void exec.confirmFinish().catch(() => {
+      // Banner já alimentado pelo hook (origem operacao); modal permanece
+      // aberto por construção (hook só fecha no sucesso).
+    });
+  }
+
+  function cancelFinish(): void {
+    if (!exec.finishProcessing) exec.cancelFinish();
+  }
+
+  function confirmCancel(): void {
+    void exec.confirmCancelExecution().catch(() => {
+      // Idem: erro de operação sem fechar.
+    });
+  }
+
+  function cancelCancel(): void {
+    if (!exec.cancelProcessing) exec.cancelCancelExecution();
+  }
+
+  function requestFinish(): void {
+    void exec.requestFinish().catch(() => {
+      // Completo sela direto; falha vira banner de operação (sem modal).
+    });
+  }
+
+  function requestCancel(): void {
+    exec.requestCancel();
+  }
+
   const doneBySeriesId: Record<string, boolean> = {};
   for (const id of exec.doneSeriesIds) doneBySeriesId[id] = true;
 
@@ -245,6 +317,17 @@ function ExecutionHost({
         clearProcessing,
         confirmClear,
         cancelClear,
+        finishConfirmOpen: exec.finishConfirmOpen,
+        finishConfirmCase: exec.finishConfirmCase,
+        finishProcessing: exec.finishProcessing,
+        confirmFinish,
+        cancelFinish,
+        cancelConfirmOpen: exec.cancelConfirmOpen,
+        cancelProcessing: exec.cancelProcessing,
+        confirmCancel,
+        cancelCancel,
+        requestFinish,
+        requestCancel,
         editing,
         editorSaving,
         editorError,
@@ -594,7 +677,9 @@ export function WorkoutDetailSection({
                             Em execução
                           </span>
                         ) : null}
-                        {headerActions ?? null}
+                        {ctx.execExecution !== null
+                          ? comAcao(headerActions, ctx.requestCancel)
+                          : null}
                         {backTarget.kind === "program" ? (
                           <Button
                             type="button"
@@ -663,6 +748,34 @@ export function WorkoutDetailSection({
                       onConfirm={ctx.confirmClear}
                       onCancel={ctx.cancelClear}
                     />
+
+                    <WorkoutConfirmModal
+                      open={ctx.finishConfirmOpen}
+                      variant={varianteFinish(ctx.finishConfirmCase)}
+                      exerciseName=""
+                      seriesCount={0}
+                      currentQuantity={0}
+                      newQuantity={0}
+                      processing={ctx.finishProcessing}
+                      onConfirm={ctx.confirmFinish}
+                      onCancel={ctx.cancelFinish}
+                    />
+
+                    <WorkoutConfirmModal
+                      open={ctx.cancelConfirmOpen}
+                      variant="cancelar-execucao"
+                      exerciseName=""
+                      seriesCount={0}
+                      currentQuantity={0}
+                      newQuantity={0}
+                      processing={ctx.cancelProcessing}
+                      onConfirm={ctx.confirmCancel}
+                      onCancel={ctx.cancelCancel}
+                    />
+
+                    {ctx.execExecution !== null
+                      ? comAcao(footer, ctx.requestFinish)
+                      : null}
                   </>
                 )}
               </ExecutionHost>
@@ -779,7 +892,10 @@ export function WorkoutDetailSection({
               onCancel={handleConfirmCancel}
             />
 
-            {footer ?? null}
+            {/* Rodapé genérico da manutenção; no ramo de execução o footer
+                é renderizado dentro do ExecutionHost (condicional à aberta,
+                com enxerto de ação — Mílon #7, D6). */}
+            {executionEnabled ? null : (footer ?? null)}
           </div>
         ) : null}
     </AsyncState>

@@ -73,6 +73,8 @@ export interface IWorkoutRepository {
   ): Promise<WorkoutEntry>;
   removeEntry(entryId: string): Promise<void>;
   reorderEntries(workoutId: string, orderedEntryIds: string[]): Promise<void>;
+  // Ordem própria dos treinos no programa (Mílon 07b, D2, plan §3).
+  reorderWorkouts(programId: string, orderedWorkoutIds: string[]): Promise<void>;
   setEntryRestSeconds(entryId: string, seconds: number | null): Promise<void>;
   // Ajustes de modo/unidade da entry (Mílon #5, aditamento 2026-10-09 "0012
   // CORRETA", D29): persistem o modo e a unidade do exercício NO TREINO.
@@ -104,6 +106,14 @@ export { type MarkExecutionSeriesInput } from "../types";
 
 export interface IWorkoutExecutionRepository {
   findOpenExecutionByWorkout(workoutId: string): Promise<WorkoutExecution | null>;
+  // Rotação do Treino do Dia (Mílon 07b, D1/D10, plan §3): última selada e
+  // aberta por programa (nulo quando não há).
+  findLastSealedExecutionByProgram(
+    programId: string,
+  ): Promise<WorkoutExecution | null>;
+  findOpenExecutionByProgram(
+    programId: string,
+  ): Promise<WorkoutExecution | null>;
   startExecution(
     workoutId: string,
     programId: string,

@@ -124,6 +124,62 @@ export async function clearExecution(
   if (error) throw error;
 }
 
+// Última selada do programa (Mílon 07b, D1/DSELT1, plan §3): finished_at
+// não-nulo, por finished_at desc com desempate por created_at desc e id desc.
+// A filtragem de não-nulo é em memória sobre a consulta por programa, pois a
+// interface do cliente não expressa negação de nulo. Nulo sem selada.
+export async function findLastSealedExecutionByProgram(
+  db: IDatabaseClient,
+  programId: string,
+): Promise<WorkoutExecution | null> {
+  const { data, error } = await db
+    .from<WorkoutExecutionRow>("workout_executions")
+    .select("*")
+    .eq("program_id", programId)
+    .order("finished_at", { ascending: false });
+
+  if (error) throw error;
+  const seladas = (data || []).filter((row) => row.finished_at !== null);
+  seladas.sort((a, b) => {
+    const fimA = a.finished_at as string;
+    const fimB = b.finished_at as string;
+    if (fimA !== fimB) return fimA < fimB ? 1 : -1;
+    if (a.created_at !== b.created_at)
+      return a.created_at < b.created_at ? 1 : -1;
+    if (a.id !== b.id) return a.id < b.id ? 1 : -1;
+    return 0;
+  });
+  const ultima = seladas[0];
+  return ultima ? toExecutionDomain(ultima) : null;
+}
+
+// Aberta do programa (Mílon 07b, D10/DABT1, plan §3): finished_at nulo, mais
+// recente por started_at desc com desempate por id desc. Havendo mais de uma
+// aberta (possível até o invariante por dono do item 7c, fora desta feature),
+// a mais recente prevalece. Nulo sem aberta.
+export async function findOpenExecutionByProgram(
+  db: IDatabaseClient,
+  programId: string,
+): Promise<WorkoutExecution | null> {
+  const { data, error } = await db
+    .from<WorkoutExecutionRow>("workout_executions")
+    .select("*")
+    .eq("program_id", programId)
+    .is("finished_at", null)
+    .order("started_at", { ascending: false });
+
+  if (error) throw error;
+  const abertas = (data || []).filter((row) => row.finished_at === null);
+  abertas.sort((a, b) => {
+    if (a.started_at !== b.started_at)
+      return a.started_at < b.started_at ? 1 : -1;
+    if (a.id !== b.id) return a.id < b.id ? 1 : -1;
+    return 0;
+  });
+  const aberta = abertas[0];
+  return aberta ? toExecutionDomain(aberta) : null;
+}
+
 export async function listDoneByExecution(
   db: IDatabaseClient,
   executionId: string,
@@ -213,6 +269,21 @@ export async function clearExecutionStandalone(
   executionId: string,
 ): Promise<void> {
   return clearExecution(createBrowserDatabaseClient(), executionId);
+}
+
+export async function findLastSealedExecutionByProgramStandalone(
+  programId: string,
+): Promise<WorkoutExecution | null> {
+  return findLastSealedExecutionByProgram(
+    createBrowserDatabaseClient(),
+    programId,
+  );
+}
+
+export async function findOpenExecutionByProgramStandalone(
+  programId: string,
+): Promise<WorkoutExecution | null> {
+  return findOpenExecutionByProgram(createBrowserDatabaseClient(), programId);
 }
 
 export async function listDoneByExecutionStandalone(

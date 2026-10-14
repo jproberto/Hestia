@@ -33,7 +33,7 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 | 4 | **Treino do dia — próximo automático** | Aba "Treino do dia" descobre o último treino executado do Programa ativo do usuário e exibe o próximo da rotação. Funciona com N treinos por Programa, sem o usuário precisar lembrar "hoje é B ou C?". | Concluído (v1 — primeira aba `/milon/today` com primeiro treino por criação; rotação por histórico adiada para pós-#7, spec §4) | [.agents/modules/milon/04-treino-do-dia/spec.md](.agents/modules/milon/04-treino-do-dia/spec.md) | [.agents/modules/milon/04-treino-do-dia/plan.md](.agents/modules/milon/04-treino-do-dia/plan.md) |
 | 5 | **Execução série a série + edição no fluxo** | Lista exercícios com séries (reps, peso, descanso). Toque curto no card alterna marcada/desmarcada na hora; toque longo abre modal com campo único (rótulo pelo modo da entry) e carga com unidade herdada (kg/lb como texto). Replicação incondicional para séries seguintes. Foto do template removida — template ao vivo. Badge "Em execução" + bloqueio do template na manutenção com aviso visível. Migrações 0011 (execuções), 0012 (modo+unidade na entry), 0013 (valor único), 0014 (lb abreviado). Ícones Editar/Excluir no padrão biblioteca. | Concluído | [.agents/modules/milon/05-execucao-series/spec.md](.agents/modules/milon/05-execucao-series/spec.md) | [.agents/modules/milon/05-execucao-series/plan.md](.agents/modules/milon/05-execucao-series/plan.md) |
 | 6 | **Timer de descanso auto + PWA push** | Ao marcar uma série como feita, o timer do descanso daquela série inicia sozinho. Notificação push via PWA avisa o fim mesmo com tela apagada/app em segundo plano. MVP inclui o PWA mínimo para isso funcionar. | | | |
-| 7 | **Encerrar treino com confirmação** | Botão "Encerrar treino" com confirmação que lista o que falta (exercícios/séries pendentes). Ao confirmar, registra o treino com `encerrado_em`. Permite encerrar parcial (falta vira dado, não bloqueio). | Em andamento (SPEC_APPROVED 2026-10-12 — botões Finalizar no fim + Cancelar no topo, 4 casos + vazio, spec §3) | [.agents/modules/milon/07-encerrar-treino/spec.md](.agents/modules/milon/07-encerrar-treino/spec.md) | |
+| 7 | **Encerrar treino com confirmação** | Botão "Encerrar treino" com confirmação que lista o que falta (exercícios/séries pendentes). Ao confirmar, registra o treino com `encerrado_em`. Permite encerrar parcial (falta vira dado, não bloqueio). | Concluído (2026-10-13 — `Finalizar` no fim + `Cancelar` no topo, 4 casos + vazio-oculto, `finishExecution` sem migração, suite 1519, coverage 85.12/84.1, review approved) | [.agents/modules/milon/07-encerrar-treino/spec.md](.agents/modules/milon/07-encerrar-treino/spec.md) | [.agents/modules/milon/07-encerrar-treino/plan.md](.agents/modules/milon/07-encerrar-treino/plan.md) |
 | 7b | **Rotação do Treino do Dia por histórico** | Treino do Dia exibe o próximo treino da rotação a partir do último executado (histórico de execuções seladas), em vez do primeiro por criação (v1 da #4). Desmembrado da #4 (spec §4, adiado para pós-#7) + reafirmado na #7 (pedido humano 2026-10-12: não esquecer). | | | |
 | 8 | **Layout responsivo para telas pequenas (celular)** | Garantir que telas de montagem/execução caibam na viewport do celular, com listas roláveis internas, ações sempre visíveis e sem estouro. | | | |
 
@@ -94,6 +94,18 @@ Registro dos achados minor do review do Argos (decisão humana 2026-09-30: "vão
 - Ramos defensivos "nunca acontece" (cancelConfirm/confirm lançando, violação de índice único) sem exercício direto — `repositories/programs.ts` 92.98% branch e `usePrograms.ts` 85.86% branch (acima do gate, mas lacuna comportamental).
 - CA-P3-11 (histórico do navegador / botão voltar na alternância de abas) não exercitável em jsdom — requer homologação manual (entra na reexecução manual da feature #2).
 - Gap "guarda de ativação com conteúdo real": ver regra acima (já registrada na seção anterior — não duplicada).
+
+---
+
+## Achados de review (Argos) — feature #7 Encerrar treino
+
+Re-review aprovado 2026-10-13 (0 blockers). 3 minors viram backlog; decisão D2 (relógio) será revisitida na #9 (duração).
+
+| # | Arquivo:linha | Achado | Encaminhamento |
+|---|---|---|---|
+| 1 | `lib/milon/repositories/executions.ts:102` | `finishExecution` grava `finished_at` com relógio do cliente (`new Date().toISOString`) em vez do relógio do banco (`now()`, plan D2). Impacto só na duração futura da #9. | backlog (decidir na #9: normalizar para banco ou aceitar cliente) |
+| 2 | `components/milon/WorkoutConfirmModal.tsx:60` | 4 textos exatos duplicados (`MSG_*` em `workout-utils.ts` + literais no modal). Travado por testes dos dois lados. | backlog (modal importar constantes ou teste cruzado) |
+| 3 | `components/milon/WorkoutConfirmModal.tsx:139` | Cor do botão de confirmação (`default` vs `destructive`) sem asserção — regressão de cor só pega no olho. | backlog (Minos: asserção de `variant` por variante) |
 
 ---
 

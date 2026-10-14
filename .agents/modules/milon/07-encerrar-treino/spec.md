@@ -14,9 +14,9 @@ Fontes: decisão humana Q1 a Q4 registrada no contexto da feature, item 7 do bac
 
 Usuários: o casal, com login individual cada um, mesmo modelo das features 01 a 05. Cada um abre o próprio treino ao chegar na academia. Não há permissão restrita. O dono do programa define a origem do Treino do Dia, mesma regra da feature 04. Uso no celular, com mão suada, mesma exigência de tela pequena das features 03 a 05.
 
-Cenário 1: finalizar o treino completo, com todas as séries marcadas, sem burocracia extra além do necessário. Cenário 2: finalizar o treino parcial, com séries faltando, assumindo a falta como dado para métricas futuras. Cenário 3: cancelar uma execução começada errada, descartando tudo sem deixar histórico. Cenário 4: tentar finalizar sem nenhuma série feita e ser conduzido ao cancelamento em vez do selamento.
+Cenário 1: finalizar o treino completo, com todas as séries marcadas, sem burocracia extra além do necessário. Cenário 2: finalizar o treino parcial, com séries faltando, assumindo a falta como dado para métricas futuras. Cenário 3: cancelar uma execução começada errada, descartando tudo sem deixar histórico. Cenário 4: estar com zero séries feitas sem botão Finalizar no caso normal, e somente no caminho de borda com execução aberta e zero marcadas ser conduzido ao cancelamento em vez do selamento.
 
-Jornada passo a passo: a pessoa executa séries no Treino do Dia, com o nome do treino exibindo indicação visual de em execução enquanto houver execução aberta. O botão Cancelar fica no topo da página do Treino do Dia. O botão Finalizar fica no final da página, abaixo do último Adicionar Exercício. Ao acionar Finalizar ou Cancelar, a pessoa vê a pergunta correspondente ao seu caso, confirma ou desiste, e permanece no Treino do Dia. Após o selamento, a página exibe o próximo treino segundo a regra vigente do Treino do Dia, cuja inteligência de rotação será revisitada após esta feature conforme a spec 04 seção 4. A execução selada fica arquivada e imutável, sem edição.
+Jornada passo a passo: a pessoa executa séries no Treino do Dia, com o nome do treino exibindo indicação visual de em execução enquanto houver execução aberta. O botão Cancelar fica no topo da página do Treino do Dia. O botão Finalizar fica no final da página, abaixo do último Adicionar Exercício. Ambos só aparecem com execução aberta, que só abre na primeira marcação, de modo que no caso normal com zero séries feitas não há botão Finalizar para acionar. Ao acionar Finalizar ou Cancelar, a pessoa vê a pergunta correspondente ao seu caso, confirma ou desiste, e permanece no Treino do Dia. Após o selamento, a página exibe o próximo treino segundo a regra vigente do Treino do Dia, cuja inteligência de rotação será revisitada após esta feature conforme a spec 04 seção 4. A execução selada fica arquivada e imutável, sem edição.
 
 Estados de tela: seguem o padrão centralizado do módulo com o componente central de estado assíncrono. Carregando exibe texto de carregamento. Erro de carga exibe nova tentativa. Erro de operação e bloqueio de domínio exibem mensagem sem nova tentativa. Modais de confirmação nunca fecham no erro e preservam o digitado. Títulos de conteúdo seguem o token tipográfico do módulo e a cor do Mílon. Foco ao concluir: a pessoa permanece no Treino do Dia, sem navegação para fora do módulo.
 
@@ -42,7 +42,9 @@ Caso 4, marcar a última série pendente pelo card: no momento em que todas as s
 
 ### Vazio com zero séries feitas
 
-Com zero séries feitas, Finalizar não sela. O acionamento é bloqueado com a mensagem O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino? A mensagem conduz ao cancelamento com exclusão da execução, sem criar registro selado vazio.
+No caso normal, com zero séries feitas, o botão Finalizar nem é exibido, o que é melhor que bloqueio. Isso acontece porque a execução só abre na primeira marcação e os botões só aparecem com execução aberta, de modo que sem execução aberta não há ação possível de selamento.
+
+A variante de vazio segue alcançável somente pelo caminho de borda: marcar uma série, desmarcar a última e desistir da pergunta de limpeza deixa a execução aberta com zero marcadas. Nesse estado o botão Finalizar aparece e, ao ser acionado, exibe a mensagem O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino? Confirmar exclui a execução sem criar registro selado vazio. Desistir mantém a execução aberta com zero marcadas.
 
 ### Efeito do selamento
 
@@ -58,7 +60,7 @@ Sem validação nova de valores. Valem as regras herdadas das features de treino
 
 ### Semântica de vazio contra zero
 
-Vazio é ausência de marcação. Zero séries feitas bloqueia Finalizar conforme a mensagem do vazio. Uma ou mais séries feitas libera Finalizar parcial ou completo conforme os casos. Zero digitado em carga ou valor continua sendo zero exibido como zero, e campo vazio continua traço, mesma regra das features 03 e 04, sem mudança.
+Vazio é ausência de marcação. No caso normal com zero séries feitas não há botão Finalizar para acionar, pois não há execução aberta. Somente no caminho de borda com execução aberta e zero marcadas o acionamento exibe a mensagem do vazio e conduz ao cancelamento. Uma ou mais séries feitas libera Finalizar parcial ou completo conforme os casos. Zero digitado em carga ou valor continua sendo zero exibido como zero, e campo vazio continua traço, mesma regra das features 03 e 04, sem mudança.
 
 ## 4. Fora de Escopo (YAGNI)
 
@@ -79,7 +81,7 @@ Histórico e resumo pertencem à feature 09. Timer pertence à feature 06. Ajust
 | 5 | Dada a pergunta de Finalizar parcial, quando confirmo, então a execução é selada com momento de término registrado e fica imutável. Quando desisto, então a execução segue aberta sem nada selado | Manual e automatizado |
 | 6 | Dado Treino do Dia com todas as séries marcadas, quando aciono Finalizar, então o selamento acontece direto sem confirmação, com momento de término registrado | Manual e automatizado |
 | 7 | Dado que marco a última série pendente pelo card e todas ficam marcadas, então a pergunta exibida é exatamente Você executou todas as séries, deseja finalizar o treino? Confirmar sela com término registrado, desistir mantém aberta com todas marcadas | Manual e automatizado |
-| 8 | Dado Treino do Dia com zero séries feitas, quando aciono Finalizar, então nada é selado e a mensagem exibida é exatamente O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino? | Manual e automatizado |
+| 8 | Dado Treino do Dia com zero séries feitas sem execução aberta, então o botão Finalizar nem é exibido; dado o caminho de borda com execução aberta e zero marcadas, quando aciono Finalizar, então nada é selado e a mensagem exibida é exatamente O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino? Confirmar exclui sem selar, desistir mantém aberta | Manual e automatizado |
 | 9 | Dada execução selada, então ela não reabre, não edita e não exclui feito, o template volta a ficar livre na manutenção sem aviso de bloqueio, e a pessoa permanece no Treino do Dia com o próximo treino exibido segundo a regra vigente de seleção | Manual e automatizado |
 | 10 | Dada execução selada, quando consulto somente execução aberta do treino, então o retorno é vazio, pois selada tem término preenchido e não conta como aberta | Automatizado |
 | 11 | Dada falha de carga nas ações de selar ou cancelar, a pessoa vê mensagem com nova tentativa. Dada falha de operação ou bloqueio, a mensagem aparece sem nova tentativa e o modal não fecha no erro | Manual e automatizado |
@@ -101,7 +103,7 @@ Cenários de teste bloqueados por dependência futura seguem a regra do backlog 
 
 Alternativa 1, selamento silencioso sem confirmação em todos os casos: o botão selaria direto com ou sem pendência. Rejeitada porque contradiz a decisão humana de aviso mais confirmação obrigatória e apagaria a distinção entre parcial assumido e completo, além de permitir selo acidental com falta.
 
-Alternativa 2, caminho escolhido, confirmação por caso com parcial permitido: Cancelar sempre confirma com aviso de exclusão, parcial confirma com aviso de pendência, completo sela direto, última marcada pergunta se deseja finalizar, vazio bloqueia e conduz ao cancelamento. Mantém a falta como dado para métricas futuras, preserva o gesto rápido do completo e impede selo vazio. Custo aceito: quatro textos distintos para manter, cobertos por testes de texto exato.
+Alternativa 2, caminho escolhido, confirmação por caso com parcial permitido: Cancelar sempre confirma com aviso de exclusão, parcial confirma com aviso de pendência, completo sela direto, última marcada pergunta se deseja finalizar, vazio oculto no caso normal sem execução aberta e conduzindo ao cancelamento somente no caminho de borda com execução aberta e zero marcadas. Mantém a falta como dado para métricas futuras, preserva o gesto rápido do completo e impede selo vazio. Custo aceito: quatro textos distintos para manter, cobertos por testes de texto exato.
 
 Alternativa 3, selamento com edição do faltante na hora: a confirmação parcial listaria cada série pendente e permitiria marcar ou dar baixa ali mesmo. Rejeitada por YAGNI nesta versão: aumenta o modal, mistura selar com executar e adia a entrega. A lista do que falta aparece como aviso de existência de pendência, sem detalhar série a série.
 
@@ -140,7 +142,8 @@ Série planejada 1 para N Série realizada ao longo de execuções distintas, ca
 | Cenário | Comportamento esperado |
 |---|---|
 | Treino sem execução aberta e botões acionados | Cancelar e Finalizar não aparecem. Nada a selar nem a excluir |
-| Zero séries feitas e Finalizar acionado | Bloqueio com mensagem de vazio que conduz ao cancelamento. Nenhum registro selado vazio é criado |
+| Zero séries feitas no caso normal | Botão Finalizar nem é exibido, pois sem execução aberta não há ação de selamento. Nenhum registro selado vazio é criado |
+| Caminho de borda com execução aberta e zero marcadas | Finalizar exibe a mensagem de vazio que conduz ao cancelamento. Confirmar exclui sem selar, desistir mantém aberta |
 | Parcial com uma feita e resto pendente | Pergunta de parcial. Confirmar sela com término registrado. Desistir mantém aberta |
 | Completo com todas marcadas | Selamento direto sem confirmação. Registro com término preenchido |
 | Última pendente marcada pelo card | Pergunta de todas executadas. Confirmar sela. Desistir mantém aberta com todas marcadas |
@@ -152,6 +155,6 @@ Série planejada 1 para N Série realizada ao longo de execuções distintas, ca
 | Dois usuários no mesmo treino ao mesmo tempo | Sem trava. Vale a última gravação. No máximo uma aberta por treino pelo índice parcial. Segunda abertura retorna a existente |
 | Template editado na manutenção durante execução aberta | Bloqueado com aviso visível e controles desabilitados. Somente o Treino do Dia escreve |
 | Treino de programa inativo | Somente leitura. Sem Cancelar nem Finalizar, mesma regra das features 02 a 04 |
-| Treino sem exercícios | Sem séries para marcar. Finalizar cai no bloqueio de vazio. Adicionar exercício segue regra da manutenção |
+| Treino sem exercícios | Sem séries para marcar e sem execução aberta. O botão Finalizar também não aparece, mesma regra do vazio no caso normal. Adicionar exercício segue regra da manutenção |
 | Migração legada sem término preenchido | Execuções antigas abertas seguem abertas. Seladas futuras preenchem término. Nenhuma migração aplicada é reescrita |
 | Rollback de selamento com erro após gravar término | Sem reabrir nem editar. Erro vira mensagem de operação. Estado recarregado reflete o banco |

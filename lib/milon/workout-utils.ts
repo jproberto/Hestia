@@ -222,3 +222,38 @@ export function ehUltimaMarcada(
 ): boolean {
   return realizadas.length === 1 && realizadas[0].seriesId === seriesId;
 }
+
+// Encerramento do treino (Mílon #7, spec §3): o caso de finalização é regra
+// pura sobre duas contagens — séries marcadas na execução aberta × séries
+// planejadas no template. `vazio` bloqueia o selamento e conduz ao
+// cancelamento; `parcial` confirma com aviso de pendência; `completo` sela
+// direto. Total zero (treino sem séries) cai em `vazio`.
+export type CasoFinalizacao = "vazio" | "parcial" | "completo";
+
+export function decidirCasoFinalizacao(
+  marcadas: number,
+  total: number,
+): CasoFinalizacao {
+  if (total <= 0) {
+    return "vazio";
+  }
+  if (marcadas <= 0) {
+    return "vazio";
+  }
+  if (marcadas >= total) {
+    return "completo";
+  }
+  return "parcial";
+}
+
+export const MSG_CANCELAR_EXECUCAO =
+  "Tem certeza que deseja cancelar essa execução? Todas as informações serão excluídas.";
+
+export const MSG_FINALIZAR_PARCIAL =
+  "Ainda existem séries não executadas. Tem certeza que deseja finalizar o treino?";
+
+export const MSG_FINALIZAR_COMPLETA =
+  "Você executou todas as séries, deseja finalizar o treino?";
+
+export const MSG_FINALIZAR_VAZIO =
+  "O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino?";

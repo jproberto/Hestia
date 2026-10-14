@@ -1,0 +1,45 @@
+﻿{
+  "status": "approved",
+  "findings": [
+    {
+      "severity": "minor",
+      "category": "plan",
+      "file": "lib/milon/repositories/executions.ts",
+      "line": 102,
+      "evidence": "finishExecution grava finished_at com new Date().toISOString() (relogio do cliente); plan.md D2 previa relogio do banco (now() no UPDATE filtrado por finished_at IS NULL). started_at vem do banco (default now() na migracao 0011), finished_at vem do cliente. Inalterado pelo commit 7ae08bb (só tocou modal + cenarios).",
+      "impact": "Skew de relogio entre os dois celulares contamina duracao encerrado_em-iniciado_em (feature 09, futura). Nenhum criterio da spec §5 cobre a fonte do relogio — spec exige so momento de termino registrado.",
+      "suggestion": "Backlog: na feature 09 normalizar finished_at para relogio do banco (default/trigger/rpc) ou registrar aceite explicito do relogio do cliente. Precedente do modulo (deleted_at via toISOString em exercises.ts:128) sustenta o minor."
+    },
+    {
+      "severity": "minor",
+      "category": "quality",
+      "file": "components/milon/WorkoutConfirmModal.tsx",
+      "line": 60,
+      "evidence": "Os quatro textos exatos vivem em dois lugares: constantes MSG_* em lib/milon/workout-utils.ts:180-190 e literais JSX no modal (linhas 100-118). Inalterado pelo commit 7ae08bb.",
+      "impact": "Duplicacao de fonte de verdade textual; mudanca futura exige editar dois arquivos. Hoje travado por testes de texto exato nos dois lados (workout-utils.test.ts + WorkoutConfirmModal.test.tsx).",
+      "suggestion": "Backlog: modal importar as constantes de workout-utils (ou teste cruzado constante-vs-render). Sem urgencia."
+    },
+    {
+      "severity": "minor",
+      "category": "test",
+      "file": "__tests__/components/milon/WorkoutConfirmModal.test.tsx",
+      "line": 371,
+      "evidence": "Commit 7ae08bb trocou o botao de confirmacao para variant={isFinalizar ? \"default\" : \"destructive\"} (components/milon/WorkoutConfirmModal.tsx:139); os testes da variante finalizar-parcial (linha 371) asserem titulo/corpo/rotulos mas nao a prop variant do Button — requisito visual da homologacao 2026-10-13 verificado por leitura, nao por teste.",
+      "impact": "Regressao futura da cor (voltar ao vermelho) nao seria pega pela suite; so por homologacao visual.",
+      "suggestion": "Backlog: adicionar assercao de variant (default para finalizar-parcial/completa; destructive para cancelar-execucao/finalizar-vazio/remover/reduzir/limpar) no teste do modal."
+    }
+  ],
+  "blockers": [],
+  "testGaps": [
+    "Cor do botao de confirmacao (default vs destructive, homologacao 2026-10-13) sem assercao automatizada — verificado por leitura de WorkoutConfirmModal.tsx:78,139.",
+    "Cenario 8 normal (zero marcadas sem execucao aberta => Finalizar oculto) sem teste de pagina dedicado; coberto indiretamente por WorkoutDetailSection.test.tsx + today/page.test.tsx (footer/headerActions so com execExecution !== null, linhas 680-682/776-778) + decisor vazio + variante finalizar-vazio em testes unitarios.",
+    "Concorrencia entre os dois aparelhos no mesmo treino (ultima gravacao prevalece + UPDATE filtrado por aberta) coberta so por contrato single-client; sem teste de corrida real entre dois clientes.",
+    "Duracao negativa com relogio do aparelho errado (decisao D2) sem teste — aceitavel nesta feature pois duracao so sera consumida na 09.",
+    "Caso degenerado total-zero (treino sem exercicios caindo em vazio) coberto em decisor unitario; sem teste de pagina com treino vazio + execucao aberta.",
+    "build-storybook validado por evidencia de Minos (test-report.json 2026-10-13T20:00:00Z), nao re-executado por Argos; next build re-executado por Argos com sucesso nesta re-review."
+  ],
+  "questions": [
+    "D2 (relogio do banco vs cliente no finished_at): manter relogio do cliente como decisao definitiva ou revisitar na 09? Sugestao: humano decide na 09, sem travar esta feature.",
+    "Cenario 8 (Finalizar oculto com zero marcadas em vez do bloqueio da spec): homologacao humana 2026-10-13 aprovou como 'melhor que o bloqueio' (context.json decisions). Argos aceita o override humano; confirmar no approve-review se a spec §3/Vazio deve ser atualizada para refletir o oculto-no-normal + vazio-so-na-borda, ou se o texto atual permanece como intencao."
+  ]
+}

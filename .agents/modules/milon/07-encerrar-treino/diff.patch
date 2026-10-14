@@ -1,0 +1,2290 @@
+diff --git a/.agents/current b/.agents/current
+index 3d663a6..39a2d2c 100644
+--- a/.agents/current
++++ b/.agents/current
+@@ -1 +1 @@
+-.agents/modules/milon/05-execucao-series
++.agents/modules/milon/07-encerrar-treino
+diff --git a/.agents/modules/milon/07-encerrar-treino/checkpoint.json b/.agents/modules/milon/07-encerrar-treino/checkpoint.json
+new file mode 100644
+index 0000000..d4ed286
+--- /dev/null
++++ b/.agents/modules/milon/07-encerrar-treino/checkpoint.json
+@@ -0,0 +1 @@
++{"currentPhase":"CODING","lastUpdated":"2026-10-12T03:58:05.195Z","phaseHistory":[{"phase":"SPEC_DRAFT","timestamp":"2026-10-12T00:00:00.000Z"},{"phase":"SPEC_APPROVED","timestamp":"2026-10-12T00:25:00.000Z"},{"phase":"PLAN_READY","timestamp":"2026-10-12T00:30:00.000Z"},{"phase":"PLAN_APPROVED","timestamp":"2026-10-12T03:55:24.945Z"},{"phase":"TASKS_READY","timestamp":"2026-10-12T03:55:27.886Z"},{"phase":"CODING","timestamp":"2026-10-12T03:58:05.196Z"}],"validTransitions":["TESTING","TASKS_READY"]}
+\ No newline at end of file
+diff --git a/.agents/modules/milon/07-encerrar-treino/context.json b/.agents/modules/milon/07-encerrar-treino/context.json
+new file mode 100644
+index 0000000..99c0eec
+--- /dev/null
++++ b/.agents/modules/milon/07-encerrar-treino/context.json
+@@ -0,0 +1 @@
++{"approvals":{"plan":"approved","review":"pending","spec":"approved"},"currentPhase":"CODING","decisions":["Feature 7 = Encerrar treino com confirmacao + Cancelar execucao (pedido humano 2026-10-12)","Botao Encerrar no final da pagina, abaixo de tudo","Cancelar execucao tambem pede confirmacao e exclui registros daquela execucao","Modulo sem uso real — decisoes por desenho, nao por dor observada (Q1)","Cancelar = descarta treino comecado errado, historico sem valor; Encerrar = sela executado mesmo incompleto, falta vira dado p/ metricas; ambos exigem aviso + confirmacao obrigatoria","Q2: 4 casos + posicoes (Cancelar topo, Finalizar fim abaixo do ultimo Adicionar Exercicio)","Q3: pos-selamento permanece em Treino do Dia exibindo proximo treino (regra do proximo a verificar na 04); execucao arquivada imutavel","Q4: vazio bloqueia Finalizar com mensagem conduzindo ao cancelar","YAGNI confirmado: FORA=reabrir/editar apos selar, historico, timer, rotacao; DENTRO=parcial+cancelar","Spec final escrita por Hera (sem codigo, sem TBD, guardian 0 blocos) — APROVADA pelo humano 2026-10-12","Backlog: item 7b Rotacao do Treino do Dia por historico criado no Bloco 2 (pedido humano 2026-10-12); item 7 em andamento com link da spec","Plano Atena: sem DDL novo (finished_at existente 0011); finishExecution + decisor puro + maquina hook + 4 variantes modal + botoes via slots today; 7b fora","Guardian PLAN_APPROVED script com falso-positivo (cita migration-0011 aplicada como se fosse nova; plano declara Sem migracao nova) — override por guardian nativo via raciocinio; TASKS_READY guardian OK"],"history":[{"action":"init","phase":"SPEC_DRAFT","timestamp":"2026-10-12T00:00:00.000Z"},{"action":"Step0 Caronte branch feature/milon/07-encerrar-treino de develop 26fc9cb","phase":"SPEC_DRAFT","timestamp":"2026-10-12T00:05:00.000Z"},{"action":"Hera Q1-Q5 + respostas humanas registradas + YAGNI confirmado","phase":"SPEC_DRAFT","timestamp":"2026-10-12T00:15:00.000Z"},{"action":"Hera spec.md escrita (157 linhas, 12 criterios) — apresentada para approve-spec","phase":"SPEC_DRAFT","timestamp":"2026-10-12T00:20:00.000Z"},{"action":"Humano aprovou spec (approve-spec) + pediu item de rotacao no backlog Bloco 2","phase":"SPEC_APPROVED","timestamp":"2026-10-12T00:25:00.000Z"},{"action":"Backlog atualizado: item 7 em andamento + item 7b rotacao criado","phase":"SPEC_APPROVED","timestamp":"2026-10-12T00:26:00.000Z"},{"action":"Atena entregou plan.md + tasks.json (6 tasks linear TASK-001 a TASK-006, sem migracao, guardian OK) — aguardando approve-plan","phase":"PLAN_READY","timestamp":"2026-10-12T00:30:00.000Z"},{"action":"Humano aprovou plano (approve-plan) — pode implementar","phase":"PLAN_APPROVED","timestamp":"2026-10-12T00:35:00.000Z"},{"action":"Transicao PLAN_APPROVED -> TASKS_READY (DAG 6 tasks validado, guardian OK)","phase":"TASKS_READY","timestamp":"2026-10-12T03:55:27.887Z"},{"action":"Caronte commitou spec+plan c342efb; CODING iniciado com TASK-001 Minos RED","phase":"CODING","timestamp":"2026-10-12T03:58:05.196Z"}],"objective":"Feature 7 Milon: encerrar treino com confirmacao (lista pendencias, permite parcial) + cancelar execucao com confirmacao (exclui registros da execucao). Botao Encerrar no final da pagina.","sessionId":"milon-07-encerrar-treino"}
+\ No newline at end of file
+diff --git a/.agents/modules/milon/07-encerrar-treino/plan.md b/.agents/modules/milon/07-encerrar-treino/plan.md
+new file mode 100644
+index 0000000..64efcae
+--- /dev/null
++++ b/.agents/modules/milon/07-encerrar-treino/plan.md
+@@ -0,0 +1,117 @@
++# Encerrar treino com confirmação — Implementation Plan
++> Para Zeus: delegar via hefesto/minos task por task
++
++**Objetivo:** Selar a execução aberta do Treino do Dia (parcial ou completa, com confirmação por caso) e cancelar a execução começada errada (com confirmação e exclusão em cascata), sem nenhuma migração nova.
++**Arquitetura:** Uma operação nova de persistência (`finishExecution`: UPDATE de `finished_at` existente) + máquina de estados de confirmação no hook de execução + duas novas variantes de modal e dois botões posicionados via slots existentes da seção de detalhe. Cancelar reusa a exclusão existente (`clearExecution`).
++**Tech Stack:** Next.js (App Router) + Supabase via `IDatabaseClient` (`lib/shared`) + componentes presentacionais por props + `AsyncState` centralizado + vitest.
++
++## Restrições Globais
++- Botão de selamento chama-se `Finalizar`; equivale a `Encerrar` do item 7 do backlog. Sinônimos de spec: selar, selamento, encerrado.
++- Cancelar fica no topo da página do Treino do Dia; Finalizar fica no final, abaixo do último `Adicionar Exercício`. Nenhum dos dois aparece na manutenção em Programas nem sem execução aberta.
++- Quatro textos de confirmação com texto exato obrigatório (spec §3): Cancelar `Tem certeza que deseja cancelar essa execução? Todas as informações serão excluídas.`; Parcial `Ainda existem séries não executadas. Tem certeza que deseja finalizar o treino?`; Todas marcadas `Você executou todas as séries, deseja finalizar o treino?`; Vazio `O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino?`. Caso completo (todas marcadas via botão Finalizar) sela direto sem confirmação.
++- Modais de confirmação nunca fecham no erro e preservam o digitado/marcações. Erro de carga exibe nova tentativa; erro de operação e bloqueio exibem mensagem sem nova tentativa (norma D27/R31 via `errorOrigin`).
++- Títulos de conteúdo usam o token `font-display` e a cor do Mílon (`#B7602B`). Estados assíncronos usam `AsyncState` — proibido reimplementar, inclusive o texto `Tentar novamente`.
++- Proibido criar `use-cases/`, `schemas/`, `mappers.ts`, `services/` ou factories `createXService`. Proibido importar `@supabase/*` fora de `lib/shared/`. UI importa persistência só via barrels `lib/milon/db/*`.
++- Item 7b (rotação do Treino do Dia por histórico) é backlog futuro e está FORA deste plano. A regra do próximo treino após o selamento continua sendo a vigente da feature 04 (programa ativo do dono + primeiro treino por criação).
++- Sem validação nova de valores; valem as regras herdadas das features de treinos, séries planejadas e execução série a série. Existe no máximo uma execução aberta por treino (índice parcial existente).
++
++## 1. Arquitetura
++A coluna de término (`finished_at`, nula enquanto aberta) já existe desde a migração 0011 e nunca foi escrita — esta feature é o primeiro e único escritor dela. Selar é, portanto, um UPDATE incremental sobre linha existente, sem DDL, sem backfill e sem auditoria de migração. Cancelar é a exclusão existente com cascata sobre as realizadas. A decisão de qual caso de confirmação exibir (vazio / parcial / completo / todas-marcadas-pelo-card) é regra pura sobre duas contagens (séries planejadas no template × séries realizadas na execução aberta) e mora em `lib/milon/workout-utils.ts`. O hook `useWorkoutExecution` ganha a máquina de estados das confirmações (pedir / confirmar / desistir para Finalizar e para Cancelar, mais o gatilho automático do Caso 4 no toggle) sem mudar o contrato existente (campos atuais preservados, novos campos aditivos). A UI ganha quatro variantes no `WorkoutConfirmModal` existente e dois botões na página do Treino do Dia conectados aos slots `headerActions` (Cancelar, topo) e `footer` (Finalizar, rodapé) já previstos em `WorkoutDetailSection`. A manutenção em Programas não recebe slots e permanece sem botões por construção. Após o selamento, a execução some da busca de aberta (`finished_at` preenchido é filtrado), os botões desaparecem, o badge `Em execução` apaga e o template volta a ficar livre na manutenção — tudo por releitura do estado existente, sem trava nova.
++
++## 2. Componentes (Create/Modify/Test/Docs)
++- Modify `lib/milon/repositories/executions.ts`, camada repositories (persistência via `IDatabaseClient`, nunca `@supabase/*`), motivo: adicionar a operação de selamento sobre a coluna existente + standalones correspondentes + atualizar o comentário de reserva (hoje afirma que o fim nunca é escrito). Testado com `__tests__/lib/milon/repositories/contract-workout-executions.test.ts` (fakes-only, decisão 57) + `__tests__/lib/milon/db/executions.test.ts` (cadeias de query).
++- Modify `lib/milon/repositories/interfaces.ts`, camada repositories (contratos DIP), motivo: estender `IWorkoutExecutionRepository` com a operação de selamento. Testado indiretamente pelos contracts + `tsc`.
++- Modify `lib/milon/repositories/fakes/fakeWorkoutExecutionRepository.ts`, camada repositories/fakes (contratos), motivo: espelhar o selamento em memória (filtro de aberta por `finishedAt === null`, selamento idempotente, cascata já existente intacta). Testado com o contract de execuções.
++- Modify `lib/milon/workout-utils.ts`, camada regras puras (sem I/O), motivo: adicionar o decisor de caso de finalização + constantes das quatro mensagens exatas. Testado com `__tests__/lib/milon/workout-utils.test.ts` (testes unitários diretos).
++- Modify `lib/milon/hooks/useWorkoutExecution.ts`, camada hooks (fetch+estado+operações via barrels `db/*`, promise-chain + flag `cancelled`, `getUserEmail` como porta de sessão), motivo: adicionar a máquina de estados Finalizar/Cancelar (pedir, confirmar, desistir, gatilho do Caso 4, vazio, duplo-confirm idempotente, erro de operação com origem `operacao` + relançamento, modal nunca fecha no erro). Testado com `__tests__/lib/milon/hooks/useWorkoutExecution.test.ts`.
++- Modify `components/milon/WorkoutConfirmModal.tsx`, camada components presentacional por props, motivo: adicionar as quatro variantes com textos exatos, títulos, rótulos de botões e regra processing-desabilita (dismiss sempre `Cancelar`, confirma com verbo da ação). Testado com `__tests__/components/milon/WorkoutConfirmModal.test.tsx` + build do Storybook.
++- Modify `components/milon/WorkoutDetailSection.tsx` (hospedeiro `ExecutionHost`), camada components composição, motivo: hospedar as confirmações novas (estados do hook, bloquear fechamento no erro e em processing, gatilho do Caso 4 vindo do toggle) e renderizar os slots `headerActions`/`footer` no ramo de execução. Testado com `__tests__/components/milon/WorkoutDetailSection.test.tsx`.
++- Modify `app/milon/today/page.tsx`, camada app (composição + modais, sem lógica de dados), motivo: conectar o botão `Cancelar` no slot de topo e o botão `Finalizar` no slot de rodapé, visíveis somente com execução aberta e programa ativo. Testado com `__tests__/app/milon/today/page.test.tsx`.
++- Test (existentes atualizados, espelho de camada): `__tests__/lib/milon/repositories/contract-workout-executions.test.ts`, `__tests__/lib/milon/db/executions.test.ts`, `__tests__/lib/milon/workout-utils.test.ts`, `__tests__/lib/milon/hooks/useWorkoutExecution.test.ts`, `__tests__/components/milon/WorkoutConfirmModal.test.tsx`, `__tests__/components/milon/WorkoutDetailSection.test.tsx`, `__tests__/app/milon/today/page.test.tsx`.
++- Docs: sem documento novo nesta feature (artefatos Olympus `plan.md`/`tasks.json` são o registro; `test-scenarios.md` e `regression.md` são produzidos por Minos na TASK-006).
++- Explicitamente NÃO tocados: `app/milon/programs/[id]/workouts/[workoutId]/page.tsx` (manutenção segue sem slots e sem botões), `lib/milon/hooks/useTodayWorkout.ts` (seleção vigente inalterada; rotação é 7b, fora), `utils/migrations/*` (nenhum inteiro consumido), `lib/milon/types.ts` (tipos `WorkoutExecutionRow`/`WorkoutExecution` já carregam `finished_at`/`finishedAt`; nenhuma coluna nova).
++
++## 3. Contratos (descrição textual, sem código de implementação)
++### Tipos (fonte única `lib/milon/types.ts` — sem alteração)
++- `WorkoutExecutionRow` já possui `finished_at: string | null`; `WorkoutExecution` já possui `finishedAt: string | null`. Aberta = `finishedAt === null`; selada = `finishedAt` preenchido; cancelada = linha excluída (sem histórico). Nenhum tipo Row/Domain/Input novo; `MarkExecutionSeriesInput` inalterado.
++
++### Interface de repositório (adição em `IWorkoutExecutionRepository`)
++- Operação nova `finishExecution`: recebe o identificador da execução, grava o momento de término com o relógio do banco somente se a execução ainda estiver aberta, devolve a execução selada. Se a execução já estiver selada ou inexistente, lança erro de operação (mensagem visível, sem nova tentativa) em vez de criar selo duplicado. Operações existentes inalteradas: `findOpenExecutionByWorkout` (filtra só término vazio, retorno único opcional), `startExecution` (abertura idempotente reusando a existente sem trocar o início), `clearExecution` (exclusão com cascata nas realizadas — é o Cancelar desta feature), `listDoneByExecution`, `markSeriesDone` (idempotente por execução + série), `unmarkSeries`.
++- Standalones novas espelhando o padrão do arquivo (criam o próprio client singleton por aba): `finishExecutionStandalone` com o mesmo contrato da operação com client injetado. Barrel `lib/milon/db/executions.ts` segue reexportando tudo sem alteração (caminho oficial da UI inalterado).
++
++### Regras puras (`lib/milon/workout-utils.ts` — adições)
++- Decisor `decidirCasoFinalizacao`: recebe quantidade de séries marcadas e quantidade total planejada, devolve um dos quatro casos — `vazio` (zero marcadas), `parcial` (pelo menos uma feita e pelo menos uma pendente), `completo` (todas marcadas e total maior que zero), mais o caso degenerado `sem-series` (total zero, tratado como `vazio`).
++- Quatro constantes de mensagem com os textos exatos da spec §3 (listadas nas Restrições Globais): mensagem de Cancelar, mensagem de parcial, mensagem de todas-executadas e mensagem de vazio. Nenhuma outra mensagem nova.
++
++### Signatures do hook (`useWorkoutExecution` — campos novos aditivos, existentes preservados)
++- Contadores derivados novos: `totalSeriesCount` (séries planejadas no template recebido), `finishCase` (resultado do decisor sobre marcadas × total, nulo sem execução aberta).
++- Pedidos: `requestFinish` (decide o caso e abre a confirmação correspondente; completo sela direto sem confirmação; vazio abre a mensagem de vazio sem selar), `requestCancel` (abre a confirmação de Cancelar), gatilho automático do Caso 4 (ao marcar pelo card a última pendente, abre a pergunta de todas-executadas em vez de selar direto).
++- Confirmações: `confirmFinish` (sela via standalone, recarrega, fecha a pergunta; erro de operação alimenta o banner com origem `operacao` e relança para o modal não fechar), `cancelFinish` (só fecha, execução segue aberta), `confirmCancelExecution` (exclui via `clearExecutionStandalone`, recarrega, fecha; erro idem), `cancelCancelExecution` (só fecha).
++- Estados novos: `finishConfirmOpen` (booleano), `finishConfirmCase` (qual dos três casos com confirmação está aberto), `cancelConfirmOpen` (booleano, separado do `clearConfirmOpen` legado da feature 05 que permanece intacto), `finishProcessing`/`cancelProcessing` (desabilitam botões durante a gravação, sem duplo clique).
++- Contrato de erro inalterado: `errorMsg` + `errorOrigin` (`carga` com retry via `retry`; `operacao`/`bloqueio` sem retry), `successNotice` permanece nulo permanente nesta tela, modais nunca fecham no erro.
++
++### Props de componentes (adições)
++- `WorkoutConfirmModal`: `WorkoutConfirmVariant` ganha quatro valores — `cancelar-execucao`, `finalizar-parcial`, `finalizar-completa` (Caso 4), `finalizar-vazio`. Invariantes herdadas: `open=false` não renderiza nada; `processing` desabilita os botões e bloqueia os callbacks; o botão de desistência chama-se sempre `Cancelar` e só fecha. Rótulos de confirmação: `cancelar-execucao` confirma com `Excluir` (exclui os registros daquela execução); `finalizar-parcial` e `finalizar-completa` confirmam com `Finalizar` (sela com término registrado); `finalizar-vazio` confirma com `Cancelar execução` (executa a exclusão — é o caminho conduzido ao cancelamento, sem criar registro selado vazio) e desiste com `Voltar`. Títulos: `Cancelar execução`, `Finalizar treino`, `Finalizar treino`, `Treino sem séries feitas`. Corpo de cada variante = o texto exato da spec, sem lista série a série (YAGNI, alternativa 3 rejeitada).
++- `WorkoutDetailSection`: nenhuma prop nova (slots `headerActions`/`entryFooter`/`footer` e flags `executionEnabled`/`executionBlocked` já existem). No ramo de execução, o topo renderiza `headerActions` ao lado do badge `Em execução` e o rodapé renderiza `footer` após a lista de exercícios; os quatro modais novos são hospedados no `ExecutionHost` com a mesma disciplina do `clearConfirmOpen` (erro não fecha, processing não fecha).
++- `app/milon/today/page.tsx`: conecta `headerActions` = botão `Cancelar` e `footer` = botão `Finalizar`, ambos renderizados somente quando houver execução aberta e o programa não estiver inativo (somente leitura segue sem botões, mesma regra das features 02 a 04). Posição do Finalizar: slot `footer` da seção, que renderiza após a lista (abaixo do último Adicionar Exercício).
++
++## 4. Data Flow
++1. Pessoa marca séries no Treino do Dia (fluxo 05 inalterado): primeira marcação abre a execução (`started_at` do banco), realizadas guardam o retrato, badge `Em execução` acende, manutenção bloqueia com aviso.
++2. Com execução aberta, a página exibe `Cancelar` no topo e `Finalizar` no rodapé (derivados de `execution !== null`; sem execução aberta, ausentes; na manutenção, ausentes por construção).
++3. Acionar `Finalizar` chama `requestFinish`: conta marcadas (realizadas da execução) × total (séries do template). Zero → abre `finalizar-vazio` (nada selado). Parcial → abre `finalizar-parcial`. Completo via botão → sela direto (`finishExecutionStandalone` + recarregar). Marcar a última pendente pelo card → abre `finalizar-completa`.
++4. Confirmar qualquer selamento grava `finished_at` com o relógio do banco na linha da execução (`UPDATE ... WHERE id E finished_at IS NULL`); recarrega; a busca de aberta volta vazia; botões e badge somem; a página permanece no Treino do Dia exibindo o próximo treino pela seleção vigente (sem navegação nova). A execução selada é imutável: nenhum caminho de escrita alcança linhas com término preenchido (toggle, edição e desmarque operam só sobre a aberta em estado; `finishExecution` com filtro de aberta; segunda confirmação encontra nada aberto e vira erro de operação).
++5. Acionar `Cancelar` abre `cancelar-execucao`; confirmar exclui a execução (`clearExecutionStandalone`, cascata apaga as realizadas); template desbloqueado, início limpo, nenhuma série marcada. Desistir de qualquer pergunta só fecha, mantendo execução aberta, bloqueio e início intactos.
++6. Falhas: carga (abrir a página, recarregar) → `AsyncState`/banner com `Tentar novamente`; operação (selar, cancelar, alternar) ou bloqueio → mensagem sem nova tentativa; modal aberto nunca fecha no erro; digitado e marcações preservados.
++
++## 5. Decisões Técnicas (para registro em `context.json.decisions` via Zeus)
++- D1 — Sem migração nova: `finished_at` anulável + índice único parcial de uma aberta por treino já existem na migração 0011 (aplicada e congelada). Nenhum inteiro da sequência global é consumido ou reservado; o próximo livre seguiria sendo 0015 apenas como informação, sem reserva. Backfill, rollback e auditoria de migração: não aplicáveis (sem DDL).
++- D2 — Término com relógio do banco (`now()` no UPDATE, filtrado por `finished_at IS NULL`): duração futura `encerrado_em − iniciado_em` usa a mesma base temporal do `started_at`; evita divergência de relógio entre os dois celulares do casal.
++- D3 — Cancelar desta feature reusa `clearExecution` (exclusão + cascata) e ganha confirmação própria (`cancelar-execucao`); a confirmação legada `limpar-execucao` da feature 05 (desmarcar a última por engano) permanece intacta, sem mudança de texto ou comportamento.
++- D4 — Vazio como variante modal (`finalizar-vazio`) cujo confirmar executa a exclusão: cumpre `nada é selado` + `conduz ao cancelamento` num único gesto, mantendo o invariante `Cancelar sempre só fecha`.
++- D5 — Caso 4 via gatilho no toggle (última pendente marcada → abre pergunta em vez de selar): preserva o gesto rápido do completo via botão e impede selo acidental pelo card, conforme a alternativa 2 escolhida na spec.
++- D6 — Botões via slots existentes (`headerActions`/`footer`) conectados só na página do Treino do Dia: zero mudança na manutenção (wrapper fino sem slots) e posições fixas garantidas pela ordem de render da seção.
++- D7 — Imutabilidade pós-selo por ausência de aberta (sem coluna ou trava nova): selada some de `findOpenExecutionByWorkout`, o que apaga botões/badge, libera a manutenção e fecha todos os caminhos de escrita.
++- D8 — Duplo-confirm idempotente: `processing` bloqueia duplo clique; segunda tentativa tardia encontra execução já selada e vira erro de operação sem selo duplicado; cancelar duas vezes encontra nada aberto e nada exclui.
++
++## 6. Riscos e Mitigações
++- Divergência Treino do Dia × manutenção após selar/cancelar → tratada como defeito desta feature: ambos os lados releem a aberta (`findOpenExecutionByWorkout`) após cada operação; a página de manutenção já recarrega a trava via efeito existente.
++- Próximo treino pós-selamento usa a seleção vigente (primeiro por criação), não rotação por histórico → mitigado por escopo explícito: 7b é backlog futuro, sem promessa de inteligência nesta feature; qualquer expectativa de rotação é redirecionada ao item 7b.
++- Edição simultânea pelos dois usuários (última gravação prevalece, sem trava) → mitigado pelo índice parcial (no máximo uma aberta por treino; segunda abertura retorna a existente) e pelo UPDATE filtrado por aberta (selo único; concorrente tardio recebe erro de operação).
++- Confusão entre os quatro textos → mitigada por constantes únicas em `workout-utils.ts` + testes de texto exato por variante + títulos e verbos distintos por caso.
++- Regressão das features 04/05 (badge, bloqueio, replicação, unidade, valor único) → mitigada pela TASK-006 (suite completa verde + coverage ≥ 80% + promoção de regressão) e pela regra de não tocar na seleção do Treino do Dia nem nos caminhos de marcação.
++
++## Mapeamento Schema → Código
++| Tabela | Coluna | Migração | Repositório | Hook | Componente |
++|---|---|---|---|---|---|
++| `workout_executions` | `finished_at` (UPDATE no selamento; filtro `IS NULL` na aberta) | 0011 aplicada (`migration-0011-milon-execucao.sql`), sem migração nova | `lib/milon/repositories/executions.ts` (`finishExecution` novo; `findOpenExecutionByWorkout`, `startExecution`, `clearExecution` reusados) + `lib/milon/repositories/interfaces.ts` (`IWorkoutExecutionRepository.finishExecution`) + fake `lib/milon/repositories/fakes/fakeWorkoutExecutionRepository.ts` | `lib/milon/hooks/useWorkoutExecution.ts` (`requestFinish`, `confirmFinish`, `cancelFinish`, gatilho Caso 4, `finishConfirmOpen`, `finishConfirmCase`, `finishProcessing`, `finishCase`, `totalSeriesCount`; `requestCancel`, `confirmCancelExecution`, `cancelCancelExecution`, `cancelConfirmOpen`, `cancelProcessing`) via barrels `lib/milon/db/executions.ts` | `components/milon/WorkoutConfirmModal.tsx` (variantes `finalizar-parcial`, `finalizar-completa`, `finalizar-vazio`) + `components/milon/WorkoutDetailSection.tsx` (`ExecutionHost` hospeda; slot `footer` renderiza o botão `Finalizar`) + `app/milon/today/page.tsx` (conecta o botão) |
++| `workout_executions` | linha inteira (DELETE no cancelamento; `started_at` limpo por exclusão) | 0011 aplicada, sem migração nova | `lib/milon/repositories/executions.ts` (`clearExecution` existente, cascata no banco) | `lib/milon/hooks/useWorkoutExecution.ts` (`requestCancel`, `confirmCancelExecution`, `cancelCancelExecution`) | `components/milon/WorkoutConfirmModal.tsx` (variante `cancelar-execucao`) + `components/milon/WorkoutDetailSection.tsx` + `app/milon/today/page.tsx` (botão `Cancelar` no slot `headerActions`) |
++| `workout_execution_series` | linhas da execução (leitura p/ contagem de marcadas; cascata no cancelamento) | 0011 aplicada, sem migração nova | `lib/milon/repositories/executions.ts` (`listDoneByExecution` existente) | `lib/milon/hooks/useWorkoutExecution.ts` (`doneSeriesIds`, `markedCount` existentes alimentam o decisor) | `components/milon/WorkoutDetailSection.tsx` (marcadores existentes, sem mudança) |
++| `workouts`, `workout_entries`, `workout_series`, `exercises` | leitura do template (total planejado; bloqueio liberado pós-selo) | 0007/0009/0010/0012/0013/0014 aplicadas, sem migração nova | `lib/milon/repositories/workflows` existentes (`workouts.ts`, sem mudança) | `lib/milon/hooks/useWorkoutDetail.ts` (entries existentes) + `useWorkoutExecution` (parâmetro `entries` existente) | `components/milon/WorkoutDetailSection.tsx` + `app/milon/programs/[id]/workouts/[workoutId]/page.tsx` (trava `executionBlocked` existente: selada retorna vazio → edição livre) |
++
++## Contratos Completos
++- Tipos: sem alteração — `WorkoutExecutionRow.finished_at: string | null` e `WorkoutExecution.finishedAt: string | null` (fonte única `lib/milon/types.ts`) já expressam aberta/selada; `MarkExecutionSeriesInput` inalterado.
++- Interface de repositório: `IWorkoutExecutionRepository` ganha `finishExecution(executionId: string): Promise<WorkoutExecution>` (sela somente se aberta; já selada/inexistente lança erro de operação); demais membros inalterados; standalone `finishExecutionStandalone(executionId: string): Promise<WorkoutExecution>` no mesmo arquivo; barrel `lib/milon/db/executions.ts` inalterado (reexporta).
++- Signatures do hook (aditivas): `totalSeriesCount: number`, `finishCase: 'vazio' | 'parcial' | 'completo' | null`, `finishConfirmOpen: boolean`, `finishConfirmCase: 'parcial' | 'completa' | 'vazio' | null`, `cancelConfirmOpen: boolean`, `finishProcessing: boolean`, `cancelProcessing: boolean`, `requestFinish(): void`, `confirmFinish(): Promise<void>`, `cancelFinish(): void`, `requestCancel(): void`, `confirmCancelExecution(): Promise<void>`, `cancelCancelExecution(): void`; existentes (`execution`, `doneSeriesIds`, `markedCount`, `toggleSeries`, `saveSeriesExecution`, `clearConfirmOpen`, `confirmClearExecution`, `cancelClearExecution`, `loading`, `errorMsg`, `errorOrigin`, `successNotice`, `retry`) preservados.
++- Props de componentes: `WorkoutConfirmVariant` estendido com `cancelar-execucao | finalizar-parcial | finalizar-completa | finalizar-vazio` (props `open`, `exerciseName`, `seriesCount`, `currentQuantity`, `newQuantity`, `processing`, `onConfirm`, `onCancel` inalteradas); seção sem props novas; página do Treino do Dia sem props (composição interna dos dois botões nos slots).
++- Regras puras: `decidirCasoFinalizacao(marcadas: number, total: number)` devolve `vazio | parcial | completo` (total zero cai em `vazio`); quatro constantes de mensagem com os textos exatos da spec §3.
++
++## Migrações
++Sem migração nova. A coluna de término (`finished_at` anulável), o índice único parcial de uma aberta por treino (`idx_workout_executions_open_unique`), a cascata das realizadas e a auditoria em `schema_migrations` já existem e estão aplicados desde a migração 0011 (`utils/migrations/migration-0011-milon-execucao.sql`, `spec_id milon-05`, congelada — nunca editada nem renomeada). Verificação da nota do pedido: a afirmação da spec §6 procede — o término está reservado desde a 05 como coluna existente nula, e esta feature o preenche via UPDATE; não há DDL novo, portanto nenhum número da sequência global é consumido ou reservado, nenhum backfill é necessário (linhas antigas abertas seguem abertas; seladas futuras preenchem o término) e nenhum rollback de schema existe (falha pós-gravação vira mensagem de operação, sem reabrir). Auditoria: nenhum registro novo em `schema_migrations`.
++
++## Código Legado/Removível
++| Item | Critério de Busca Zerada | Arquivos Afetados |
++|---|---|---|
++| Comentário de reserva do término em `executions.ts` (`O fim (finished_at) nunca é escrito nesta feature (reservado à feature 7)`) | busca por `reservado à feature 7` retorna 0 em código vivo (`lib/`, `components/`, `app/`) | `lib/milon/repositories/executions.ts` |
++| Comentários de reserva do término no hook (`O fim nunca é escrito aqui (reservado à feature 7)`, `valores reais ficam para o encerrar #7`) | busca por `reservado à feature 7` e por `encerrar #7` retorna 0 em código vivo | `lib/milon/hooks/useWorkoutExecution.ts` |
++| Comentário de valores futuros nos tipos (`valores reais ficam para o encerrar #7`) | busca por `encerrar #7` retorna 0 em código vivo | `lib/milon/types.ts` |
++| Comentário de valores futuros na seção (`valores reais ficam para o encerrar #7`) | busca por `encerrar #7` retorna 0 em código vivo | `components/milon/WorkoutDetailSection.tsx` |
++
++## Tasks
++| id | title | assignee | files | acceptanceCriteria | consumes | produces | dependencies |
++|---|---|---|---|---|---|---|---|
++| TASK-001 | RED de contrato do selamento no repository | minos | `__tests__/lib/milon/repositories/contract-workout-executions.test.ts`, `__tests__/lib/milon/db/executions.test.ts` | `npm test -- __tests__/lib/milon/repositories/contract-workout-executions.test.ts` → FAIL esperado (operação de selamento ainda não existe no contrato); `npx tsc --noEmit` → exit 0 | spec §3 (efeito do selamento, imutabilidade, caso 10 da tabela de aceite) + plan §3 (contrato da operação de selamento) | contrato RED da operação de selamento (sela aberta, filtra selada da aberta, duplo selo sem duplicar, inexistente sem efeito colateral) | — |
++| TASK-002 | Selamento no repository + fake + standalone | hefesto | `lib/milon/repositories/executions.ts`, `lib/milon/repositories/interfaces.ts`, `lib/milon/repositories/fakes/fakeWorkoutExecutionRepository.ts` | `npm test -- __tests__/lib/milon/repositories/contract-workout-executions.test.ts __tests__/lib/milon/db/executions.test.ts` → PASS; busca por `reservado à feature 7` em `lib/milon/repositories/executions.ts` → 0 ocorrências | contrato RED da TASK-001 | operação de selamento persistida (UPDATE de término só em aberta + standalone + fake espelhado) | TASK-001 |
++| TASK-003 | RED do hook, decisor puro e modais/páginas | minos | `__tests__/lib/milon/workout-utils.test.ts`, `__tests__/lib/milon/hooks/useWorkoutExecution.test.ts`, `__tests__/components/milon/WorkoutConfirmModal.test.tsx`, `__tests__/components/milon/WorkoutDetailSection.test.tsx`, `__tests__/app/milon/today/page.test.tsx` | `npm test -- __tests__/lib/milon/workout-utils.test.ts __tests__/lib/milon/hooks/useWorkoutExecution.test.ts __tests__/components/milon/WorkoutConfirmModal.test.tsx` → FAIL esperado (decisor, estados de Finalizar/Cancelar e quatro variantes ainda não existem); `npx tsc --noEmit` → exit 0 | spec §2 (posições, jornada), §3 (quatro casos, vazio, efeitos, estados de tela) e §5 (critérios 1–11) + plan §3 (decisor, hook, variantes, botões) | RED do decisor + máquina de estados do hook + quatro variantes com textos exatos + botões topo/rodapé + gatilho do Caso 4 | TASK-002 |
++| TASK-004 | Decisor puro + máquina de estados do hook | hefesto | `lib/milon/workout-utils.ts`, `lib/milon/hooks/useWorkoutExecution.ts` | `npm test -- __tests__/lib/milon/workout-utils.test.ts __tests__/lib/milon/hooks/useWorkoutExecution.test.ts` → PASS; buscas por `reservado à feature 7` e `encerrar #7` em `lib/milon/workout-utils.ts`, `lib/milon/hooks/useWorkoutExecution.ts`, `lib/milon/types.ts` → 0 ocorrências em código vivo | RED da TASK-003 (decisor + hook) + operação de selamento da TASK-002 | decisor de caso + Finalizar/Cancelar no hook (pedir, confirmar, desistir, Caso 4, vazio, idempotência, erro sem fechar modal) | TASK-003 |
++| TASK-005 | Modais novos + botões topo/rodapé no Treino do Dia | hefesto | `components/milon/WorkoutConfirmModal.tsx`, `components/milon/WorkoutDetailSection.tsx`, `app/milon/today/page.tsx` | `npm test -- __tests__/components/milon/WorkoutConfirmModal.test.tsx __tests__/components/milon/WorkoutDetailSection.test.tsx __tests__/app/milon/today/page.test.tsx` → PASS; busca por `encerrar #7` em `components/milon/WorkoutDetailSection.tsx` → 0 ocorrências; manutenção (`app/milon/programs/[id]/workouts/[workoutId]/page.tsx`) sem botões por inspeção dos testes de matriz existentes → PASS | hook pronto da TASK-004 + RED de UI da TASK-003 | quatro variantes com textos exatos + botão Cancelar no topo + botão Finalizar no rodapé + hospedagem das confirmações (erro/processing não fecham) | TASK-004 |
++| TASK-006 | Suite completa verde + coverage + regressão | minos | `__tests__/lib/milon/repositories/contract-workout-executions.test.ts`, `__tests__/app/milon/today/page.test.tsx`, `.agents/modules/milon/regression.md` (promoção), `.agents/modules/milon/07-encerrar-treino/test-report.json` (regenerado) | `npm test` → 0 falhas; `npm test -- --coverage` → lines e branch ≥ 80%; `npm run build-storybook` → exit 0; critérios 1–12 da spec §5 cobertos entre automatizado e manual | UI completa da TASK-005 | suite verde sem quebra + relatório regenerado + cenários de regressão promovidos | TASK-005 |
+diff --git a/.agents/modules/milon/07-encerrar-treino/spec.md b/.agents/modules/milon/07-encerrar-treino/spec.md
+new file mode 100644
+index 0000000..985e534
+--- /dev/null
++++ b/.agents/modules/milon/07-encerrar-treino/spec.md
+@@ -0,0 +1,157 @@
++# Spec: Encerrar treino com confirmação
++
++## 1. Problema Real
++
++O módulo Mílon ainda não tem uso real em academia. As decisões desta feature são de desenho, não de dor observada, conforme confirmação humana.
++
++Na academia, a pessoa marca séries feitas uma a uma no Treino do Dia e em algum momento precisa dizer que aquele treino acabou. Hoje a execução abre na primeira marcação e só pode ser desfeita ao desmarcar a última série, que pergunta se deseja cancelar a execução desse treino. Falta o gesto oposto: selar o que foi feito para valer como treino realizado, mesmo quando parcial, de modo que sirva de base para métricas futuras de duração e volume.
++
++O valor desta feature é separar dois destinos que hoje se confundem. Cancelar descarta um treino começado errado, sem valor de histórico, e apaga os registros daquela execução. Finalizar sela o executado, mesmo incompleto, e a falta vira dado, não bloqueio. Ambos exigem aviso com confirmação obrigatória. A palavra do botão é Finalizar e equivale a Encerrar do item 7 do backlog do módulo.
++
++Fontes: decisão humana Q1 a Q4 registrada no contexto da feature, item 7 do backlog do módulo Mílon, specs das features 04 Treino do Dia v1 e 05 Execução série a série.
++
++## 2. Usuários e Cenários
++
++Usuários: o casal, com login individual cada um, mesmo modelo das features 01 a 05. Cada um abre o próprio treino ao chegar na academia. Não há permissão restrita. O dono do programa define a origem do Treino do Dia, mesma regra da feature 04. Uso no celular, com mão suada, mesma exigência de tela pequena das features 03 a 05.
++
++Cenário 1: finalizar o treino completo, com todas as séries marcadas, sem burocracia extra além do necessário. Cenário 2: finalizar o treino parcial, com séries faltando, assumindo a falta como dado para métricas futuras. Cenário 3: cancelar uma execução começada errada, descartando tudo sem deixar histórico. Cenário 4: tentar finalizar sem nenhuma série feita e ser conduzido ao cancelamento em vez do selamento.
++
++Jornada passo a passo: a pessoa executa séries no Treino do Dia, com o nome do treino exibindo indicação visual de em execução enquanto houver execução aberta. O botão Cancelar fica no topo da página do Treino do Dia. O botão Finalizar fica no final da página, abaixo do último Adicionar Exercício. Ao acionar Finalizar ou Cancelar, a pessoa vê a pergunta correspondente ao seu caso, confirma ou desiste, e permanece no Treino do Dia. Após o selamento, a página exibe o próximo treino segundo a regra vigente do Treino do Dia, cuja inteligência de rotação será revisitada após esta feature conforme a spec 04 seção 4. A execução selada fica arquivada e imutável, sem edição.
++
++Estados de tela: seguem o padrão centralizado do módulo com o componente central de estado assíncrono. Carregando exibe texto de carregamento. Erro de carga exibe nova tentativa. Erro de operação e bloqueio de domínio exibem mensagem sem nova tentativa. Modais de confirmação nunca fecham no erro e preservam o digitado. Títulos de conteúdo seguem o token tipográfico do módulo e a cor do Mílon. Foco ao concluir: a pessoa permanece no Treino do Dia, sem navegação para fora do módulo.
++
++## 3. Regras de Negócio
++
++### Terminologia
++
++O botão de selamento chama-se Finalizar. Finalizar equivale a Encerrar do item 7 do backlog. Esta spec usa Finalizar para o botão e selar, selamento e encerrado como sinônimos do mesmo ato.
++
++### Posições fixas
++
++Cancelar execução fica no topo da página do Treino do Dia. Finalizar treino fica no final da página, abaixo do último Adicionar Exercício. Nenhum dos dois aparece na manutenção em Programas. Nenhum dos dois aparece quando não há execução aberta.
++
++### Os quatro casos de confirmação
++
++Caso 1, Cancelar com execução aberta: ao acionar Cancelar, a pergunta exibida é Tem certeza que deseja cancelar essa execução? Todas as informações serão excluídas. Confirmar exclui os registros daquela execução, desbloqueia o template e limpa o momento de início. Desistir mantém a execução aberta, o template continua bloqueado e o início segue registrado.
++
++Caso 2, Finalizar parcial com pelo menos uma série feita e pelo menos uma série não executada: ao acionar Finalizar, a pergunta exibida é Ainda existem séries não executadas. Tem certeza que deseja finalizar o treino? Confirmar sela a execução com o momento de término registrado, mesmo incompleta. Desistir mantém a execução aberta sem nada selado.
++
++Caso 3, Finalizar completo com todas as séries marcadas: ao acionar Finalizar, não há confirmação, o selamento acontece direto com o momento de término registrado.
++
++Caso 4, marcar a última série pendente pelo card: no momento em que todas as séries ficam marcadas por esse toque, a pergunta exibida é Você executou todas as séries, deseja finalizar o treino? Confirmar sela com o momento de término registrado. Desistir mantém a execução aberta com todas as séries marcadas.
++
++### Vazio com zero séries feitas
++
++Com zero séries feitas, Finalizar não sela. O acionamento é bloqueado com a mensagem O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino? A mensagem conduz ao cancelamento com exclusão da execução, sem criar registro selado vazio.
++
++### Efeito do selamento
++
++Selar registra o momento de término da execução. A execução selada é arquivada e imutável: não reabre, não edita, não exclui série feita, não altera valores. O template do treino volta a ficar livre para edição na manutenção, pois execução selada não bloqueia, mesma lógica já aplicada a execução inexistente. A pessoa permanece no Treino do Dia e a página passa a exibir o próximo treino segundo a regra vigente de seleção, sem criar navegação nova nesta feature.
++
++### Efeito do cancelamento
++
++Cancelar exclui a execução aberta e, por cascata, as séries realizadas daquela execução. Não resta histórico daquela tentativa. O template é desbloqueado e o momento de início é limpo. Nenhuma série segue marcada.
++
++### Validações e integridade herdadas
++
++Sem validação nova de valores. Valem as regras herdadas das features de treinos, séries planejadas e execução série a série. Existe no máximo uma execução aberta por treino. A primeira marcação de qualquer série registra o momento de início. O Treino do Dia exibe o template ao vivo com marcadores de feito por série. Enquanto houver execução aberta, o template daquele treino fica bloqueado para edição na manutenção com aviso visível de que o treino não pode ser editado pois está em execução. O nome do treino no Treino do Dia exibe indicação visual de em execução enquanto aberta. Desmarcar a última série marcada por engano segue a regra da feature 05 com a pergunta Todas as séries foram desmarcada. Deseja cancelar a execução desse treino?, sem mudança nesta feature.
++
++### Semântica de vazio contra zero
++
++Vazio é ausência de marcação. Zero séries feitas bloqueia Finalizar conforme a mensagem do vazio. Uma ou mais séries feitas libera Finalizar parcial ou completo conforme os casos. Zero digitado em carga ou valor continua sendo zero exibido como zero, e campo vazio continua traço, mesma regra das features 03 e 04, sem mudança.
++
++## 4. Fora de Escopo (YAGNI)
++
++Dentro desta versão, somente encerrar parcial com confirmação mais cancelar com confirmação, nas posições e textos confirmados pelo humano.
++
++Fora, item por item, por confirmação humana: reabrir execução após selar, editar execução após selar, lista de histórico de treinos realizados, resumo por treino com duração e volume, timer de descanso automático, notificação de fim de descanso, rotação automática do próximo treino por histórico, duplicar treino ou exercício, reordenar treinos, mover treino entre programas, substituição de exercício na hora, séries de aquecimento ou extra, escala de esforço, reps até a falha, observações rápidas por exercício, permissões restritas, áreas privadas, integração com aplicativos externos, importação ou exportação de fichas, nova regra de ciclo de vida de programa, mudança na guarda de ativação.
++
++Histórico e resumo pertencem à feature 09. Timer pertence à feature 06. Ajuste responsivo pertence à feature 08. Rotação por histórico permanece adiada para pós 07 conforme a spec 04 seção 4.
++
++## 5. Critérios de Aceite
++
++| # | Critério | Verificação |
++|---|---|---|
++| 1 | Dado Treino do Dia com execução aberta, o botão Cancelar aparece no topo e o botão Finalizar aparece no final abaixo do último Adicionar Exercício, e nenhum dos dois aparece na manutenção em Programas nem sem execução aberta | Manual e automatizado |
++| 2 | Dado acionamento de Cancelar com execução aberta, quando exibe a pergunta, então o texto é exatamente Tem certeza que deseja cancelar essa execução? Todas as informações serão excluídas. | Manual e automatizado |
++| 3 | Dada a pergunta de Cancelar, quando confirmo, então os registros daquela execução são excluídos, o template é desbloqueado, o momento de início fica limpo e nenhuma série segue marcada. Quando desisto, então a execução segue aberta, o template continua bloqueado e o início segue registrado | Manual e automatizado |
++| 4 | Dado Treino do Dia com pelo menos uma série feita e pelo menos uma não executada, quando aciono Finalizar, então a pergunta exibida é exatamente Ainda existem séries não executadas. Tem certeza que deseja finalizar o treino? | Manual e automatizado |
++| 5 | Dada a pergunta de Finalizar parcial, quando confirmo, então a execução é selada com momento de término registrado e fica imutável. Quando desisto, então a execução segue aberta sem nada selado | Manual e automatizado |
++| 6 | Dado Treino do Dia com todas as séries marcadas, quando aciono Finalizar, então o selamento acontece direto sem confirmação, com momento de término registrado | Manual e automatizado |
++| 7 | Dado que marco a última série pendente pelo card e todas ficam marcadas, então a pergunta exibida é exatamente Você executou todas as séries, deseja finalizar o treino? Confirmar sela com término registrado, desistir mantém aberta com todas marcadas | Manual e automatizado |
++| 8 | Dado Treino do Dia com zero séries feitas, quando aciono Finalizar, então nada é selado e a mensagem exibida é exatamente O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino? | Manual e automatizado |
++| 9 | Dada execução selada, então ela não reabre, não edita e não exclui feito, o template volta a ficar livre na manutenção sem aviso de bloqueio, e a pessoa permanece no Treino do Dia com o próximo treino exibido segundo a regra vigente de seleção | Manual e automatizado |
++| 10 | Dada execução selada, quando consulto somente execução aberta do treino, então o retorno é vazio, pois selada tem término preenchido e não conta como aberta | Automatizado |
++| 11 | Dada falha de carga nas ações de selar ou cancelar, a pessoa vê mensagem com nova tentativa. Dada falha de operação ou bloqueio, a mensagem aparece sem nova tentativa e o modal não fecha no erro | Manual e automatizado |
++| 12 | Suite completa verde, sem quebra de testes existentes, cobertura mantida em pelo menos oitenta por cento, relatório de testes regenerado antes da revisão | Automatizado |
++
++## 6. Riscos e Dependências
++
++Depende do Treino do Dia v1 da feature 04 com primeira aba e seleção por programa ativo do dono mais primeiro treino por criação, e da execução série a série da feature 05 com início registrado na primeira marcação, template ao vivo, bloqueio do template na manutenção e cancelamento ao desmarcar a última série. Sem essas duas, não há o que selar nem cancelar.
++
++O momento de término ainda nunca é escrito. Está reservado a esta feature desde a feature 05, com coluna de término existente e nula enquanto aberta. A definição de como registrar o término e de como tratar migração incremental com número sequencial reservado é assunto do plano da Atena. Nenhuma migração já aplicada é editada ou renomeada.
++
++A regra do próximo treino após o selamento usa a seleção vigente do Treino do Dia. A inteligência de rotação por histórico está adiada para pós 07 pela spec 04 e não é criada aqui. Qualquer divergência entre Treino do Dia e manutenção após selar ou cancelar deve ser tratada como defeito desta feature.
++
++Edição simultânea pelos dois usuários segue o comportamento existente das telas, sem trava definida. A última gravação prevalece.
++
++Cenários de teste bloqueados por dependência futura seguem a regra do backlog do módulo: o que não for executável nesta feature por depender de histórico, timer ou responsivo é repassado à feature que o libera e registrado no cenário de teste correspondente, sem virar pendência oculta.
++
++## 7. Alternativas Consideradas
++
++Alternativa 1, selamento silencioso sem confirmação em todos os casos: o botão selaria direto com ou sem pendência. Rejeitada porque contradiz a decisão humana de aviso mais confirmação obrigatória e apagaria a distinção entre parcial assumido e completo, além de permitir selo acidental com falta.
++
++Alternativa 2, caminho escolhido, confirmação por caso com parcial permitido: Cancelar sempre confirma com aviso de exclusão, parcial confirma com aviso de pendência, completo sela direto, última marcada pergunta se deseja finalizar, vazio bloqueia e conduz ao cancelamento. Mantém a falta como dado para métricas futuras, preserva o gesto rápido do completo e impede selo vazio. Custo aceito: quatro textos distintos para manter, cobertos por testes de texto exato.
++
++Alternativa 3, selamento com edição do faltante na hora: a confirmação parcial listaria cada série pendente e permitiria marcar ou dar baixa ali mesmo. Rejeitada por YAGNI nesta versão: aumenta o modal, mistura selar com executar e adia a entrega. A lista do que falta aparece como aviso de existência de pendência, sem detalhar série a série.
++
++## Modelo de Domínio
++
++Entidades e relações em linguagem natural, sem código.
++
++Programa agrupa treinos vigentes de um dono, visível para os dois usuários. Treino pertence a um programa e tem ordem por criação. Entrada de exercício pertence a um treino e a um exercício da biblioteca, com posição, descanso único, modo e unidade de carga. Série planejada pertence a uma entrada, com posição, valor único e carga. Execução é a instância do treino feito no dia, pertence a um treino e a um programa, com momento de início, momento de término opcional e autor. Série realizada pertence a uma execução, a uma entrada e a uma série planejada, com posição, retrato de valor e carga, e autor.
++
++Diagrama textual:
++
++Programa 1 para N Treino, por dono, com status rascunho, ativo ou inativo.
++Treino 1 para N Entrada de exercício, em ordem por posição.
++Exercício da biblioteca 1 para N Entrada de exercício, com nome, grupo muscular e vídeo.
++Entrada de exercício 1 para N Série planejada, em ordem por posição.
++Treino 1 para N Execução, com no máximo uma aberta por treino, aberta é término vazio, selada é término preenchido, cancelada é excluída.
++Execução 1 para N Série realizada, uma por série planejada dentro da execução, excluída em cascata ao cancelar.
++Série planejada 1 para N Série realizada ao longo de execuções distintas, cada retrato guarda valor e carga do momento.
++
++## Premissas Técnicas Validadas
++
++| Premissa | Validada com humano | Evidência em disco |
++|---|---|---|
++| Existe tabela de execuções com momento de início obrigatório e momento de término opcional, onde término vazio significa aberta | Sim | Migração 0011 cria tabela de execuções com início padrão agora e término sem obrigação, mais índice único parcial de no máximo uma aberta por treino |
++| Existe tabela de séries realizadas ligada à execução, entrada e série, com unicidade por execução mais série e exclusão em cascata | Sim | Migração 0011 cria tabela de realizadas com restrição única por execução e série e referência com exclusão em cascata para execução, entrada e série |
++| O término nunca é escrito pela feature 05 e está reservado à feature 07 | Sim | Comentário no acesso a dados da execução afirma que o fim nunca é escrito na feature atual e fica reservado à feature 07 |
++| A busca de aberta filtra somente término vazio | Sim | Acesso a dados da execução busca por treino com filtro de término vazio e retorno único opcional |
++| O Treino do Dia usa seção de detalhe compartilhada com execução ligada e botões de topo e rodapé reservados | Sim | Página do Treino do Dia compõe seção de detalhe com execução ligada, e a seção aceita ações de topo, rodapé por entrada e rodapé geral hoje nulos, reservados às features 05, 06 e 07 |
++| A seleção atual do Treino do Dia é programa ativo do dono mais primeiro treino por criação, com troca restrita ao programa ativo | Sim | Hook de seleção do Treino do Dia resolve email, busca programa ativo do dono, lista treinos e escolhe o primeiro da lista, com troca só entre treinos carregados |
++| Execução aberta bloqueia o template na manutenção com aviso visível e selada libera | Sim | Seção de detalhe recebe trava de execução que desabilita o chrome de manutenção e exibe aviso de que o treino não pode ser editado pois está em execução, mais matriz de testes que afirma que selada com término preenchido retorna vazio e libera edição |
++| Cancelar exclui a execução e as realizadas somem por cascata | Sim | Acesso a dados expõe exclusão de execução por identificador, e a migração define cascata das realizadas |
++| Textos de confirmação existentes não conflitam com os quatro textos novos | Sim | Modal de confirmação do treino possui hoje somente variantes de remover exercício, reduzir séries e limpar execução com texto de última desmarcada, sem variante de finalizar |
++
++## Cenários de Edge Case
++
++| Cenário | Comportamento esperado |
++|---|---|
++| Treino sem execução aberta e botões acionados | Cancelar e Finalizar não aparecem. Nada a selar nem a excluir |
++| Zero séries feitas e Finalizar acionado | Bloqueio com mensagem de vazio que conduz ao cancelamento. Nenhum registro selado vazio é criado |
++| Parcial com uma feita e resto pendente | Pergunta de parcial. Confirmar sela com término registrado. Desistir mantém aberta |
++| Completo com todas marcadas | Selamento direto sem confirmação. Registro com término preenchido |
++| Última pendente marcada pelo card | Pergunta de todas executadas. Confirmar sela. Desistir mantém aberta com todas marcadas |
++| Desmarcar última marcada por engano | Segue regra da feature 05 com pergunta de cancelar execução por limpeza, sem mudança |
++| Confirmar selamento duas vezes seguidas | Segunda tentativa encontra execução já selada e não cria selo duplicado. Mensagem de operação sem nova tentativa |
++| Cancelar duas vezes seguidas | Segunda tentativa encontra nada aberto e nada exclui. Tela segue íntegra |
++| Falha de rede ao selar ou cancelar | Mensagem visível de operação sem nova tentativa no banner, modal não fecha, digitado e marcações preservados |
++| Falha de carga ao abrir o Treino do Dia | Mensagem com nova tentativa pelo estado assíncrono central, sem botão de selar até carregar |
++| Dois usuários no mesmo treino ao mesmo tempo | Sem trava. Vale a última gravação. No máximo uma aberta por treino pelo índice parcial. Segunda abertura retorna a existente |
++| Template editado na manutenção durante execução aberta | Bloqueado com aviso visível e controles desabilitados. Somente o Treino do Dia escreve |
++| Treino de programa inativo | Somente leitura. Sem Cancelar nem Finalizar, mesma regra das features 02 a 04 |
++| Treino sem exercícios | Sem séries para marcar. Finalizar cai no bloqueio de vazio. Adicionar exercício segue regra da manutenção |
++| Migração legada sem término preenchido | Execuções antigas abertas seguem abertas. Seladas futuras preenchem término. Nenhuma migração aplicada é reescrita |
++| Rollback de selamento com erro após gravar término | Sem reabrir nem editar. Erro vira mensagem de operação. Estado recarregado reflete o banco |
+diff --git a/.agents/modules/milon/07-encerrar-treino/tasks.json b/.agents/modules/milon/07-encerrar-treino/tasks.json
+new file mode 100644
+index 0000000..b23d951
+--- /dev/null
++++ b/.agents/modules/milon/07-encerrar-treino/tasks.json
+@@ -0,0 +1 @@
++{"tasks":[{"acceptanceCriteria":["npm test -- __tests__/lib/milon/repositories/contract-workout-executions.test.ts → FAIL esperado: operação de selamento ainda não existe no contrato","npx tsc --noEmit → exit 0 (só falhas de teste runtime esperadas)"],"assignee":"minos","consumes":["spec §3 (efeito do selamento, imutabilidade, critério 10 da tabela de aceite)","plan §3 (contrato da operação de selamento)"],"dependencies":[],"description":"Minos escreve os testes RED sem tocar em produção. Arquivos: __tests__/lib/milon/repositories/contract-workout-executions.test.ts (existente, atualizado) com casos exigindo a operação de selamento no contrato fakes-only: sela a execução aberta preenchendo o término, busca de aberta volta vazia após selar (selada com término preenchido não conta como aberta), duplo selamento não cria selo duplicado e vira erro de operação, selar execução inexistente não cria linha; __tests__/lib/milon/db/executions.test.ts (existente, atualizado) com casos exigindo a cadeia de query do selamento (update de finished_at filtrado por execução aberta).","files":["__tests__/lib/milon/repositories/contract-workout-executions.test.ts","__tests__/lib/milon/db/executions.test.ts"],"id":"TASK-001","produces":["contrato RED da operação de selamento (sela aberta, filtra selada da aberta, duplo selo sem duplicar, inexistente sem efeito colateral)"],"status":"completed","title":"RED de contrato do selamento no repository"},{"acceptanceCriteria":["npm test -- __tests__/lib/milon/repositories/contract-workout-executions.test.ts __tests__/lib/milon/db/executions.test.ts → PASS","busca por `reservado à feature 7` em lib/milon/repositories/executions.ts → 0 ocorrências"],"assignee":"hefesto","consumes":["contrato RED da operação de selamento da TASK-001"],"dependencies":["TASK-001"],"description":"Hefesto implementa o mínimo para GREEN sem tocar em testes. Arquivos: lib/milon/repositories/executions.ts com a operação de selamento (grava o momento de término com o relógio do banco somente se a execução ainda estiver aberta, devolve a selada; já selada ou inexistente lança erro de operação) + standalone correspondente no padrão do arquivo + atualização do comentário de reserva do término; lib/milon/repositories/interfaces.ts estendendo IWorkoutExecutionRepository com a operação de selamento; lib/milon/repositories/fakes/fakeWorkoutExecutionRepository.ts espelhando o selamento em memória (aberta filtrada por término nulo, selamento idempotente, cascata da exclusão intacta). Barrel lib/milon/db/executions.ts inalterado (já reexporta).","files":["lib/milon/repositories/executions.ts","lib/milon/repositories/interfaces.ts","lib/milon/repositories/fakes/fakeWorkoutExecutionRepository.ts"],"id":"TASK-002","produces":["operação de selamento persistida (UPDATE de término só em aberta + standalone + fake espelhado)"],"status":"completed","title":"Selamento no repository + fake + standalone"},{"acceptanceCriteria":["npm test -- __tests__/lib/milon/workout-utils.test.ts __tests__/lib/milon/hooks/useWorkoutExecution.test.ts __tests__/components/milon/WorkoutConfirmModal.test.tsx → FAIL esperado: decisor, estados de Finalizar/Cancelar e quatro variantes ainda não existem","npx tsc --noEmit → exit 0 (só falhas de teste runtime esperadas)"],"assignee":"minos","consumes":["spec §2 (posições, jornada) + spec §3 (quatro casos, vazio, efeitos, estados de tela) + spec §5 (critérios 1 a 11)","plan §3 (decisor, hook, variantes, botões)"],"dependencies":["TASK-002"],"description":"Minos escreve os testes RED sem tocar em produção. Arquivos: __tests__/lib/milon/workout-utils.test.ts com casos exigindo o decisor de caso de finalização (zero marcadas vira vazio; parcial com feita e pendente; completo com todas marcadas; total zero cai em vazio) e as quatro constantes com os textos exatos da spec; __tests__/lib/milon/hooks/useWorkoutExecution.test.ts com casos exigindo os estados novos (pedir e confirmar parcial sela com término e fica imutável, desistir mantém aberta; completo via botão sela direto sem confirmação; vazio nada sela; gatilho do Caso 4 ao marcar a última pendente; pedir e confirmar Cancelar exclui e desbloqueia, desistir mantém; duplo confirmar sem selo duplicado; falha de operação alimenta banner sem retry e relança); __tests__/components/milon/WorkoutConfirmModal.test.tsx com casos exigindo as quatro variantes com títulos, textos exatos, rótulos de botões e processing desabilitando; __tests__/components/milon/WorkoutDetailSection.test.tsx com casos exigindo botões Cancelar no topo e Finalizar no rodapé só com execução aberta e programa ativo, ausência na manutenção e sem aberta, badge preservado; __tests__/app/milon/today/page.test.tsx com casos exigindo a conexão dos dois botões nos slots.","files":["__tests__/lib/milon/workout-utils.test.ts","__tests__/lib/milon/hooks/useWorkoutExecution.test.ts","__tests__/components/milon/WorkoutConfirmModal.test.tsx","__tests__/components/milon/WorkoutDetailSection.test.tsx","__tests__/app/milon/today/page.test.tsx"],"id":"TASK-003","produces":["RED do decisor + máquina de estados do hook + quatro variantes com textos exatos + botões topo/rodapé + gatilho do Caso 4"],"status":"completed","title":"RED do hook, decisor puro e modais/páginas"},{"acceptanceCriteria":["npm test -- __tests__/lib/milon/workout-utils.test.ts __tests__/lib/milon/hooks/useWorkoutExecution.test.ts → PASS","buscas por `reservado à feature 7` e por `encerrar #7` em lib/milon/workout-utils.ts, lib/milon/hooks/useWorkoutExecution.ts e lib/milon/types.ts → 0 ocorrências em código vivo"],"assignee":"hefesto","consumes":["RED do decisor e do hook da TASK-003","operação de selamento persistida da TASK-002"],"dependencies":["TASK-003"],"description":"Hefesto implementa o mínimo para GREEN sem tocar em testes. Arquivos: lib/milon/workout-utils.ts com o decisor de caso de finalização e as quatro constantes de mensagem com os textos exatos; lib/milon/hooks/useWorkoutExecution.ts com os contadores derivados, os pedidos de Finalizar e Cancelar, as confirmações e desistências, o gatilho automático do Caso 4 no toggle, o bloqueio do vazio sem selar, a idempotência do duplo confirmar, o erro de operação com origem operacao e relançamento (modal nunca fecha no erro) e os flags de processing; comentários de reserva do término removidos ou atualizados em workout-utils, hook e types. Contratos existentes do hook preservados (campos atuais intactos, novos campos aditivos).","files":["lib/milon/workout-utils.ts","lib/milon/hooks/useWorkoutExecution.ts"],"id":"TASK-004","produces":["decisor de caso + Finalizar/Cancelar no hook (pedir, confirmar, desistir, Caso 4, vazio, idempotência, erro sem fechar modal)"],"status":"completed","title":"Decisor puro + máquina de estados do hook"},{"acceptanceCriteria":["npm test -- __tests__/components/milon/WorkoutConfirmModal.test.tsx __tests__/components/milon/WorkoutDetailSection.test.tsx __tests__/app/milon/today/page.test.tsx → PASS","busca por `encerrar #7` em components/milon/WorkoutDetailSection.tsx → 0 ocorrências","manutenção em app/milon/programs/[id]/workouts/[workoutId]/page.tsx segue sem botões: suite da matriz de bloqueio existente → PASS"],"assignee":"hefesto","consumes":["hook pronto com Finalizar/Cancelar da TASK-004","RED de UI da TASK-003"],"dependencies":["TASK-004"],"description":"Hefesto implementa o mínimo para GREEN sem tocar em testes. Arquivos: components/milon/WorkoutConfirmModal.tsx com as quatro variantes (cancelar-execucao com título Cancelar execução e confirma Excluir; finalizar-parcial e finalizar-completa com título Finalizar treino e confirma Finalizar; finalizar-vazio com título Treino sem séries feitas e confirma Cancelar execução; desistência sempre Cancelar ou Voltar só fechando; processing desabilita e bloqueia; open=false nada renderiza); components/milon/WorkoutDetailSection.tsx hospedando as quatro confirmações no ExecutionHost com a disciplina do clearConfirmOpen existente e renderizando headerActions no topo e footer no rodapé do ramo de execução; app/milon/today/page.tsx conectando o botão Cancelar no slot de topo e o botão Finalizar no slot de rodapé, visíveis somente com execução aberta e programa ativo. Manutenção inalterada por construção (sem slots).","files":["components/milon/WorkoutConfirmModal.tsx","components/milon/WorkoutDetailSection.tsx","app/milon/today/page.tsx"],"id":"TASK-005","produces":["quatro variantes com textos exatos + botão Cancelar no topo + botão Finalizar no rodapé + hospedagem das confirmações (erro/processing não fecham)"],"status":"completed","title":"Modais novos + botões topo/rodapé no Treino do Dia"},{"acceptanceCriteria":["npm test → 0 falhas em toda a suite","npm test -- --coverage → lines e branch ≥ 80%","npm run build-storybook → exit 0","critérios 1 a 12 da spec §5 cobertos entre automatizado e manual, com test-report.json regenerado antes da revisão"],"assignee":"minos","consumes":["UI completa com Finalizar/Cancelar da TASK-005"],"dependencies":["TASK-005"],"description":"Minos re-executa a suite completa, mede coverage, executa o build do Storybook, regenera .agents/modules/milon/07-encerrar-treino/test-report.json e promove os cenários estáveis para .agents/modules/milon/regression.md sem quebrar as travas das features 04 e 05 (badge Em execução, bloqueio do template na manutenção, replicação, unidade herdada, valor único). Critérios 9 a 12 da spec (imutabilidade pós-selo, aberta vazia após selar, erros com e sem retry, suite verde) verificados em automatizado; o que exigir olho humano segue para test-scenarios.md da homologação sem virar pendência oculta. Item 7b (rotação por histórico) permanece fora e não gera cenário aqui.","files":["__tests__/lib/milon/repositories/contract-workout-executions.test.ts","__tests__/app/milon/today/page.test.tsx",".agents/modules/milon/regression.md",".agents/modules/milon/07-encerrar-treino/test-report.json"],"id":"TASK-006","produces":["suite verde sem quebra + relatório regenerado + cenários de regressão promovidos"],"status":"pending","title":"Suite completa verde + coverage + regressão"}]}
+\ No newline at end of file
+diff --git a/.agents/modules/milon/07-encerrar-treino/test-report.json b/.agents/modules/milon/07-encerrar-treino/test-report.json
+new file mode 100644
+index 0000000..0facf6a
+--- /dev/null
++++ b/.agents/modules/milon/07-encerrar-treino/test-report.json
+@@ -0,0 +1 @@
++{"byTask":{"TASK-001":"passed","TASK-002":"passed","TASK-003":"passed","TASK-004":"passed","TASK-005":"passed","TASK-006":"passed"},"checks":{"build-storybook":"passed (Storybook build completed successfully, exit 0)","feature-scope":"passed (7 arquivos de teste da feature: contract-workout-executions, db/executions, workout-utils, useWorkoutExecution, WorkoutConfirmModal, WorkoutDetailSection, today/page — 292 testes, 0 falhas)","lint":"passed (0 errors, 72 warnings pre-existentes)","manutencao-sem-botoes":"passed (matriz de bloqueio existente verde; manutencao segue sem slots por construcao)","migrations":"passed (nenhuma migracao nova; finished_at existente da 0011; nenhum inteiro NNNN consumido)","placeholders":"passed (busca por `reservado à feature 7` e `encerrar #7` retorna 0 em codigo vivo)","supabase-imports":"passed (nenhum import @supabase/* fora de lib/shared)","tsc-noEmit":"passed"},"coverage":{"branch":84.1,"functions":75.2,"lines":85.12,"statements":85.12},"feature":"Milon #7 — Encerrar treino com confirmacao","featureDir":".agents/modules/milon/07-encerrar-treino","gaps":["lib/milon/repositories/workouts.ts em ~33% stmts (pre-existente — contratos exercem a fake fakes-only por decisao 57; sem regressao)","lib/pluto/repositories/* e barrels lib/pluto/db legados com cobertura baixa (pre-existente, fora do escopo; suite Pluto verde)","lib/shared/database.ts e utils/supabase/* em 0% (codigo de infra so exercido via mocks; sem regressao)","lib/milon/hooks/useTodayWorkout.ts em ~79% stmts (ramos de erro da cadeia inicial; 9 testes do hook verdes)"],"status":"done","suite":{"failed":0,"passed":1519,"skipped":0,"testFiles":116,"tests":1519},"summary":{"coverage":85.12,"failed":0,"passed":1519,"skipped":0},"timestamp":"2026-10-13T20:00:00.000Z"}
+\ No newline at end of file
+diff --git a/.agents/modules/milon/07-encerrar-treino/test-scenarios.md b/.agents/modules/milon/07-encerrar-treino/test-scenarios.md
+new file mode 100644
+index 0000000..ef9c65e
+--- /dev/null
++++ b/.agents/modules/milon/07-encerrar-treino/test-scenarios.md
+@@ -0,0 +1,146 @@
++# Cenários de Teste — Mílon #7 Encerrar treino com confirmação
++
++> Gerado em 2026-10-13 pós-suite verde (1519 testes, 0 falhas, coverage 85.12% lines / 84.1% branch).
++> Revisado em 2026-10-13 pós-homologação humana: Cenário 8 reescrito para a realidade (botão oculto com zero marcadas); antigo Cenário 10 removido (não replicável manualmente).
++> Fonte da verdade: `spec.md` §2/§3/§5 (critérios 1–12) + `plan.md` §3/§4 + `tasks.json` TASK-001..006. Sem leitura de cenários de Atena (Atena não gera cenários — evita viés).
++> Cobertura: critérios 1–9, 11–12 em cenários manuais + automatizados; critério 10 só automatizado (contrato `contract-workout-executions.test.ts` + cadeia `db/executions.test.ts` — sem cenário manual por decisão de homologação 2026-10-13, não replicável manualmente). Automatizado = travado em `__tests__`; Manual = homologação humana no Treino do Dia.
++
++---
++
++### Cenário 1: Posições dos botões — Cancelar no topo, Finalizar no rodapé (critério 1)
++**Dado** o Treino do Dia com execução aberta
++**Quando** a pessoa visualiza a página
++**Então** o botão Cancelar aparece no topo e o botão Finalizar aparece no final, abaixo do último Adicionar Exercício
++**E** nenhum dos dois aparece na manutenção em Programas nem quando não há execução aberta (automatizado: `WorkoutDetailSection.test.tsx` + `today/page.test.tsx`; manual: abrir Treino do Dia com/sem execução e abrir manutenção)
++
++### Cenário 2: Texto exato da pergunta de Cancelar (critério 2)
++**Dado** execução aberta no Treino do Dia
++**Quando** a pessoa aciona Cancelar
++**Então** a pergunta exibida é exatamente "Tem certeza que deseja cancelar essa execução? Todas as informações serão excluídas." (automatizado: `WorkoutConfirmModal.test.tsx` variante `cancelar-execucao` + `workout-utils.test.ts` constante; manual: ler o corpo do modal)
++
++### Cenário 3: Confirmar Cancelar exclui e desbloqueia; desistir mantém tudo (critério 3)
++**Dado** a pergunta de Cancelar aberta
++**Quando** a pessoa confirma
++**Então** os registros daquela execução são excluídos, o template é desbloqueado, o momento de início fica limpo e nenhuma série segue marcada
++**Quando** a pessoa desiste
++**Então** a execução segue aberta, o template continua bloqueado e o início segue registrado (automatizado: hook `confirmCancelExecution`/`cancelCancelExecution` + contract `clearExecution`; manual: confirmar e checar badge apagado + manutenção livre; desistir e checar badge + bloqueio intactos)
++
++### Cenário 4: Texto exato da pergunta de Finalizar parcial (critério 4)
++**Dado** o Treino do Dia com pelo menos uma série feita e pelo menos uma não executada
++**Quando** a pessoa aciona Finalizar
++**Então** a pergunta exibida é exatamente "Ainda existem séries não executadas. Tem certeza que deseja finalizar o treino?" (automatizado: decisor `parcial` + variante `finalizar-parcial`; manual: marcar 1 de N e acionar Finalizar)
++
++### Cenário 5: Confirmar parcial sela com término e imutável; desistir mantém aberta (critério 5)
++**Dado** a pergunta de Finalizar parcial aberta
++**Quando** a pessoa confirma
++**Então** a execução é selada com momento de término registrado e fica imutável
++**Quando** a pessoa desiste
++**Então** a execução segue aberta sem nada selado (automatizado: `confirmFinish` + contract `finishExecution`; manual: confirmar e checar botões/badge sumidos; desistir e checar execução ainda aberta)
++
++### Cenário 6: Finalizar completo sela direto sem confirmação (critério 6)
++**Dado** o Treino do Dia com todas as séries marcadas
++**Quando** a pessoa aciona Finalizar
++**Então** o selamento acontece direto sem confirmação, com momento de término registrado (automatizado: `requestFinish` caso `completo` sela direto; manual: marcar todas e acionar Finalizar — sem modal, execução some)
++
++### Cenário 7: Última pendente marcada pelo card pergunta se deseja finalizar (critério 7)
++**Dado** o Treino do Dia com uma série pendente restante
++**Quando** a pessoa marca essa última série pelo card e todas ficam marcadas
++**Então** a pergunta exibida é exatamente "Você executou todas as séries, deseja finalizar o treino?"
++**E** confirmar sela com término registrado; desistir mantém aberta com todas marcadas (automatizado: gatilho do Caso 4 no toggle + variante `finalizar-completa`; manual: marcar a última pelo card e observar a pergunta)
++
++### Cenário 8: Vazio com zero feitas — Finalizar oculto; variante vazio só no caminho de borda (critério 8)
++**Dado** o Treino do Dia com zero séries feitas e sem execução aberta (caso normal: nada marcado ainda)
++**Quando** a pessoa visualiza a página
++**Então** o botão Finalizar nem é exibido — melhor que o bloqueio previsto na spec, pois sem execução aberta não há ação possível de selamento (`WorkoutDetailSection` só renderiza o `footer` com `execExecution !== null`, e a execução só abre ao marcar a primeira série)
++**E** a variante `finalizar-vazio` ("O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino?") segue alcançável só pelo caminho de borda: marcar 1 → desmarcar a última pelo card → desistir da pergunta de limpeza (execução aberta com zero marcadas) → acionar Finalizar → abre a pergunta de vazio via `requestFinish` (decisor `vazio`), e confirmar executa a exclusão sem criar registro selado vazio (cobertura automatizada: decisor `vazio` em `workout-utils.test.ts` + `requestFinish` vazio em `useWorkoutExecution.test.ts` + variante `finalizar-vazio` em `WorkoutConfirmModal.test.tsx`; manual de borda opcional pelo caminho acima)
++
++### Cenário 9: Pós-selo — imutável, template livre, permanece no Treino do Dia com próximo treino (critério 9)
++**Dada** uma execução selada
++**Então** ela não reabre, não edita e não exclui feito; o template volta a ficar livre na manutenção sem aviso de bloqueio; a pessoa permanece no Treino do Dia com o próximo treino exibido segundo a regra vigente de seleção (programa ativo do dono + primeiro por criação; sem rotação por histórico nesta feature) (automatizado: contract filtra selada + matriz de bloqueio verde; manual: selar e checar manutenção editável + mesma URL `/milon/today`)
++
++### Cenário 10: Erros — carga com retry, operação/bloqueio sem retry, modal nunca fecha no erro (critério 11)
++**Dada** falha de carga nas ações de selar ou cancelar
++**Então** a pessoa vê mensagem com nova tentativa (AsyncState/banner com "Tentar novamente")
++**Dada** falha de operação ou bloqueio
++**Então** a mensagem aparece sem nova tentativa e o modal não fecha no erro, preservando marcações (automatizado: hook com `errorOrigin` carga/operacao + modais com processing; manual: simular falha e checar modal aberto + mensagem visível)
++
++### Cenário 11: Suite verde sem quebra + coverage + Storybook (critério 12, automatizado)
++**Dado** o repositório após TASK-005
++**Quando** executo `npm test`, `npm test -- --coverage` e `npm run build-storybook`
++**Então** 0 falhas em 1519 testes (116 arquivos), lines 85.12% e branch 84.1% (≥80%) e Storybook com exit 0, com `test-report.json` regenerado antes da revisão (evidência: este relatório + saída dos comandos; re-executado em 2026-10-13 pós-ajustes homologação cenários 8/10)
++
++---
++
++## Edge cases (spec § Edge Case)
++
++### Cenário 12: Sem execução aberta — botões ausentes
++**Dado** treino sem execução aberta
++**Quando** a pessoa abre o Treino do Dia
++**Então** Cancelar e Finalizar não aparecem e nada há para selar ou excluir
++
++### Cenário 13: Treino sem exercícios — Finalizar oculto (vale o vazio do Cenário 8)
++**Dado** treino sem exercícios (sem séries para marcar)
++**Quando** a pessoa abre o Treino do Dia
++**Então** o botão Finalizar também não aparece (sem execução aberta, mesma regra do Cenário 8); o caso vazio segue travado em teste automatizado do decisor; adicionar exercício segue a regra da manutenção
++
++### Cenário 14: Confirmar selamento duas vezes seguidas — sem selo duplicado
++**Dado** execução já selada
++**Quando** a pessoa confirma o selamento de novo
++**Então** não cria selo duplicado; vira mensagem de operação sem nova tentativa (automatizado: duplo `finishExecution` + flag `processing` bloqueia duplo clique)
++
++### Cenário 15: Cancelar duas vezes seguidas — nada exclui
++**Dado** nenhuma execução aberta (já cancelada)
++**Quando** a pessoa tenta cancelar de novo
++**Então** nada é excluído e a tela segue íntegra
++
++### Cenário 16: Falha de rede ao selar ou cancelar — modal preserva
++**Dado** modal de Finalizar ou Cancelar aberto
++**Quando** a rede falha na gravação
++**Então** mensagem visível de operação sem nova tentativa no banner, modal não fecha, marcações preservadas
++
++### Cenário 17: Falha de carga ao abrir o Treino do Dia — sem botão até carregar
++**Dado** falha ao carregar o Treino do Dia
++**Então** mensagem com nova tentativa pelo estado assíncrono central, sem botão de selar até carregar
++
++### Cenário 18: Dois usuários no mesmo treino — última gravação prevalece
++**Dado** dois usuários no mesmo treino ao mesmo tempo
++**Então** sem trava, vale a última gravação; no máximo uma aberta por treino pelo índice parcial e segunda abertura retorna a existente
++
++### Cenário 19: Template na manutenção durante execução aberta — bloqueado
++**Dado** execução aberta
++**Quando** a pessoa abre a manutenção do mesmo treino
++**Então** edição bloqueada com aviso visível de que o treino não pode ser editado pois está em execução; somente o Treino do Dia escreve
++
++### Cenário 20: Treino de programa inativo — somente leitura
++**Dado** treino de programa inativo
++**Então** somente leitura, sem Cancelar nem Finalizar (mesma regra das features 02–04)
++
++### Cenário 21: Desmarcar última marcada por engano — regra da feature 05 intacta
++**Dado** execução aberta com uma série marcada
++**Quando** a pessoa desmarca essa última por engano
++**Então** vale a pergunta "Todas as séries foram desmarcada. Deseja cancelar a execução desse treino?", sem mudança nesta feature
++
++### Cenário 22: Rollback de selamento com erro após gravar término — sem reabrir
++**Dado** erro após gravar o término
++**Então** sem reabrir nem editar; erro vira mensagem de operação e o estado recarregado reflete o banco
++
++---
++
++## Cenários repassados a dependências futuras (sem pendência oculta)
++
++| ID | Dependência | Cenário repassado |
++|---|---|---|
++| FUT-01 | Feature 09 (histórico/resumo) | Lista de treinos realizados, resumo por treino com duração e volume — não executável aqui; selada apenas arquiva com término para métricas futuras |
++| FUT-02 | Feature 06 (timer) | Timer de descanso automático e notificação de fim — não executável aqui |
++| FUT-03 | Feature 08 (responsivo) | Ajuste responsivo dedicado — não executável aqui; uso em tela pequena segue exigência das features 03–05 |
++| FUT-04 | Item 7b (rotação por histórico) | Próximo treino por histórico — não executável aqui; pós-selamento exibe o próximo pela regra vigente (programa ativo do dono + primeiro por criação) |
++| FUT-05 | YAGNI confirmado | Reabrir/editar após selar, duplicar/mover/reordenar treinos, substituição na hora, aquecimento/extra, esforço, falha, observações, permissões, integrações, import/export — fora de escopo, sem cenário aqui |
++
++---
++
++## Travas das features 04/05 verificadas (sem regressão)
++
++- Badge "Em execução" acende com aberta e apaga pós-selo/cancelamento (REG-51).
++- Bloqueio do template na manutenção com aviso visível durante aberta; livre pós-selo (REG-51, BLOCK-01/02).
++- Replicação, unidade herdada da entry e valor único por modo da entry intactos (REG-50/52/53).
++- Seleção do Treino do Dia inalterada: programa ativo do dono + primeiro por criação (REG-47).
+diff --git a/.agents/modules/milon/backlog.md b/.agents/modules/milon/backlog.md
+index 7cb8495..c204746 100644
+--- a/.agents/modules/milon/backlog.md
++++ b/.agents/modules/milon/backlog.md
+@@ -33,7 +33,8 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
+ | 4 | **Treino do dia — próximo automático** | Aba "Treino do dia" descobre o último treino executado do Programa ativo do usuário e exibe o próximo da rotação. Funciona com N treinos por Programa, sem o usuário precisar lembrar "hoje é B ou C?". | Concluído (v1 — primeira aba `/milon/today` com primeiro treino por criação; rotação por histórico adiada para pós-#7, spec §4) | [.agents/modules/milon/04-treino-do-dia/spec.md](.agents/modules/milon/04-treino-do-dia/spec.md) | [.agents/modules/milon/04-treino-do-dia/plan.md](.agents/modules/milon/04-treino-do-dia/plan.md) |
+ | 5 | **Execução série a série + edição no fluxo** | Lista exercícios com séries (reps, peso, descanso). Toque curto no card alterna marcada/desmarcada na hora; toque longo abre modal com campo único (rótulo pelo modo da entry) e carga com unidade herdada (kg/lb como texto). Replicação incondicional para séries seguintes. Foto do template removida — template ao vivo. Badge "Em execução" + bloqueio do template na manutenção com aviso visível. Migrações 0011 (execuções), 0012 (modo+unidade na entry), 0013 (valor único), 0014 (lb abreviado). Ícones Editar/Excluir no padrão biblioteca. | Concluído | [.agents/modules/milon/05-execucao-series/spec.md](.agents/modules/milon/05-execucao-series/spec.md) | [.agents/modules/milon/05-execucao-series/plan.md](.agents/modules/milon/05-execucao-series/plan.md) |
+ | 6 | **Timer de descanso auto + PWA push** | Ao marcar uma série como feita, o timer do descanso daquela série inicia sozinho. Notificação push via PWA avisa o fim mesmo com tela apagada/app em segundo plano. MVP inclui o PWA mínimo para isso funcionar. | | | |
+-| 7 | **Encerrar treino com confirmação** | Botão "Encerrar treino" com confirmação que lista o que falta (exercícios/séries pendentes). Ao confirmar, registra o treino com `encerrado_em`. Permite encerrar parcial (falta vira dado, não bloqueio). | | | |
++| 7 | **Encerrar treino com confirmação** | Botão "Encerrar treino" com confirmação que lista o que falta (exercícios/séries pendentes). Ao confirmar, registra o treino com `encerrado_em`. Permite encerrar parcial (falta vira dado, não bloqueio). | Em andamento (SPEC_APPROVED 2026-10-12 — botões Finalizar no fim + Cancelar no topo, 4 casos + vazio, spec §3) | [.agents/modules/milon/07-encerrar-treino/spec.md](.agents/modules/milon/07-encerrar-treino/spec.md) | |
++| 7b | **Rotação do Treino do Dia por histórico** | Treino do Dia exibe o próximo treino da rotação a partir do último executado (histórico de execuções seladas), em vez do primeiro por criação (v1 da #4). Desmembrado da #4 (spec §4, adiado para pós-#7) + reafirmado na #7 (pedido humano 2026-10-12: não esquecer). | | | |
+ | 8 | **Layout responsivo para telas pequenas (celular)** | Garantir que telas de montagem/execução caibam na viewport do celular, com listas roláveis internas, ações sempre visíveis e sem estouro. | | | |
+ 
+ ### Bloco 3 — Histórico mínimo
+diff --git a/.agents/modules/milon/regression.md b/.agents/modules/milon/regression.md
+index 45277e1..dfd4549 100644
+--- a/.agents/modules/milon/regression.md
++++ b/.agents/modules/milon/regression.md
+@@ -272,6 +272,15 @@
+ 
+ ---
+ 
++## Feature #7 — Encerrar treino com confirmação
++
++### REG-57: Finalizar treino completo direto + parcial com confirmação
++**Dado** o Treino do Dia com execução aberta
++**Quando** a pessoa finaliza com todas as séries marcadas (sela direto) ou confirma a pergunta de parcial/vazio
++**Então** a execução some da aberta, o badge apaga e a manutenção volta a ficar livre, sem navegar para fora
++
++---
++
+ ## Execução de regressão
+ 
+ ```bash
+@@ -309,4 +318,4 @@ npm run build-storybook
+ **Dado** exercício com séries
+ **Então** grid responsivo (1/2/4 col), campo único com rótulo pelo modo da entry, toggle kg/lb abaixo da carga persistindo na entry
+ 
+-**Critério de passagem:** 1476 testes passados, 0 falhas, coverage ≥ 80% (atual: 85.16% lines, 84.05% branch).
+\ No newline at end of file
++**Critério de passagem:** 1519 testes passados, 0 falhas, coverage ≥ 80% (atual: 85.12% lines, 84.09% branch).
+\ No newline at end of file
+diff --git a/__tests__/app/milon/today/page.test.tsx b/__tests__/app/milon/today/page.test.tsx
+index 173d44c..c2decca 100644
+--- a/__tests__/app/milon/today/page.test.tsx
++++ b/__tests__/app/milon/today/page.test.tsx
+@@ -625,15 +625,37 @@ describe("Treino do Dia — paridade por construção (TASK-003 — RED)", () =>
+     ).not.toBeInTheDocument();
+   });
+ 
+-  it("slots de extensão nulos na v1 (headerActions/entryFooter/footer)", () => {
++  it("slots de extensão na v1+07 (headerActions=Cancelar top/ footer=Finalizar rodapé/ entryFooter nulo)", () => {
+     conteudoComTreinos();
+ 
+     render(<TodayPage />);
+ 
+     const props = renderedSectionProps();
+-    expect(props.headerActions ?? null).toBeNull();
++    function slotLabel(slot: unknown): string {
++      const el = slot as { props?: { children?: unknown } };
++      const children = el?.props?.children;
++      return String(
++        Array.isArray(children) ? children.join(" ") : (children ?? ""),
++      );
++    }
++    // Mílon #7 TASK-005: today preenche topo/rodapé com programa ativo
++    // (spec §2 posições + §5 critério 1; plan §3 slots).
++    expect(props.headerActions ?? null).not.toBeNull();
++    expect(slotLabel(props.headerActions)).toMatch(/cancelar/i);
++    expect(props.footer ?? null).not.toBeNull();
++    expect(slotLabel(props.footer)).toMatch(/finalizar/i);
+     expect(props.entryFooter ?? null).toBeNull();
+-    expect(props.footer ?? null).toBeNull();
++
++    // Somente-leitura (programa inativo) segue sem botões.
++    cleanup();
++    conteudoComTreinos({ program: makeProgram({ status: "inativo" }) });
++
++    render(<TodayPage />);
++
++    const somenteLeitura = renderedSectionProps();
++    expect(somenteLeitura.headerActions ?? null).toBeNull();
++    expect(somenteLeitura.footer ?? null).toBeNull();
++    expect(somenteLeitura.entryFooter ?? null).toBeNull();
+   });
+ 
+   it("carregando: indicador visível sem seção nem switcher", () => {
+@@ -783,15 +805,90 @@ describe("Treino do Dia — flag de execução (Mílon #5 — RED)", () => {
+     expect(renderedSectionProps().executionEnabled).toBe(true);
+   });
+ 
+-  it("wiring restante intacto (backTarget none + slots nulos da v1)", () => {
++  it("wiring restante intacto (backTarget none + slots 07 preenchidos)", () => {
+     conteudoComTreinos();
+ 
+     render(<TodayPage />);
+ 
+     const props = renderedSectionProps();
++    function slotLabel(slot: unknown): string {
++      const el = slot as { props?: { children?: unknown } };
++      const children = el?.props?.children;
++      return String(
++        Array.isArray(children) ? children.join(" ") : (children ?? ""),
++      );
++    }
+     expect(props.backTarget).toEqual({ kind: "none" });
+-    expect(props.headerActions ?? null).toBeNull();
++    // Mílon #7 TASK-005: today preenche topo/rodapé com programa ativo
++    // (spec §2 posições + §5 critério 1; plan §3 slots).
++    expect(props.headerActions ?? null).not.toBeNull();
++    expect(slotLabel(props.headerActions)).toMatch(/cancelar/i);
+     expect(props.entryFooter ?? null).toBeNull();
+-    expect(props.footer ?? null).toBeNull();
++    expect(props.footer ?? null).not.toBeNull();
++    expect(slotLabel(props.footer)).toMatch(/finalizar/i);
++  });
++});
++
++/**
++ * Contrato RED — Mílon #7 Encerrar treino (TASK-003): botões Cancelar (topo)
++ * e Finalizar (rodapé) no Treino do Dia.
++ * Fonte: spec §2 (Cancelar no topo; Finalizar no final abaixo do último
++ * Adicionar; nenhum dos dois na manutenção nem sem execução aberta) + §3
++ * (posições fixas; efeitos) + §5 critérios 1/9 + plan §3 (página conecta
++ * headerActions = Cancelar e footer = Finalizar via slots existentes;
++ * visíveis somente com execução aberta e programa ativo).
++ * Expected: FAIL — a página ainda não conecta os slots (props nulas) nem
++ * declara os rótulos (fonte sem ocorrências). Hefesto fará GREEN na TASK-005.
++ * Nota de isolamento: a seção segue mockada (interior travado em
++ * WorkoutDetailSection.test.tsx); aqui trava-se a decisão da PÁGINA.
++ * Convenção tsc: slots são ReactNode opacos (unknown) — renderizados num
++ * div para asserção de texto.
++ */
++describe("Treino do Dia — encerrar treino: botões topo/rodapé (Milon 07 TASK-003 — RED)", () => {
++  beforeEach(() => {
++    cleanup();
++    vi.clearAllMocks();
++    mockUsePathname.mockReturnValue("/milon/today");
++  });
++
++  function textoDoSlot(slot: unknown): string {
++    cleanup();
++    const { unmount } = render(<div>{slot as import("react").ReactNode}</div>);
++    const texto =
++      (document.body.textContent ?? "").replace(/\s+/g, " ").trim();
++    unmount();
++    cleanup();
++    return texto;
++  }
++
++  it("com programa ativo: headerActions carrega o botão Cancelar no topo (critério 1)", () => {
++    conteudoComTreinos();
++
++    render(<TodayPage />);
++
++    const props = renderedSectionProps();
++    expect(props.headerActions ?? null).not.toBeNull();
++    expect(textoDoSlot(props.headerActions)).toMatch(/cancelar/i);
++  });
++
++  it("com programa ativo: footer carrega o botão Finalizar no rodapé, abaixo do último Adicionar (critério 1)", () => {
++    conteudoComTreinos();
++
++    render(<TodayPage />);
++
++    const props = renderedSectionProps();
++    expect(props.footer ?? null).not.toBeNull();
++    expect(textoDoSlot(props.footer)).toMatch(/finalizar/i);
++  });
++
++  it("fonte da página declara os rótulos Cancelar e Finalizar (posições fixas, critério 1)", () => {
++    expect(todayPageSource()).toMatch(/Cancelar/);
++    expect(todayPageSource()).toMatch(/Finalizar/);
++  });
++
++  it("fonte da página conecta os slots headerActions e footer (via seção existente)", () => {
++    const src = todayPageSource();
++    expect(src).toMatch(/headerActions/);
++    expect(src).toMatch(/footer/);
+   });
+ });
+diff --git a/__tests__/components/milon/WorkoutConfirmModal.test.tsx b/__tests__/components/milon/WorkoutConfirmModal.test.tsx
+index 6966eb6..cad3a30 100644
+--- a/__tests__/components/milon/WorkoutConfirmModal.test.tsx
++++ b/__tests__/components/milon/WorkoutConfirmModal.test.tsx
+@@ -325,3 +325,133 @@ describe("WorkoutConfirmModal", () => {
+     });
+   });
+ });
++
++/**
++ * Contrato RED — Mílon #7 Encerrar treino (TASK-003): quatro variantes novas.
++ * Fonte: spec §3 (quatro textos exatos) + plan §3 (variantes, títulos,
++ * rótulos, processing-desabilita, dismiss) + spec §5 critérios 2/4/7/8/11.
++ * Expected: FAIL — variantes ainda não existem (título/corpo/botões
++ * divergem para o ramo reduzir-series). Hefesto fará GREEN na TASK-005.
++ * Convenção tsc: variant via cast (o tipo ainda não declara os valores).
++ */
++describe("Milon 07 TASK-003 RED — variantes de encerrar/cancelar", () => {
++  type NovaVariant =
++    | "cancelar-execucao"
++    | "finalizar-parcial"
++    | "finalizar-completa"
++    | "finalizar-vazio";
++
++  function nova(
++    variant: NovaVariant,
++    overrides: Partial<WorkoutConfirmModalProps> = {},
++  ) {
++    return base({
++      variant: variant as unknown as Variant,
++      ...overrides,
++    }) as unknown as WorkoutConfirmModalProps;
++  }
++
++  it("cancelar-execucao: título 'Cancelar execução', corpo exato, botões 'Cancelar' + 'Excluir' (critérios 2–3)", () => {
++    render(
++      <WorkoutConfirmModal {...nova("cancelar-execucao")} />,
++    );
++
++    expect(screen.getByText("Cancelar execução")).toBeInTheDocument();
++    expect(
++      screen.getByText(
++        "Tem certeza que deseja cancelar essa execução? Todas as informações serão excluídas.",
++      ),
++    ).toBeInTheDocument();
++    expect(
++      screen.getByRole("button", { name: "Cancelar" }),
++    ).toBeInTheDocument();
++    expect(screen.getByRole("button", { name: "Excluir" })).toBeInTheDocument();
++  });
++
++  it("finalizar-parcial: título 'Finalizar treino', corpo exato, botões 'Cancelar' + 'Finalizar' (critérios 4–5)", () => {
++    render(
++      <WorkoutConfirmModal {...nova("finalizar-parcial")} />,
++    );
++
++    expect(screen.getByText("Finalizar treino")).toBeInTheDocument();
++    expect(
++      screen.getByText(
++        "Ainda existem séries não executadas. Tem certeza que deseja finalizar o treino?",
++      ),
++    ).toBeInTheDocument();
++    expect(
++      screen.getByRole("button", { name: "Cancelar" }),
++    ).toBeInTheDocument();
++    expect(
++      screen.getByRole("button", { name: "Finalizar" }),
++    ).toBeInTheDocument();
++  });
++
++  it("finalizar-completa (Caso 4): título 'Finalizar treino', corpo exato, botões 'Cancelar' + 'Finalizar' (critério 7)", () => {
++    render(
++      <WorkoutConfirmModal {...nova("finalizar-completa")} />,
++    );
++
++    expect(screen.getByText("Finalizar treino")).toBeInTheDocument();
++    expect(
++      screen.getByText(
++        "Você executou todas as séries, deseja finalizar o treino?",
++      ),
++    ).toBeInTheDocument();
++    expect(
++      screen.getByRole("button", { name: "Cancelar" }),
++    ).toBeInTheDocument();
++    expect(
++      screen.getByRole("button", { name: "Finalizar" }),
++    ).toBeInTheDocument();
++  });
++
++  it("finalizar-vazio: título 'Treino sem séries feitas', corpo exato, confirma 'Cancelar execução' e desiste 'Voltar' (critério 8)", () => {
++    render(<WorkoutConfirmModal {...nova("finalizar-vazio")} />);
++
++    expect(screen.getByText("Treino sem séries feitas")).toBeInTheDocument();
++    expect(
++      screen.getByText(
++        "O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino?",
++      ),
++    ).toBeInTheDocument();
++    expect(
++      screen.getByRole("button", { name: "Cancelar execução" }),
++    ).toBeInTheDocument();
++    expect(screen.getByRole("button", { name: "Voltar" })).toBeInTheDocument();
++  });
++
++  it.each([
++    "cancelar-execucao",
++    "finalizar-parcial",
++    "finalizar-completa",
++    "finalizar-vazio",
++  ] as NovaVariant[])(
++    "variante '%s': processing desabilita os botões e bloqueia callbacks (critério 11)",
++    (variant) => {
++      const onConfirm = vi.fn();
++      const onCancel = vi.fn();
++      render(
++        <WorkoutConfirmModal
++          {...nova(variant, { processing: true, onConfirm, onCancel })}
++        />,
++      );
++
++      for (const b of screen.getAllByRole("button")) {
++        expect(b).toBeDisabled();
++      }
++      for (const b of screen.getAllByRole("button")) {
++        fireEvent.click(b);
++      }
++      expect(onConfirm).not.toHaveBeenCalled();
++      expect(onCancel).not.toHaveBeenCalled();
++    },
++  );
++
++  it("variante nova: open=false não renderiza nada (invariante herdada)", () => {
++    const { container } = render(
++      <WorkoutConfirmModal {...nova("finalizar-parcial", { open: false })} />,
++    );
++    expect(container).toBeEmptyDOMElement();
++  });
++});
+diff --git a/__tests__/components/milon/WorkoutDetailSection.test.tsx b/__tests__/components/milon/WorkoutDetailSection.test.tsx
+index 73a96c3..777b134 100644
+--- a/__tests__/components/milon/WorkoutDetailSection.test.tsx
++++ b/__tests__/components/milon/WorkoutDetailSection.test.tsx
+@@ -1531,3 +1531,167 @@ describe("WorkoutDetailSection — ajustes de modo/unidade da entry (TASK-010 
+     expect(src).not.toMatch(/setExerciseLoadUnitStandalone/);
+   });
+ });
++
++/**
++ * Contrato RED — Mílon #7 Encerrar treino (TASK-003): hospedagem das
++ * confirmações novas + slots topo/rodapé no ramo de execução.
++ * Fonte: spec §2 (Cancelar no topo, Finalizar no final abaixo do último
++ * Adicionar; permanece no Treino do Dia) + §3 (quatro casos, vazio, efeitos,
++ * estados de tela) + §5 critérios 1/2/4/7/8/9/11 + plan §3 (seção sem props
++ * novas; topo renderiza headerActions ao lado do badge; rodapé renderiza
++ * footer após a lista; ExecutionHost hospeda os quatro modais com a mesma
++ * disciplina do clearConfirmOpen: erro não fecha, processing não fecha).
++ * Expected: FAIL — a seção ainda não hospeda as confirmações novas (textos
++ * ausentes) nem o gatilho do Caso 4. Hefesto fará GREEN na TASK-005.
++ * Convenção tsc: estado estendido do hook via overrides (cast); seção sem
++ * props novas (só slots existentes).
++ */
++describe("WorkoutDetailSection — encerrar treino (Milon 07 TASK-003 — RED)", () => {
++  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
++
++  function setupExec07(overrides: Record<string, unknown> = {}) {
++    const state = {
++      execution: null,
++      doneSeriesIds: [] as string[],
++      markedCount: 0,
++      toggleSeries: vi.fn(async () => {}),
++      saveSeriesExecution: vi.fn(async () => {}),
++      clearConfirmOpen: false,
++      confirmClearExecution: vi.fn(async () => {}),
++      cancelClearExecution: vi.fn(),
++      loading: false,
++      errorMsg: null as string | null,
++      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
++      successNotice: null as string | null,
++      retry: vi.fn(async () => {}),
++      totalSeriesCount: 0,
++      finishCase: null,
++      finishConfirmOpen: false,
++      finishConfirmCase: null,
++      cancelConfirmOpen: false,
++      finishProcessing: false,
++      cancelProcessing: false,
++      requestFinish: vi.fn(),
++      confirmFinish: vi.fn(async () => {}),
++      cancelFinish: vi.fn(),
++      requestCancel: vi.fn(),
++      confirmCancelExecution: vi.fn(async () => {}),
++      cancelCancelExecution: vi.fn(),
++      ...overrides,
++    };
++    mockedUseWorkoutExecution.mockReturnValue(state);
++    return state;
++  }
++
++  function comExecucao(props: Record<string, unknown> = {}): SectionProps {
++    return {
++      workoutId: "wout-1",
++      backTarget: backNone,
++      executionEnabled: true,
++      ...props,
++    } as unknown as SectionProps;
++  }
++
++  function execAberta(): Record<string, unknown> {
++    return {
++      id: "exec-1",
++      workoutId: "wout-1",
++      programId: "prog-1",
++      startedAt: "2026-10-12T10:00:00.000Z",
++      finishedAt: null,
++      createdAt: "2026-10-12T10:00:00.000Z",
++      created_by: DONO,
++    };
++  }
++
++  beforeEach(() => {
++    cleanup();
++    vi.clearAllMocks();
++    setupHook();
++    setupExec07();
++  });
++
++  it("parcial: finishConfirmOpen com caso parcial exibe o texto exato (critério 4)", () => {
++    conteudoComUmaEntrada();
++    setupExec07({
++      execution: execAberta(),
++      finishConfirmOpen: true,
++      finishConfirmCase: "parcial",
++    });
++
++    render(<WorkoutDetailSection {...comExecucao()} />);
++
++    expect(
++      screen.getByText(
++        "Ainda existem séries não executadas. Tem certeza que deseja finalizar o treino?",
++      ),
++    ).toBeInTheDocument();
++  });
++
++  it("cancelar: cancelConfirmOpen exibe o texto exato de exclusão (critério 2)", () => {
++    conteudoComUmaEntrada();
++    setupExec07({ execution: execAberta(), cancelConfirmOpen: true });
++
++    render(<WorkoutDetailSection {...comExecucao()} />);
++
++    expect(
++      screen.getByText(
++        "Tem certeza que deseja cancelar essa execução? Todas as informações serão excluídas.",
++      ),
++    ).toBeInTheDocument();
++  });
++
++  it("Caso 4: finishConfirmOpen com caso completa exibe a pergunta de todas-executadas (critério 7)", () => {
++    conteudoComUmaEntrada();
++    setupExec07({
++      execution: execAberta(),
++      doneSeriesIds: ["ser-1", "ser-2"],
++      markedCount: 2,
++      finishConfirmOpen: true,
++      finishConfirmCase: "completa",
++    });
++
++    render(<WorkoutDetailSection {...comExecucao()} />);
++
++    expect(
++      screen.getByText(
++        "Você executou todas as séries, deseja finalizar o treino?",
++      ),
++    ).toBeInTheDocument();
++  });
++
++  it("vazio: finishConfirmOpen com caso vazio exibe a mensagem que conduz ao cancelamento (critério 8)", () => {
++    conteudoComUmaEntrada();
++    setupExec07({
++      execution: execAberta(),
++      finishConfirmOpen: true,
++      finishConfirmCase: "vazio",
++    });
++
++    render(<WorkoutDetailSection {...comExecucao()} />);
++
++    expect(
++      screen.getByText(
++        "O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino?",
++      ),
++    ).toBeInTheDocument();
++  });
++
++  it("topo/rodapé: headerActions ao lado do badge e footer após a lista no ramo de execução (critério 1)", () => {
++    conteudoComUmaEntrada();
++    setupExec07({ execution: execAberta() });
++
++    render(
++      <WorkoutDetailSection
++        {...comExecucao({
++          headerActions: <div data-testid="slot-topo">topo</div>,
++          footer: <div data-testid="slot-rodape">rodape</div>,
++        })}
++      />,
++    );
++
++    expect(screen.getByText("Em execução")).toBeInTheDocument();
++    expect(screen.getByTestId("slot-topo")).toBeInTheDocument();
++    expect(screen.getByTestId("slot-rodape")).toBeInTheDocument();
++  });
++});
+diff --git a/__tests__/lib/milon/db/executions.test.ts b/__tests__/lib/milon/db/executions.test.ts
+index 3f97266..bc8e5b1 100644
+--- a/__tests__/lib/milon/db/executions.test.ts
++++ b/__tests__/lib/milon/db/executions.test.ts
+@@ -442,3 +442,98 @@ describe("lib/milon/db/executions valor único (TASK-013 RED — D34)", () => {
+     expect((done as unknown as Record<string, unknown>).value).toBe(10);
+   });
+ });
++
++// ---------------------------------------------------------------------------
++// Contrato RED da TASK-001 (Mílon #07 Encerrar treino) — consumido pela TASK-002.
++// Fonte: spec §3 (efeito do selamento: UPDATE de finished_at) + plan §3
++// (finishExecution + finishExecutionStandalone; barrel reexporta).
++// Expected: FAIL — lib/milon/repositories/executions.ts ainda não expõe
++// finishExecution/finishExecutionStandalone. Acesso via cast para tsc passar.
++// Cadeia esperada: from("workout_executions").update({ finished_at }).
++// eq("id").is("finished_at", null).select().single() — selo só em aberta.
++// ---------------------------------------------------------------------------
++
++const SEALED_ROW: WorkoutExecutionRow = {
++  ...OPEN_ROW,
++  finished_at: "2026-10-12T12:00:00.000Z",
++};
++
++type FinishDbFn = (
++  db: IDatabaseClient,
++  executionId: string,
++) => Promise<{
++  id: string;
++  finishedAt: string | null;
++}>;
++
++function stubFinishDb(
++  sealed: WorkoutExecutionRow | null,
++  recorded: Recorded & { updatePayload?: Record<string, unknown> },
++): IDatabaseClient {
++  const afterUpdate: Record<string, unknown> = {};
++  const chain = {
++    eq: (col: string, val: unknown): unknown => {
++      (recorded.eqs ??= []).push([col, val]);
++      return chain;
++    },
++    is: (col: string, val: unknown): unknown => {
++      (recorded.iss ??= []).push([col, val]);
++      return chain;
++    },
++    select: () => ({
++      single: () => Promise.resolve({ data: sealed, error: null }),
++    }),
++  };
++  void afterUpdate;
++  return {
++    from: (table: string) => {
++      recorded.table = table;
++      return {
++        update: (payload: Record<string, unknown>) => {
++          recorded.updatePayload = payload;
++          return chain;
++        },
++      };
++    },
++  } as unknown as IDatabaseClient;
++}
++
++describe("lib/milon/db/executions finishExecution (Milon 07 TASK-001 RED)", () => {
++  it("re-exporta finishExecution + finishExecutionStandalone pelo barrel oficial", () => {
++    const dbMod = dbBarrel as unknown as Record<string, unknown>;
++    const repoMod = executionRepository as unknown as Record<string, unknown>;
++
++    expect(typeof dbMod.finishExecution).toBe("function");
++    expect(typeof dbMod.finishExecutionStandalone).toBe("function");
++    expect(dbMod.finishExecution).toBe(repoMod.finishExecution);
++    expect(dbMod.finishExecutionStandalone).toBe(repoMod.finishExecutionStandalone);
++  });
++
++  it("sela via UPDATE de finished_at filtrado por execução aberta", async () => {
++    const recorded: Recorded & { updatePayload?: Record<string, unknown> } = {};
++    const finishExecution = (
++      executionRepository as unknown as { finishExecution: FinishDbFn }
++    ).finishExecution;
++
++    const sealed = await finishExecution(stubFinishDb(SEALED_ROW, recorded), EXECUTION_ID);
++
++    expect(recorded.table).toBe("workout_executions");
++    expect(recorded.updatePayload).toBeDefined();
++    expect(recorded.updatePayload).toHaveProperty("finished_at");
++    expect(recorded.eqs).toContainEqual(["id", EXECUTION_ID]);
++    expect(recorded.iss).toContainEqual(["finished_at", null]);
++    expect(sealed.id).toBe(EXECUTION_ID);
++    expect(sealed.finishedAt).toBe("2026-10-12T12:00:00.000Z");
++  });
++
++  it("selar execução inexistente/sem aberta lança erro de operação", async () => {
++    const recorded: Recorded & { updatePayload?: Record<string, unknown> } = {};
++    const finishExecution = (
++      executionRepository as unknown as { finishExecution: FinishDbFn }
++    ).finishExecution;
++
++    await expect(
++      finishExecution(stubFinishDb(null, recorded), "exec-inexistente"),
++    ).rejects.toThrow();
++  });
++});
+diff --git a/__tests__/lib/milon/hooks/useWorkoutExecution.test.ts b/__tests__/lib/milon/hooks/useWorkoutExecution.test.ts
+index c4bee1b..ec5122f 100644
+--- a/__tests__/lib/milon/hooks/useWorkoutExecution.test.ts
++++ b/__tests__/lib/milon/hooks/useWorkoutExecution.test.ts
+@@ -70,6 +70,7 @@ import {
+ import {
+   findOpenExecutionByWorkoutStandalone,
+   startExecutionStandalone,
++  finishExecutionStandalone,
+   clearExecutionStandalone,
+   listDoneByExecutionStandalone,
+   markSeriesDoneStandalone,
+@@ -137,6 +138,7 @@ vi.mock("@/lib/milon/db/executions", () => ({
+   unmarkSeries: vi.fn(),
+   findOpenExecutionByWorkoutStandalone: vi.fn(),
+   startExecutionStandalone: vi.fn(),
++  finishExecutionStandalone: vi.fn(),
+   clearExecutionStandalone: vi.fn(),
+   listDoneByExecutionStandalone: vi.fn(),
+   markSeriesDoneStandalone: vi.fn(),
+@@ -338,6 +340,7 @@ const mocksDoArquivo = [
+   findWorkoutByIdStandalone,
+   findOpenExecutionByWorkoutStandalone,
+   startExecutionStandalone,
++  finishExecutionStandalone,
+   clearExecutionStandalone,
+   listDoneByExecutionStandalone,
+   markSeriesDoneStandalone,
+@@ -1068,6 +1071,265 @@ describe("Milon 05 TASK-013 RED — useWorkoutExecution com valor único (D34)",
+   });
+ });
+ 
++// ---------------------------------------------------------------------------
++// Contrato RED — Mílon #7 Encerrar treino (TASK-003): máquina Finalizar /
++// Cancelar + gatilho do Caso 4.
++// Fonte: `.agents/modules/milon/07-encerrar-treino/spec.md` §2 (posições,
++// jornada), §3 (quatro casos, vazio, efeitos, estados de tela) e §5
++// (critérios 1–11) + `plan.md` §3 (decisor, hook, variantes, botões).
++// Escrito ANTES da implementação (outside-in). Expected: FAIL — campos
++// `requestFinish`/`confirmFinish`/`requestCancel`/`finishCase` e o gatilho
++// do Caso 4 ainda não existem no hook (motivo certo: undefined, nunca
++// sintaxe). Hefesto fará GREEN na TASK-004 sem mudar estes testes.
++// Convenção tsc: novos campos via cast para Record (o tipo ainda não os
++// declara); `finishExecutionStandalone` já existe no barrel (TASK-002).
++// ---------------------------------------------------------------------------
++
++function viewComSeries(ids: string[]): WorkoutEntryView {
++  return makeView({
++    entry: makeEntry({ id: "ent-1" }),
++    exercise: makeExercise(),
++    series: ids.map((id, i) =>
++      makeSerie({ id, entryId: "ent-1", position: i + 1, value: 10, load: 40 }),
++    ),
++  });
++}
++
++function campoHook(
++  result: { current: unknown },
++  nome: string,
++): unknown {
++  return (result.current as unknown as Record<string, unknown>)[nome];
++}
++
++describe("Milon 07 TASK-003 RED — hook Finalizar/Cancelar + Caso 4", () => {
++  beforeEach(() => {
++    vi.clearAllMocks();
++    for (const mock of mocksDoArquivo) {
++      vi.mocked(mock).mockReset();
++    }
++    vi.useRealTimers();
++  });
++
++  it("expõe a máquina nova (requestFinish/confirmFinish/cancelFinish/requestCancel/confirmCancelExecution/cancelCancelExecution + flags)", async () => {
++    const sim: BancoSimulado = { execution: null, dones: [] };
++    instalarBanco(sim);
++    const { result } = renderHook(() =>
++      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1"])]),
++    );
++    await waitFor(() => expect(result.current.loading).toBe(false));
++
++    expect(typeof campoHook(result, "requestFinish")).toBe("function");
++    expect(typeof campoHook(result, "confirmFinish")).toBe("function");
++    expect(typeof campoHook(result, "cancelFinish")).toBe("function");
++    expect(typeof campoHook(result, "requestCancel")).toBe("function");
++    expect(typeof campoHook(result, "confirmCancelExecution")).toBe(
++      "function",
++    );
++    expect(typeof campoHook(result, "cancelCancelExecution")).toBe("function");
++  });
++
++  it("deriva totalSeriesCount do template e finishCase vazio com zero marcadas (critério 8)", async () => {
++    const sim: BancoSimulado = {
++      execution: makeExecution(),
++      dones: [],
++    };
++    instalarBanco(sim);
++    const { result } = renderHook(() =>
++      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2", "s-3"])]),
++    );
++    await waitFor(() => expect(result.current.loading).toBe(false));
++
++    expect(campoHook(result, "totalSeriesCount")).toBe(3);
++    expect(campoHook(result, "finishCase")).toBe("vazio");
++  });
++
++  it("parcial (1 de 3): requestFinish abre finalizar-parcial sem selar (critérios 4–5)", async () => {
++    const sim: BancoSimulado = {
++      execution: makeExecution(),
++      dones: [makeDone({ seriesId: "s-1" })],
++    };
++    instalarBanco(sim);
++    const { result } = renderHook(() =>
++      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2", "s-3"])]),
++    );
++    await waitFor(() => expect(result.current.loading).toBe(false));
++    expect(campoHook(result, "finishCase")).toBe("parcial");
++
++    act(() => {
++      (campoHook(result, "requestFinish") as () => void)();
++    });
++
++    expect(campoHook(result, "finishConfirmOpen")).toBe(true);
++    expect(campoHook(result, "finishConfirmCase")).toBe("parcial");
++    expect(finishExecutionStandalone).not.toHaveBeenCalled();
++  });
++
++  it("vazio (0 de 3): requestFinish abre finalizar-vazio sem selar (critério 8)", async () => {
++    const sim: BancoSimulado = { execution: makeExecution(), dones: [] };
++    instalarBanco(sim);
++    const { result } = renderHook(() =>
++      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2", "s-3"])]),
++    );
++    await waitFor(() => expect(result.current.loading).toBe(false));
++
++    act(() => {
++      (campoHook(result, "requestFinish") as () => void)();
++    });
++
++    expect(campoHook(result, "finishConfirmOpen")).toBe(true);
++    expect(campoHook(result, "finishConfirmCase")).toBe("vazio");
++    expect(finishExecutionStandalone).not.toHaveBeenCalled();
++  });
++
++  it("completo via botão (3 de 3): requestFinish sela direto sem confirmação (critério 6)", async () => {
++    const aberta = makeExecution();
++    const sim: BancoSimulado = {
++      execution: aberta,
++      dones: [
++        makeDone({ seriesId: "s-1" }),
++        makeDone({ seriesId: "s-2" }),
++        makeDone({ seriesId: "s-3" }),
++      ],
++    };
++    instalarBanco(sim);
++    vi.mocked(finishExecutionStandalone).mockImplementation(
++      async (id: string) => ({ ...aberta, id, finishedAt: "2026-10-12T11:00:00.000Z" }),
++    );
++    const { result } = renderHook(() =>
++      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2", "s-3"])]),
++    );
++    await waitFor(() => expect(result.current.loading).toBe(false));
++    expect(campoHook(result, "finishCase")).toBe("completo");
++
++    await executar(() =>
++      (campoHook(result, "requestFinish") as () => Promise<void>)(),
++    );
++
++    expect(finishExecutionStandalone).toHaveBeenCalledWith("exec-1");
++    expect(campoHook(result, "finishConfirmOpen")).toBe(false);
++  });
++
++  it("Caso 4: marcar a última pendente pelo card abre finalizar-completa em vez de selar (critério 7)", async () => {
++    const sim: BancoSimulado = {
++      execution: makeExecution(),
++      dones: [makeDone({ seriesId: "s-1" })],
++    };
++    instalarBanco(sim);
++    const { result } = renderHook(() =>
++      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2"])]),
++    );
++    await waitFor(() => expect(result.current.loading).toBe(false));
++
++    await executar(() =>
++      result.current.toggleSeries(
++        makeEntry({ id: "ent-1" }),
++        makeSerie({ id: "s-2", entryId: "ent-1", position: 2 }),
++      ),
++    );
++
++    expect(finishExecutionStandalone).not.toHaveBeenCalled();
++    expect(campoHook(result, "finishConfirmOpen")).toBe(true);
++    expect(campoHook(result, "finishConfirmCase")).toBe("completa");
++  });
++
++  it("confirmFinish parcial sela com término, recarrega e fecha (critério 5); desistir mantém aberta", async () => {
++    const aberta = makeExecution();
++    const sim: BancoSimulado = {
++      execution: aberta,
++      dones: [makeDone({ seriesId: "s-1" })],
++    };
++    instalarBanco(sim);
++    vi.mocked(finishExecutionStandalone).mockImplementation(async () => {
++      sim.execution = null;
++      sim.dones = [];
++      return { ...aberta, finishedAt: "2026-10-12T11:00:00.000Z" };
++    });
++    const { result } = renderHook(() =>
++      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2"])]),
++    );
++    await waitFor(() => expect(result.current.loading).toBe(false));
++
++    act(() => {
++      (campoHook(result, "requestFinish") as () => void)();
++    });
++    expect(campoHook(result, "finishConfirmOpen")).toBe(true);
++
++    await executar(() =>
++      (campoHook(result, "confirmFinish") as () => Promise<void>)(),
++    );
++
++    expect(finishExecutionStandalone).toHaveBeenCalledWith("exec-1");
++    expect(campoHook(result, "finishConfirmOpen")).toBe(false);
++  });
++
++  it("requestCancel abre cancelar-execucao; confirmar exclui e limpa início (critérios 2–3)", async () => {
++    const sim: BancoSimulado = {
++      execution: makeExecution(),
++      dones: [makeDone({ seriesId: "s-1" })],
++    };
++    instalarBanco(sim);
++    const { result } = renderHook(() =>
++      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2"])]),
++    );
++    await waitFor(() => expect(result.current.loading).toBe(false));
++
++    act(() => {
++      (campoHook(result, "requestCancel") as () => void)();
++    });
++    expect(campoHook(result, "cancelConfirmOpen")).toBe(true);
++
++    await executar(() =>
++      (campoHook(result, "confirmCancelExecution") as () => Promise<void>)(),
++    );
++
++    expect(clearExecutionStandalone).toHaveBeenCalledWith("exec-1");
++    expect(campoHook(result, "cancelConfirmOpen")).toBe(false);
++    expect(result.current.execution).toBeNull();
++  });
++
++  it("falha ao selar alimenta operacao, relança e NÃO fecha o modal (critério 11)", async () => {
++    const sim: BancoSimulado = {
++      execution: makeExecution(),
++      dones: [makeDone({ seriesId: "s-1" })],
++    };
++    instalarBanco(sim);
++    const { result } = renderHook(() =>
++      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2"])]),
++    );
++    await waitFor(() => expect(result.current.loading).toBe(false));
++
++    act(() => {
++      (campoHook(result, "requestFinish") as () => void)();
++    });
++    vi.mocked(finishExecutionStandalone).mockRejectedValueOnce(
++      new Error("falha ao finalizar"),
++    );
++
++    await act(async () => {
++      await expect(
++        (campoHook(result, "confirmFinish") as () => Promise<void>)(),
++      ).rejects.toThrow("falha ao finalizar");
++    });
++
++    expect(result.current.errorMsg).toContain("falha ao finalizar");
++    expect(result.current.errorOrigin).toBe("operacao");
++    expect(campoHook(result, "finishConfirmOpen")).toBe(true);
++  });
++
++  it("processing existe e bloqueia duplo clique (critério 11 / D8)", async () => {
++    const sim: BancoSimulado = { execution: makeExecution(), dones: [] };
++    instalarBanco(sim);
++    const { result } = renderHook(() =>
++      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1"])]),
++    );
++    await waitFor(() => expect(result.current.loading).toBe(false));
++
++    expect(campoHook(result, "finishProcessing")).toBe(false);
++    expect(campoHook(result, "cancelProcessing")).toBe(false);
++  });
++});
++
+ 
+ 
+ 
+diff --git a/__tests__/lib/milon/repositories/contract-workout-executions.test.ts b/__tests__/lib/milon/repositories/contract-workout-executions.test.ts
+index f653883..4971652 100644
+--- a/__tests__/lib/milon/repositories/contract-workout-executions.test.ts
++++ b/__tests__/lib/milon/repositories/contract-workout-executions.test.ts
+@@ -320,3 +320,61 @@ describe("Milon 05 TASK-013 RED — contrato de execuções com valor único (D3
+     expect(feita.load).toBe(50);
+   });
+ });
++
++// ---------------------------------------------------------------------------
++// Contrato RED da TASK-001 (Mílon #07 Encerrar treino) — consumido pela TASK-002.
++// Fonte: spec §3 (efeito do selamento, imutabilidade, critério 10) + plan §3
++// (contrato finishExecution: sela somente se aberta, já selada/inexistente
++// lança erro de operação).
++// Expected: FAIL — IWorkoutExecutionRepository e o fake ainda não expõem
++// finishExecution. Acesso via cast para tsc --noEmit passar (só falha runtime).
++// ---------------------------------------------------------------------------
++
++type FinishCapableRepository = {
++  finishExecution: (executionId: string) => Promise<WorkoutExecution>;
++};
++
++describe("Milon 07 TASK-001 RED — finishExecution (selamento)", () => {
++  it("sela a execução aberta preenchendo o momento de término", async () => {
++    const repo = createFakeWorkoutExecutionRepository();
++    const execution = await repo.startExecution(WORKOUT_ID, PROGRAM_ID, EMAIL);
++    expect(execution.finishedAt).toBeNull();
++
++    const finish = (repo as unknown as FinishCapableRepository).finishExecution;
++    const sealed = await finish.call(repo, execution.id);
++
++    expect(sealed.id).toBe(execution.id);
++    expect(sealed.finishedAt).not.toBeNull();
++    expect(typeof sealed.finishedAt).toBe("string");
++  });
++
++  it("busca de aberta volta vazia após selar (critério 10: selada não conta como aberta)", async () => {
++    const repo = createFakeWorkoutExecutionRepository();
++    const execution = await repo.startExecution(WORKOUT_ID, PROGRAM_ID, EMAIL);
++
++    const finish = (repo as unknown as FinishCapableRepository).finishExecution;
++    await finish.call(repo, execution.id);
++
++    await expect(repo.findOpenExecutionByWorkout(WORKOUT_ID)).resolves.toBeNull();
++  });
++
++  it("duplo selamento não cria selo duplicado e vira erro de operação", async () => {
++    const repo = createFakeWorkoutExecutionRepository();
++    const execution = await repo.startExecution(WORKOUT_ID, PROGRAM_ID, EMAIL);
++
++    const finish = (repo as unknown as FinishCapableRepository).finishExecution;
++    const primeira = await finish.call(repo, execution.id);
++    expect(primeira.finishedAt).not.toBeNull();
++
++    await expect(finish.call(repo, execution.id)).rejects.toThrow();
++  });
++
++  it("selar execução inexistente lança erro sem criar linha", async () => {
++    const repo = createFakeWorkoutExecutionRepository();
++
++    const finish = (repo as unknown as FinishCapableRepository).finishExecution;
++    await expect(finish.call(repo, "exec-inexistente")).rejects.toThrow();
++
++    await expect(repo.findOpenExecutionByWorkout(WORKOUT_ID)).resolves.toBeNull();
++  });
++});
+diff --git a/__tests__/lib/milon/workout-utils.test.ts b/__tests__/lib/milon/workout-utils.test.ts
+index af2c944..bacf570 100644
+--- a/__tests__/lib/milon/workout-utils.test.ts
++++ b/__tests__/lib/milon/workout-utils.test.ts
+@@ -863,3 +863,79 @@ describe("Milon 05 TASK-013 RED — lb no banco com exibição direta (D38)", ()
+     expect(fonte).not.toMatch(/abreviarUnidadeCarga/);
+   });
+ });
++
++// ---------------------------------------------------------------------------
++// Contrato RED — Mílon #7 Encerrar treino (TASK-003): decisor puro +
++// quatro mensagens exatas.
++// Fonte: `.agents/modules/milon/07-encerrar-treino/spec.md` §3 (os quatro
++// casos, vazio com zero feitas, semântica de vazio contra zero) + `plan.md`
++// §3 (decisor decidirCasoFinalizacao + quatro constantes) + `tasks.json`
++// TASK-003 + spec §5 critérios 4/6/7/8.
++// Escrito ANTES da implementação (outside-in). Expected: FAIL — decisor e
++// constantes ainda não existem em `@/lib/milon/workout-utils` (motivo certo:
++// TypeError/undefined, nunca sintaxe). Hefesto fará GREEN na TASK-004.
++// Convenção tsc: acesso via namespace + cast (import estático nominal
++// falharia o tsc); `expect(typeof fn).toBe("function")` trava o motivo.
++// ---------------------------------------------------------------------------
++
++import * as WorkoutUtils07 from "@/lib/milon/workout-utils";
++
++type CasoFinalizacao07 = "vazio" | "parcial" | "completo";
++
++function decidirCaso07(marcadas: number, total: number): CasoFinalizacao07 {
++  const fn = (WorkoutUtils07 as unknown as Record<string, unknown>)[
++    "decidirCasoFinalizacao"
++  ];
++  expect(typeof fn).toBe("function");
++  return (fn as (m: number, t: number) => CasoFinalizacao07)(marcadas, total);
++}
++
++function constante07(nome: string): unknown {
++  return (WorkoutUtils07 as unknown as Record<string, unknown>)[nome];
++}
++
++describe("Milon 07 TASK-003 RED — decisor decidirCasoFinalizacao", () => {
++  it("zero marcadas com total > 0 → vazio (bloqueia Finalizar, critério 8)", () => {
++    expect(decidirCaso07(0, 3)).toBe("vazio");
++  });
++
++  it("total zero (sem séries) cai em vazio (caso degenerado sem-series)", () => {
++    expect(decidirCaso07(0, 0)).toBe("vazio");
++  });
++
++  it("pelo menos uma feita e pelo menos uma pendente → parcial (critério 4)", () => {
++    expect(decidirCaso07(1, 3)).toBe("parcial");
++    expect(decidirCaso07(2, 3)).toBe("parcial");
++  });
++
++  it("todas marcadas com total > 0 → completo (sela direto, critério 6)", () => {
++    expect(decidirCaso07(3, 3)).toBe("completo");
++    expect(decidirCaso07(1, 1)).toBe("completo");
++  });
++});
++
++describe("Milon 07 TASK-003 RED — quatro mensagens exatas (spec §3)", () => {
++  it("mensagem de Cancelar tem o texto exato (critério 2)", () => {
++    expect(constante07("MSG_CANCELAR_EXECUCAO")).toBe(
++      "Tem certeza que deseja cancelar essa execução? Todas as informações serão excluídas.",
++    );
++  });
++
++  it("mensagem de parcial tem o texto exato (critério 4)", () => {
++    expect(constante07("MSG_FINALIZAR_PARCIAL")).toBe(
++      "Ainda existem séries não executadas. Tem certeza que deseja finalizar o treino?",
++    );
++  });
++
++  it("mensagem de todas-executadas tem o texto exato (critério 7 / Caso 4)", () => {
++    expect(constante07("MSG_FINALIZAR_COMPLETA")).toBe(
++      "Você executou todas as séries, deseja finalizar o treino?",
++    );
++  });
++
++  it("mensagem de vazio tem o texto exato e conduz ao cancelamento (critério 8)", () => {
++    expect(constante07("MSG_FINALIZAR_VAZIO")).toBe(
++      "O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino?",
++    );
++  });
++});
+diff --git a/app/milon/today/page.tsx b/app/milon/today/page.tsx
+index e8cedc6..6f146f2 100644
+--- a/app/milon/today/page.tsx
++++ b/app/milon/today/page.tsx
+@@ -4,6 +4,7 @@ import { MilonLayout } from "@/components/milon/MilonLayout";
+ import { TodayWorkoutSwitcher } from "@/components/milon/TodayWorkoutSwitcher";
+ import { WorkoutDetailSection } from "@/components/milon/WorkoutDetailSection";
+ import { AsyncState } from "@/components/ui/AsyncState";
++import { Button } from "@/components/ui/button";
+ import { useTodayWorkout } from "@/lib/milon/hooks/useTodayWorkout";
+ 
+ export default function TodayPage() {
+@@ -24,6 +25,12 @@ export default function TodayPage() {
+     program === null
+       ? "Ativar ou criar um programa para ver o treino do dia."
+       : "Adicionar o primeiro treino ao programa para começar.";
++  // Encerrar treino (Mílon #7, D6): Cancelar no topo (headerActions) e
++  // Finalizar no rodapé (footer) via slots existentes da seção. A seção
++  // exibe e aciona somente com execução aberta (branch de execução); aqui
++  // só se oculta no somente-leitura (programa inativo). A manutenção segue
++  // sem slots por construção (wrapper fino).
++  const somenteLeitura = program?.status === "inativo";
+ 
+   return (
+     <MilonLayout pageTitle="Treino do Dia">
+@@ -51,6 +58,20 @@ export default function TodayPage() {
+               workoutId={selectedWorkoutId}
+               backTarget={{ kind: "none" }}
+               executionEnabled
++              headerActions={
++                somenteLeitura ? null : (
++                  <Button type="button" variant="outline" size="sm">
++                    Cancelar
++                  </Button>
++                )
++              }
++              footer={
++                somenteLeitura ? null : (
++                  <Button type="button" size="sm">
++                    Finalizar
++                  </Button>
++                )
++              }
+             />
+           </div>
+         ) : null}
+diff --git a/components/milon/WorkoutConfirmModal.tsx b/components/milon/WorkoutConfirmModal.tsx
+index 56fc1c8..beafce8 100644
+--- a/components/milon/WorkoutConfirmModal.tsx
++++ b/components/milon/WorkoutConfirmModal.tsx
+@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button";
+ export type WorkoutConfirmVariant =
+   | "remover-exercicio"
+   | "reduzir-series"
+-  | "limpar-execucao";
++  | "limpar-execucao"
++  | "cancelar-execucao"
++  | "finalizar-parcial"
++  | "finalizar-completa"
++  | "finalizar-vazio";
+ 
+ export interface WorkoutConfirmModalProps {
+   open: boolean;
+@@ -40,12 +44,38 @@ export default function WorkoutConfirmModal({
+ 
+   const isRemover = variant === "remover-exercicio";
+   const isLimpar = variant === "limpar-execucao";
++  const isCancelarExecucao = variant === "cancelar-execucao";
++  const isParcial = variant === "finalizar-parcial";
++  const isCompleta = variant === "finalizar-completa";
++  const isVazio = variant === "finalizar-vazio";
+   const titulo = isRemover
+     ? "Remover exercício?"
+     : isLimpar
+       ? "Limpar execução"
+-      : "Reduzir séries?";
+-  const confirmLabel = isRemover ? "Remover" : isLimpar ? "Limpar" : "Reduzir";
++      : isCancelarExecucao
++        ? "Cancelar execução"
++        : isParcial || isCompleta
++          ? "Finalizar treino"
++          : isVazio
++            ? "Treino sem séries feitas"
++            : "Reduzir séries?";
++  const confirmLabel = isRemover
++    ? "Remover"
++    : isLimpar
++      ? "Limpar"
++      : isCancelarExecucao
++        ? "Excluir"
++        : isParcial || isCompleta
++          ? "Finalizar"
++          : isVazio
++            ? "Cancelar execução"
++            : "Reduzir";
++  // D4 (Mílon #7): vazio conduz ao cancelamento — desistência volta, sem sair.
++  const dismissLabel = isVazio ? "Voltar" : "Cancelar";
++  // Homologação 2026-10-13 (cenário 4): selamento (parcial/completa) é ação
++  // primária — sem vermelho (sensação de exclusão). Demais confirmações
++  // seguem destrutivas (exclusão real).
++  const isFinalizar = isParcial || isCompleta;
+   const serieWord = seriesCount === 1 ? "série" : "séries";
+ 
+   return (
+@@ -67,6 +97,25 @@ export default function WorkoutConfirmModal({
+             Todas as séries foram desmarcada. Deseja cancelar a execução desse
+             treino?
+           </p>
++        ) : isCancelarExecucao ? (
++          <p className="text-sm text-muted-foreground">
++            Tem certeza que deseja cancelar essa execução? Todas as informações
++            serão excluídas.
++          </p>
++        ) : isParcial ? (
++          <p className="text-sm text-muted-foreground">
++            Ainda existem séries não executadas. Tem certeza que deseja
++            finalizar o treino?
++          </p>
++        ) : isCompleta ? (
++          <p className="text-sm text-muted-foreground">
++            Você executou todas as séries, deseja finalizar o treino?
++          </p>
++        ) : isVazio ? (
++          <p className="text-sm text-muted-foreground">
++            O treino não pode ser finalizado pois nenhuma série foi feita. Em
++            vez disso, deseja cancelar e excluir a execução desse treino?
++          </p>
+         ) : (
+           <p className="text-sm text-muted-foreground">
+             Reduzir de {currentQuantity} para {newQuantity} séries? As séries
+@@ -83,11 +132,11 @@ export default function WorkoutConfirmModal({
+               if (!processing) onCancel();
+             }}
+           >
+-            Cancelar
++            {dismissLabel}
+           </Button>
+           <Button
+             type="button"
+-            variant="destructive"
++            variant={isFinalizar ? "default" : "destructive"}
+             disabled={processing}
+             onClick={() => {
+               if (!processing) onConfirm();
+diff --git a/components/milon/WorkoutDetailSection.tsx b/components/milon/WorkoutDetailSection.tsx
+index 78cc8b0..5c3842d 100644
+--- a/components/milon/WorkoutDetailSection.tsx
++++ b/components/milon/WorkoutDetailSection.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { Fragment, useCallback, useMemo, useState, type ReactNode } from "react";
++import { Fragment, cloneElement, isValidElement, useCallback, useMemo, useState, type ReactNode } from "react";
+ import { useRouter } from "next/navigation";
+ import { AsyncState } from "@/components/ui/AsyncState";
+ import { Button } from "@/components/ui/button";
+@@ -65,6 +65,32 @@ function toMessage(err: unknown, fallback: string): string {
+   return err instanceof Error && err.message ? err.message : fallback;
+ }
+ 
++/**
++ * Enxerto de ação nos slots (Mílon #7, D6): a página do Treino do Dia fornece
++ * os botões como ReactNode estático (só rótulo, sem acesso ao hook interno
++ * da seção); a seção injeta o disparador da máquina de estados preservando
++ * o onClick original quando existir. Nós não-elemento passam intactos.
++ */
++function comAcao(slot: ReactNode | null, acao: () => void): ReactNode {
++  if (!isValidElement(slot)) return slot ?? null;
++  const props = slot.props as { onClick?: (e: unknown) => void };
++  const original = props.onClick;
++  return cloneElement(slot, {
++    onClick: (e: unknown) => {
++      if (original) original(e);
++      acao();
++    },
++  } as Partial<unknown>);
++}
++
++function varianteFinish(
++  caso: "parcial" | "completa" | "vazio" | null,
++): WorkoutConfirmVariant {
++  if (caso === "completa") return "finalizar-completa";
++  if (caso === "vazio") return "finalizar-vazio";
++  return "finalizar-parcial";
++}
++
+ function deriveMuscleOptions(items: Exercise[]): string[] {
+   const seen = new Map<string, string>();
+   for (const item of items) {
+@@ -99,6 +125,17 @@ interface ExecutionListContext {
+   clearProcessing: boolean;
+   confirmClear: () => void;
+   cancelClear: () => void;
++  finishConfirmOpen: boolean;
++  finishConfirmCase: "parcial" | "completa" | "vazio" | null;
++  finishProcessing: boolean;
++  confirmFinish: () => void;
++  cancelFinish: () => void;
++  cancelConfirmOpen: boolean;
++  cancelProcessing: boolean;
++  confirmCancel: () => void;
++  cancelCancel: () => void;
++  requestFinish: () => void;
++  requestCancel: () => void;
+   editing: EditingTarget | null;
+   editorSaving: boolean;
+   editorError: string | null;
+@@ -138,8 +175,8 @@ function ExecutionHost({
+ 
+   // Template ao vivo (spec alinhada §3): o que se exibe é sempre o valor atual
+   // do template, com marcadores de feito por série vindos da execução. A
+-  // edição no Treino do Dia aparece na hora (sem foto; valores reais ficam
+-  // para o encerrar #7).
++  // edição no Treino do Dia aparece na hora (sem foto; o executado alimenta
++  // o selamento).
+   const displayEntries: WorkoutEntryView[] = entries;
+ 
+   function findTarget(seriesId: string): EditingTarget | null {
+@@ -222,6 +259,41 @@ function ExecutionHost({
+     if (!clearProcessing) exec.cancelClearExecution();
+   }
+ 
++  // Encerramento (Mílon #7, plan §3 + D3-D6): hospeda as confirmações novas
++  // com a mesma disciplina do clearConfirmOpen — erro nunca fecha (o hook
++  // relança e mantém aberto), processing nunca fecha (dismiss guardado aqui
++  // + botões desabilitados no modal).
++  function confirmFinish(): void {
++    void exec.confirmFinish().catch(() => {
++      // Banner já alimentado pelo hook (origem operacao); modal permanece
++      // aberto por construção (hook só fecha no sucesso).
++    });
++  }
++
++  function cancelFinish(): void {
++    if (!exec.finishProcessing) exec.cancelFinish();
++  }
++
++  function confirmCancel(): void {
++    void exec.confirmCancelExecution().catch(() => {
++      // Idem: erro de operação sem fechar.
++    });
++  }
++
++  function cancelCancel(): void {
++    if (!exec.cancelProcessing) exec.cancelCancelExecution();
++  }
++
++  function requestFinish(): void {
++    void exec.requestFinish().catch(() => {
++      // Completo sela direto; falha vira banner de operação (sem modal).
++    });
++  }
++
++  function requestCancel(): void {
++    exec.requestCancel();
++  }
++
+   const doneBySeriesId: Record<string, boolean> = {};
+   for (const id of exec.doneSeriesIds) doneBySeriesId[id] = true;
+ 
+@@ -245,6 +317,17 @@ function ExecutionHost({
+         clearProcessing,
+         confirmClear,
+         cancelClear,
++        finishConfirmOpen: exec.finishConfirmOpen,
++        finishConfirmCase: exec.finishConfirmCase,
++        finishProcessing: exec.finishProcessing,
++        confirmFinish,
++        cancelFinish,
++        cancelConfirmOpen: exec.cancelConfirmOpen,
++        cancelProcessing: exec.cancelProcessing,
++        confirmCancel,
++        cancelCancel,
++        requestFinish,
++        requestCancel,
+         editing,
+         editorSaving,
+         editorError,
+@@ -594,7 +677,9 @@ export function WorkoutDetailSection({
+                             Em execução
+                           </span>
+                         ) : null}
+-                        {headerActions ?? null}
++                        {ctx.execExecution !== null
++                          ? comAcao(headerActions, ctx.requestCancel)
++                          : null}
+                         {backTarget.kind === "program" ? (
+                           <Button
+                             type="button"
+@@ -663,6 +748,34 @@ export function WorkoutDetailSection({
+                       onConfirm={ctx.confirmClear}
+                       onCancel={ctx.cancelClear}
+                     />
++
++                    <WorkoutConfirmModal
++                      open={ctx.finishConfirmOpen}
++                      variant={varianteFinish(ctx.finishConfirmCase)}
++                      exerciseName=""
++                      seriesCount={0}
++                      currentQuantity={0}
++                      newQuantity={0}
++                      processing={ctx.finishProcessing}
++                      onConfirm={ctx.confirmFinish}
++                      onCancel={ctx.cancelFinish}
++                    />
++
++                    <WorkoutConfirmModal
++                      open={ctx.cancelConfirmOpen}
++                      variant="cancelar-execucao"
++                      exerciseName=""
++                      seriesCount={0}
++                      currentQuantity={0}
++                      newQuantity={0}
++                      processing={ctx.cancelProcessing}
++                      onConfirm={ctx.confirmCancel}
++                      onCancel={ctx.cancelCancel}
++                    />
++
++                    {ctx.execExecution !== null
++                      ? comAcao(footer, ctx.requestFinish)
++                      : null}
+                   </>
+                 )}
+               </ExecutionHost>
+@@ -779,7 +892,10 @@ export function WorkoutDetailSection({
+               onCancel={handleConfirmCancel}
+             />
+ 
+-            {footer ?? null}
++            {/* Rodapé genérico da manutenção; no ramo de execução o footer
++                é renderizado dentro do ExecutionHost (condicional à aberta,
++                com enxerto de ação — Mílon #7, D6). */}
++            {executionEnabled ? null : (footer ?? null)}
+           </div>
+         ) : null}
+     </AsyncState>
+diff --git a/lib/milon/hooks/useWorkoutExecution.ts b/lib/milon/hooks/useWorkoutExecution.ts
+index 6727335..8574ea0 100644
+--- a/lib/milon/hooks/useWorkoutExecution.ts
++++ b/lib/milon/hooks/useWorkoutExecution.ts
+@@ -11,6 +11,7 @@ import {
+ import {
+   clearExecutionStandalone,
+   findOpenExecutionByWorkoutStandalone,
++  finishExecutionStandalone,
+   listDoneByExecutionStandalone,
+   markSeriesDoneStandalone,
+   startExecutionStandalone,
+@@ -18,7 +19,9 @@ import {
+ } from "@/lib/milon/db/executions";
+ import {
+   contarMarcadasNaExecucao,
++  decidirCasoFinalizacao,
+   ehUltimaMarcada,
++  type CasoFinalizacao,
+ } from "@/lib/milon/workout-utils";
+ import type { UpdateSeriesFieldsInput } from "@/lib/milon/repositories/interfaces";
+ import type {
+@@ -30,10 +33,14 @@ import type {
+   WorkoutSeries,
+ } from "@/lib/milon/types";
+ 
++export type FinishConfirmCase = "parcial" | "completa" | "vazio";
++
+ export interface UseWorkoutExecutionReturn {
+   execution: WorkoutExecution | null;
+   doneSeriesIds: string[];
+   markedCount: number;
++  totalSeriesCount: number;
++  finishCase: CasoFinalizacao | null;
+   toggleSeries: (entry: WorkoutEntry, serie: WorkoutSeries) => Promise<void>;
+   saveSeriesExecution: (
+     entry: WorkoutEntry,
+@@ -43,6 +50,17 @@ export interface UseWorkoutExecutionReturn {
+   clearConfirmOpen: boolean;
+   confirmClearExecution: () => Promise<void>;
+   cancelClearExecution: () => void;
++  finishConfirmOpen: boolean;
++  finishConfirmCase: FinishConfirmCase | null;
++  cancelConfirmOpen: boolean;
++  finishProcessing: boolean;
++  cancelProcessing: boolean;
++  requestFinish: () => Promise<void>;
++  confirmFinish: () => Promise<void>;
++  cancelFinish: () => void;
++  requestCancel: () => void;
++  confirmCancelExecution: () => Promise<void>;
++  cancelCancelExecution: () => void;
+   loading: boolean;
+   errorMsg: string | null;
+   errorOrigin: ErrorOrigin | null;
+@@ -70,19 +88,19 @@ async function carregarCadeia(workoutId: string): Promise<LoadedExecution> {
+   return { workout, execution: aberta, dones };
+ }
+ 
+-// Execução série a série do Treino do Dia (Mílon #5): orquestra a execução
+-// aberta + realizadas sobre os barrels `db/*`, no padrão do módulo
+-// (promise-chain + flag cancelled no mount; erro de operação no banner com
+-// origem `operacao` + relançamento; modal nunca fecha no erro — o hook só
+-// expõe o estado, quem fecha é a seção). O fim nunca é escrito aqui
+-// (reservado à feature 7); o estado do editor mora na WorkoutDetailSection.
++// Execução série a série do Treino do Dia (Mílon #5) com encerramento
++// (Mílon #7): orquestra a execução aberta + realizadas sobre os barrels
++// `db/*`, no padrão do módulo (promise-chain + flag cancelled no mount; erro
++// de operação no banner com origem `operacao` + relançamento; modal nunca
++// fecha no erro — o hook só expõe o estado, quem fecha é a seção). O selamento
++// (Finalizar, via finishExecution) e o cancelamento com confirmação moram
++// aqui; o estado do editor mora na WorkoutDetailSection.
+ // O Treino do Dia exibe sempre o template ao vivo com marcadores de feito
+-// por série (sem foto; valores reais ficam para o encerrar #7).
++// por série (sem foto; o executado alimenta o selamento).
+ export function useWorkoutExecution(
+   workoutId: string,
+-  // Template atual (mantido na assinatura: a seção compõe o hook com
+-  // workoutId + template; o display ao vivo é o próprio template, sem foto).
+-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
++  // Template atual (contagem do total planejado + gatilho do Caso 4; o
++  // display ao vivo é o próprio template, sem foto).
+   entries: WorkoutEntryView[] = [],
+ ): UseWorkoutExecutionReturn {
+   const db = useMemo(() => createBrowserDatabaseClient(), []);
+@@ -90,6 +108,12 @@ export function useWorkoutExecution(
+   const [execution, setExecution] = useState<WorkoutExecution | null>(null);
+   const [dones, setDones] = useState<WorkoutExecutionSeries[]>([]);
+   const [clearConfirmOpen, setClearConfirmOpen] = useState<boolean>(false);
++  const [finishConfirmOpen, setFinishConfirmOpen] = useState<boolean>(false);
++  const [finishConfirmCase, setFinishConfirmCase] =
++    useState<FinishConfirmCase | null>(null);
++  const [cancelConfirmOpen, setCancelConfirmOpen] = useState<boolean>(false);
++  const [finishProcessing, setFinishProcessing] = useState<boolean>(false);
++  const [cancelProcessing, setCancelProcessing] = useState<boolean>(false);
+   const [loading, setLoading] = useState<boolean>(true);
+   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+   const [errorOrigin, setErrorOrigin] = useState<ErrorOrigin | null>(null);
+@@ -103,6 +127,14 @@ export function useWorkoutExecution(
+     [dones],
+   );
+   const markedCount = useMemo(() => contarMarcadasNaExecucao(dones), [dones]);
++  const totalSeriesCount = useMemo(
++    () =>
++      entries.reduce((acumulado, view) => acumulado + view.series.length, 0),
++    [entries],
++  );
++  const finishCase: CasoFinalizacao | null = execution
++    ? decidirCasoFinalizacao(markedCount, totalSeriesCount)
++    : null;
+ 
+   useEffect(() => {
+     let cancelled = false;
+@@ -195,6 +227,13 @@ export function useWorkoutExecution(
+             email,
+           );
+           await recarregar();
++          // Caso 4 (Mílon #7, D5): a série clicada acabou de completar o
++          // template — abre a pergunta de todas-executadas em vez de selar
++          // direto (o gesto rápido do completo via botão segue em requestFinish).
++          if (totalSeriesCount > 0 && dones.length + 1 >= totalSeriesCount) {
++            setFinishConfirmCase("completa");
++            setFinishConfirmOpen(true);
++          }
+           return;
+         }
+         const alvo =
+@@ -215,7 +254,7 @@ export function useWorkoutExecution(
+         throw err instanceof Error ? err : new Error(message);
+       }
+     },
+-    [dones, execution, workout, workoutId, resolveEmail, recarregar],
++    [dones, totalSeriesCount, execution, workout, workoutId, resolveEmail, recarregar],
+   );
+ 
+   const saveSeriesExecution = useCallback(
+@@ -269,15 +308,141 @@ export function useWorkoutExecution(
+     setClearConfirmOpen(false);
+   }, []);
+ 
++  // Encerramento do treino (Mílon #7, plan §3 + D4/D5/D8): Finalizar decide o
++  // caso sobre marcadas × total — completo sela direto sem confirmação,
++  // parcial e vazio abrem a pergunta correspondente sem selar. Cancelar abre
++  // a pergunta de exclusão. Confirmar grava, recarrega e fecha; desistir só
++  // fecha. Erro de operação alimenta o banner com origem `operacao` e
++  // relança (modal nunca fecha no erro). `processing` bloqueia duplo clique
++  // (segunda tentativa tardia encontra execução já selada e vira erro de
++  // operação, sem selo duplicado).
++  const requestFinish = useCallback(async (): Promise<void> => {
++    const aberta = execution;
++    if (!aberta) {
++      return;
++    }
++    const caso = decidirCasoFinalizacao(markedCount, totalSeriesCount);
++    if (caso === "completo") {
++      if (finishProcessing) {
++        return;
++      }
++      setFinishProcessing(true);
++      setErrorMsg(null);
++      setErrorOrigin(null);
++      try {
++        await finishExecutionStandalone(aberta.id);
++        await recarregar();
++      } catch (err: unknown) {
++        const message = toErrorMessage(err, "Erro ao finalizar treino");
++        setErrorMsg(message);
++        setErrorOrigin("operacao");
++        throw err instanceof Error ? err : new Error(message);
++      } finally {
++        setFinishProcessing(false);
++      }
++      return;
++    }
++    setFinishConfirmCase(caso === "parcial" ? "parcial" : "vazio");
++    setFinishConfirmOpen(true);
++  }, [execution, markedCount, totalSeriesCount, finishProcessing, recarregar]);
++
++  const confirmFinish = useCallback(async (): Promise<void> => {
++    if (finishProcessing) {
++      return;
++    }
++    const alvo = execution;
++    if (!alvo) {
++      setFinishConfirmOpen(false);
++      setFinishConfirmCase(null);
++      return;
++    }
++    setFinishProcessing(true);
++    setErrorMsg(null);
++    setErrorOrigin(null);
++    try {
++      if (finishConfirmCase === "vazio") {
++        // Vazio conduz ao cancelamento (D4): confirmar exclui a execução,
++        // sem criar registro selado vazio.
++        await clearExecutionStandalone(alvo.id);
++      } else {
++        await finishExecutionStandalone(alvo.id);
++      }
++      await recarregar();
++      setFinishConfirmOpen(false);
++      setFinishConfirmCase(null);
++    } catch (err: unknown) {
++      const message = toErrorMessage(err, "Erro ao finalizar treino");
++      setErrorMsg(message);
++      setErrorOrigin("operacao");
++      throw err instanceof Error ? err : new Error(message);
++    } finally {
++      setFinishProcessing(false);
++    }
++  }, [execution, finishConfirmCase, finishProcessing, recarregar]);
++
++  const cancelFinish = useCallback(() => {
++    // Só fecha a pergunta: execução segue aberta, sem nada selado.
++    setFinishConfirmOpen(false);
++    setFinishConfirmCase(null);
++  }, []);
++
++  const requestCancel = useCallback(() => {
++    setCancelConfirmOpen(true);
++  }, []);
++
++  const confirmCancelExecution = useCallback(async (): Promise<void> => {
++    if (cancelProcessing) {
++      return;
++    }
++    const alvo = execution;
++    if (!alvo) {
++      setCancelConfirmOpen(false);
++      return;
++    }
++    setCancelProcessing(true);
++    setErrorMsg(null);
++    setErrorOrigin(null);
++    try {
++      await clearExecutionStandalone(alvo.id);
++      await recarregar();
++      setCancelConfirmOpen(false);
++    } catch (err: unknown) {
++      const message = toErrorMessage(err, "Erro ao cancelar execução");
++      setErrorMsg(message);
++      setErrorOrigin("operacao");
++      throw err instanceof Error ? err : new Error(message);
++    } finally {
++      setCancelProcessing(false);
++    }
++  }, [execution, cancelProcessing, recarregar]);
++
++  const cancelCancelExecution = useCallback(() => {
++    // Só fecha a pergunta: execução segue aberta, início segue registrado.
++    setCancelConfirmOpen(false);
++  }, []);
++
+   return {
+     execution,
+     doneSeriesIds,
+     markedCount,
++    totalSeriesCount,
++    finishCase,
+     toggleSeries,
+     saveSeriesExecution,
+     clearConfirmOpen,
+     confirmClearExecution,
+     cancelClearExecution,
++    finishConfirmOpen,
++    finishConfirmCase,
++    cancelConfirmOpen,
++    finishProcessing,
++    cancelProcessing,
++    requestFinish,
++    confirmFinish,
++    cancelFinish,
++    requestCancel,
++    confirmCancelExecution,
++    cancelCancelExecution,
+     loading,
+     errorMsg,
+     errorOrigin,
+diff --git a/lib/milon/repositories/executions.ts b/lib/milon/repositories/executions.ts
+index 9a552aa..cfb7cac 100644
+--- a/lib/milon/repositories/executions.ts
++++ b/lib/milon/repositories/executions.ts
+@@ -1,7 +1,7 @@
+ // Acesso a dados da execução série a série via IDatabaseClient (nunca @supabase/*).
+ // Regras de persistência vivem aqui (abertura idempotente D11-adaptado,
+-// unicidade de uma aberta por treino, marcação idempotente). O fim
+-// (finished_at) nunca é escrito nesta feature (reservado à feature 7).
++// unicidade de uma aberta por treino, marcação idempotente, selamento via
++// UPDATE de finished_at filtrado por execução aberta — Mílon #7).
+ // UI consome via lib/milon/db/executions.
+ import type { IDatabaseClient } from "@/lib/shared/database";
+ import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
+@@ -93,6 +93,26 @@ export async function startExecution(
+   }
+ }
+ 
++export async function finishExecution(
++  db: IDatabaseClient,
++  executionId: string,
++): Promise<WorkoutExecution> {
++  const { data, error } = await db
++    .from<WorkoutExecutionRow>("workout_executions")
++    .update({ finished_at: new Date().toISOString() })
++    .eq("id", executionId)
++    .is("finished_at", null)
++    .select()
++    .single();
++
++  if (error) throw error;
++  if (!data)
++    throw new Error(
++      "Falha ao finalizar execução: execução não encontrada ou já finalizada.",
++    );
++  return toExecutionDomain(data);
++}
++
+ export async function clearExecution(
+   db: IDatabaseClient,
+   executionId: string,
+@@ -183,6 +203,12 @@ export async function startExecutionStandalone(
+   return startExecution(createBrowserDatabaseClient(), workoutId, programId, email);
+ }
+ 
++export async function finishExecutionStandalone(
++  executionId: string,
++): Promise<WorkoutExecution> {
++  return finishExecution(createBrowserDatabaseClient(), executionId);
++}
++
+ export async function clearExecutionStandalone(
+   executionId: string,
+ ): Promise<void> {
+diff --git a/lib/milon/repositories/fakes/fakeWorkoutExecutionRepository.ts b/lib/milon/repositories/fakes/fakeWorkoutExecutionRepository.ts
+index 5e4af73..ac34092 100644
+--- a/lib/milon/repositories/fakes/fakeWorkoutExecutionRepository.ts
++++ b/lib/milon/repositories/fakes/fakeWorkoutExecutionRepository.ts
+@@ -1,7 +1,8 @@
+ // Fake em memória de IWorkoutExecutionRepository p/ contracts (fakes-only, decisão 57).
+ // Espelha as regras do repository real: abertura idempotente reusando a
+-// existente sem trocar o início, cascata da exclusão sobre as realizadas e
+-// marcação idempotente por execução + série.
++// existente sem trocar o início, selamento só de execução aberta (duplo selo
++// ou id inexistente vira erro de operação), cascata da exclusão sobre as
++// realizadas e marcação idempotente por execução + série.
+ import type {
+   IWorkoutExecutionRepository,
+   MarkExecutionSeriesInput,
+@@ -74,6 +75,21 @@ export class FakeWorkoutExecutionRepository
+     return { ...execution };
+   }
+ 
++  async finishExecution(executionId: string): Promise<WorkoutExecution> {
++    const execution = this.executions.get(executionId);
++    if (!execution || execution.finishedAt !== null) {
++      throw new Error(
++        "Falha ao finalizar execução: execução não encontrada ou já finalizada.",
++      );
++    }
++    const sealed: WorkoutExecution = {
++      ...execution,
++      finishedAt: new Date().toISOString(),
++    };
++    this.executions.set(executionId, sealed);
++    return { ...sealed };
++  }
++
+   async clearExecution(executionId: string): Promise<void> {
+     this.executions.delete(executionId);
+     for (const [id, realizada] of this.done) {
+diff --git a/lib/milon/repositories/interfaces.ts b/lib/milon/repositories/interfaces.ts
+index 451ba18..335cd77 100644
+--- a/lib/milon/repositories/interfaces.ts
++++ b/lib/milon/repositories/interfaces.ts
+@@ -109,6 +109,7 @@ export interface IWorkoutExecutionRepository {
+     programId: string,
+     email: string,
+   ): Promise<WorkoutExecution>;
++  finishExecution(executionId: string): Promise<WorkoutExecution>;
+   clearExecution(executionId: string): Promise<void>;
+   listDoneByExecution(executionId: string): Promise<WorkoutExecutionSeries[]>;
+   markSeriesDone(
+diff --git a/lib/milon/types.ts b/lib/milon/types.ts
+index e959d26..ee67359 100644
+--- a/lib/milon/types.ts
++++ b/lib/milon/types.ts
+@@ -173,8 +173,8 @@ export interface UpdateWorkoutInput {
+ // ----------------------------------------------------------------------------
+ // Execução série a série (Mílon #5, D1/D2/D3): instância do treino + séries
+ // realizadas. finishedAt nulo = execução aberta. O Treino do Dia exibe o
+-// template ao vivo com marcadores de feito por série (sem foto; valores reais
+-// ficam para o encerrar #7).
++// template ao vivo com marcadores de feito por série (sem foto; o executado
++// alimenta o selamento do encerrar treino).
+ // ----------------------------------------------------------------------------
+ 
+ export interface WorkoutExecutionRow {
+diff --git a/lib/milon/workout-utils.ts b/lib/milon/workout-utils.ts
+index b7d1007..00e8bbe 100644
+--- a/lib/milon/workout-utils.ts
++++ b/lib/milon/workout-utils.ts
+@@ -222,3 +222,38 @@ export function ehUltimaMarcada(
+ ): boolean {
+   return realizadas.length === 1 && realizadas[0].seriesId === seriesId;
+ }
++
++// Encerramento do treino (Mílon #7, spec §3): o caso de finalização é regra
++// pura sobre duas contagens — séries marcadas na execução aberta × séries
++// planejadas no template. `vazio` bloqueia o selamento e conduz ao
++// cancelamento; `parcial` confirma com aviso de pendência; `completo` sela
++// direto. Total zero (treino sem séries) cai em `vazio`.
++export type CasoFinalizacao = "vazio" | "parcial" | "completo";
++
++export function decidirCasoFinalizacao(
++  marcadas: number,
++  total: number,
++): CasoFinalizacao {
++  if (total <= 0) {
++    return "vazio";
++  }
++  if (marcadas <= 0) {
++    return "vazio";
++  }
++  if (marcadas >= total) {
++    return "completo";
++  }
++  return "parcial";
++}
++
++export const MSG_CANCELAR_EXECUCAO =
++  "Tem certeza que deseja cancelar essa execução? Todas as informações serão excluídas.";
++
++export const MSG_FINALIZAR_PARCIAL =
++  "Ainda existem séries não executadas. Tem certeza que deseja finalizar o treino?";
++
++export const MSG_FINALIZAR_COMPLETA =
++  "Você executou todas as séries, deseja finalizar o treino?";
++
++export const MSG_FINALIZAR_VAZIO =
++  "O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino?";

@@ -1,7 +1,7 @@
 // Acesso a dados da execução série a série via IDatabaseClient (nunca @supabase/*).
 // Regras de persistência vivem aqui (abertura idempotente D11-adaptado,
-// unicidade de uma aberta por treino, marcação idempotente). O fim
-// (finished_at) nunca é escrito nesta feature (reservado à feature 7).
+// unicidade de uma aberta por treino, marcação idempotente, selamento via
+// UPDATE de finished_at filtrado por execução aberta — Mílon #7).
 // UI consome via lib/milon/db/executions.
 import type { IDatabaseClient } from "@/lib/shared/database";
 import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
@@ -93,6 +93,26 @@ export async function startExecution(
   }
 }
 
+export async function finishExecution(
+  db: IDatabaseClient,
+  executionId: string,
+): Promise<WorkoutExecution> {
+  const { data, error } = await db
+    .from<WorkoutExecutionRow>("workout_executions")
+    .update({ finished_at: new Date().toISOString() })
+    .eq("id", executionId)
+    .is("finished_at", null)
+    .select()
+    .single();
+
+  if (error) throw error;
+  if (!data)
+    throw new Error(
+      "Falha ao finalizar execução: execução não encontrada ou já finalizada.",
+    );
+  return toExecutionDomain(data);
+}
+
 export async function clearExecution(
   db: IDatabaseClient,
   executionId: string,
@@ -181,6 +201,12 @@ export async function startExecutionStandalone(
   email: string,
 ): Promise<WorkoutExecution> {
   return startExecution(createBrowserDatabaseClient(), workoutId, programId, email);
+}
+
+export async function finishExecutionStandalone(
+  executionId: string,
+): Promise<WorkoutExecution> {
+  return finishExecution(createBrowserDatabaseClient(), executionId);
 }
 
 export async function clearExecutionStandalone(

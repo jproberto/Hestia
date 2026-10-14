@@ -442,3 +442,98 @@ describe("lib/milon/db/executions valor único (TASK-013 RED — D34)", () => {
     expect((done as unknown as Record<string, unknown>).value).toBe(10);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-001 (Mílon #07 Encerrar treino) — consumido pela TASK-002.
+// Fonte: spec §3 (efeito do selamento: UPDATE de finished_at) + plan §3
+// (finishExecution + finishExecutionStandalone; barrel reexporta).
+// Expected: FAIL — lib/milon/repositories/executions.ts ainda não expõe
+// finishExecution/finishExecutionStandalone. Acesso via cast para tsc passar.
+// Cadeia esperada: from("workout_executions").update({ finished_at }).
+// eq("id").is("finished_at", null).select().single() — selo só em aberta.
+// ---------------------------------------------------------------------------
+
+const SEALED_ROW: WorkoutExecutionRow = {
+  ...OPEN_ROW,
+  finished_at: "2026-10-12T12:00:00.000Z",
+};
+
+type FinishDbFn = (
+  db: IDatabaseClient,
+  executionId: string,
+) => Promise<{
+  id: string;
+  finishedAt: string | null;
+}>;
+
+function stubFinishDb(
+  sealed: WorkoutExecutionRow | null,
+  recorded: Recorded & { updatePayload?: Record<string, unknown> },
+): IDatabaseClient {
+  const afterUpdate: Record<string, unknown> = {};
+  const chain = {
+    eq: (col: string, val: unknown): unknown => {
+      (recorded.eqs ??= []).push([col, val]);
+      return chain;
+    },
+    is: (col: string, val: unknown): unknown => {
+      (recorded.iss ??= []).push([col, val]);
+      return chain;
+    },
+    select: () => ({
+      single: () => Promise.resolve({ data: sealed, error: null }),
+    }),
+  };
+  void afterUpdate;
+  return {
+    from: (table: string) => {
+      recorded.table = table;
+      return {
+        update: (payload: Record<string, unknown>) => {
+          recorded.updatePayload = payload;
+          return chain;
+        },
+      };
+    },
+  } as unknown as IDatabaseClient;
+}
+
+describe("lib/milon/db/executions finishExecution (Milon 07 TASK-001 RED)", () => {
+  it("re-exporta finishExecution + finishExecutionStandalone pelo barrel oficial", () => {
+    const dbMod = dbBarrel as unknown as Record<string, unknown>;
+    const repoMod = executionRepository as unknown as Record<string, unknown>;
+
+    expect(typeof dbMod.finishExecution).toBe("function");
+    expect(typeof dbMod.finishExecutionStandalone).toBe("function");
+    expect(dbMod.finishExecution).toBe(repoMod.finishExecution);
+    expect(dbMod.finishExecutionStandalone).toBe(repoMod.finishExecutionStandalone);
+  });
+
+  it("sela via UPDATE de finished_at filtrado por execução aberta", async () => {
+    const recorded: Recorded & { updatePayload?: Record<string, unknown> } = {};
+    const finishExecution = (
+      executionRepository as unknown as { finishExecution: FinishDbFn }
+    ).finishExecution;
+
+    const sealed = await finishExecution(stubFinishDb(SEALED_ROW, recorded), EXECUTION_ID);
+
+    expect(recorded.table).toBe("workout_executions");
+    expect(recorded.updatePayload).toBeDefined();
+    expect(recorded.updatePayload).toHaveProperty("finished_at");
+    expect(recorded.eqs).toContainEqual(["id", EXECUTION_ID]);
+    expect(recorded.iss).toContainEqual(["finished_at", null]);
+    expect(sealed.id).toBe(EXECUTION_ID);
+    expect(sealed.finishedAt).toBe("2026-10-12T12:00:00.000Z");
+  });
+
+  it("selar execução inexistente/sem aberta lança erro de operação", async () => {
+    const recorded: Recorded & { updatePayload?: Record<string, unknown> } = {};
+    const finishExecution = (
+      executionRepository as unknown as { finishExecution: FinishDbFn }
+    ).finishExecution;
+
+    await expect(
+      finishExecution(stubFinishDb(null, recorded), "exec-inexistente"),
+    ).rejects.toThrow();
+  });
+});

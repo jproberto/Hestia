@@ -173,8 +173,8 @@ export interface UpdateWorkoutInput {
 // ----------------------------------------------------------------------------
 // Execução série a série (Mílon #5, D1/D2/D3): instância do treino + séries
 // realizadas. finishedAt nulo = execução aberta. O Treino do Dia exibe o
-// template ao vivo com marcadores de feito por série (sem foto; valores reais
-// ficam para o encerrar #7).
+// template ao vivo com marcadores de feito por série (sem foto; o executado
+// alimenta o selamento do encerrar treino).
 // ----------------------------------------------------------------------------
 
 export interface WorkoutExecutionRow {

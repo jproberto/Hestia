@@ -625,15 +625,37 @@ describe("Treino do Dia — paridade por construção (TASK-003 — RED)", () =>
     ).not.toBeInTheDocument();
   });
 
-  it("slots de extensão nulos na v1 (headerActions/entryFooter/footer)", () => {
+  it("slots de extensão na v1+07 (headerActions=Cancelar top/ footer=Finalizar rodapé/ entryFooter nulo)", () => {
     conteudoComTreinos();
 
     render(<TodayPage />);
 
     const props = renderedSectionProps();
-    expect(props.headerActions ?? null).toBeNull();
+    function slotLabel(slot: unknown): string {
+      const el = slot as { props?: { children?: unknown } };
+      const children = el?.props?.children;
+      return String(
+        Array.isArray(children) ? children.join(" ") : (children ?? ""),
+      );
+    }
+    // Mílon #7 TASK-005: today preenche topo/rodapé com programa ativo
+    // (spec §2 posições + §5 critério 1; plan §3 slots).
+    expect(props.headerActions ?? null).not.toBeNull();
+    expect(slotLabel(props.headerActions)).toMatch(/cancelar/i);
+    expect(props.footer ?? null).not.toBeNull();
+    expect(slotLabel(props.footer)).toMatch(/finalizar/i);
     expect(props.entryFooter ?? null).toBeNull();
-    expect(props.footer ?? null).toBeNull();
+
+    // Somente-leitura (programa inativo) segue sem botões.
+    cleanup();
+    conteudoComTreinos({ program: makeProgram({ status: "inativo" }) });
+
+    render(<TodayPage />);
+
+    const somenteLeitura = renderedSectionProps();
+    expect(somenteLeitura.headerActions ?? null).toBeNull();
+    expect(somenteLeitura.footer ?? null).toBeNull();
+    expect(somenteLeitura.entryFooter ?? null).toBeNull();
   });
 
   it("carregando: indicador visível sem seção nem switcher", () => {
@@ -783,15 +805,90 @@ describe("Treino do Dia — flag de execução (Mílon #5 — RED)", () => {
     expect(renderedSectionProps().executionEnabled).toBe(true);
   });
 
-  it("wiring restante intacto (backTarget none + slots nulos da v1)", () => {
+  it("wiring restante intacto (backTarget none + slots 07 preenchidos)", () => {
     conteudoComTreinos();
 
     render(<TodayPage />);
 
     const props = renderedSectionProps();
+    function slotLabel(slot: unknown): string {
+      const el = slot as { props?: { children?: unknown } };
+      const children = el?.props?.children;
+      return String(
+        Array.isArray(children) ? children.join(" ") : (children ?? ""),
+      );
+    }
     expect(props.backTarget).toEqual({ kind: "none" });
-    expect(props.headerActions ?? null).toBeNull();
+    // Mílon #7 TASK-005: today preenche topo/rodapé com programa ativo
+    // (spec §2 posições + §5 critério 1; plan §3 slots).
+    expect(props.headerActions ?? null).not.toBeNull();
+    expect(slotLabel(props.headerActions)).toMatch(/cancelar/i);
     expect(props.entryFooter ?? null).toBeNull();
-    expect(props.footer ?? null).toBeNull();
+    expect(props.footer ?? null).not.toBeNull();
+    expect(slotLabel(props.footer)).toMatch(/finalizar/i);
+  });
+});
+
+/**
+ * Contrato RED — Mílon #7 Encerrar treino (TASK-003): botões Cancelar (topo)
+ * e Finalizar (rodapé) no Treino do Dia.
+ * Fonte: spec §2 (Cancelar no topo; Finalizar no final abaixo do último
+ * Adicionar; nenhum dos dois na manutenção nem sem execução aberta) + §3
+ * (posições fixas; efeitos) + §5 critérios 1/9 + plan §3 (página conecta
+ * headerActions = Cancelar e footer = Finalizar via slots existentes;
+ * visíveis somente com execução aberta e programa ativo).
+ * Expected: FAIL — a página ainda não conecta os slots (props nulas) nem
+ * declara os rótulos (fonte sem ocorrências). Hefesto fará GREEN na TASK-005.
+ * Nota de isolamento: a seção segue mockada (interior travado em
+ * WorkoutDetailSection.test.tsx); aqui trava-se a decisão da PÁGINA.
+ * Convenção tsc: slots são ReactNode opacos (unknown) — renderizados num
+ * div para asserção de texto.
+ */
+describe("Treino do Dia — encerrar treino: botões topo/rodapé (Milon 07 TASK-003 — RED)", () => {
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    mockUsePathname.mockReturnValue("/milon/today");
+  });
+
+  function textoDoSlot(slot: unknown): string {
+    cleanup();
+    const { unmount } = render(<div>{slot as import("react").ReactNode}</div>);
+    const texto =
+      (document.body.textContent ?? "").replace(/\s+/g, " ").trim();
+    unmount();
+    cleanup();
+    return texto;
+  }
+
+  it("com programa ativo: headerActions carrega o botão Cancelar no topo (critério 1)", () => {
+    conteudoComTreinos();
+
+    render(<TodayPage />);
+
+    const props = renderedSectionProps();
+    expect(props.headerActions ?? null).not.toBeNull();
+    expect(textoDoSlot(props.headerActions)).toMatch(/cancelar/i);
+  });
+
+  it("com programa ativo: footer carrega o botão Finalizar no rodapé, abaixo do último Adicionar (critério 1)", () => {
+    conteudoComTreinos();
+
+    render(<TodayPage />);
+
+    const props = renderedSectionProps();
+    expect(props.footer ?? null).not.toBeNull();
+    expect(textoDoSlot(props.footer)).toMatch(/finalizar/i);
+  });
+
+  it("fonte da página declara os rótulos Cancelar e Finalizar (posições fixas, critério 1)", () => {
+    expect(todayPageSource()).toMatch(/Cancelar/);
+    expect(todayPageSource()).toMatch(/Finalizar/);
+  });
+
+  it("fonte da página conecta os slots headerActions e footer (via seção existente)", () => {
+    const src = todayPageSource();
+    expect(src).toMatch(/headerActions/);
+    expect(src).toMatch(/footer/);
   });
 });

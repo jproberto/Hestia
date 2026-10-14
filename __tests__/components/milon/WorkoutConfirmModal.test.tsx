@@ -325,3 +325,133 @@ describe("WorkoutConfirmModal", () => {
     });
   });
 });
+
+/**
+ * Contrato RED — Mílon #7 Encerrar treino (TASK-003): quatro variantes novas.
+ * Fonte: spec §3 (quatro textos exatos) + plan §3 (variantes, títulos,
+ * rótulos, processing-desabilita, dismiss) + spec §5 critérios 2/4/7/8/11.
+ * Expected: FAIL — variantes ainda não existem (título/corpo/botões
+ * divergem para o ramo reduzir-series). Hefesto fará GREEN na TASK-005.
+ * Convenção tsc: variant via cast (o tipo ainda não declara os valores).
+ */
+describe("Milon 07 TASK-003 RED — variantes de encerrar/cancelar", () => {
+  type NovaVariant =
+    | "cancelar-execucao"
+    | "finalizar-parcial"
+    | "finalizar-completa"
+    | "finalizar-vazio";
+
+  function nova(
+    variant: NovaVariant,
+    overrides: Partial<WorkoutConfirmModalProps> = {},
+  ) {
+    return base({
+      variant: variant as unknown as Variant,
+      ...overrides,
+    }) as unknown as WorkoutConfirmModalProps;
+  }
+
+  it("cancelar-execucao: título 'Cancelar execução', corpo exato, botões 'Cancelar' + 'Excluir' (critérios 2–3)", () => {
+    render(
+      <WorkoutConfirmModal {...nova("cancelar-execucao")} />,
+    );
+
+    expect(screen.getByText("Cancelar execução")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Tem certeza que deseja cancelar essa execução? Todas as informações serão excluídas.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Cancelar" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Excluir" })).toBeInTheDocument();
+  });
+
+  it("finalizar-parcial: título 'Finalizar treino', corpo exato, botões 'Cancelar' + 'Finalizar' (critérios 4–5)", () => {
+    render(
+      <WorkoutConfirmModal {...nova("finalizar-parcial")} />,
+    );
+
+    expect(screen.getByText("Finalizar treino")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Ainda existem séries não executadas. Tem certeza que deseja finalizar o treino?",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Cancelar" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Finalizar" }),
+    ).toBeInTheDocument();
+  });
+
+  it("finalizar-completa (Caso 4): título 'Finalizar treino', corpo exato, botões 'Cancelar' + 'Finalizar' (critério 7)", () => {
+    render(
+      <WorkoutConfirmModal {...nova("finalizar-completa")} />,
+    );
+
+    expect(screen.getByText("Finalizar treino")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Você executou todas as séries, deseja finalizar o treino?",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Cancelar" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Finalizar" }),
+    ).toBeInTheDocument();
+  });
+
+  it("finalizar-vazio: título 'Treino sem séries feitas', corpo exato, confirma 'Cancelar execução' e desiste 'Voltar' (critério 8)", () => {
+    render(<WorkoutConfirmModal {...nova("finalizar-vazio")} />);
+
+    expect(screen.getByText("Treino sem séries feitas")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino?",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Cancelar execução" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Voltar" })).toBeInTheDocument();
+  });
+
+  it.each([
+    "cancelar-execucao",
+    "finalizar-parcial",
+    "finalizar-completa",
+    "finalizar-vazio",
+  ] as NovaVariant[])(
+    "variante '%s': processing desabilita os botões e bloqueia callbacks (critério 11)",
+    (variant) => {
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+      render(
+        <WorkoutConfirmModal
+          {...nova(variant, { processing: true, onConfirm, onCancel })}
+        />,
+      );
+
+      for (const b of screen.getAllByRole("button")) {
+        expect(b).toBeDisabled();
+      }
+      for (const b of screen.getAllByRole("button")) {
+        fireEvent.click(b);
+      }
+      expect(onConfirm).not.toHaveBeenCalled();
+      expect(onCancel).not.toHaveBeenCalled();
+    },
+  );
+
+  it("variante nova: open=false não renderiza nada (invariante herdada)", () => {
+    const { container } = render(
+      <WorkoutConfirmModal {...nova("finalizar-parcial", { open: false })} />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+});

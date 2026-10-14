@@ -1,7 +1,8 @@
 // Fake em memória de IWorkoutExecutionRepository p/ contracts (fakes-only, decisão 57).
 // Espelha as regras do repository real: abertura idempotente reusando a
-// existente sem trocar o início, cascata da exclusão sobre as realizadas e
-// marcação idempotente por execução + série.
+// existente sem trocar o início, selamento só de execução aberta (duplo selo
+// ou id inexistente vira erro de operação), cascata da exclusão sobre as
+// realizadas e marcação idempotente por execução + série.
 import type {
   IWorkoutExecutionRepository,
   MarkExecutionSeriesInput,
@@ -72,6 +73,21 @@ export class FakeWorkoutExecutionRepository
     };
     this.executions.set(execution.id, execution);
     return { ...execution };
+  }
+
+  async finishExecution(executionId: string): Promise<WorkoutExecution> {
+    const execution = this.executions.get(executionId);
+    if (!execution || execution.finishedAt !== null) {
+      throw new Error(
+        "Falha ao finalizar execução: execução não encontrada ou já finalizada.",
+      );
+    }
+    const sealed: WorkoutExecution = {
+      ...execution,
+      finishedAt: new Date().toISOString(),
+    };
+    this.executions.set(executionId, sealed);
+    return { ...sealed };
   }
 
   async clearExecution(executionId: string): Promise<void> {

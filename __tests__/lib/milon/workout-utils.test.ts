@@ -863,3 +863,79 @@ describe("Milon 05 TASK-013 RED — lb no banco com exibição direta (D38)", ()
     expect(fonte).not.toMatch(/abreviarUnidadeCarga/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Contrato RED — Mílon #7 Encerrar treino (TASK-003): decisor puro +
+// quatro mensagens exatas.
+// Fonte: `.agents/modules/milon/07-encerrar-treino/spec.md` §3 (os quatro
+// casos, vazio com zero feitas, semântica de vazio contra zero) + `plan.md`
+// §3 (decisor decidirCasoFinalizacao + quatro constantes) + `tasks.json`
+// TASK-003 + spec §5 critérios 4/6/7/8.
+// Escrito ANTES da implementação (outside-in). Expected: FAIL — decisor e
+// constantes ainda não existem em `@/lib/milon/workout-utils` (motivo certo:
+// TypeError/undefined, nunca sintaxe). Hefesto fará GREEN na TASK-004.
+// Convenção tsc: acesso via namespace + cast (import estático nominal
+// falharia o tsc); `expect(typeof fn).toBe("function")` trava o motivo.
+// ---------------------------------------------------------------------------
+
+import * as WorkoutUtils07 from "@/lib/milon/workout-utils";
+
+type CasoFinalizacao07 = "vazio" | "parcial" | "completo";
+
+function decidirCaso07(marcadas: number, total: number): CasoFinalizacao07 {
+  const fn = (WorkoutUtils07 as unknown as Record<string, unknown>)[
+    "decidirCasoFinalizacao"
+  ];
+  expect(typeof fn).toBe("function");
+  return (fn as (m: number, t: number) => CasoFinalizacao07)(marcadas, total);
+}
+
+function constante07(nome: string): unknown {
+  return (WorkoutUtils07 as unknown as Record<string, unknown>)[nome];
+}
+
+describe("Milon 07 TASK-003 RED — decisor decidirCasoFinalizacao", () => {
+  it("zero marcadas com total > 0 → vazio (bloqueia Finalizar, critério 8)", () => {
+    expect(decidirCaso07(0, 3)).toBe("vazio");
+  });
+
+  it("total zero (sem séries) cai em vazio (caso degenerado sem-series)", () => {
+    expect(decidirCaso07(0, 0)).toBe("vazio");
+  });
+
+  it("pelo menos uma feita e pelo menos uma pendente → parcial (critério 4)", () => {
+    expect(decidirCaso07(1, 3)).toBe("parcial");
+    expect(decidirCaso07(2, 3)).toBe("parcial");
+  });
+
+  it("todas marcadas com total > 0 → completo (sela direto, critério 6)", () => {
+    expect(decidirCaso07(3, 3)).toBe("completo");
+    expect(decidirCaso07(1, 1)).toBe("completo");
+  });
+});
+
+describe("Milon 07 TASK-003 RED — quatro mensagens exatas (spec §3)", () => {
+  it("mensagem de Cancelar tem o texto exato (critério 2)", () => {
+    expect(constante07("MSG_CANCELAR_EXECUCAO")).toBe(
+      "Tem certeza que deseja cancelar essa execução? Todas as informações serão excluídas.",
+    );
+  });
+
+  it("mensagem de parcial tem o texto exato (critério 4)", () => {
+    expect(constante07("MSG_FINALIZAR_PARCIAL")).toBe(
+      "Ainda existem séries não executadas. Tem certeza que deseja finalizar o treino?",
+    );
+  });
+
+  it("mensagem de todas-executadas tem o texto exato (critério 7 / Caso 4)", () => {
+    expect(constante07("MSG_FINALIZAR_COMPLETA")).toBe(
+      "Você executou todas as séries, deseja finalizar o treino?",
+    );
+  });
+
+  it("mensagem de vazio tem o texto exato e conduz ao cancelamento (critério 8)", () => {
+    expect(constante07("MSG_FINALIZAR_VAZIO")).toBe(
+      "O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino?",
+    );
+  });
+});

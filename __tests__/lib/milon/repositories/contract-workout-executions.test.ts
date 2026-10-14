@@ -320,3 +320,61 @@ describe("Milon 05 TASK-013 RED — contrato de execuções com valor único (D3
     expect(feita.load).toBe(50);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-001 (Mílon #07 Encerrar treino) — consumido pela TASK-002.
+// Fonte: spec §3 (efeito do selamento, imutabilidade, critério 10) + plan §3
+// (contrato finishExecution: sela somente se aberta, já selada/inexistente
+// lança erro de operação).
+// Expected: FAIL — IWorkoutExecutionRepository e o fake ainda não expõem
+// finishExecution. Acesso via cast para tsc --noEmit passar (só falha runtime).
+// ---------------------------------------------------------------------------
+
+type FinishCapableRepository = {
+  finishExecution: (executionId: string) => Promise<WorkoutExecution>;
+};
+
+describe("Milon 07 TASK-001 RED — finishExecution (selamento)", () => {
+  it("sela a execução aberta preenchendo o momento de término", async () => {
+    const repo = createFakeWorkoutExecutionRepository();
+    const execution = await repo.startExecution(WORKOUT_ID, PROGRAM_ID, EMAIL);
+    expect(execution.finishedAt).toBeNull();
+
+    const finish = (repo as unknown as FinishCapableRepository).finishExecution;
+    const sealed = await finish.call(repo, execution.id);
+
+    expect(sealed.id).toBe(execution.id);
+    expect(sealed.finishedAt).not.toBeNull();
+    expect(typeof sealed.finishedAt).toBe("string");
+  });
+
+  it("busca de aberta volta vazia após selar (critério 10: selada não conta como aberta)", async () => {
+    const repo = createFakeWorkoutExecutionRepository();
+    const execution = await repo.startExecution(WORKOUT_ID, PROGRAM_ID, EMAIL);
+
+    const finish = (repo as unknown as FinishCapableRepository).finishExecution;
+    await finish.call(repo, execution.id);
+
+    await expect(repo.findOpenExecutionByWorkout(WORKOUT_ID)).resolves.toBeNull();
+  });
+
+  it("duplo selamento não cria selo duplicado e vira erro de operação", async () => {
+    const repo = createFakeWorkoutExecutionRepository();
+    const execution = await repo.startExecution(WORKOUT_ID, PROGRAM_ID, EMAIL);
+
+    const finish = (repo as unknown as FinishCapableRepository).finishExecution;
+    const primeira = await finish.call(repo, execution.id);
+    expect(primeira.finishedAt).not.toBeNull();
+
+    await expect(finish.call(repo, execution.id)).rejects.toThrow();
+  });
+
+  it("selar execução inexistente lança erro sem criar linha", async () => {
+    const repo = createFakeWorkoutExecutionRepository();
+
+    const finish = (repo as unknown as FinishCapableRepository).finishExecution;
+    await expect(finish.call(repo, "exec-inexistente")).rejects.toThrow();
+
+    await expect(repo.findOpenExecutionByWorkout(WORKOUT_ID)).resolves.toBeNull();
+  });
+});

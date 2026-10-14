@@ -91,6 +91,10 @@ export interface WorkoutRow {
   id: string;
   program_id: string;
   name: string;
+  // Ordem própria no programa (Mílon 07b, migração 0015): ausente/nulo em
+  // linha gravada antes da migração; ordena por último com desempate por
+  // criação. Opcional para não quebrar leitura legada.
+  position?: number | null;
   created_at: string;
   created_by: string;
 }
@@ -99,6 +103,8 @@ export interface Workout {
   id: string;
   programId: string;
   name: string;
+  // Espelha a coluna sem reinterpretar: ausente/nulo = pré-0015 (por último).
+  position?: number | null;
   createdAt: string;
   created_by: string;
 }

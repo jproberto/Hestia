@@ -52,6 +52,10 @@ import { useTodayWorkout } from "@/lib/milon/hooks/useTodayWorkout";
 import * as hooksIndex from "@/lib/milon/hooks";
 import { findActiveProgramByOwnerStandalone } from "@/lib/milon/db/programs";
 import { listWorkoutsByProgramStandalone } from "@/lib/milon/db/workouts";
+import {
+  findLastSealedExecutionByProgramStandalone,
+  findOpenExecutionByProgramStandalone,
+} from "@/lib/milon/db/executions";
 import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
 import type { IDatabaseClient } from "@/lib/shared/database";
 import type { Program, Workout } from "@/lib/milon/types";
@@ -114,6 +118,32 @@ vi.mock("@/lib/milon/db/workouts", () => ({
   applySeriesToAllStandalone: vi.fn(),
 }));
 
+// Barrel `db/executions` mockado para a nova resolução do hook (Mílon 07b,
+// TASK-004): o hook consulta a aberta + a última selada do programa após
+// listar os treinos. O legado cobre o cenário sem histórico — ambos os
+// standalones resolvem nulo (primeiro da ordem), preservando as asserções
+// vigentes. Factory cobre TODOS os exports do barrel real.
+vi.mock("@/lib/milon/db/executions", () => ({
+  findOpenExecutionByWorkout: vi.fn(),
+  startExecution: vi.fn(),
+  finishExecution: vi.fn(),
+  clearExecution: vi.fn(),
+  findLastSealedExecutionByProgram: vi.fn(),
+  findOpenExecutionByProgram: vi.fn(),
+  listDoneByExecution: vi.fn(),
+  markSeriesDone: vi.fn(),
+  unmarkSeries: vi.fn(),
+  findOpenExecutionByWorkoutStandalone: vi.fn(),
+  startExecutionStandalone: vi.fn(),
+  finishExecutionStandalone: vi.fn(),
+  clearExecutionStandalone: vi.fn(),
+  findLastSealedExecutionByProgramStandalone: vi.fn(),
+  findOpenExecutionByProgramStandalone: vi.fn(),
+  listDoneByExecutionStandalone: vi.fn(),
+  markSeriesDoneStandalone: vi.fn(),
+  unmarkSeriesStandalone: vi.fn(),
+}));
+
 // E-mail da sessão = mock global de `__tests__/setup.ts`.
 const EMAIL = "teste@hestia.com";
 
@@ -161,6 +191,11 @@ describe("Mílon #4 — useTodayWorkout (contrato RED, TASK-001)", () => {
     // setup.ts é preservado — getUserEmail continua respondendo "teste@hestia.com").
     vi.mocked(findActiveProgramByOwnerStandalone).mockReset();
     vi.mocked(listWorkoutsByProgramStandalone).mockReset();
+    vi.mocked(findOpenExecutionByProgramStandalone).mockReset();
+    vi.mocked(findLastSealedExecutionByProgramStandalone).mockReset();
+    // Cenário sem histórico (legado #4): aberta + selada nulas → primeiro.
+    vi.mocked(findOpenExecutionByProgramStandalone).mockResolvedValue(null);
+    vi.mocked(findLastSealedExecutionByProgramStandalone).mockResolvedValue(null);
     vi.useRealTimers();
   });
 

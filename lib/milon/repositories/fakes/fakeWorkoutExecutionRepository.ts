@@ -97,6 +97,43 @@ export class FakeWorkoutExecutionRepository
     }
   }
 
+  // Última selada do programa como o real (Mílon 07b, D1/DSELT1): finished_at
+  // não-nulo por finished_at desc, desempate por created_at desc e id desc.
+  async findLastSealedExecutionByProgram(
+    programId: string,
+  ): Promise<WorkoutExecution | null> {
+    const seladas = [...this.executions.values()]
+      .filter((e) => e.programId === programId && e.finishedAt !== null)
+      .sort((a, b) => {
+        const fimA = a.finishedAt as string;
+        const fimB = b.finishedAt as string;
+        if (fimA !== fimB) return fimA < fimB ? 1 : -1;
+        if (a.createdAt !== b.createdAt)
+          return a.createdAt < b.createdAt ? 1 : -1;
+        if (a.id !== b.id) return a.id < b.id ? 1 : -1;
+        return 0;
+      });
+    const ultima = seladas[0];
+    return ultima ? { ...ultima } : null;
+  }
+
+  // Aberta do programa como o real (Mílon 07b, D10/DABT1): finished_at nulo,
+  // mais recente por started_at desc com desempate por id desc.
+  async findOpenExecutionByProgram(
+    programId: string,
+  ): Promise<WorkoutExecution | null> {
+    const abertas = [...this.executions.values()]
+      .filter((e) => e.programId === programId && e.finishedAt === null)
+      .sort((a, b) => {
+        if (a.startedAt !== b.startedAt)
+          return a.startedAt < b.startedAt ? 1 : -1;
+        if (a.id !== b.id) return a.id < b.id ? 1 : -1;
+        return 0;
+      });
+    const aberta = abertas[0];
+    return aberta ? { ...aberta } : null;
+  }
+
   async listDoneByExecution(
     executionId: string,
   ): Promise<WorkoutExecutionSeries[]> {

@@ -115,9 +115,10 @@
 **Dado** Programa inativo  
 **Então** sem adicionar/renomear/excluir treinos
 
-### REG-21: Ordem de treinos = ordem de criação (sem reordenação)
-**Dado** vários treinos  
-**Então** listados na ordem de criação, sem ação de reordenar
+### REG-21: Ordem de treinos = ordem própria com reordenação (atualizado Mílon #7b)
+**Dado** vários treinos
+**Então** listados na ordem própria do programa (posição; criação define a inicial)
+**E** arrastar pelo handle no detalhe do programa reordena e persiste
 
 ### REG-22: Excluir treino com exercícios — bloqueado
 **Dado** treino com exercícios  
@@ -213,10 +214,10 @@
 
 ## Feature #4 — Treino do Dia v1 (paridade com manutenção)
 
-### REG-47: Abrir o Mílon cai direto no treino do dia
-**Dado** o dono logado com programa ativo contendo treinos  
-**Quando** a pessoa abre o Mílon (raiz, refresh ou cartão do dashboard)  
-**Então** termina no Treino do Dia vendo o primeiro treino do programa ativo por ordem de criação, com exercícios e séries
+### REG-47: Abrir o Mílon cai no treino da rotação (atualizado Mílon #7b)
+**Dado** o dono logado com programa ativo contendo treinos
+**Quando** a pessoa abre o Mílon (raiz, refresh ou cartão do dashboard)
+**Então** termina no Treino do Dia vendo o treino seguinte ao último selado na ordem atual (volta ao primeiro após o último); sem histórico, o primeiro; com execução aberta, o treino da aberta
 
 ### REG-48: Manutenção via Treino do Dia reflete na ficha
 **Dado** o Treino do Dia com o treino selecionado  
@@ -281,6 +282,15 @@
 
 ---
 
+## Feature #7b — Rotação do Treino do Dia por histórico
+
+### REG-58: Rotação avança após selar
+**Dado** o Treino do Dia exibindo o próximo da rotação
+**Quando** a pessoa sela o treino e volta à aba
+**Então** o treino seguinte da ordem aparece (com volta ao primeiro)
+
+---
+
 ## Execução de regressão
 
 ```bash
@@ -318,4 +328,4 @@ npm run build-storybook
 **Dado** exercício com séries
 **Então** grid responsivo (1/2/4 col), campo único com rótulo pelo modo da entry, toggle kg/lb abaixo da carga persistindo na entry
 
-**Critério de passagem:** 1519 testes passados, 0 falhas, coverage ≥ 80% (atual: 85.12% lines, 84.09% branch).
+**Critério de passagem:** 1573 testes passados, 0 falhas, coverage ≥ 80% (atual: 84.5% lines, 83.72% branch).

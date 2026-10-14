@@ -7,10 +7,12 @@ import {
   deleteWorkoutStandalone,
   listEntriesByProgramStandalone,
   listWorkoutsByProgramStandalone,
+  reorderWorkoutsStandalone,
   updateWorkoutNameStandalone,
 } from "@/lib/milon/db/workouts";
 import { listExercisesAllStandalone } from "@/lib/milon/db/exercises";
 import {
+  MSG_TREINO_COM_EXECUCOES,
   MSG_TREINO_COM_EXERCICIOS,
   gerarSubtituloMusculares,
   normalizarNomeTreino,
@@ -37,6 +39,7 @@ export interface UseProgramWorkoutsReturn {
   create: (input: CreateWorkoutInput) => Promise<Workout>;
   rename: (id: string, input: UpdateWorkoutInput) => Promise<void>;
   remove: (workout: Workout) => Promise<void>;
+  reorder: (orderedWorkoutIds: string[]) => Promise<void>;
 }
 
 const SUCCESS_SAVE_MESSAGE = "Treino salvo com sucesso.";
@@ -235,7 +238,10 @@ export function useProgramWorkouts(programId: string): UseProgramWorkoutsReturn 
         const message = toErrorMessage(err, "Erro ao excluir treino");
         setErrorMsg(message);
         setErrorOrigin(
-          message === MSG_TREINO_COM_EXERCICIOS ? "bloqueio" : "operacao",
+          message === MSG_TREINO_COM_EXERCICIOS ||
+            message === MSG_TREINO_COM_EXECUCOES
+            ? "bloqueio"
+            : "operacao",
         );
         throw err instanceof Error ? err : new Error(message);
       }
@@ -243,6 +249,24 @@ export function useProgramWorkouts(programId: string): UseProgramWorkoutsReturn 
       flashSuccess(SUCCESS_REMOVE_MESSAGE);
     },
     [refreshList, flashSuccess],
+  );
+
+  const reorder = useCallback(
+    async (orderedWorkoutIds: string[]): Promise<void> => {
+      setErrorMsg(null);
+      setErrorOrigin(null);
+      try {
+        await reorderWorkoutsStandalone(programId, orderedWorkoutIds);
+      } catch (err: unknown) {
+        const message = toErrorMessage(err, "Erro ao reordenar treinos");
+        setErrorMsg(message);
+        setErrorOrigin("operacao");
+        throw err instanceof Error ? err : new Error(message);
+      }
+      await refreshList();
+      flashSuccess(SUCCESS_SAVE_MESSAGE);
+    },
+    [programId, refreshList, flashSuccess],
   );
 
   return {
@@ -256,5 +280,6 @@ export function useProgramWorkouts(programId: string): UseProgramWorkoutsReturn 
     create,
     rename,
     remove,
+    reorder,
   };
 }

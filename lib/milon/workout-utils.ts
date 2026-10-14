@@ -9,6 +9,32 @@ import type {
 export const MSG_TREINO_COM_EXERCICIOS =
   "Este treino possui exercícios. Remova-os antes de excluir o treino.";
 
+// Guarda de exclusão com histórico (Mílon 07b, D6, plan §3): treino com
+// execução associada (aberta ou selada) não pode ser excluído; o histórico é
+// preservado e a trava RESTRICT do banco permanece como backstop.
+export const MSG_TREINO_COM_EXECUCOES =
+  "Este treino possui execuções registradas. O histórico é preservado e o treino não pode ser excluído.";
+
+// Rotação do Treino do Dia (Mílon 07b, D1, plan §3): vizinho seguinte ao
+// último selado na ordem vigente, com volta ao primeiro. Regra pura (sem I/O)
+// para teste direto; a parcial selada conta igual porque só o id chega aqui.
+export function pickNextWorkoutAfterLastSealed(
+  orderedWorkoutIds: string[],
+  lastSealedWorkoutId: string | null,
+): string | null {
+  if (orderedWorkoutIds.length === 0) {
+    return null;
+  }
+  if (lastSealedWorkoutId === null) {
+    return orderedWorkoutIds[0];
+  }
+  const indice = orderedWorkoutIds.indexOf(lastSealedWorkoutId);
+  if (indice === -1) {
+    return orderedWorkoutIds[0];
+  }
+  return orderedWorkoutIds[(indice + 1) % orderedWorkoutIds.length];
+}
+
 export const MSG_PROGRAMA_COM_TREINOS =
   "Este programa possui treinos. Esvazie-o antes de excluir.";
 

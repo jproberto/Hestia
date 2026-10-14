@@ -7,6 +7,7 @@ import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
 import type { UpdateSeriesFieldsInput } from "./interfaces";
 import {
   MSG_EXERCICIO_JA_NO_TREINO,
+  MSG_TREINO_COM_EXECUCOES,
   MSG_TREINO_COM_EXERCICIOS,
   normalizarNomeTreino,
   validarNomeTreino,
@@ -20,19 +21,28 @@ import type {
   Workout,
   WorkoutEntry,
   WorkoutEntryRow,
+  WorkoutExecutionRow,
   WorkoutRow,
   WorkoutSeries,
   WorkoutSeriesRow,
 } from "../types";
 
 function toWorkoutDomain(row: WorkoutRow): Workout {
-  return {
+  const workout: Workout = {
     id: row.id,
     programId: row.program_id,
     name: row.name,
     createdAt: row.created_at,
     created_by: row.created_by,
   };
+  // Transporta sem inventar número (Mílon 07b, plan §3): chave presente só
+  // quando o banco a devolve; ausente equivale a nulo (pré-0015, por último).
+  // Condicional também preserva o contrato de cadeia congelado em
+  // __tests__/lib/milon/db/workouts.test.ts (toEqual sem position).
+  if (row.position != null) {
+    workout.position = row.position;
+  }
+  return workout;
 }
 
 function toEntryDomain(row: WorkoutEntryRow): WorkoutEntry {
@@ -83,7 +93,22 @@ export async function listWorkoutsByProgram(
     .order("id", { ascending: true });
 
   if (error) throw error;
-  return (data || []).map(toWorkoutDomain);
+  // Ordem própria (Mílon 07b, D2, plan §3): position asc com nulos por último,
+  // depois created_at asc, depois id asc. Ordenação em memória sobre a cadeia
+  // congelada (eq + created_at + id) para não quebrar
+  // __tests__/lib/milon/db/workouts.test.ts; o Postgres já devolveria nulos
+  // por último em ASC, o sort só garante o contrato em qualquer retorno.
+  return (data || []).map(toWorkoutDomain).sort(compararTreinosPorPosicao);
+}
+
+// Comparador da ordem vigente (Mílon 07b, D2/DORD1): ausente/nulo por último.
+function compararTreinosPorPosicao(a: Workout, b: Workout): number {
+  const posA = a.position ?? Number.POSITIVE_INFINITY;
+  const posB = b.position ?? Number.POSITIVE_INFINITY;
+  if (posA !== posB) return posA - posB;
+  if (a.createdAt !== b.createdAt)
+    return a.createdAt < b.createdAt ? -1 : 1;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 
 export async function findWorkoutById(
@@ -117,9 +142,19 @@ export async function createWorkout(
   );
   if (colisao) throw new Error(colisao);
 
+  // Criação numerada (Mílon 07b, D2, plan §3): próxima posição ao fim da ordem
+  // vigente (maior vigente + 1; 1 quando não há treinos; nulos contam como 0).
+  const proximaPosition =
+    existentes.reduce((max, w) => Math.max(max, w.position ?? 0), 0) + 1;
+
   const { data, error } = await db
     .from<WorkoutRow>("workouts")
-    .insert({ program_id: programId, name: nome, created_by: email })
+    .insert({
+      program_id: programId,
+      name: nome,
+      position: proximaPosition,
+      created_by: email,
+    })
     .select()
     .single();
 
@@ -166,11 +201,51 @@ export async function deleteWorkout(
   const entradas = await listEntriesByWorkout(db, workoutId);
   if (entradas.length > 0) throw new Error(MSG_TREINO_COM_EXERCICIOS);
 
+  // Guarda amigável com histórico (Mílon 07b, D6/DDEL1, plan §3): antes da
+  // remoção, verifica execuções associadas (abertas ou seladas); o RESTRICT do
+  // banco permanece como backstop para corridas.
+  const { data: execucoes, error: execucoesError } = await db
+    .from<WorkoutExecutionRow>("workout_executions")
+    .select("*")
+    .eq("workout_id", workoutId);
+  if (execucoesError) throw execucoesError;
+  if ((execucoes || []).length > 0) throw new Error(MSG_TREINO_COM_EXECUCOES);
+
   const { error } = await db
     .from<WorkoutRow>("workouts")
     .delete()
     .eq("id", workoutId);
   if (error) throw error;
+}
+
+// Reordenação manual (Mílon 07b, D2, plan §3): mesmo protocolo de
+// reorderEntries — valida conjunto idêntico e regrava positions 1..n na ordem
+// recebida. Mensagem inline como em reorderEntries.
+export async function reorderWorkouts(
+  db: IDatabaseClient,
+  programId: string,
+  orderedWorkoutIds: string[],
+): Promise<void> {
+  const atuais = await listWorkoutsByProgram(db, programId);
+  const atuaisIds = new Set(atuais.map((w) => w.id));
+  const recebidosIds = new Set(orderedWorkoutIds);
+  const conjuntoIgual =
+    atuais.length === orderedWorkoutIds.length &&
+    orderedWorkoutIds.every((id) => atuaisIds.has(id)) &&
+    atuais.every((w) => recebidosIds.has(w.id));
+  if (!conjuntoIgual) {
+    throw new Error(
+      "A ordem informada não corresponde aos treinos do programa.",
+    );
+  }
+
+  for (let i = 0; i < orderedWorkoutIds.length; i += 1) {
+    const { error } = await db
+      .from<WorkoutRow>("workouts")
+      .update({ position: i + 1 })
+      .eq("id", orderedWorkoutIds[i]);
+    if (error) throw error;
+  }
 }
 
 export async function hasWorkouts(
@@ -522,6 +597,17 @@ export async function deleteWorkoutStandalone(
   workoutId: string,
 ): Promise<void> {
   return deleteWorkout(createBrowserDatabaseClient(), workoutId);
+}
+
+export async function reorderWorkoutsStandalone(
+  programId: string,
+  orderedWorkoutIds: string[],
+): Promise<void> {
+  return reorderWorkouts(
+    createBrowserDatabaseClient(),
+    programId,
+    orderedWorkoutIds,
+  );
 }
 
 export async function hasWorkoutsStandalone(

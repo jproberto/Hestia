@@ -7,6 +7,7 @@ import type {
 } from "../interfaces";
 import {
   MSG_EXERCICIO_JA_NO_TREINO,
+  MSG_TREINO_COM_EXECUCOES,
   MSG_TREINO_COM_EXERCICIOS,
   normalizarNomeTreino,
   validarNomeTreino,
@@ -19,6 +20,7 @@ import type {
   UpdateWorkoutInput,
   Workout,
   WorkoutEntry,
+  WorkoutExecution,
   WorkoutSeries,
 } from "../../types";
 
@@ -26,6 +28,9 @@ export interface WorkoutSeed {
   workouts?: Workout[];
   entries?: WorkoutEntry[];
   series?: WorkoutSeries[];
+  // Execuções por treino (Mílon 07b, D6): só para a guarda de exclusão com
+  // histórico; nunca listadas nem alteradas por este fake.
+  executions?: WorkoutExecution[];
 }
 
 function withEntryDefaults(entry: WorkoutEntry): WorkoutEntry {
@@ -39,7 +44,12 @@ function withEntryDefaults(entry: WorkoutEntry): WorkoutEntry {
 }
 
 function sortWorkouts(workouts: Workout[]): Workout[] {
+  // Mesma ordem do real (Mílon 07b, D2/DORD1): position asc com nulos por
+  // último, depois created_at asc, depois id asc.
   return [...workouts].sort((a, b) => {
+    const posA = a.position ?? Number.POSITIVE_INFINITY;
+    const posB = b.position ?? Number.POSITIVE_INFINITY;
+    if (posA !== posB) return posA - posB;
     if (a.createdAt !== b.createdAt)
       return a.createdAt < b.createdAt ? -1 : 1;
     return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
@@ -50,6 +60,7 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
   private workouts = new Map<string, Workout>();
   private entries = new Map<string, WorkoutEntry>();
   private series = new Map<string, WorkoutSeries>();
+  private executions = new Map<string, WorkoutExecution>();
   private seq = 0;
 
   constructor(seed: WorkoutSeed = {}) {
@@ -60,9 +71,11 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
     this.workouts.clear();
     this.entries.clear();
     this.series.clear();
+    this.executions.clear();
     for (const w of seed.workouts ?? []) this.workouts.set(w.id, { ...w });
     for (const e of seed.entries ?? []) this.entries.set(e.id, { ...e });
     for (const s of seed.series ?? []) this.series.set(s.id, { ...s });
+    for (const e of seed.executions ?? []) this.executions.set(e.id, { ...e });
   }
 
   private nextId(prefix: string): string {
@@ -100,6 +113,11 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
       id: this.nextId("w"),
       programId,
       name: nome,
+      // Criação numerada como o real (Mílon 07b, D2): max vigente + 1, ou 1.
+      position:
+        [...this.workouts.values()]
+          .filter((w) => w.programId === programId)
+          .reduce((max, w) => Math.max(max, w.position ?? 0), 0) + 1,
       createdAt: new Date().toISOString(),
       created_by: email,
     };
@@ -135,7 +153,39 @@ export class FakeWorkoutRepository implements IWorkoutRepository {
       (e) => e.workoutId === workoutId,
     );
     if (temEntradas) throw new Error(MSG_TREINO_COM_EXERCICIOS);
+    // Guarda com histórico como o real (Mílon 07b, D6): qualquer execução
+    // associada (aberta ou selada) bloqueia com a mensagem própria.
+    const temExecucoes = [...this.executions.values()].some(
+      (e) => e.workoutId === workoutId,
+    );
+    if (temExecucoes) throw new Error(MSG_TREINO_COM_EXECUCOES);
     this.workouts.delete(workoutId);
+  }
+
+  // Reordenação como o real (Mílon 07b, D2): conjunto idêntico com a mesma
+  // mensagem, regravando positions 1..n na ordem recebida.
+  async reorderWorkouts(
+    programId: string,
+    orderedWorkoutIds: string[],
+  ): Promise<void> {
+    const atuais = [...this.workouts.values()].filter(
+      (w) => w.programId === programId,
+    );
+    const atuaisIds = new Set(atuais.map((w) => w.id));
+    const recebidosIds = new Set(orderedWorkoutIds);
+    const conjuntoIgual =
+      atuais.length === orderedWorkoutIds.length &&
+      orderedWorkoutIds.every((id) => atuaisIds.has(id)) &&
+      atuais.every((w) => recebidosIds.has(w.id));
+    if (!conjuntoIgual) {
+      throw new Error(
+        "A ordem informada não corresponde aos treinos do programa.",
+      );
+    }
+    orderedWorkoutIds.forEach((id, index) => {
+      const treino = this.workouts.get(id);
+      if (treino) this.workouts.set(id, { ...treino, position: index + 1 });
+    });
   }
 
   async hasWorkouts(programId: string): Promise<boolean> {

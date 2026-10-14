@@ -4,6 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
 import { findActiveProgramByOwnerStandalone } from "@/lib/milon/db/programs";
 import { listWorkoutsByProgramStandalone } from "@/lib/milon/db/workouts";
+import {
+  findLastSealedExecutionByProgramStandalone,
+  findOpenExecutionByProgramStandalone,
+} from "@/lib/milon/db/executions";
+import { pickNextWorkoutAfterLastSealed } from "@/lib/milon/workout-utils";
 import type {
   Program,
   ProgramErrorOrigin,
@@ -72,12 +77,60 @@ export function useTodayWorkout(): UseTodayWorkoutReturn {
                 if (cancelled) return;
                 const list = items ?? [];
                 setWorkouts(list);
-                setSelectedWorkoutId(
-                  list.length > 0 ? list[0].id : null,
+                if (list.length === 0) {
+                  setSelectedWorkoutId(null);
+                  setErrorMsg(null);
+                  setErrorOrigin(null);
+                  setLoading(false);
+                  return;
+                }
+                findOpenExecutionByProgramStandalone(active.id).then(
+                  (aberta) => {
+                    if (cancelled) return;
+                    if (
+                      aberta != null &&
+                      list.some((w) => w.id === aberta.workoutId)
+                    ) {
+                      setSelectedWorkoutId(aberta.workoutId);
+                      setErrorMsg(null);
+                      setErrorOrigin(null);
+                      setLoading(false);
+                      return;
+                    }
+                    findLastSealedExecutionByProgramStandalone(active.id).then(
+                      (selada) => {
+                        if (cancelled) return;
+                        setSelectedWorkoutId(
+                          pickNextWorkoutAfterLastSealed(
+                            list.map((w) => w.id),
+                            selada != null ? selada.workoutId : null,
+                          ),
+                        );
+                        setErrorMsg(null);
+                        setErrorOrigin(null);
+                        setLoading(false);
+                      },
+                      (err: unknown) => {
+                        if (cancelled) return;
+                        setSelectedWorkoutId(null);
+                        setErrorMsg(
+                          toErrorMessage(err, "Erro ao carregar treino do dia"),
+                        );
+                        setErrorOrigin("carga");
+                        setLoading(false);
+                      },
+                    );
+                  },
+                  (err: unknown) => {
+                    if (cancelled) return;
+                    setSelectedWorkoutId(null);
+                    setErrorMsg(
+                      toErrorMessage(err, "Erro ao carregar treino do dia"),
+                    );
+                    setErrorOrigin("carga");
+                    setLoading(false);
+                  },
                 );
-                setErrorMsg(null);
-                setErrorOrigin(null);
-                setLoading(false);
               },
               (err: unknown) => {
                 if (cancelled) return;
@@ -153,13 +206,36 @@ export function useTodayWorkout(): UseTodayWorkoutReturn {
       }
       const list = items ?? [];
       setWorkouts(list);
-      setSelectedWorkoutId(list.length > 0 ? list[0].id : null);
+      if (list.length === 0) {
+        setSelectedWorkoutId(null);
+        setErrorMsg(null);
+        setErrorOrigin(null);
+        return;
+      }
+      const aberta = await findOpenExecutionByProgramStandalone(active.id);
+      if (aberta != null && list.some((w) => w.id === aberta.workoutId)) {
+        setSelectedWorkoutId(aberta.workoutId);
+        setErrorMsg(null);
+        setErrorOrigin(null);
+        return;
+      }
+      const selada = await findLastSealedExecutionByProgramStandalone(
+        active.id,
+      );
+      setSelectedWorkoutId(
+        pickNextWorkoutAfterLastSealed(
+          list.map((w) => w.id),
+          selada != null ? selada.workoutId : null,
+        ),
+      );
       setErrorMsg(null);
       setErrorOrigin(null);
     } catch (err: unknown) {
       if (resolvedProgram == null) {
         setProgram(null);
         setWorkouts([]);
+        setSelectedWorkoutId(null);
+      } else {
         setSelectedWorkoutId(null);
       }
       setErrorMsg(toErrorMessage(err, "Erro ao carregar treino do dia"));

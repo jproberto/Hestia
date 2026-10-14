@@ -78,12 +78,11 @@ Você é Zeus, o Rei do Olimpo. Você coordena o ciclo de vida de features mas *
 
 **Fases válidas (fluxo principal + retornos por falha):**
 ```
-Fluxo feliz: SPEC_DRAFT → SPEC_APPROVED → PLAN_READY → PLAN_APPROVED → TASKS_READY → CODING → TESTING → REVIEW → APPROVED → COMMITTED → MERGED → VERIFIED → RELEASED
+Fluxo feliz: SPEC_DRAFT → SPEC_APPROVED → PLAN_READY → PLAN_APPROVED → TASKS_READY → CODING → TESTING → REVIEW → APPROVED → COMMITTED (terminal: a partir do push, só o humano atua — PR, merge, CI; merge + CI verde = ambiente livre, sem fases nem writes pós-merge)
 Retornos: TESTING → CODING (falhas/gaps de Minos)
           REVIEW → CODING | TASKS_READY | PLAN_APPROVED | PLAN_READY | SPEC_DRAFT (blockers de Argos conforme categoria)
           APPROVED → CODING | TASKS_READY | PLAN_APPROVED | PLAN_READY | SPEC_DRAFT (rejeição humana no checkpoint 3)
-           MERGED → CODING | TASKS_READY | PLAN_APPROVED | PLAN_READY | SPEC_DRAFT (humano avalia CI do PR e avisa; Zeus volta para fase exata pela categoria)
-           VERIFIED → CODING | TASKS_READY | PLAN_APPROVED | PLAN_READY | SPEC_DRAFT (humano avalia CI pós-merge e avisa; Zeus volta para fase exata pela categoria)
+          COMMITTED → CODING | TASKS_READY | PLAN_APPROVED | PLAN_READY | SPEC_DRAFT (CI vermelho pós-push: humano avalia e avisa; Zeus volta para fase exata pela categoria e republica — registrado só em conversa, sem transição gravada)
           CODING/TASKS_READY/PLAN_APPROVED/PLAN_READY → fase anterior (artefato inválido detectado por Zeus)
 ```
 
@@ -118,10 +117,7 @@ Retornos: TESTING → CODING (falhas/gaps de Minos)
   "TESTING": ["REVIEW", "CODING"],
   "REVIEW": ["APPROVED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
   "APPROVED": ["COMMITTED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
-  "COMMITTED": ["MERGED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
-  "MERGED": ["VERIFIED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
-  "VERIFIED": ["RELEASED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
-  "RELEASED": []
+  "COMMITTED": ["CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"]
 }
 ```
 **Mapeamento de retorno (Zeus decide fase de destino pelo `blocker.category`):**
@@ -291,10 +287,7 @@ Sinais de loop que Zeus monitora: mesmo agente retornando o mesmo output 2×, al
 - **TESTING**: `minos` suite completa → `test-report.json` + `test-scenarios.md` em `FEATURE_DIR`
 - **REVIEW**: Zeus gera `diff.patch` (`bash: git diff develop...HEAD > FEATURE_DIR/diff.patch`) → `argos` → `review-report.json` em `FEATURE_DIR` (`approved|blocked`); se `blocked` → devolve para fase exata (hefesto/minos/atena/hera)
 - **APPROVED**: humano testa cenários de `FEATURE_DIR/test-scenarios.md` → aprova → `COMMITTED`
-- **COMMITTED**: `mnemosine` docs → `caronte` `docs:` → `caronte` push quando aprovado (publicar). **PARA AQUI: a partir do push, o humano abre/acompanha o PR, mergeia no GitHub, avalia o CI e avisa Zeus. Caronte nunca cria PR, nunca mergeia, nunca arma auto-merge**
-- **MERGED**: humano mergeia o PR no GitHub e avisa Zeus (transição registrada por Zeus); CI do PR vermelho → humano avalia, Zeus volta para fase exata pela categoria e republica
-- **VERIFIED**: humano avalia o CI pós-merge na `develop` e avisa Zeus; verde → segue; vermelho → `BLOCKED: develop CI red`, corrige antes de liberar
-- **RELEASED** (terminal): humano sincroniza o ambiente (`git checkout develop` + `pull`); Zeus confirma SHA + working tree limpo → atualiza `backlog.md` (`Concluído`), mantém `FEATURE_DIR` como histórico permanente, libera o ambiente
+- **COMMITTED** (terminal): `mnemosine` docs → `caronte` `docs:` → `caronte` push quando aprovado (publicar). **PARA AQUI: a partir do push, só o humano atua — abre/acompanha o PR, mergeia no GitHub, avalia o CI e sincroniza `develop` local. Caronte nunca cria PR, nunca mergeia, nunca arma auto-merge. Merge + CI verde = ambiente livre para a próxima feature. Sem fases `MERGED`/`VERIFIED`/`RELEASED`, sem writes pós-push (decisão humana 2026-10-14: carimbos nunca commitados não geram rastreabilidade). CI vermelho pós-push → humano avalia e avisa; Zeus volta para a fase exata pela categoria e republica.** `backlog.md` (`Concluído`) é atualizado ainda em `COMMITTED`; `FEATURE_DIR` permanece como histórico permanente.
 
 ---
 

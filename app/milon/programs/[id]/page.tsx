@@ -38,6 +38,7 @@ export default function ProgramDetailPage() {
     create,
     rename,
     remove,
+    reorder,
   } = useProgramWorkouts(id);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -104,6 +105,15 @@ export default function ProgramDetailPage() {
     [remove],
   );
 
+  const handleReorder = useCallback(
+    (orderedIds: string[]) => {
+      void reorder(orderedIds).catch(() => {
+        // O erro fica visível na lista via hook (banner `operacao`).
+      });
+    },
+    [reorder],
+  );
+
   const defaultName = editingWorkout
     ? editingWorkout.name
     : sugerirNomeTreino(workouts.map((w) => w.name));
@@ -164,6 +174,7 @@ export default function ProgramDetailPage() {
               onRename={handleRename}
               onDelete={handleDelete}
               onRetry={() => void retryWorkouts()}
+              onReorder={readOnly ? undefined : handleReorder}
             />
 
             <WorkoutModal

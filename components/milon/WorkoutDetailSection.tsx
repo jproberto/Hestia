@@ -71,6 +71,13 @@ export interface WorkoutDetailSectionProps {
   activeExecutionWorkoutId?: string | null;
   writeBlocked?: boolean;
   blockedTooltip?: string | null;
+  /**
+   * Troca de execução ativa (Mílon 07c, AC6): invalidação da fonte única
+   * após o selamento. A seção invoca após Finalizar/Cancelar com sucesso;
+   * a página do Treino do Dia liga ao `retry()` de `useActiveExecution`
+   * para que outro treino libere escrita sem reload.
+   */
+  onExecutionSettled?: () => void | Promise<void>;
 }
 
 function toMessage(err: unknown, fallback: string): string {
@@ -168,11 +175,13 @@ function ExecutionHost({
   workoutId,
   entries,
   onTemplateChanged,
+  onExecutionSettled,
   children,
 }: {
   workoutId: string;
   entries: WorkoutEntryView[];
   onTemplateChanged: () => void;
+  onExecutionSettled?: () => void | Promise<void>;
   children: (ctx: ExecutionListContext) => ReactNode;
 }) {
   const exec = useWorkoutExecution(workoutId, entries);
@@ -274,12 +283,20 @@ function ExecutionHost({
   // Encerramento (Mílon #7, plan §3 + D3-D6): hospeda as confirmações novas
   // com a mesma disciplina do clearConfirmOpen — erro nunca fecha (o hook
   // relança e mantém aberto), processing nunca fecha (dismiss guardado aqui
-  // + botões desabilitados no modal).
+  // + botões desabilitados no modal). Após o selamento com sucesso, invalida
+  // a fonte única via `onExecutionSettled` (Mílon 07c, AC6).
+  function notifySettled(): void {
+    void onExecutionSettled?.();
+  }
+
   function confirmFinish(): void {
-    void exec.confirmFinish().catch(() => {
-      // Banner já alimentado pelo hook (origem operacao); modal permanece
-      // aberto por construção (hook só fecha no sucesso).
-    });
+    void exec
+      .confirmFinish()
+      .then(() => notifySettled())
+      .catch(() => {
+        // Banner já alimentado pelo hook (origem operacao); modal permanece
+        // aberto por construção (hook só fecha no sucesso).
+      });
   }
 
   function cancelFinish(): void {
@@ -287,9 +304,12 @@ function ExecutionHost({
   }
 
   function confirmCancel(): void {
-    void exec.confirmCancelExecution().catch(() => {
-      // Idem: erro de operação sem fechar.
-    });
+    void exec
+      .confirmCancelExecution()
+      .then(() => notifySettled())
+      .catch(() => {
+        // Idem: erro de operação sem fechar.
+      });
   }
 
   function cancelCancel(): void {
@@ -297,9 +317,12 @@ function ExecutionHost({
   }
 
   function requestFinish(): void {
-    void exec.requestFinish().catch(() => {
-      // Completo sela direto; falha vira banner de operação (sem modal).
-    });
+    void exec
+      .requestFinish()
+      .then(() => notifySettled())
+      .catch(() => {
+        // Completo sela direto; falha vira banner de operação (sem modal).
+      });
   }
 
   function requestCancel(): void {
@@ -363,6 +386,7 @@ export function WorkoutDetailSection({
   activeExecutionWorkoutId = null,
   writeBlocked = false,
   blockedTooltip = null,
+  onExecutionSettled,
 }: WorkoutDetailSectionProps) {
   const router = useRouter();
 
@@ -681,6 +705,7 @@ export function WorkoutDetailSection({
                 workoutId={workoutId}
                 entries={entries}
                 onTemplateChanged={() => void retry()}
+                onExecutionSettled={onExecutionSettled}
               >
                 {(ctx) => (
                   <>

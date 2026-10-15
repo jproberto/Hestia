@@ -19,10 +19,18 @@ export default function TodayPage() {
     errorOrigin,
     retry,
   } = useTodayWorkout();
-  const { activeWorkoutId: activeWorkoutIdBruto } =
-    (useActiveExecution() as { activeWorkoutId?: string | null } | undefined) ??
-    {};
+  const {
+    activeWorkoutId: activeWorkoutIdBruto,
+    retry: retryActiveExecution,
+  } =
+    (useActiveExecution() as
+      | { activeWorkoutId?: string | null; retry?: () => Promise<void> }
+      | undefined) ?? {};
   const activeWorkoutId = activeWorkoutIdBruto ?? null;
+  // Troca de execução ativa (Mílon 07c, AC6): após Finalizar/Cancelar, a
+  // seção avisa via `onExecutionSettled` e a fonte única é invalidada para
+  // que outro treino libere escrita sem reload.
+  const handleExecutionSettled = () => void retryActiveExecution?.();
 
   const hasSelection = selectedWorkoutId !== null;
   const empty = !loading && !errorMsg && !hasSelection;
@@ -83,6 +91,7 @@ export default function TodayPage() {
               activeExecutionWorkoutId={activeWorkoutId}
               writeBlocked={bloqueado}
               blockedTooltip={tooltipBloqueio}
+              onExecutionSettled={handleExecutionSettled}
               headerActions={
                 somenteLeitura ? null : (
                   <Button type="button" variant="outline" size="sm">

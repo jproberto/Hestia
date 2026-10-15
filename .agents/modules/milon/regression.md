@@ -291,6 +291,16 @@
 
 ---
 
+## Feature #07c — Troca com execução ativa (2026-10-15 — suite 1618/1618, cov 84.59% lines / 83.49% branch)
+
+### REG-59: Escrita bloqueada no outro treino com tooltip, libera após Finalizar/Cancelar
+**Dado** execução aberta no Treino A (badge "Em execução") com Treino B no mesmo programa ativo
+**Quando** a pessoa troca para o Treino B e tenta marcar/editar série
+**Então** a escrita é bloqueada com tooltip "Finalize o Treino A para marcar séries aqui"
+**E** após Finalizar ou Cancelar no Treino A, o Treino B aceita escrita sem reload
+
+---
+
 ## Execução de regressão
 
 ```bash
@@ -328,4 +338,4 @@ npm run build-storybook
 **Dado** exercício com séries
 **Então** grid responsivo (1/2/4 col), campo único com rótulo pelo modo da entry, toggle kg/lb abaixo da carga persistindo na entry
 
-**Critério de passagem:** 1573 testes passados, 0 falhas, coverage ≥ 80% (atual: 84.5% lines, 83.72% branch).
+**Critério de passagem:** 1618 testes passados, 0 falhas, coverage ≥ 80% (atual: 84.59% lines, 83.49% branch — 07c em 2026-10-15).

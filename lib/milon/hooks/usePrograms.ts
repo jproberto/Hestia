@@ -12,6 +12,7 @@ import {
   hasWorkoutsStandalone,
   hasWorkoutWithExerciseStandalone,
 } from "@/lib/milon/db/workouts";
+import { findOpenExecutionByOwnerStandalone } from "@/lib/milon/db/executions";
 import {
   aplicarEfeitoColateralAtivacao,
   guardaAtivacao,
@@ -58,6 +59,11 @@ export interface UseProgramsReturn {
 function toErrorMessage(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
 }
+
+// Ativação bloqueada com execução aberta (Mílon 07c, R7/AC9/EC1b, plan §3):
+// texto exato congelado da spec, sem paráfrase.
+const MSG_ATIVAR_COM_EXECUCAO_ABERTA =
+  "Finalize ou cancele a execução ativa antes de ativar outro programa";
 
 // Fetch+estado no padrão do projeto (promise-chain + flag cancelled no mount;
 // operações via barrels `db/programs` + `db/workouts` + puras de `program-utils.ts`).
@@ -209,6 +215,26 @@ export function usePrograms(): UseProgramsReturn {
 
   const runActivation = useCallback(
     async (program: Program): Promise<void> => {
+      // Pré-cheque R7 (Mílon 07c, plan §3): aberta do dono do programa alvo
+      // bloqueia ANTES da guarda de conteúdo, com origem bloqueio.
+      try {
+        const abertaPorDono =
+          await findOpenExecutionByOwnerStandalone(program.owner);
+        if (abertaPorDono) {
+          setErrorMsg(MSG_ATIVAR_COM_EXECUCAO_ABERTA);
+          setErrorOrigin("bloqueio");
+          throw new Error(MSG_ATIVAR_COM_EXECUCAO_ABERTA);
+        }
+      } catch (err: unknown) {
+        const message = toErrorMessage(
+          err,
+          "Erro ao verificar execução ativa",
+        );
+        if (message === MSG_ATIVAR_COM_EXECUCAO_ABERTA) throw err;
+        setErrorMsg(message);
+        setErrorOrigin("operacao");
+        throw err instanceof Error ? err : new Error(message);
+      }
       let temConteudo: boolean;
       try {
         temConteudo = await hasWorkoutWithExerciseStandalone(program.id);

@@ -131,12 +131,14 @@ vi.mock("@/lib/milon/db/workouts", () => ({
 
 vi.mock("@/lib/milon/db/executions", () => ({
   findOpenExecutionByWorkout: vi.fn(),
+  findOpenExecutionByOwner: vi.fn(),
   startExecution: vi.fn(),
   clearExecution: vi.fn(),
   listDoneByExecution: vi.fn(),
   markSeriesDone: vi.fn(),
   unmarkSeries: vi.fn(),
   findOpenExecutionByWorkoutStandalone: vi.fn(),
+  findOpenExecutionByOwnerStandalone: vi.fn(),
   startExecutionStandalone: vi.fn(),
   finishExecutionStandalone: vi.fn(),
   clearExecutionStandalone: vi.fn(),
@@ -1327,6 +1329,161 @@ describe("Milon 07 TASK-003 RED — hook Finalizar/Cancelar + Caso 4", () => {
 
     expect(campoHook(result, "finishProcessing")).toBe(false);
     expect(campoHook(result, "cancelProcessing")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-003 (Mílon 07c, Troca com execução ativa) — pré-cheque
+// por dono em alternar/salvar série (R2, plan §3).
+// Fonte: `.agents/modules/milon/07c-troca-execucao-ativa/spec.md` R2 (qualquer
+// escrita no treino ≠ execução ativa é bloqueada) + AC1 (tooltip
+// `"Finalize o Treino A para marcar séries aqui"`, spec.md:64) + `plan.md` §3
+// (plan.md:71 — alternar e salvar consultam a aberta por dono com o e-mail da
+// sessão antes de qualquer escrita; com aberta em treino diferente, gravam a
+// mensagem amigável de bloqueio com origem `bloqueio` e relançam; sem aberta
+// ou com aberta no próprio treino, seguem o fluxo atual) + `tasks.json`
+// TASK-003 (acceptanceCriteria 2) + standalone entregue na TASK-002
+// (`lib/milon/repositories/executions.ts:301-305`).
+// Estado vigente citado (verdade para o RED):
+// - `lib/milon/hooks/useWorkoutExecution.ts:200-283` — `toggleSeries` abre via
+//   `startExecutionStandalone` e `saveSeriesExecution` grava via
+//   `updateSeriesFieldsStandalone` SEM consultar `findOpenExecutionByOwnerStandalone`
+//   (grep por `findOpenExecutionByOwner` em lib/milon/hooks retorna 0).
+// - O barrel mockado neste arquivo ainda não exporta
+//   `findOpenExecutionByOwnerStandalone` — o shim abaixo o instala em runtime
+//   sem editar o `vi.mock` vigente (só adiciona), para o FAIL ser pelo motivo
+//   certo (pré-cheque inexistente no hook, nunca setup).
+// Escrito ANTES da implementação (outside-in). Expected: FAIL nos 4 blocos —
+// o hook escreve em vez de bloquear e nunca consulta a aberta por dono
+// (motivo certo, nunca sintaxe). Hefesto fará GREEN na TASK-004 sem mudar
+// estes testes.
+// Convenção de mensagem fixada aqui (plan.md:71 fala em "mensagem amigável de
+// bloqueio" sem congelar o literal do hook; a página compõe o tooltip com o
+// nome da lista em plan.md:77): o `errorMsg` do hook deve conter um fragmento
+// congelado — ou o padrão do tooltip AC1 (`Finalize o … para marcar séries
+// aqui`, spec.md:64) ou o fragmento de corrida EC3 (`execu…ativa`,
+// spec.md:152). Hefesto escolhe um dos dois sem parafrasear; o teste aceita
+// ambos via regex — a origem `bloqueio` + relançamento + escrita ausente são
+// estritos.
+// ---------------------------------------------------------------------------
+
+describe("Milon 07c TASK-003 RED — pré-cheque por dono em toggle/salvar (R2, plan §3)", () => {
+  type Fn07c = ReturnType<typeof vi.fn>;
+
+  async function ownerStandaloneMock(): Promise<Fn07c> {
+    const mod = (await import(
+      "@/lib/milon/db/executions"
+    )) as unknown as Record<string, unknown>;
+    const atual = mod.findOpenExecutionByOwnerStandalone;
+    if (typeof atual === "function") {
+      const m = atual as unknown as Fn07c;
+      m.mockReset();
+      return m;
+    }
+    const m: Fn07c = vi.fn();
+    mod.findOpenExecutionByOwnerStandalone = m;
+    return m;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    for (const mock of mocksDoArquivo) {
+      vi.mocked(mock).mockReset();
+    }
+    vi.useRealTimers();
+  });
+
+  it("toggleSeries com aberta em OUTRO treino relança com bloqueio e NÃO escreve", async () => {
+    const sim: BancoSimulado = { execution: null, dones: [] };
+    instalarBanco(sim);
+    const owner = await ownerStandaloneMock();
+    owner.mockResolvedValue(
+      makeExecution({ id: "exec-outra", workoutId: "w-outro" }),
+    );
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const view = viewComSeries(["s-1", "s-2"]);
+    await act(async () => {
+      await expect(
+        result.current.toggleSeries(view.entry, view.series[0]),
+      ).rejects.toThrow(/Finalize o|execu.*ativa/i);
+    });
+
+    expect(owner).toHaveBeenCalledWith(EMAIL);
+    expect(result.current.errorOrigin).toBe("bloqueio");
+    expect(result.current.errorMsg).toMatch(/Finalize o|execu.*ativa/i);
+    expect(startExecutionStandalone).not.toHaveBeenCalled();
+    expect(markSeriesDoneStandalone).not.toHaveBeenCalled();
+    expect(unmarkSeriesStandalone).not.toHaveBeenCalled();
+  });
+
+  it("saveSeriesExecution com aberta em OUTRO treino relança com bloqueio e NÃO grava", async () => {
+    const sim: BancoSimulado = { execution: null, dones: [] };
+    instalarBanco(sim);
+    const owner = await ownerStandaloneMock();
+    owner.mockResolvedValue(
+      makeExecution({ id: "exec-outra", workoutId: "w-outro" }),
+    );
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const view = viewComSeries(["s-1", "s-2"]);
+    await act(async () => {
+      await expect(
+        result.current.saveSeriesExecution(view.entry, view.series[0], {
+          value: 12,
+        }),
+      ).rejects.toThrow(/Finalize o|execu.*ativa/i);
+    });
+
+    expect(owner).toHaveBeenCalledWith(EMAIL);
+    expect(result.current.errorOrigin).toBe("bloqueio");
+    expect(result.current.errorMsg).toMatch(/Finalize o|execu.*ativa/i);
+    expect(updateSeriesFieldsStandalone).not.toHaveBeenCalled();
+    expect(applySeriesToFollowingStandalone).not.toHaveBeenCalled();
+  });
+
+  it("sem aberta do dono, toggleSeries segue o fluxo atual (marca e publica a execução)", async () => {
+    const sim: BancoSimulado = { execution: null, dones: [] };
+    instalarBanco(sim);
+    const owner = await ownerStandaloneMock();
+    owner.mockResolvedValue(null);
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const view = viewComSeries(["s-1", "s-2"]);
+    await executar(() => result.current.toggleSeries(view.entry, view.series[0]));
+
+    expect(owner).toHaveBeenCalledWith(EMAIL);
+    expect(result.current.errorMsg).toBeNull();
+    expect(result.current.errorOrigin).toBeNull();
+    expect(markSeriesDoneStandalone).toHaveBeenCalled();
+  });
+
+  it("com aberta no PRÓPRIO treino, toggleSeries segue o fluxo atual (sem bloqueio)", async () => {
+    const sim: BancoSimulado = { execution: null, dones: [] };
+    instalarBanco(sim);
+    const owner = await ownerStandaloneMock();
+    owner.mockResolvedValue(makeExecution({ id: "exec-1", workoutId: WORKOUT_ID }));
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const view = viewComSeries(["s-1", "s-2"]);
+    await executar(() => result.current.toggleSeries(view.entry, view.series[0]));
+
+    expect(owner).toHaveBeenCalledWith(EMAIL);
+    expect(result.current.errorMsg).toBeNull();
+    expect(result.current.errorOrigin).toBeNull();
+    expect(markSeriesDoneStandalone).toHaveBeenCalled();
   });
 });
 

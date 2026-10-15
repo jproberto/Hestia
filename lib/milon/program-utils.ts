@@ -171,6 +171,27 @@ export function guardaAtivacao(hasWorkoutWithExercise: boolean): string | null {
   return null;
 }
 
+// Troca com execução ativa (Mílon 07c, R7/R6, plan §3): guardas puras que
+// recebem se há execução aberta do dono e devolvem o texto exato congelado
+// da spec (AC9/AC5) ou nulo. Sem paráfrase.
+export function guardaAtivacaoComExecucaoAberta(
+  hasOpenExecution: boolean,
+): string | null {
+  if (hasOpenExecution) {
+    return "Finalize ou cancele a execução ativa antes de ativar outro programa";
+  }
+  return null;
+}
+
+export function guardaArquivamentoComExecucaoAberta(
+  hasOpenExecution: boolean,
+): string | null {
+  if (hasOpenExecution) {
+    return "Finalize ou cancele a execução ativa antes de arquivar";
+  }
+  return null;
+}
+
 export function aplicarEfeitoColateralAtivacao(
   programas: Program[],
   dono: string,

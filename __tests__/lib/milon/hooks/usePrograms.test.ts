@@ -1546,3 +1546,163 @@ describe("Mílon #2 — usePrograms: origem da mensagem (Patch v4, TASK-022 RED)
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-003 (Mílon 07c, Troca com execução ativa) — pré-cheque
+// R7 em runActivation (spec R7/AC9/EC1b, plan §3).
+// Fonte: `.agents/modules/milon/07c-troca-execucao-ativa/spec.md` R7
+// (spec.md:43 — dono com execução aberta em qualquer programa bloqueia a
+// ativação) + AC9 (spec.md:69 — mensagem `"Finalize ou cancele a execução
+// ativa antes de ativar outro programa"`) + EC1b (spec.md:150 — mesmo texto)
+// + `plan.md` §3 (plan.md:71 — ativação consulta a aberta pelo dono do
+// programa alvo ANTES da guarda de conteúdo; com aberta, grava o texto exato
+// com origem `bloqueio` e relança) + `tasks.json` TASK-003 (acceptanceCriteria
+// 3) + standalone entregue na TASK-002
+// (`lib/milon/repositories/executions.ts:301-305`).
+// Estado vigente citado (verdade para o RED):
+// - `lib/milon/hooks/usePrograms.ts:210-249` — `runActivation` consulta só
+//   `hasWorkoutWithExerciseStandalone` e chama `updateProgramStandalone`, sem
+//   consultar `findOpenExecutionByOwnerStandalone` (grep por
+//   `findOpenExecutionByOwner` em lib/milon/hooks retorna 0).
+// Escrito ANTES da implementação (outside-in). Expected: FAIL nos blocos de
+// bloqueio — o hook ativa em vez de bloquear (repositório chamado, sem origem
+// `bloqueio`; motivo certo, nunca sintaxe). Hefesto fará GREEN na TASK-004
+// sem mudar estes testes (pré-cheque R7 com origem `bloqueio` antes da guarda
+// de conteúdo, preservando-a).
+// ---------------------------------------------------------------------------
+
+describe("Milon 07c TASK-003 RED — ativação bloqueada com execução aberta (R7/AC9/EC1b, plan §3)", () => {
+  const MSG_ATIVAR =
+    "Finalize ou cancele a execução ativa antes de ativar outro programa";
+
+  function abertaDe(owner: string, workoutId = "w-ativo"): WorkoutExecution {
+    return {
+      id: "exec-ativa",
+      workoutId,
+      programId: "p-qualquer",
+      startedAt: "2026-10-14T10:00:00.000Z",
+      finishedAt: null,
+      createdAt: "2026-10-14T10:00:00.000Z",
+      created_by: owner,
+    };
+  }
+
+  beforeEach(() => {
+    prepararMocks();
+    vi.mocked(findOpenExecutionByOwnerStandalone).mockReset();
+  });
+
+  it("activate com aberta do dono do programa alvo relança o texto exato com origem bloqueio SEM atualizar", async () => {
+    const alvo = programa({ id: "p-alvo", status: "rascunho", owner: EMAIL });
+    mockList([alvo]);
+    quandoGuardaDeAtivacao(true);
+    vi.mocked(findOpenExecutionByOwnerStandalone).mockResolvedValue(
+      abertaDe(EMAIL),
+    );
+
+    const { result } = renderHook(() => usePrograms());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const thrown = await executarECapturar(() => result.current.activate(alvo));
+
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toBe(MSG_ATIVAR);
+    expect(findOpenExecutionByOwnerStandalone).toHaveBeenCalledWith(EMAIL);
+    expect(result.current.errorMsg).toBe(MSG_ATIVAR);
+    expect(origemDe(result)).toBe("bloqueio");
+    expect(updateProgramStandalone).not.toHaveBeenCalled();
+    expect(result.current.programs[0].status).toBe("rascunho");
+  });
+
+  it("reactivate com aberta do dono relança o texto exato com origem bloqueio SEM atualizar", async () => {
+    const alvo = programa({ id: "p-alvo", status: "inativo", owner: EMAIL });
+    mockList([alvo]);
+    quandoGuardaDeAtivacao(true);
+    vi.mocked(findOpenExecutionByOwnerStandalone).mockResolvedValue(
+      abertaDe(EMAIL),
+    );
+
+    const { result } = renderHook(() => usePrograms());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const thrown = await executarECapturar(() => result.current.reactivate(alvo));
+
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toBe(MSG_ATIVAR);
+    expect(result.current.errorMsg).toBe(MSG_ATIVAR);
+    expect(origemDe(result)).toBe("bloqueio");
+    expect(updateProgramStandalone).not.toHaveBeenCalled();
+  });
+
+  it("pré-cheque R7 vem ANTES da guarda de conteúdo (com aberta, o erro é o de ativar, não o de conteúdo)", async () => {
+    const alvo = programa({ id: "p-alvo", status: "rascunho", owner: EMAIL });
+    mockList([alvo]);
+    quandoGuardaDeAtivacao(false);
+    vi.mocked(findOpenExecutionByOwnerStandalone).mockResolvedValue(
+      abertaDe(EMAIL),
+    );
+
+    const { result } = renderHook(() => usePrograms());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const thrown = await executarECapturar(() => result.current.activate(alvo));
+
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toBe(MSG_ATIVAR);
+    expect(result.current.errorMsg).toBe(MSG_ATIVAR);
+    expect(origemDe(result)).toBe("bloqueio");
+    expect(updateProgramStandalone).not.toHaveBeenCalled();
+  });
+
+  it("sem aberta do dono, activate segue o fluxo atual (consulta por dono e ativa)", async () => {
+    const alvo = programa({ id: "p-alvo", status: "rascunho", owner: EMAIL });
+    mockList([alvo], [{ ...alvo, status: "ativo" }]);
+    quandoGuardaDeAtivacao(true);
+    vi.mocked(findOpenExecutionByOwnerStandalone).mockResolvedValue(null);
+    vi.mocked(updateProgramStandalone).mockResolvedValue({
+      ...alvo,
+      status: "ativo",
+    });
+
+    const { result } = renderHook(() => usePrograms());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await executar(() => result.current.activate(alvo));
+
+    expect(findOpenExecutionByOwnerStandalone).toHaveBeenCalledWith(
+      alvo.owner,
+    );
+    expect(updateProgramStandalone).toHaveBeenCalledWith("p-alvo", {
+      status: "ativo",
+    });
+    expect(result.current.errorMsg).toBeNull();
+    expect(origemDe(result)).toBeNull();
+    expect(result.current.programs[0].status).toBe("ativo");
+  });
+});
+
+vi.mock("@/lib/milon/db/executions", () => ({
+  findOpenExecutionByWorkout: vi.fn(),
+  findOpenExecutionByOwner: vi.fn(),
+  findLastSealedExecutionByProgram: vi.fn(),
+  findOpenExecutionByProgram: vi.fn(),
+  startExecution: vi.fn(),
+  finishExecution: vi.fn(),
+  clearExecution: vi.fn(),
+  listDoneByExecution: vi.fn(),
+  markSeriesDone: vi.fn(),
+  unmarkSeries: vi.fn(),
+  findOpenExecutionByWorkoutStandalone: vi.fn(),
+  findOpenExecutionByOwnerStandalone: vi.fn(),
+  startExecutionStandalone: vi.fn(),
+  finishExecutionStandalone: vi.fn(),
+  clearExecutionStandalone: vi.fn(),
+  findLastSealedExecutionByProgramStandalone: vi.fn(),
+  findOpenExecutionByProgramStandalone: vi.fn(),
+  listDoneByExecutionStandalone: vi.fn(),
+  markSeriesDoneStandalone: vi.fn(),
+  unmarkSeriesStandalone: vi.fn(),
+}));
+
+import { findOpenExecutionByOwnerStandalone } from "@/lib/milon/db/executions";
+import type { WorkoutExecution } from "@/lib/milon/types";

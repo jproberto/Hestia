@@ -301,3 +301,78 @@ describe("Mílon #2 — program-utils (contrato RED, TASK-002)", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-003 (Mílon 07c, Troca com execução ativa) — guardas
+// puras de ativação e arquivamento com execução aberta (R6/R7, plan §3).
+// Fonte: `.agents/modules/milon/07c-troca-execucao-ativa/spec.md` R6
+// (arquivar com aberta bloqueia) + R7 (ativar com aberta bloqueia) + AC5
+// (spec.md:68 — `"Finalize ou cancele a execução ativa antes de arquivar"`) +
+// AC9 (spec.md:69 — `"Finalize ou cancele a execução ativa antes de ativar
+// outro programa"`) + `plan.md` §3 (plan.md:67 — duas funções puras em
+// program-utils que recebem se há execução aberta e devolvem o texto exato ou
+// nulo) + `tasks.json` TASK-003 (acceptanceCriteria 5).
+// Estado vigente citado (verdade para o RED):
+// - `lib/milon/program-utils.ts:167-172` — só existe `guardaAtivacao` (por
+//   conteúdo); grep por `guardaAtivacaoComExecucaoAberta` e por
+//   `guardaArquivamentoComExecucaoAberta` em lib/ retorna 0.
+// - O texto de arquivar já existe no repositório
+//   (`lib/milon/repositories/programs.ts:20-21`); a guarda pura deve devolver
+//   o literal idêntico, sem paráfrase.
+// Escrito ANTES da implementação (outside-in). Expected: FAIL — funções
+// inexistentes (TypeError ao chamar `undefined`; motivo certo, nunca
+// sintaxe). Hefesto fará GREEN na TASK-004 sem mudar estes testes.
+// Convenção de nomes fixada aqui (plan.md:67 descreve as duas funções sem
+// citar identificadores — Minos fixa, Hefesto implementa literalmente):
+// `guardaAtivacaoComExecucaoAberta(hasOpenExecution: boolean)` e
+// `guardaArquivamentoComExecucaoAberta(hasOpenExecution: boolean)`, ambas
+// `(boolean) => string | null`, no padrão da `guardaAtivacao` vigente.
+// ---------------------------------------------------------------------------
+
+describe("Mílon 07c TASK-003 RED — guardas puras de execução aberta (R6/R7, plan §3)", () => {
+  const MSG_ATIVAR =
+    "Finalize ou cancele a execução ativa antes de ativar outro programa";
+  const MSG_ARQUIVAR = "Finalize ou cancele a execução ativa antes de arquivar";
+
+  type Guarda07c = (hasOpenExecution: boolean) => string | null;
+
+  async function guardas(): Promise<{
+    guardaAtivacaoComExecucaoAberta: unknown;
+    guardaArquivamentoComExecucaoAberta: unknown;
+  }> {
+    const mod = (await import("@/lib/milon/program-utils")) as unknown as Record<
+      string,
+      unknown
+    >;
+    return {
+      guardaAtivacaoComExecucaoAberta: mod.guardaAtivacaoComExecucaoAberta,
+      guardaArquivamentoComExecucaoAberta: mod.guardaArquivamentoComExecucaoAberta,
+    };
+  }
+
+  it("expõe as duas guardas puras do contrato", async () => {
+    const {
+      guardaAtivacaoComExecucaoAberta,
+      guardaArquivamentoComExecucaoAberta,
+    } = await guardas();
+
+    expect(typeof guardaAtivacaoComExecucaoAberta).toBe("function");
+    expect(typeof guardaArquivamentoComExecucaoAberta).toBe("function");
+  });
+
+  it("guarda de ativação: com aberta devolve o texto exato de ativar; sem aberta devolve nulo", async () => {
+    const { guardaAtivacaoComExecucaoAberta } = await guardas();
+    const guarda = guardaAtivacaoComExecucaoAberta as Guarda07c;
+
+    expect(guarda(true)).toBe(MSG_ATIVAR);
+    expect(guarda(false)).toBeNull();
+  });
+
+  it("guarda de arquivamento: com aberta devolve o texto exato de arquivar; sem aberta devolve nulo", async () => {
+    const { guardaArquivamentoComExecucaoAberta } = await guardas();
+    const guarda = guardaArquivamentoComExecucaoAberta as Guarda07c;
+
+    expect(guarda(true)).toBe(MSG_ARQUIVAR);
+    expect(guarda(false)).toBeNull();
+  });
+});

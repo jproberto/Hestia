@@ -59,6 +59,18 @@ export interface WorkoutDetailSectionProps {
    * execução aberta e passa `executionBlocked={execution !== null}`.
    */
   executionBlocked?: boolean;
+  /**
+   * Troca de execução ativa (Mílon 07c, plan §3): treino com a execução
+   * aberta do dono (default nulo), escrita bloqueada neste treino
+   * (default falso) e tooltip nomeado (default nulo). Com `writeBlocked`
+   * verdadeiro, o pacote de execução é suspenso, o editor nunca abre,
+   * a lista renderiza em leitura com o tooltip e a barra de aviso exibe
+   * o texto. Badge/slots de finalizar e cancelar seguem só na aberta
+   * própria (via `useWorkoutExecution` do próprio treino).
+   */
+  activeExecutionWorkoutId?: string | null;
+  writeBlocked?: boolean;
+  blockedTooltip?: string | null;
 }
 
 function toMessage(err: unknown, fallback: string): string {
@@ -348,6 +360,9 @@ export function WorkoutDetailSection({
   footer = null,
   executionEnabled = false,
   executionBlocked = false,
+  activeExecutionWorkoutId = null,
+  writeBlocked = false,
+  blockedTooltip = null,
 }: WorkoutDetailSectionProps) {
   const router = useRouter();
 
@@ -391,7 +406,12 @@ export function WorkoutDetailSection({
   const [confirmProcessing, setConfirmProcessing] = useState(false);
 
   const readOnly = program?.status === "inativo";
-  const effectiveReadOnly = (readOnly ?? false) || executionBlocked;
+  // Mílon 07c: escrita bloqueada neste treino (a página já deriva como
+  // aberta em treino distinto; o id da aberta só identifica, sem decidir).
+  void activeExecutionWorkoutId;
+  const bloqueado07c = writeBlocked === true;
+  const effectiveReadOnly =
+    (readOnly ?? false) || executionBlocked || bloqueado07c;
   const backProgramId =
     backTarget.kind === "program" ? backTarget.programId : "";
   const programId = program?.id ?? backProgramId;
@@ -703,10 +723,19 @@ export function WorkoutDetailSection({
                       </div>
                     ) : null}
 
+                    {bloqueado07c && blockedTooltip ? (
+                      <div
+                        role="alert"
+                        className="rounded border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300 font-medium"
+                      >
+                        {blockedTooltip}
+                      </div>
+                    ) : null}
+
                     <WorkoutEntriesList
                       entries={ctx.displayEntries}
                       programId={programId}
-                      readOnly={effectiveReadOnly}
+                      readOnly={effectiveReadOnly || bloqueado07c}
                       empty={ctx.displayEntries.length === 0}
                       errorMsg={errorMsg}
                       errorOrigin={errorOrigin}
@@ -723,11 +752,12 @@ export function WorkoutDetailSection({
                       onConfirmUnit={handleUnitCommit}
                       onModeCommit={handleModeCommit}
                       onUnitCommit={handleUnitCommit}
-                      execution={ctx.executionPackage}
+                      execution={bloqueado07c ? undefined : ctx.executionPackage}
+                      blockedTooltip={blockedTooltip}
                     />
 
                     <SeriesEditModal
-                      open={ctx.editing !== null}
+                      open={bloqueado07c ? false : ctx.editing !== null}
                       series={ctx.editing?.serie ?? null}
                       loadUnit={ctx.editing?.loadUnit ?? null}
                       exerciseMode={ctx.editing?.exerciseMode ?? null}
@@ -819,6 +849,15 @@ export function WorkoutDetailSection({
                   </div>
                 ) : null}
 
+                {bloqueado07c && blockedTooltip ? (
+                  <div
+                    role="alert"
+                    className="rounded border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300 font-medium"
+                  >
+                    {blockedTooltip}
+                  </div>
+                ) : null}
+
                 <WorkoutEntriesList
                   entries={entries}
                   programId={programId}
@@ -839,6 +878,7 @@ export function WorkoutDetailSection({
                   onConfirmUnit={handleUnitCommit}
                   onModeCommit={handleModeCommit}
                   onUnitCommit={handleUnitCommit}
+                  blockedTooltip={blockedTooltip}
                 />
               </>
             )}

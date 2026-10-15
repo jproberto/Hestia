@@ -43,6 +43,11 @@ export interface WorkoutEntriesListProps {
   /** Ajustes de modo/unidade da entry (Mílon #5, D31): repassados sem interpretar. */
   onModeCommit?: (entryId: string, mode: EntryMode) => void;
   onUnitCommit?: (entryId: string, unit: LoadUnit) => void;
+  /**
+   * Tooltip de bloqueio (Mílon 07c): repassado sem interpretar aos
+   * ExerciseEntryCards. Default nulo (sem bloqueio).
+   */
+  blockedTooltip?: string | null;
 }
 
 interface GhostState {
@@ -88,6 +93,7 @@ export default function WorkoutEntriesList({
   execution,
   onModeCommit,
   onUnitCommit,
+  blockedTooltip = null,
 }: WorkoutEntriesListProps) {
   void programId;
   const [searchText, setSearchText] = useState("");
@@ -396,6 +402,7 @@ export default function WorkoutEntriesList({
                     execution={execution}
                     onModeCommit={(mode) => onModeCommit?.(view.entry.id, mode)}
                     onUnitCommit={(unit) => onUnitCommit?.(view.entry.id, unit)}
+                    blockedTooltip={blockedTooltip}
                   />
                   {isPlaceholderAfter && index === paginatedViews.length - 1 && (
                     <li

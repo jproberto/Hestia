@@ -38,6 +38,12 @@ export interface ExerciseEntryCardProps {
   onModeCommit?: (mode: EntryMode) => void;
   /** Ajuste de unidade da entry (Mílon #5, D31): seletor no chrome de manutenção. */
   onUnitCommit?: (unit: LoadUnit) => void;
+  /**
+   * Tooltip de bloqueio (Mílon 07c): repassado sem interpretar aos
+   * SeriesCards; no ramo leitura o card expõe título acessível.
+   * Default nulo (sem bloqueio).
+   */
+  blockedTooltip?: string | null;
 }
 
 /**
@@ -71,6 +77,7 @@ export default function ExerciseEntryCard({
   execution,
   onModeCommit,
   onUnitCommit,
+  blockedTooltip = null,
 }: ExerciseEntryCardProps) {
   const { entry, exercise, series } = entryView;
 
@@ -146,6 +153,9 @@ export default function ExerciseEntryCard({
         isDragging ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
       style={{ minHeight: isDragging ? "200px" : undefined }}
+      {...(readOnly && blockedTooltip
+        ? { title: blockedTooltip, "aria-disabled": true as const }
+        : {})}
     >
       <div className="flex items-center gap-2">
         {maintenanceVisible ? (
@@ -306,6 +316,7 @@ export default function ExerciseEntryCard({
             onApplyAll={() => onApplyAll(serie.id)}
             onChooseUnit={onChooseUnit}
             execution={execution}
+            blockedTooltip={blockedTooltip}
           />
         ))}
       </div>

@@ -892,3 +892,152 @@ describe("Treino do Dia — encerrar treino: botões topo/rodapé (Milon 07 TASK
     expect(src).toMatch(/footer/);
   });
 });
+
+vi.mock("@/lib/milon/hooks/useActiveExecution", () => ({
+  useActiveExecution: vi.fn(),
+}));
+
+import { useActiveExecution as mockedUseActiveExecutionFn } from "@/lib/milon/hooks/useActiveExecution";
+
+/**
+ * Contrato RED — Mílon 07c Troca execução ativa (TASK-005):
+ * página deriva bloqueado + tooltip nomeado pela lista carregada.
+ *
+ * Fonte: `.agents/modules/milon/07c-troca-execucao-ativa/plan.md` §3
+ * (bloqueado é verdadeiro quando há execução ativa e o id dela difere do
+ * selecionado; tooltip usa o nome do treino ativo obtido exclusivamente da
+ * lista carregada do hook de seleção) + `tasks.json` TASK-005 (composição
+ * com useActiveExecution inexistente) + `spec.md` §5 AC1
+ * ("Finalize o Treino A para marcar séries aqui").
+ *
+ * CONTRATO FIXADO AQUI (o que a TASK-006 deve implementar):
+ * - a página compõe `useActiveExecution()` (fonte única) + `useTodayWorkout()`;
+ * - repassa à seção `writeBlocked=true` + `blockedTooltip` com o nome da
+ *   lista quando aberta em treino distinto; `writeBlocked=false` quando no
+ *   treino ativo ou sem aberta;
+ * - repassa ao switcher `activeWorkoutId` com o id da aberta (ou nulo).
+ *
+ * Expected: FAIL nos 3 blocos novos — produção ainda não compõe o hook
+ * (props undefined). Hefesto fará GREEN na TASK-006 sem mudar estes testes.
+ * Isolamento: seção/switcher seguem mockados (interior travado nos testes
+ * próprios); aqui trava-se só a decisão da PÁGINA. Factories com defaults
+ * reutilizadas; mocks de hooks com promessas resolvidas.
+ */
+describe("Treino do Dia — bloqueio por execução ativa 07c (TASK-005 — RED)", () => {
+  const TOOLTIP_ATIVO_A = "Finalize o Treino A para marcar séries aqui";
+
+  type ActiveHookState = {
+    activeExecution: {
+      id: string;
+      workoutId: string;
+      programId: string;
+      startedAt: string;
+      finishedAt: null;
+      createdAt: string;
+      created_by: string;
+    } | null;
+    activeWorkoutId: string | null;
+    loading: boolean;
+    errorMsg: string | null;
+    errorOrigin: TodayErrorOrigin;
+    retry: Mock;
+  };
+
+  function defaultActiveState(
+    overrides: Partial<ActiveHookState> = {},
+  ): ActiveHookState {
+    return {
+      activeExecution: null,
+      activeWorkoutId: null,
+      loading: false,
+      errorMsg: null,
+      errorOrigin: null,
+      retry: vi.fn(async () => {}),
+      ...overrides,
+    };
+  }
+
+  function setupActive(state: ActiveHookState): void {
+    (mockedUseActiveExecutionFn as unknown as Mock).mockReturnValue(state);
+  }
+
+  function execAbertaNoW1() {
+    return {
+      id: "exec-1",
+      workoutId: "w-1",
+      programId: "prog-1",
+      startedAt: "2026-10-14T10:00:00.000Z",
+      finishedAt: null,
+      createdAt: "2026-10-14T10:00:00.000Z",
+      created_by: DONO,
+    };
+  }
+
+  function lerPropsDaSecao(): Record<string, unknown> {
+    const mock = MockedSection as unknown as ReturnType<typeof vi.fn>;
+    const last = mock.mock.calls.at(-1) as [Record<string, unknown>] | undefined;
+    return last?.[0] ?? {};
+  }
+
+  function lerPropsDoSwitcher(): Record<string, unknown> {
+    const mock = MockedSwitcher as unknown as ReturnType<typeof vi.fn>;
+    const last = mock.mock.calls.at(-1) as [Record<string, unknown>] | undefined;
+    return last?.[0] ?? {};
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    mockUsePathname.mockReturnValue("/milon/today");
+    setupActive(defaultActiveState());
+  });
+
+  it("selecionado distinto da aberta: seção bloqueada com tooltip nomeado pela lista carregada (AC1)", () => {
+    conteudoComTreinos({ selectedWorkoutId: "w-2" });
+    setupActive(
+      defaultActiveState({
+        activeExecution: execAbertaNoW1() as ActiveHookState["activeExecution"],
+        activeWorkoutId: "w-1",
+      }),
+    );
+
+    render(<TodayPage />);
+
+    expect(mockedUseActiveExecutionFn).toHaveBeenCalled();
+    const props = lerPropsDaSecao();
+    expect(props["writeBlocked"]).toBe(true);
+    expect(props["blockedTooltip"]).toBe(TOOLTIP_ATIVO_A);
+  });
+
+  it("switcher recebe o id do treino ativo (leitura segue livre — R3)", () => {
+    conteudoComTreinos({ selectedWorkoutId: "w-2" });
+    setupActive(
+      defaultActiveState({
+        activeExecution: execAbertaNoW1() as ActiveHookState["activeExecution"],
+        activeWorkoutId: "w-1",
+      }),
+    );
+
+    render(<TodayPage />);
+
+    const switcher = lerPropsDoSwitcher();
+    expect(switcher["activeWorkoutId"]).toBe("w-1");
+    expect(screen.getByRole("combobox", { name: /treino/i })).toBeInTheDocument();
+  });
+
+  it("selecionado igual à aberta: escrita liberada (writeBlocked falso, sem tooltip)", () => {
+    conteudoComTreinos({ selectedWorkoutId: "w-1" });
+    setupActive(
+      defaultActiveState({
+        activeExecution: execAbertaNoW1() as ActiveHookState["activeExecution"],
+        activeWorkoutId: "w-1",
+      }),
+    );
+
+    render(<TodayPage />);
+
+    const props = lerPropsDaSecao();
+    expect(props["writeBlocked"]).toBe(false);
+    expect(props["blockedTooltip"] ?? null).toBeNull();
+  });
+});

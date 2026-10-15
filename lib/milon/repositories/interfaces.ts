@@ -106,6 +106,9 @@ export { type MarkExecutionSeriesInput } from "../types";
 
 export interface IWorkoutExecutionRepository {
   findOpenExecutionByWorkout(workoutId: string): Promise<WorkoutExecution | null>;
+  // Troca com execução ativa (Mílon 07c, R1, plan §3): aberta por dono
+  // (created_by, finished_at nulo), mais recente por início desc.
+  findOpenExecutionByOwner(email: string): Promise<WorkoutExecution | null>;
   // Rotação do Treino do Dia (Mílon 07b, D1/D10, plan §3): última selada e
   // aberta por programa (nulo quando não há).
   findLastSealedExecutionByProgram(

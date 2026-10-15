@@ -7,10 +7,18 @@ import type {
   ProgramRow,
   CreateProgramInput,
   UpdateProgramInput,
+  WorkoutExecutionRow,
 } from "../types";
 
 export const PROGRAM_ACTIVE_UNICITY_MESSAGE =
   "já existe um programa ativo para este dono — ative outro para substituir";
+
+// Arquivar programa com execução aberta do dono (Mílon 07c, R6/EC1, spec
+// AC5): texto exato congelado da spec, sem paráfrase. Demais textos
+// congelados preservados (tooltip AC1, ativar AC9, remover AC10, corrida
+// EC3 — fora deste módulo).
+export const PROGRAM_ARCHIVE_BLOCKED_MESSAGE =
+  "Finalize ou cancele a execução ativa antes de arquivar";
 
 function toDomain(row: ProgramRow): Program {
   return {
@@ -127,6 +135,25 @@ export async function updateProgram(
       .eq("owner", current.owner)
       .eq("status", "ativo");
     if (deactivateError) throw deactivateError;
+  }
+
+  // Guarda R6 (Mílon 07c, plan §3): transição explícita para inativo bloqueada
+  // quando o dono tem execução aberta em qualquer programa. Lê o dono atual
+  // do programa e procura a aberta desse dono direto na tabela de execuções
+  // pelo mesmo IDatabaseClient, sem importar o módulo de execuções. Sem
+  // escrita quando bloqueado. Leitura só com eq + filtro em memória para não
+  // exigir negação de nulo do cliente.
+  if (input.status === "inativo") {
+    const current = await findProgramById(db, id);
+    if (current) {
+      const { data, error } = await db
+        .from<WorkoutExecutionRow>("workout_executions")
+        .select("*")
+        .eq("created_by", current.owner);
+      if (error) throw error;
+      const aberta = (data ?? []).find((row) => row.finished_at === null);
+      if (aberta) throw new Error(PROGRAM_ARCHIVE_BLOCKED_MESSAGE);
+    }
   }
 
   const payload: Record<string, unknown> = {};

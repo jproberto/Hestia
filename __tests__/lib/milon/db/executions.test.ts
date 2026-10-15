@@ -130,6 +130,12 @@ function stubStartWithOpenDb(openRow: WorkoutExecutionRow, recorded: Recorded): 
       (recorded.iss ??= []).push([col, val]);
       return chain;
     },
+    order: (col: string, opts?: { ascending?: boolean }): unknown => {
+      (recorded.orders ??= []).push([col, opts?.ascending]);
+      return chain;
+    },
+    then: (onfulfilled: (value: unknown) => unknown) =>
+      Promise.resolve({ data: [openRow], error: null }).then(onfulfilled),
     maybeSingle: () => Promise.resolve({ data: openRow, error: null }),
   };
   return {
@@ -162,6 +168,12 @@ function stubStartWithoutOpenDb(inserted: WorkoutExecutionRow, recorded: Recorde
       (recorded.iss ??= []).push([col, val]);
       return chain;
     },
+    order: (col: string, opts?: { ascending?: boolean }): unknown => {
+      (recorded.orders ??= []).push([col, opts?.ascending]);
+      return chain;
+    },
+    then: (onfulfilled: (value: unknown) => unknown) =>
+      Promise.resolve({ data: [], error: null }).then(onfulfilled),
     maybeSingle: () => Promise.resolve({ data: null, error: null }),
   };
   return {

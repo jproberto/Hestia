@@ -47,6 +47,14 @@ function isUniqueViolation(error: unknown): boolean {
   return haystack.includes("duplicate") || haystack.includes("unique");
 }
 
+// Troca com execução ativa (Mílon 07c, R1/EC3, plan §3): texto de corrida
+// congelado nesta task (TASK-002). Contém o fragmento da spec EC3
+// ("já existe execução ativa") verificado pelo contrato 07c via regex
+// /execu.*ativa/i. Demais textos congelados preservados sem paráfrase
+// (tooltip AC1, arquivar AC5, ativar AC9, remover AC10 — fora deste módulo).
+export const EXECUTION_OWNER_CONFLICT_MESSAGE =
+  "Já existe execução ativa para este dono";
+
 export async function findOpenExecutionByWorkout(
   db: IDatabaseClient,
   workoutId: string,
@@ -62,14 +70,46 @@ export async function findOpenExecutionByWorkout(
   return data ? toExecutionDomain(data) : null;
 }
 
+// Aberta por dono (Mílon 07c, R1, plan §3): finished_at nulo, mais recente
+// por started_at desc com desempate por id desc. Havendo mais de uma aberta
+// (possível em legado pré-0016), a mais recente prevalece. Nulo sem aberta.
+export async function findOpenExecutionByOwner(
+  db: IDatabaseClient,
+  email: string,
+): Promise<WorkoutExecution | null> {
+  const { data, error } = await db
+    .from<WorkoutExecutionRow>("workout_executions")
+    .select("*")
+    .eq("created_by", email)
+    .is("finished_at", null)
+    .order("started_at", { ascending: false });
+
+  if (error) throw error;
+  const abertas = (data || []).filter((row) => row.finished_at === null);
+  abertas.sort((a, b) => {
+    if (a.started_at !== b.started_at)
+      return a.started_at < b.started_at ? 1 : -1;
+    if (a.id !== b.id) return a.id < b.id ? 1 : -1;
+    return 0;
+  });
+  const aberta = abertas[0];
+  return aberta ? toExecutionDomain(aberta) : null;
+}
+
 export async function startExecution(
   db: IDatabaseClient,
   workoutId: string,
   programId: string,
   email: string,
 ): Promise<WorkoutExecution> {
-  const aberta = await findOpenExecutionByWorkout(db, workoutId);
-  if (aberta) return aberta;
+  // Invariante R1 (Mílon 07c, plan §3): máximo 1 aberta por dono, global.
+  // Pré-cheque por dono: aberta em treino distinto recusa com texto de
+  // corrida; mesmo treino devolve a existente sem trocar o início.
+  const abertaPorDono = await findOpenExecutionByOwner(db, email);
+  if (abertaPorDono) {
+    if (abertaPorDono.workoutId === workoutId) return abertaPorDono;
+    throw new Error(EXECUTION_OWNER_CONFLICT_MESSAGE);
+  }
 
   try {
     const { data, error } = await db
@@ -87,9 +127,16 @@ export async function startExecution(
     return toExecutionDomain(data);
   } catch (error) {
     if (!isUniqueViolation(error)) throw error;
-    const existente = await findOpenExecutionByWorkout(db, workoutId);
-    if (existente) return existente;
-    throw error;
+    // Corrida EC3: dois dispositivos passaram no pré-cheque, o banco barrou
+    // o segundo insert no índice único por dono. Relê por dono: mesmo treino
+    // devolve a existente (idempotente), distinto lança o texto de corrida
+    // (nunca devolve execução alheia).
+    const existente = await findOpenExecutionByOwner(db, email);
+    if (existente) {
+      if (existente.workoutId === workoutId) return existente;
+      throw new Error(EXECUTION_OWNER_CONFLICT_MESSAGE);
+    }
+    throw new Error(EXECUTION_OWNER_CONFLICT_MESSAGE);
   }
 }
 
@@ -249,6 +296,12 @@ export async function findOpenExecutionByWorkoutStandalone(
   workoutId: string,
 ): Promise<WorkoutExecution | null> {
   return findOpenExecutionByWorkout(createBrowserDatabaseClient(), workoutId);
+}
+
+export async function findOpenExecutionByOwnerStandalone(
+  email: string,
+): Promise<WorkoutExecution | null> {
+  return findOpenExecutionByOwner(createBrowserDatabaseClient(), email);
 }
 
 export async function startExecutionStandalone(

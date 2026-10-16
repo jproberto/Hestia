@@ -141,11 +141,12 @@ function defineWorkoutExecutionRepositoryContract(
         expect(segunda.startedAt).toBe(primeira.startedAt);
       });
 
-      it("treinos diferentes ganham execuções distintas", async () => {
-        const uma = await repo.startExecution("w-1", PROGRAM_ID, EMAIL);
-        const outra = await repo.startExecution("w-2", PROGRAM_ID, EMAIL);
+      it("treinos diferentes com mesmo dono recusam a segunda abertura (R1)", async () => {
+        await repo.startExecution("w-1", PROGRAM_ID, EMAIL);
 
-        expect(outra.id).not.toBe(uma.id);
+        await expect(repo.startExecution("w-2", PROGRAM_ID, EMAIL)).rejects.toThrow(
+          "Já existe execução ativa para este dono",
+        );
       });
     });
 
@@ -173,11 +174,12 @@ function defineWorkoutExecutionRepositoryContract(
         await expect(repo.clearExecution("id-que-nao-existe")).resolves.toBeUndefined();
       });
 
-      it("excluir uma execução não afeta as realizadas de outra execução", async () => {
+      it("excluir uma execução não afeta as realizadas de outra execução (donos distintos, R1)", async () => {
+        const OUTRO_EMAIL = "contrato-execucao-outro@hestia.lan";
         const uma = await repo.startExecution("w-1", PROGRAM_ID, EMAIL);
-        const outra = await repo.startExecution("w-2", PROGRAM_ID, EMAIL);
+        const outra = await repo.startExecution("w-2", PROGRAM_ID, OUTRO_EMAIL);
         await repo.markSeriesDone(makeMarkInput(uma.id, "s-1", 1, { value: 10 }), EMAIL);
-        await repo.markSeriesDone(makeMarkInput(outra.id, "s-9", 1, { value: 8 }), EMAIL);
+        await repo.markSeriesDone(makeMarkInput(outra.id, "s-9", 1, { value: 8 }), OUTRO_EMAIL);
 
         await repo.clearExecution(uma.id);
 

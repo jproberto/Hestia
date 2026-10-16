@@ -10,6 +10,7 @@ import {
 } from "@/lib/milon/db/workouts";
 import {
   clearExecutionStandalone,
+  findOpenExecutionByOwnerStandalone,
   findOpenExecutionByWorkoutStandalone,
   finishExecutionStandalone,
   listDoneByExecutionStandalone,
@@ -71,6 +72,12 @@ export interface UseWorkoutExecutionReturn {
 function toErrorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
 }
+
+// Bloqueio de escrita com execução ativa em outro treino (Mílon 07c, R2,
+// plan §3): fragmento congelado verificado pelo contrato via regex
+// /Finalize o|execu.*ativa/i (contém "execução ativa"). Origem `bloqueio` +
+// relançamento + ausência de escrita são estritos.
+const ESCRITA_BLOQUEADA_MESSAGE = "Já existe execução ativa para este dono";
 
 interface LoadedExecution {
   workout: Workout | null;
@@ -201,6 +208,25 @@ export function useWorkoutExecution(
     async (entry: WorkoutEntry, serie: WorkoutSeries): Promise<void> => {
       setErrorMsg(null);
       setErrorOrigin(null);
+      // Pré-cheque por dono (Mílon 07c, R2, plan §3): aberta em treino
+      // distinto bloqueia antes de qualquer escrita, sem tocar na máquina
+      // de finalizar/cancelar.
+      try {
+        const email = await resolveEmail();
+        const abertaPorDono =
+          await findOpenExecutionByOwnerStandalone(email);
+        if (abertaPorDono && abertaPorDono.workoutId !== workoutId) {
+          setErrorMsg(ESCRITA_BLOQUEADA_MESSAGE);
+          setErrorOrigin("bloqueio");
+          throw new Error(ESCRITA_BLOQUEADA_MESSAGE);
+        }
+      } catch (err: unknown) {
+        const message = toErrorMessage(err, "Erro ao verificar execução ativa");
+        if (message === ESCRITA_BLOQUEADA_MESSAGE) throw err;
+        setErrorMsg(message);
+        setErrorOrigin("operacao");
+        throw err instanceof Error ? err : new Error(message);
+      }
       try {
         const marcada = dones.some((done) => done.seriesId === serie.id);
         if (!marcada) {
@@ -265,6 +291,24 @@ export function useWorkoutExecution(
     ): Promise<void> => {
       setErrorMsg(null);
       setErrorOrigin(null);
+      // Pré-cheque por dono (Mílon 07c, R2, plan §3): mesmo bloqueio do
+      // toggle antes de qualquer gravação no template.
+      try {
+        const email = await resolveEmail();
+        const abertaPorDono =
+          await findOpenExecutionByOwnerStandalone(email);
+        if (abertaPorDono && abertaPorDono.workoutId !== workoutId) {
+          setErrorMsg(ESCRITA_BLOQUEADA_MESSAGE);
+          setErrorOrigin("bloqueio");
+          throw new Error(ESCRITA_BLOQUEADA_MESSAGE);
+        }
+      } catch (err: unknown) {
+        const message = toErrorMessage(err, "Erro ao verificar execução ativa");
+        if (message === ESCRITA_BLOQUEADA_MESSAGE) throw err;
+        setErrorMsg(message);
+        setErrorOrigin("operacao");
+        throw err instanceof Error ? err : new Error(message);
+      }
       try {
         // Comportamento único (D4): sempre origem + seguintes, incluindo
         // marcadas — sem indicador de cópia; feito e execução nunca são
@@ -279,7 +323,7 @@ export function useWorkoutExecution(
         throw err instanceof Error ? err : new Error(message);
       }
     },
-    [recarregar],
+    [recarregar, resolveEmail, workoutId],
   );
 
   const confirmClearExecution = useCallback(async (): Promise<void> => {

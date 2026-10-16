@@ -6,12 +6,19 @@ export interface TodayWorkoutSwitcherProps {
   workouts: Workout[];
   selectedWorkoutId: string | null;
   onSelect: (workoutId: string) => void;
+  /**
+   * Treino com execução aberta (Mílon 07c): a opção correspondente recebe
+   * o sufixo textual " (em execução)". Default nulo (sem aberta).
+   * Leitura segue livre (R3) — só marcador visual.
+   */
+  activeWorkoutId?: string | null;
 }
 
 export function TodayWorkoutSwitcher({
   workouts,
   selectedWorkoutId,
   onSelect,
+  activeWorkoutId = null,
 }: TodayWorkoutSwitcherProps) {
   return (
     <label className="flex items-center gap-2 text-sm">
@@ -24,7 +31,9 @@ export function TodayWorkoutSwitcher({
       >
         {workouts.map((workout) => (
           <option key={workout.id} value={workout.id}>
-            {workout.name}
+            {workout.id === activeWorkoutId
+              ? `${workout.name} (em execução)`
+              : workout.name}
           </option>
         ))}
       </select>

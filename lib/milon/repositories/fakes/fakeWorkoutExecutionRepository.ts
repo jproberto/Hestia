@@ -17,6 +17,14 @@ export interface WorkoutExecutionSeed {
   doneSeries?: WorkoutExecutionSeries[];
 }
 
+// Espelho do texto de corrida do repository real (Mílon 07c, TASK-002):
+// literal completo congelado aqui, idêntico ao real, contendo o fragmento
+// da spec EC3 ("já existe execução ativa"). Demais textos congelados
+// preservados sem paráfrase (tooltip AC1, arquivar AC5, ativar AC9,
+// remover AC10 — fora deste fake).
+const FAKE_EXECUTION_OWNER_CONFLICT_MESSAGE =
+  "Já existe execução ativa para este dono";
+
 export class FakeWorkoutExecutionRepository
   implements IWorkoutExecutionRepository
 {
@@ -53,13 +61,35 @@ export class FakeWorkoutExecutionRepository
     return null;
   }
 
+  // Aberta por dono como o real (Mílon 07c, R1, plan §3): created_by igual ao
+  // e-mail, finishedAt nulo, mais recente por startedAt desc com desempate
+  // por id desc. Mesmo texto de corrida do real (espelho, sem importar o
+  // módulo de execuções).
+  async findOpenExecutionByOwner(
+    email: string,
+  ): Promise<WorkoutExecution | null> {
+    const abertas = [...this.executions.values()]
+      .filter((e) => e.created_by === email && e.finishedAt === null)
+      .sort((a, b) => {
+        if (a.startedAt !== b.startedAt)
+          return a.startedAt < b.startedAt ? 1 : -1;
+        if (a.id !== b.id) return a.id < b.id ? 1 : -1;
+        return 0;
+      });
+    const aberta = abertas[0];
+    return aberta ? { ...aberta } : null;
+  }
+
   async startExecution(
     workoutId: string,
     programId: string,
     email: string,
   ): Promise<WorkoutExecution> {
-    const aberta = await this.findOpenExecutionByWorkout(workoutId);
-    if (aberta) return aberta;
+    const abertaPorDono = await this.findOpenExecutionByOwner(email);
+    if (abertaPorDono) {
+      if (abertaPorDono.workoutId === workoutId) return abertaPorDono;
+      throw new Error(FAKE_EXECUTION_OWNER_CONFLICT_MESSAGE);
+    }
 
     const now = new Date().toISOString();
     const execution: WorkoutExecution = {

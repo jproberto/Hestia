@@ -1695,3 +1695,127 @@ describe("WorkoutDetailSection — encerrar treino (Milon 07 TASK-003 — RED)",
     expect(screen.getByTestId("slot-rodape")).toBeInTheDocument();
   });
 });
+
+/**
+ * Contrato RED — Mílon 07c Troca execução ativa (TASK-005):
+ * escrita bloqueada na seção.
+ *
+ * Fonte: `.agents/modules/milon/07c-troca-execucao-ativa/plan.md` §3
+ * (seção recebe treino ativo opcional, escrita bloqueada default falso e
+ * texto do tooltip default nulo; com escrita bloqueada verdadeira neste
+ * treino, o pacote de execução é indefinido, o editor nunca abre, a lista
+ * renderiza em modo leitura com título acessível igual ao tooltip, e uma
+ * barra de aviso exibe o tooltip) + `tasks.json` TASK-005
+ * (props activeExecutionWorkoutId, writeBlocked e blockedTooltip
+ * inexistentes) + `spec.md` §5 AC1
+ * ("Finalize o Treino A para marcar séries aqui").
+ *
+ * CONTRATO FIXADO AQUI (nomes que a TASK-006 deve implementar):
+ * - `activeExecutionWorkoutId?: string | null` (default nulo);
+ * - `writeBlocked?: boolean` (default falso);
+ * - `blockedTooltip?: string | null` (default nulo).
+ *
+ * Expected: FAIL nos 3 blocos novos — produção ainda ignora as props
+ * (sem barra, com marcadores, editor abre). Hefesto fará GREEN na TASK-006
+ * sem mudar estes testes (props novas via cast para o tsc seguir verde).
+ */
+describe("WorkoutDetailSection — escrita bloqueada 07c (TASK-005 — RED)", () => {
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  const TOOLTIP_ATIVO_A = "Finalize o Treino A para marcar séries aqui";
+
+  function setupExecBloqueada(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  function comBloqueio(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-2",
+      backTarget: backNone,
+      executionEnabled: true,
+      ...({
+        activeExecutionWorkoutId: "wout-1",
+        writeBlocked: true,
+        blockedTooltip: TOOLTIP_ATIVO_A,
+      } as Record<string, unknown>),
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExecBloqueada();
+  });
+
+  it("bloqueada exibe barra de aviso com o tooltip nomeado (AC1)", () => {
+    conteudoComUmaEntrada({
+      workout: makeWorkout({ id: "wout-2", name: "Treino B" }),
+    });
+
+    render(<WorkoutDetailSection {...comBloqueio()} />);
+
+    expect(screen.getByText(TOOLTIP_ATIVO_A)).toBeInTheDocument();
+  });
+
+  it("bloqueada suspende o pacote de execução (sem marcadores clicáveis, leitura preservada)", () => {
+    conteudoComUmaEntrada({
+      workout: makeWorkout({ id: "wout-2", name: "Treino B" }),
+    });
+    setupExecBloqueada({ doneSeriesIds: ["ser-1"], markedCount: 1 });
+
+    render(<WorkoutDetailSection {...comBloqueio()} />);
+
+    expect(
+      screen.queryByRole("button", { name: /^série/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Supino reto" }),
+    ).toBeInTheDocument();
+  });
+
+  it("bloqueada nunca abre o editor no toque longo (sem alternância)", () => {
+    conteudoComUmaEntrada({
+      workout: makeWorkout({ id: "wout-2", name: "Treino B" }),
+    });
+    setupExecBloqueada({ doneSeriesIds: [], markedCount: 0 });
+
+    render(<WorkoutDetailSection {...comBloqueio()} />);
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.pointerDown(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+      vi.advanceTimersByTime(500);
+      fireEvent.pointerUp(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(
+      screen.queryByRole("button", { name: /salvar/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(TOOLTIP_ATIVO_A)).toBeInTheDocument();
+  });
+});

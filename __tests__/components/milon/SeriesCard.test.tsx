@@ -999,3 +999,57 @@ describe("Milon 05 TASK-013 RED — SeriesCard com valor único + lb (D34/D38)",
     expect(screen.queryByText(/libra/i)).toBeNull();
   });
 });
+
+/**
+ * Contrato RED — Mílon 07c Troca execução ativa (TASK-005):
+ * tooltip no ramo somente-leitura dos cards.
+ *
+ * Fonte: `.agents/modules/milon/07c-troca-execucao-ativa/plan.md` §3
+ * (lista repassa o tooltip; cards aplicam título e marcador de desabilitado
+ * no ramo somente-leitura) + `tasks.json` TASK-005 (prop de tooltip
+ * inexistente no ramo somente-leitura) + `spec.md` §5 AC1
+ * ("Finalize o Treino A para marcar séries aqui").
+ *
+ * CONTRATO FIXADO AQUI (nome que a TASK-006 deve implementar):
+ * - `SeriesCardProps` ganha `blockedTooltip?: string | null`
+ *   (default nulo); no ramo readOnly com texto presente, o card expõe
+ *   `title` acessível igual ao tooltip e marcador de desabilitado
+ *   (`aria-disabled="true"`).
+ *
+ * Expected: FAIL nos 2 blocos novos — o ramo readOnly atual não tem
+ * `title` nem `aria-disabled`. Hefesto fará GREEN na TASK-006 sem mudar
+ * estes testes (prop nova via cast para o tsc seguir verde).
+ */
+describe("SeriesCard — tooltip no ramo leitura 07c (TASK-005 — RED)", () => {
+  const TOOLTIP_ATIVO_A = "Finalize o Treino A para marcar séries aqui";
+
+  function renderLeituraComTooltip() {
+    const props = {
+      ...base({
+        series: makeSeries({ value: 10, load: 50 }),
+        loadUnit: "kg",
+        readOnly: true,
+      }),
+      ...({ blockedTooltip: TOOLTIP_ATIVO_A } as unknown as Record<
+        string,
+        unknown
+      >),
+    } as unknown as Parameters<typeof SeriesCard>[0];
+    render(<SeriesCard {...props} />);
+  }
+
+  it("ramo leitura expõe o tooltip como título acessível (AC1)", () => {
+    renderLeituraComTooltip();
+
+    expect(screen.getByTitle(TOOLTIP_ATIVO_A)).toBeInTheDocument();
+  });
+
+  it("ramo leitura com tooltip marca o card como desabilitado", () => {
+    renderLeituraComTooltip();
+
+    expect(screen.getByTitle(TOOLTIP_ATIVO_A)).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
+});

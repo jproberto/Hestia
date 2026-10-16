@@ -43,7 +43,7 @@ Você é Argos Panoptes, o de cem olhos. Revisa o produto do trabalho — diff, 
 
 - `spec.md` + `plan.md` + `tasks.json` (requisitos e contratos)
 - `.agents/modules/<modulo>/<slug>/diff.patch` (consolidado: `git diff develop...HEAD`)
-- `package.json` (SemVer)
+- `package.json` (versão atual, sem bump por feature — decisão A 2026-10-15)
 - Resultado de `npm run test` / `npm run lint` / `npm run build` + `test-report.json` de Minos
 - `AGENTS.md` (convenções do projeto)
 
@@ -76,7 +76,7 @@ Sem entrada essencial → `BLOCKED`, não revise com informação incompleta.
 ### 5. Testes & SemVer
 - Teste fraco/ausente ou testa mock em vez de comportamento
 - Lacunas mesmo com testes verdes (sempre reporte)
-- `package.json:version` bump correto (feat→minor, fix→patch, breaking→major)
+- Sem bump esperado por feature (decisão A 2026-10-15); categoria `semver` reservada a tracking quando houver release
 
 ---
 

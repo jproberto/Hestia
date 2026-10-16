@@ -168,3 +168,58 @@ describe("TodayWorkoutSwitcher (TASK-003 — RED)", () => {
     expect(screen.getByText("Treino")).toBeInTheDocument();
   });
 });
+
+/**
+ * Contrato RED — Mílon 07c Troca execução ativa (TASK-005):
+ * marcador da execução ativa no switcher.
+ *
+ * Fonte: `.agents/modules/milon/07c-troca-execucao-ativa/plan.md` §3
+ * (switcher recebe treino ativo opcional e sufixa a opção correspondente
+ * com o marcador textual de em execução) + `tasks.json` TASK-005
+ * (prop activeWorkoutId inexistente).
+ *
+ * CONTRATO FIXADO AQUI (nome que a TASK-006 deve implementar):
+ * - `TodayWorkoutSwitcherProps` ganha `activeWorkoutId?: string | null`
+ *   (default nulo); a opção cujo id coincide recebe o sufixo textual
+ *   `" (em execução)"`, mantendo o nome base; as demais seguem sem sufixo.
+ *
+ * Expected: FAIL nos 2 blocos novos — produção ainda renderiza só o nome.
+ * Hefesto fará GREEN na TASK-006 sem mudar estes testes (prop nova via
+ * cast para o tsc seguir verde).
+ */
+describe("TodayWorkoutSwitcher — marcador de execução 07c (TASK-005 — RED)", () => {
+  type SwitcherProps = Parameters<typeof TodayWorkoutSwitcher>[0];
+
+  function comAtivo(activeWorkoutId: string | null): SwitcherProps {
+    return {
+      workouts: treinosOrdenados(),
+      selectedWorkoutId: "w-2",
+      onSelect: () => {},
+      ...( { activeWorkoutId } as unknown as Record<string, unknown> ),
+    } as unknown as SwitcherProps;
+  }
+
+  function textoDaOpcao(value: string): string {
+    const select = screen.getByRole("combobox", { name: /treino/i });
+    const option = select.querySelector(`option[value="${value}"]`);
+    if (!option) throw new Error(`Opção ${value} não renderizada`);
+    return option.textContent ?? "";
+  }
+
+  it("sufixa a opção ativa com o marcador textual (leitura segue livre — R3)", () => {
+    render(<TodayWorkoutSwitcher {...comAtivo("w-1")} />);
+
+    expect(textoDaOpcao("w-1")).toMatch(/Treino A.*\(em execução\)/);
+    expect(textoDaOpcao("w-2")).not.toMatch(/em execução/);
+    expect(textoDaOpcao("w-3")).not.toMatch(/em execução/);
+  });
+
+  it("o marcador acompanha o treino ativo ao trocar (sem bloquear a seleção)", () => {
+    const { rerender } = render(<TodayWorkoutSwitcher {...comAtivo("w-1")} />);
+    expect(textoDaOpcao("w-1")).toMatch(/\(em execução\)/);
+
+    rerender(<TodayWorkoutSwitcher {...comAtivo("w-2")} />);
+    expect(textoDaOpcao("w-2")).toMatch(/Treino B.*\(em execução\)/);
+    expect(textoDaOpcao("w-1")).not.toMatch(/em execução/);
+  });
+});

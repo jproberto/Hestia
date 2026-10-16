@@ -59,6 +59,25 @@ export interface WorkoutDetailSectionProps {
    * execução aberta e passa `executionBlocked={execution !== null}`.
    */
   executionBlocked?: boolean;
+  /**
+   * Troca de execução ativa (Mílon 07c, plan §3): treino com a execução
+   * aberta do dono (default nulo), escrita bloqueada neste treino
+   * (default falso) e tooltip nomeado (default nulo). Com `writeBlocked`
+   * verdadeiro, o pacote de execução é suspenso, o editor nunca abre,
+   * a lista renderiza em leitura com o tooltip e a barra de aviso exibe
+   * o texto. Badge/slots de finalizar e cancelar seguem só na aberta
+   * própria (via `useWorkoutExecution` do próprio treino).
+   */
+  activeExecutionWorkoutId?: string | null;
+  writeBlocked?: boolean;
+  blockedTooltip?: string | null;
+  /**
+   * Troca de execução ativa (Mílon 07c, AC6): invalidação da fonte única
+   * após o selamento. A seção invoca após Finalizar/Cancelar com sucesso;
+   * a página do Treino do Dia liga ao `retry()` de `useActiveExecution`
+   * para que outro treino libere escrita sem reload.
+   */
+  onExecutionSettled?: () => void | Promise<void>;
 }
 
 function toMessage(err: unknown, fallback: string): string {
@@ -156,11 +175,13 @@ function ExecutionHost({
   workoutId,
   entries,
   onTemplateChanged,
+  onExecutionSettled,
   children,
 }: {
   workoutId: string;
   entries: WorkoutEntryView[];
   onTemplateChanged: () => void;
+  onExecutionSettled?: () => void | Promise<void>;
   children: (ctx: ExecutionListContext) => ReactNode;
 }) {
   const exec = useWorkoutExecution(workoutId, entries);
@@ -262,12 +283,20 @@ function ExecutionHost({
   // Encerramento (Mílon #7, plan §3 + D3-D6): hospeda as confirmações novas
   // com a mesma disciplina do clearConfirmOpen — erro nunca fecha (o hook
   // relança e mantém aberto), processing nunca fecha (dismiss guardado aqui
-  // + botões desabilitados no modal).
+  // + botões desabilitados no modal). Após o selamento com sucesso, invalida
+  // a fonte única via `onExecutionSettled` (Mílon 07c, AC6).
+  function notifySettled(): void {
+    void onExecutionSettled?.();
+  }
+
   function confirmFinish(): void {
-    void exec.confirmFinish().catch(() => {
-      // Banner já alimentado pelo hook (origem operacao); modal permanece
-      // aberto por construção (hook só fecha no sucesso).
-    });
+    void exec
+      .confirmFinish()
+      .then(() => notifySettled())
+      .catch(() => {
+        // Banner já alimentado pelo hook (origem operacao); modal permanece
+        // aberto por construção (hook só fecha no sucesso).
+      });
   }
 
   function cancelFinish(): void {
@@ -275,9 +304,12 @@ function ExecutionHost({
   }
 
   function confirmCancel(): void {
-    void exec.confirmCancelExecution().catch(() => {
-      // Idem: erro de operação sem fechar.
-    });
+    void exec
+      .confirmCancelExecution()
+      .then(() => notifySettled())
+      .catch(() => {
+        // Idem: erro de operação sem fechar.
+      });
   }
 
   function cancelCancel(): void {
@@ -285,9 +317,12 @@ function ExecutionHost({
   }
 
   function requestFinish(): void {
-    void exec.requestFinish().catch(() => {
-      // Completo sela direto; falha vira banner de operação (sem modal).
-    });
+    void exec
+      .requestFinish()
+      .then(() => notifySettled())
+      .catch(() => {
+        // Completo sela direto; falha vira banner de operação (sem modal).
+      });
   }
 
   function requestCancel(): void {
@@ -348,6 +383,10 @@ export function WorkoutDetailSection({
   footer = null,
   executionEnabled = false,
   executionBlocked = false,
+  activeExecutionWorkoutId = null,
+  writeBlocked = false,
+  blockedTooltip = null,
+  onExecutionSettled,
 }: WorkoutDetailSectionProps) {
   const router = useRouter();
 
@@ -391,7 +430,12 @@ export function WorkoutDetailSection({
   const [confirmProcessing, setConfirmProcessing] = useState(false);
 
   const readOnly = program?.status === "inativo";
-  const effectiveReadOnly = (readOnly ?? false) || executionBlocked;
+  // Mílon 07c: escrita bloqueada neste treino (a página já deriva como
+  // aberta em treino distinto; o id da aberta só identifica, sem decidir).
+  void activeExecutionWorkoutId;
+  const bloqueado07c = writeBlocked === true;
+  const effectiveReadOnly =
+    (readOnly ?? false) || executionBlocked || bloqueado07c;
   const backProgramId =
     backTarget.kind === "program" ? backTarget.programId : "";
   const programId = program?.id ?? backProgramId;
@@ -661,6 +705,7 @@ export function WorkoutDetailSection({
                 workoutId={workoutId}
                 entries={entries}
                 onTemplateChanged={() => void retry()}
+                onExecutionSettled={onExecutionSettled}
               >
                 {(ctx) => (
                   <>
@@ -703,10 +748,19 @@ export function WorkoutDetailSection({
                       </div>
                     ) : null}
 
+                    {bloqueado07c && blockedTooltip ? (
+                      <div
+                        role="alert"
+                        className="rounded border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300 font-medium"
+                      >
+                        {blockedTooltip}
+                      </div>
+                    ) : null}
+
                     <WorkoutEntriesList
                       entries={ctx.displayEntries}
                       programId={programId}
-                      readOnly={effectiveReadOnly}
+                      readOnly={effectiveReadOnly || bloqueado07c}
                       empty={ctx.displayEntries.length === 0}
                       errorMsg={errorMsg}
                       errorOrigin={errorOrigin}
@@ -723,11 +777,12 @@ export function WorkoutDetailSection({
                       onConfirmUnit={handleUnitCommit}
                       onModeCommit={handleModeCommit}
                       onUnitCommit={handleUnitCommit}
-                      execution={ctx.executionPackage}
+                      execution={bloqueado07c ? undefined : ctx.executionPackage}
+                      blockedTooltip={blockedTooltip}
                     />
 
                     <SeriesEditModal
-                      open={ctx.editing !== null}
+                      open={bloqueado07c ? false : ctx.editing !== null}
                       series={ctx.editing?.serie ?? null}
                       loadUnit={ctx.editing?.loadUnit ?? null}
                       exerciseMode={ctx.editing?.exerciseMode ?? null}
@@ -819,6 +874,15 @@ export function WorkoutDetailSection({
                   </div>
                 ) : null}
 
+                {bloqueado07c && blockedTooltip ? (
+                  <div
+                    role="alert"
+                    className="rounded border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300 font-medium"
+                  >
+                    {blockedTooltip}
+                  </div>
+                ) : null}
+
                 <WorkoutEntriesList
                   entries={entries}
                   programId={programId}
@@ -839,6 +903,7 @@ export function WorkoutDetailSection({
                   onConfirmUnit={handleUnitCommit}
                   onModeCommit={handleModeCommit}
                   onUnitCommit={handleUnitCommit}
+                  blockedTooltip={blockedTooltip}
                 />
               </>
             )}

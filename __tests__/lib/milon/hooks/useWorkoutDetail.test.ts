@@ -1074,3 +1074,125 @@ describe("Milon 05 TASK-013 RED — useWorkoutDetail com valor único (D34)", ()
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Contrato RED da TASK-003 (Mílon 07c, Troca com execução ativa) — pré-cheque
+// R8 em removeEntry (spec R8/AC10/EC7, plan §3).
+// Fonte: `.agents/modules/milon/07c-troca-execucao-ativa/spec.md` R8
+// (spec.md:44 — excluir entry com execução aberta do dono sempre bloqueia) +
+// AC10 (spec.md:73 — mensagem `"Finalize ou cancele a execução ativa antes de
+// remover exercícios"`) + EC7 (spec.md:156 — mesmo texto) + `plan.md` §3
+// (plan.md:72 — removeEntry consulta a aberta por dono com o e-mail da sessão
+// antes de qualquer exclusão; com aberta, grava o texto exato com origem
+// `bloqueio` e relança sem chamar a exclusão; sem aberta, segue o fluxo de
+// excluir/recarregar; o mapeamento de origem classifica o texto exato como
+// `bloqueio`) + `tasks.json` TASK-003 (acceptanceCriteria 4).
+// Estado vigente citado (verdade para o RED):
+// - `lib/milon/hooks/useWorkoutDetail.ts:343-356` — `removeEntry` chama
+//   `removeEntryStandalone` direto, sem consultar a aberta por dono (grep por
+//   `findOpenExecutionByOwner` em lib/milon/hooks retorna 0).
+// - `lib/milon/hooks/useWorkoutDetail.ts:100-110` — `toErrorOrigin` só mapeia
+//   ordem/duplicata/programa-com-treinos para `bloqueio`; o texto exato de
+//   remover ainda cai em `operacao`.
+// Escrito ANTES da implementação (outside-in). Expected: FAIL nos blocos de
+// bloqueio — o hook exclui em vez de bloquear (exclusão chamada, sem origem
+// `bloqueio`; motivo certo, nunca sintaxe). Hefesto fará GREEN na TASK-004
+// sem mudar estes testes (estende o mapeamento de origem + pré-cheque R8).
+// ---------------------------------------------------------------------------
+
+describe("Milon 07c TASK-003 RED — removeEntry bloqueada com execução aberta (R8/AC10/EC7, plan §3)", () => {
+  const MSG_REMOVER =
+    "Finalize ou cancele a execução ativa antes de remover exercícios";
+
+  function abertaDoDono(): {
+    id: string;
+    workoutId: string;
+    programId: string;
+    startedAt: string;
+    finishedAt: null;
+    createdAt: string;
+    created_by: string;
+  } {
+    return {
+      id: "exec-ativa",
+      workoutId: "w-outro",
+      programId: "p-1",
+      startedAt: "2026-10-14T10:00:00.000Z",
+      finishedAt: null,
+      createdAt: "2026-10-14T10:00:00.000Z",
+      created_by: EMAIL,
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    for (const mock of mocksDoArquivo) {
+      vi.mocked(mock).mockReset();
+    }
+    vi.mocked(findOpenExecutionByOwnerStandalone).mockReset();
+  });
+
+  it("com execução aberta do dono, removeEntry relança o texto exato com origem bloqueio SEM excluir", async () => {
+    vi.mocked(findOpenExecutionByOwnerStandalone).mockResolvedValue(abertaDoDono());
+    vi.mocked(removeEntryStandalone).mockResolvedValue(undefined);
+    const { result } = await montarPadrao();
+
+    let thrown: unknown;
+    await act(async () => {
+      try {
+        await result.current.removeEntry(makeEntry({ id: "ent-1" }));
+      } catch (err: unknown) {
+        thrown = err;
+      }
+    });
+
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toBe(MSG_REMOVER);
+    expect(findOpenExecutionByOwnerStandalone).toHaveBeenCalledWith(EMAIL);
+    expect(result.current.errorMsg).toBe(MSG_REMOVER);
+    expect(result.current.errorOrigin).toBe("bloqueio");
+    expect(removeEntryStandalone).not.toHaveBeenCalled();
+    expect(listEntriesByProgramStandalone).toHaveBeenCalledTimes(1);
+  });
+
+  it("sem execução aberta do dono, removeEntry segue o fluxo atual (exclui e recarrega)", async () => {
+    vi.mocked(findOpenExecutionByOwnerStandalone).mockResolvedValue(null);
+    vi.mocked(removeEntryStandalone).mockResolvedValue(undefined);
+    const { result } = await montarPadrao();
+
+    await executar(() => result.current.removeEntry(makeEntry({ id: "ent-1" })));
+
+    expect(findOpenExecutionByOwnerStandalone).toHaveBeenCalledWith(EMAIL);
+    expect(removeEntryStandalone).toHaveBeenCalledWith("ent-1");
+    await waitFor(() =>
+      expect(listEntriesByProgramStandalone).toHaveBeenCalledTimes(2),
+    );
+    expect(result.current.errorMsg).toBeNull();
+    expect(result.current.errorOrigin).toBeNull();
+  });
+});
+
+vi.mock("@/lib/milon/db/executions", () => ({
+  findOpenExecutionByWorkout: vi.fn(),
+  findOpenExecutionByOwner: vi.fn(),
+  findLastSealedExecutionByProgram: vi.fn(),
+  findOpenExecutionByProgram: vi.fn(),
+  startExecution: vi.fn(),
+  finishExecution: vi.fn(),
+  clearExecution: vi.fn(),
+  listDoneByExecution: vi.fn(),
+  markSeriesDone: vi.fn(),
+  unmarkSeries: vi.fn(),
+  findOpenExecutionByWorkoutStandalone: vi.fn(),
+  findOpenExecutionByOwnerStandalone: vi.fn(),
+  startExecutionStandalone: vi.fn(),
+  finishExecutionStandalone: vi.fn(),
+  clearExecutionStandalone: vi.fn(),
+  findLastSealedExecutionByProgramStandalone: vi.fn(),
+  findOpenExecutionByProgramStandalone: vi.fn(),
+  listDoneByExecutionStandalone: vi.fn(),
+  markSeriesDoneStandalone: vi.fn(),
+  unmarkSeriesStandalone: vi.fn(),
+}));
+
+import { findOpenExecutionByOwnerStandalone } from "@/lib/milon/db/executions";

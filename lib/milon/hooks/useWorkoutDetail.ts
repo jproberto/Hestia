@@ -24,6 +24,7 @@ import {
   updateExerciseStandalone,
 } from "@/lib/milon/db/exercises";
 import { findProgramByIdStandalone } from "@/lib/milon/db/programs";
+import { findOpenExecutionByOwnerStandalone } from "@/lib/milon/db/executions";
 import {
   MSG_EXERCICIO_JA_NO_TREINO,
   MSG_PROGRAMA_COM_TREINOS,
@@ -93,6 +94,11 @@ const SUCCESS_SAVE_MESSAGE = "Alteração salva com sucesso.";
 const ORDEM_GUARDA_MESSAGE =
   "A ordem informada não corresponde aos exercícios do treino.";
 
+// Remoção bloqueada com execução aberta (Mílon 07c, R8/AC10/EC7, plan §3):
+// texto exato congelado da spec, sem paráfrase.
+const MSG_REMOVER_EXERCICIOS =
+  "Finalize ou cancele a execução ativa antes de remover exercícios";
+
 function toErrorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
 }
@@ -102,7 +108,8 @@ function toErrorOrigin(message: string): ErrorOrigin {
     message === ORDEM_GUARDA_MESSAGE ||
     message === MSG_TREINO_COM_EXERCICIOS ||
     message === MSG_EXERCICIO_JA_NO_TREINO ||
-    message === MSG_PROGRAMA_COM_TREINOS
+    message === MSG_PROGRAMA_COM_TREINOS ||
+    message === MSG_REMOVER_EXERCICIOS
   ) {
     return "bloqueio";
   }
@@ -344,6 +351,24 @@ export function useWorkoutDetail(workoutId: string): UseWorkoutDetailReturn {
     async (entry: WorkoutEntry): Promise<void> => {
       setErrorMsg(null);
       setErrorOrigin(null);
+      // Pré-cheque R8 (Mílon 07c, plan §3): com execução aberta do dono,
+      // bloqueia antes de qualquer exclusão, sem chamar removeEntryStandalone.
+      try {
+        const email = await resolveEmail();
+        const abertaPorDono =
+          await findOpenExecutionByOwnerStandalone(email);
+        if (abertaPorDono) {
+          setErrorMsg(MSG_REMOVER_EXERCICIOS);
+          setErrorOrigin("bloqueio");
+          throw new Error(MSG_REMOVER_EXERCICIOS);
+        }
+      } catch (err: unknown) {
+        const message = toErrorMessage(err, "Erro ao verificar execução ativa");
+        if (message === MSG_REMOVER_EXERCICIOS) throw err;
+        setErrorMsg(message);
+        setErrorOrigin(toErrorOrigin(message));
+        throw err instanceof Error ? err : new Error(message);
+      }
       try {
         await removeEntryStandalone(entry.id);
       } catch (err: unknown) {
@@ -352,7 +377,7 @@ export function useWorkoutDetail(workoutId: string): UseWorkoutDetailReturn {
       await refreshViews();
       flashSuccess(SUCCESS_SAVE_MESSAGE);
     },
-    [refreshViews, flashSuccess, failAsPage],
+    [refreshViews, flashSuccess, failAsPage, resolveEmail],
   );
 
   const reorderEntries = useCallback(

@@ -36,6 +36,12 @@ export interface SeriesCardProps {
   onApplyAll: () => void;
   onChooseUnit: (unit: LoadUnit) => void;
   execution?: SeriesExecutionProps;
+  /**
+   * Tooltip de bloqueio (Mílon 07c): no ramo somente-leitura com texto
+   * presente, o card expõe `title` acessível igual ao tooltip + marcador
+   * `aria-disabled`. Default nulo (sem bloqueio).
+   */
+  blockedTooltip?: string | null;
 }
 
 /**
@@ -59,6 +65,7 @@ export default function SeriesCard({
   onApplyAll,
   onChooseUnit,
   execution,
+  blockedTooltip = null,
 }: SeriesCardProps) {
   const rotulo = `Série ${index + 1}`;
   const baseId = `serie-${series.id}`;
@@ -207,8 +214,17 @@ export default function SeriesCard({
     const resumoValor = isRepsMode
       ? `${series.value ?? "—"} reps`
       : `${series.value ?? "—"} s`;
+    // Mílon 07c: ramo leitura bloqueada expõe o tooltip como título
+    // acessível + marcador de desabilitado (AC1).
+    const bloqueioProps =
+      blockedTooltip !== null && blockedTooltip !== ""
+        ? { title: blockedTooltip, "aria-disabled": true as const }
+        : {};
     return (
-      <div className="rounded-md border px-3 py-2 flex flex-col gap-1">
+      <div
+        className="rounded-md border px-3 py-2 flex flex-col gap-1"
+        {...bloqueioProps}
+      >
         <span className="text-sm font-medium">{rotulo}</span>
         <span className="text-xs text-muted-foreground">
           {resumoValor} · {series.load ?? "—"}

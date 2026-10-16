@@ -1,6 +1,16 @@
 "use client";
 
-import { Fragment, cloneElement, isValidElement, useCallback, useMemo, useState, type ReactNode } from "react";
+import {
+  Fragment,
+  cloneElement,
+  isValidElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import { AsyncState } from "@/components/ui/AsyncState";
 import { Button } from "@/components/ui/button";
@@ -38,6 +48,15 @@ export type WorkoutDetailBackTarget =
   | { kind: "program"; programId: string }
   | { kind: "none" };
 
+/**
+ * Desfecho da operação de encerramento (Mílon 07b-1, plan §3): `sealed`
+ * somente após `finishExecution` bem-sucedido (parcial confirmada,
+ * completa confirmada ou completo direto); `cancelled` somente após
+ * `clearExecution` bem-sucedido (Cancelar confirmado ou Finalizar vazio
+ * conduzido). Emitido uma única vez por operação de sucesso, nunca no erro.
+ */
+export type ExecutionSettledOutcome = "sealed" | "cancelled";
+
 export interface WorkoutDetailSectionProps {
   workoutId: string;
   backTarget: WorkoutDetailBackTarget;
@@ -72,12 +91,22 @@ export interface WorkoutDetailSectionProps {
   writeBlocked?: boolean;
   blockedTooltip?: string | null;
   /**
-   * Troca de execução ativa (Mílon 07c, AC6): invalidação da fonte única
-   * após o selamento. A seção invoca após Finalizar/Cancelar com sucesso;
-   * a página do Treino do Dia liga ao `retry()` de `useActiveExecution`
-   * para que outro treino libere escrita sem reload.
+   * Troca de execução ativa (Mílon 07c, AC6) + desfecho (Mílon 07b-1,
+   * plan §3): invalidação da fonte única após Finalizar/Cancelar com
+   * sucesso. A seção invoca exatamente uma vez por operação bem-sucedida
+   * carregando o desfecho (`sealed` nos três caminhos de selamento,
+   * `cancelled` nos dois de exclusão); a falha nunca emite. A chamada sem
+   * argumento é retrocompatível (comportamento 7c: não-selamento).
    */
-  onExecutionSettled?: () => void | Promise<void>;
+  onExecutionSettled?: (outcome: ExecutionSettledOutcome) => void | Promise<void>;
+  /**
+   * Sinal de foco do cabeçalho (Mílon 07b-1, plan §3 / DA5): com valor
+   * não-nulo a seção foca o próprio cabeçalho rotulado `Cabeçalho do
+   * treino` (tabindex -1, foco só programático) ao montar e a cada nova
+   * mudança do valor, nos dois ramos (execução e manutenção). Nulo
+   * (default) nenhum foco programático.
+   */
+  focusHeaderSignal?: number | null;
 }
 
 function toMessage(err: unknown, fallback: string): string {
@@ -181,7 +210,7 @@ function ExecutionHost({
   workoutId: string;
   entries: WorkoutEntryView[];
   onTemplateChanged: () => void;
-  onExecutionSettled?: () => void | Promise<void>;
+  onExecutionSettled?: (outcome: ExecutionSettledOutcome) => void | Promise<void>;
   children: (ctx: ExecutionListContext) => ReactNode;
 }) {
   const exec = useWorkoutExecution(workoutId, entries);
@@ -284,18 +313,24 @@ function ExecutionHost({
   // com a mesma disciplina do clearConfirmOpen — erro nunca fecha (o hook
   // relança e mantém aberto), processing nunca fecha (dismiss guardado aqui
   // + botões desabilitados no modal). Após o selamento com sucesso, invalida
-  // a fonte única via `onExecutionSettled` (Mílon 07c, AC6).
-  function notifySettled(): void {
-    void onExecutionSettled?.();
+  // a fonte única via `onExecutionSettled` (Mílon 07c, AC6) informando o
+  // desfecho da operação (Mílon 07b-1, plan §3).
+  function notifySettled(outcome: ExecutionSettledOutcome): void {
+    void onExecutionSettled?.(outcome);
   }
 
   function confirmFinish(): void {
+    // Captura síncrona do caso ANTES da chamada do hook (plan §3 / TASK-002
+    // AC3): `confirmFinish` reinicia `finishConfirmCase` ao concluir, daí o
+    // desfecho ser decidido aqui — vazio conduzido emite `cancelled`, os
+    // demais (parcial/completa) emitem `sealed`.
+    const caso = exec.finishConfirmCase;
     void exec
       .confirmFinish()
-      .then(() => notifySettled())
+      .then(() => notifySettled(caso === "vazio" ? "cancelled" : "sealed"))
       .catch(() => {
         // Banner já alimentado pelo hook (origem operacao); modal permanece
-        // aberto por construção (hook só fecha no sucesso).
+        // aberto por construção (hook só fecha no sucesso). Sem desfecho.
       });
   }
 
@@ -306,9 +341,9 @@ function ExecutionHost({
   function confirmCancel(): void {
     void exec
       .confirmCancelExecution()
-      .then(() => notifySettled())
+      .then(() => notifySettled("cancelled"))
       .catch(() => {
-        // Idem: erro de operação sem fechar.
+        // Idem: erro de operação sem fechar, sem desfecho.
       });
   }
 
@@ -317,9 +352,15 @@ function ExecutionHost({
   }
 
   function requestFinish(): void {
+    // Caso capturado síncrono e anterior à chamada do hook: só o completo
+    // sela direto (emite `sealed`); parcial/vazio abrem a pergunta sem
+    // selar e o desfecho sai em `confirmFinish` — nunca aqui.
+    const caso = exec.finishCase;
     void exec
       .requestFinish()
-      .then(() => notifySettled())
+      .then(() => {
+        if (caso === "completo") notifySettled("sealed");
+      })
       .catch(() => {
         // Completo sela direto; falha vira banner de operação (sem modal).
       });
@@ -387,8 +428,18 @@ export function WorkoutDetailSection({
   writeBlocked = false,
   blockedTooltip = null,
   onExecutionSettled,
+  focusHeaderSignal = null,
 }: WorkoutDetailSectionProps) {
   const router = useRouter();
+
+  // Foco do cabeçalho pelo sinal (Mílon 07b-1, plan §3 + DA5): só há foco
+  // programático com sinal não-nulo, ao montar e a cada mudança do valor
+  // (o tabindex -1 do cabeçalho mantém o foco fora da tabulação).
+  const cabecalhoRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (focusHeaderSignal === null) return;
+    cabecalhoRef.current?.focus();
+  }, [focusHeaderSignal]);
 
   const {
     workout,
@@ -711,6 +762,8 @@ export function WorkoutDetailSection({
                   <>
                     <section
                       aria-label="Cabeçalho do treino"
+                      ref={cabecalhoRef}
+                      tabIndex={-1}
                       className="rounded-lg border bg-card p-6 shadow-sm flex flex-col gap-2"
                     >
                       <div className="flex items-center justify-between gap-4">
@@ -838,6 +891,8 @@ export function WorkoutDetailSection({
               <>
                 <section
                   aria-label="Cabeçalho do treino"
+                  ref={cabecalhoRef}
+                  tabIndex={-1}
                   className="rounded-lg border bg-card p-6 shadow-sm flex flex-col gap-2"
                 >
                   <div className="flex items-center justify-between gap-4">

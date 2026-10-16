@@ -1819,3 +1819,360 @@ describe("WorkoutDetailSection — escrita bloqueada 07c (TASK-005 — RED)", ()
     expect(screen.getByText(TOOLTIP_ATIVO_A)).toBeInTheDocument();
   });
 });
+
+/**
+ * Contrato RED — Mílon 07b-1 "Avançar para o próximo treino" (TASK-001):
+ * desfecho do aviso de assentamento + foco do cabeçalho na seção.
+ *
+ * Fonte da verdade: `.agents/modules/milon/07b-1-avancar-proximo-treino/`
+ * - `spec.md` §5 (critérios 1, 4, 5 e 8) + §2 ("foco ao concluir": após
+ *   Finalizar o foco vai para o cabeçalho do próximo treino; após Cancelar
+ *   permanece no cabeçalho do mesmo treino);
+ * - `plan.md` §3 Contratos Completos — `onExecutionSettled` passa de
+ *   assinatura sem argumento para parâmetro de desfecho da união textual
+ *   `sealed` | `cancelled` (`sealed` só após `finishExecution` bem-sucedido:
+ *   parcial confirmada, completa confirmada ou completo direto; `cancelled`
+ *   só após `clearExecution` bem-sucedido: Cancelar confirmado ou Finalizar
+ *   vazio conduzido), invocado exatamente uma vez por operação de sucesso e
+ *   nunca no erro; nova prop opcional `focusHeaderSignal` (número ou nulo,
+ *   padrão nulo) que foca o cabeçalho rotulado `Cabeçalho do treino` (com
+ *   tabindex menos um) ao montar com sinal não-nulo e a cada mudança;
+ * - `plan.md` §5 decisões DA3 (desfecho como parâmetro do callback
+ *   existente, ponto único de notificação da 7c preservado) e DA5 (foco por
+ *   sinal numérico, verificável como `document.activeElement`);
+ * - `tasks.json` TASK-001 `acceptanceCriteria` (fonte da cobertura).
+ *
+ * ESTADO VIGENTE DA PRODUÇÃO (lido do disco — é o que faz estes testes
+ * caírem):
+ * - `components/milon/WorkoutDetailSection.tsx` declara
+ *   `onExecutionSettled?: () => void | Promise<void>` (sem parâmetro) e os
+ *   TRÊS pontos de emissão do `ExecutionHost` chamam
+ *   `void onExecutionSettled?.()` sem argumento (`notifySettled()` após
+ *   `confirmFinish`, após `confirmCancelExecution` e após `requestFinish`);
+ * - NÃO existe a prop `focusHeaderSignal` e nenhum dos dois cabeçalhos
+ *   (ramo de execução e ramo de manutenção) tem `tabindex` — em jsdom
+ *   apenas elemento com `tabindex` aceita foco programático (verificado:
+ *   `tabindex="-1"` foca, ausência não foca).
+ *
+ * Expected: FAIL pelo motivo certo em 6 casos — os 4 de desfecho falham na
+ * asserção de argumento (a chamada atual não leva desfecho: diff
+ * `chamada com [] esperado ['sealed'|'cancelled']`) e os 2 de foco falham
+ * na ausência de `tabindex`/foco programático (prop nova ignorada). Os
+ * casos de falha de operação e o de sinal nulo são TRAVAS VERDES do
+ * comportamento inalterado da 07/7c (a produção já não emite no erro e já
+ * não foca sem sinal): passam agora e DEVEM continuar verdes após o GREEN
+ * da TASK-002. Semântica 07/7c preservada: nenhum teste existente deste
+ * arquivo acopla a assinatura sem desfecho (verificado por busca por
+ * `onExecutionSettled` — zero ocorrências antes deste bloco).
+ *
+ * Padrão do repositório: Testing Library + Vitest + jsdom, factories com
+ * defaults, `clickConnectedButton` para clique pós-render da composição,
+ * props inexistentes via cast (`as unknown as SectionProps`) para o
+ * `tsc --noEmit` seguir exit 0 no RED.
+ */
+describe("WorkoutDetailSection — desfecho do aviso e foco do cabeçalho (07b-1 TASK-001 — RED)", () => {
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  /** Estado do hook de execução com a máquina da 07 (base da spec 07). */
+  function setupExec07b1(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null as Record<string, unknown> | null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      totalSeriesCount: 0,
+      finishCase: null as "vazio" | "parcial" | "completo" | null,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      finishConfirmOpen: false,
+      finishConfirmCase: null as "parcial" | "completa" | "vazio" | null,
+      cancelConfirmOpen: false,
+      finishProcessing: false,
+      cancelProcessing: false,
+      requestFinish: vi.fn(async () => {}),
+      confirmFinish: vi.fn(async () => {}),
+      cancelFinish: vi.fn(),
+      requestCancel: vi.fn(),
+      confirmCancelExecution: vi.fn(async () => {}),
+      cancelCancelExecution: vi.fn(),
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  /** Execução aberta do próprio treino (fixture da 07). */
+  function execAberta(): Record<string, unknown> {
+    return {
+      id: "exec-1",
+      workoutId: "wout-1",
+      programId: "prog-1",
+      startedAt: "2026-10-16T10:00:00.000Z",
+      finishedAt: null,
+      createdAt: "2026-10-16T10:00:00.000Z",
+      created_by: DONO,
+    };
+  }
+
+  function comExecucao(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backNone,
+      executionEnabled: true,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  function manutencao(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backProgram,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  /** Cabeçalho da seção: elemento rotulado acessivelmente (aria-label). */
+  function cabecalhoDoTreino(): HTMLElement {
+    return screen.getByRole("region", { name: "Cabeçalho do treino" });
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExec07b1();
+  });
+
+  // --- Desfecho por caminho de sucesso (spec §5 critérios 1, 4 e 5) -------
+
+  it("confirmar o Finalizar parcial emite onExecutionSettled com desfecho 'sealed'", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExec07b1({
+      execution: execAberta(),
+      doneSeriesIds: ["ser-1"],
+      markedCount: 1,
+      finishConfirmOpen: true,
+      finishConfirmCase: "parcial",
+    });
+    const settled = vi.fn();
+
+    render(
+      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
+    );
+
+    // Confirmação do modal de parcial (botão "Finalizar" da 07).
+    await clickConnectedButton(/^finalizar$/i);
+
+    await waitFor(() => expect(execState.confirmFinish).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(settled).toHaveBeenCalled());
+    // RED: a produção chama `void onExecutionSettled?.()` SEM argumento.
+    expect(settled).toHaveBeenCalledWith("sealed");
+    expect(settled).toHaveBeenCalledTimes(1);
+  });
+
+  it("Finalizar completo direto (requestFinish no caso completo) emite onExecutionSettled com desfecho 'sealed'", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExec07b1({
+      execution: execAberta(),
+      // Caso completo: todas as séries marcadas (07 decide sem confirmação).
+      finishCase: "completo",
+      doneSeriesIds: ["ser-1", "ser-2"],
+      markedCount: 2,
+      totalSeriesCount: 2,
+    });
+    const settled = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comExecucao({
+          onExecutionSettled: settled,
+          footer: <button type="button">Finalizar</button>,
+        })}
+      />,
+    );
+
+    // Rodapé com enxerto de ação (Mílon #7, D6): dispara requestFinish.
+    await clickConnectedButton(/^finalizar$/i);
+
+    await waitFor(() => expect(execState.requestFinish).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(settled).toHaveBeenCalled());
+    // RED: chamada sem argumento não satisfaz o desfecho esperado.
+    expect(settled).toHaveBeenCalledWith("sealed");
+    expect(settled).toHaveBeenCalledTimes(1);
+  });
+
+  it("confirmar o Cancelar emite onExecutionSettled com desfecho 'cancelled'", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExec07b1({
+      execution: execAberta(),
+      cancelConfirmOpen: true,
+    });
+    const settled = vi.fn();
+
+    render(
+      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
+    );
+
+    // Confirmação de exclusão da 07 (botão "Excluir" do modal de cancelar).
+    await clickConnectedButton(/^excluir$/i);
+
+    await waitFor(() =>
+      expect(execState.confirmCancelExecution).toHaveBeenCalledTimes(1),
+    );
+    await waitFor(() => expect(settled).toHaveBeenCalled());
+    // RED: chamada sem argumento não satisfaz o desfecho esperado.
+    expect(settled).toHaveBeenCalledWith("cancelled");
+    expect(settled).toHaveBeenCalledTimes(1);
+  });
+
+  it("confirmar o Finalizar vazio conduzido ao cancelamento emite 'cancelled' e NÃO 'sealed' (spec §5 critério 5)", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExec07b1({
+      execution: execAberta(),
+      finishConfirmOpen: true,
+      finishConfirmCase: "vazio",
+    });
+    // Modela o hook real (07): ao concluir, `confirmFinish` reinicia o caso
+    // (`finishConfirmCase` volta a nulo) — daí a captura do caso ter de ser
+    // síncrona e anterior à chamada do hook (plan §3 / TASK-002 AC3).
+    execState.confirmFinish = vi.fn(async () => {
+      mockedUseWorkoutExecution.mockReturnValue({
+        ...execState,
+        finishConfirmOpen: false,
+        finishConfirmCase: null,
+      });
+    });
+    const settled = vi.fn();
+
+    render(
+      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
+    );
+
+    // Botão de confirmar do modal de vazio é "Cancelar execução" (07 D4).
+    await clickConnectedButton(/^cancelar execução$/i);
+
+    await waitFor(() => expect(execState.confirmFinish).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(settled).toHaveBeenCalled());
+    // RED: chamada sem argumento não satisfaz o desfecho esperado.
+    expect(settled).toHaveBeenCalledWith("cancelled");
+    expect(settled).toHaveBeenCalledTimes(1);
+    // O vazio conduzido NÃO é selamento: nada pode ser reportado como sealed.
+    expect(settled).not.toHaveBeenCalledWith("sealed");
+  });
+
+  // --- Ausência de desfecho no erro (spec §5 critério 8) — travas verdes --
+
+  it("falha ao confirmar o Finalizar NÃO emite onExecutionSettled (nenhum desfecho; modal preservado)", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExec07b1({
+      execution: execAberta(),
+      finishConfirmOpen: true,
+      finishConfirmCase: "parcial",
+      confirmFinish: vi.fn(async () => {
+        throw new Error("Erro ao finalizar treino");
+      }),
+    });
+    const settled = vi.fn();
+
+    render(
+      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
+    );
+
+    await clickConnectedButton(/^finalizar$/i);
+
+    await waitFor(() => expect(execState.confirmFinish).toHaveBeenCalledTimes(1));
+    // Trava 07: erro de operação não fecha o modal (mensagem segue visível).
+    expect(
+      screen.getByText(
+        /Ainda existem séries não executadas\. Tem certeza que deseja finalizar o treino\?/i,
+      ),
+    ).toBeInTheDocument();
+    // Trava verde do contrato: nada é emitido no caminho de erro (a produção
+    // já comporta assim e o GREEN da TASK-002 não pode quebrar isto).
+    expect(settled).not.toHaveBeenCalled();
+  });
+
+  it("falha ao confirmar o Cancelar NÃO emite onExecutionSettled (nenhum desfecho; modal preservado)", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExec07b1({
+      execution: execAberta(),
+      cancelConfirmOpen: true,
+      confirmCancelExecution: vi.fn(async () => {
+        throw new Error("Erro ao cancelar execução");
+      }),
+    });
+    const settled = vi.fn();
+
+    render(
+      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
+    );
+
+    await clickConnectedButton(/^excluir$/i);
+
+    await waitFor(() =>
+      expect(execState.confirmCancelExecution).toHaveBeenCalledTimes(1),
+    );
+    expect(
+      screen.getByText(
+        /Tem certeza que deseja cancelar essa execução\? Todas as informações serão excluídas\./i,
+      ),
+    ).toBeInTheDocument();
+    // Trava verde do contrato: nenhum desfecho no caminho de erro.
+    expect(settled).not.toHaveBeenCalled();
+  });
+
+  // --- Foco do cabeçalho pelo sinal (spec §2 "foco ao concluir" + DA5) ----
+
+  it("focusHeaderSignal não-nulo foca o cabeçalho ao montar e a cada novo valor do sinal (ramo de execução)", () => {
+    conteudoComUmaEntrada();
+    setupExec07b1({ execution: execAberta() });
+    const settled = vi.fn();
+
+    const { rerender } = render(
+      <WorkoutDetailSection
+        {...comExecucao({ onExecutionSettled: settled, focusHeaderSignal: 1 })}
+      />,
+    );
+
+    const cabecalho = cabecalhoDoTreino();
+    // RED: sem a prop nova o cabeçalho não tem tabindex e não foca.
+    expect(cabecalho).toHaveAttribute("tabindex", "-1");
+    expect(cabecalho).toHaveFocus();
+
+    // Perde o foco e a página incrementa o sinal (novo desfecho) → refoca.
+    cabecalho.blur();
+    expect(cabecalho).not.toHaveFocus();
+    rerender(
+      <WorkoutDetailSection
+        {...comExecucao({ onExecutionSettled: settled, focusHeaderSignal: 2 })}
+      />,
+    );
+    expect(cabecalho).toHaveFocus();
+  });
+
+  it("focusHeaderSignal não-nulo foca o cabeçalho no ramo de manutenção também (duas ramificações)", () => {
+    conteudoComUmaEntrada();
+
+    render(<WorkoutDetailSection {...manutencao({ focusHeaderSignal: 1 })} />);
+
+    const cabecalho = cabecalhoDoTreino();
+    // RED: cabeçalho da manutenção também está sem tabindex e sem foco.
+    expect(cabecalho).toHaveAttribute("tabindex", "-1");
+    expect(cabecalho).toHaveFocus();
+  });
+
+  it("trava: focusHeaderSignal nulo (default) não move o foco programático do cabeçalho", () => {
+    conteudoComUmaEntrada();
+
+    render(<WorkoutDetailSection {...manutencao()} />);
+
+    expect(cabecalhoDoTreino()).not.toHaveFocus();
+  });
+});

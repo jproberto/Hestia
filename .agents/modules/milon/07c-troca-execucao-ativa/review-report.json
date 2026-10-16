@@ -1,0 +1,43 @@
+﻿{
+  "status": "approved",
+  "category": "none",
+  "findings": [
+    {
+      "severity": "minor",
+      "category": "contract",
+      "file": "lib/milon/repositories/programs.ts",
+      "line": 104,
+      "evidence": "createProgram (:104-111) desativa outros programas via db.update direto sem a guarda R6; updateProgram no ramo status=ativo (:129-138) faz o mesmo. A guarda R6 existe somente no ramo status=inativo (:146-157). UI hoje segura (save cria sempre rascunho em usePrograms.ts:192; runActivation tem pre-cheque R7). Re-checado no diff novo: sem mudanca neste ponto, sem regressao.",
+      "impact": "Bypass de R6 apenas em chamadas diretas ao repositorio (criar-ativando desativa o programa com a aberta sem o erro congelado). Sem impacto na UI atual.",
+      "suggestion": "Backlog: aplicar a guarda R6 tambem aos ramos de desativacao colateral (create/update-ativo) ou documentar que o ponto de estrangulamento cobre so transicoes explicitas para inativo (decisao do plan, sem mudanca obrigatoria)."
+    },
+    {
+      "severity": "minor",
+      "category": "quality",
+      "file": "lib/milon/hooks/useActiveExecution.ts",
+      "line": 26,
+      "evidence": "carregarAtiva (:22-33) captura QUALQUER falha de getEmail e retorna null silencioso (sem erro, origem carga nao alimentada). Pagina interpreta como sem execucao e libera a escrita visualmente. Re-checado no diff novo: inalterado, sem regressao.",
+      "impact": "Fail-open cosmetico: se a sessao falhar, a UI sugere escrita livre; a trava real continua no startExecution (pre-cheque por dono + indice unico 0016), entao R1 nao e violado. Apenas ruido de UX em edge de sessao.",
+      "suggestion": "Backlog: propagar falha de sessao como origem carga em vez de null silencioso, ou documentar o fail-open como aceito."
+    },
+    {
+      "severity": "minor",
+      "category": "semver",
+      "file": "package.json",
+      "line": 3,
+      "evidence": "git diff develop...HEAD -- package.json vazio; version permanece 1.0.0 sem bump (feat->minor pela rubrica). Nenhuma feature anterior do modulo fez bump por feature; sem politica de bump por feature em AGENTS.md.",
+      "impact": "Nenhum impacto funcional; apenas divergencia da rubrica padrao vs pratica do repo.",
+      "suggestion": "Nao bloqueia. Zeus/humano confirmar se bump por feature e esperado; se sim, aplicar minor nesta ou na release."
+    }
+  ],
+  "blockers": [],
+  "testGaps": [
+    "AC6 (ex-blocker, AGORA COBERTO): __tests__/app/milon/today/page-ac6.test.tsx 2/2 (Finalizar em A -> B libera sem reload; Cancelar em A -> B libera sem reload) — asserts writeBlocked false + blockedTooltip null + botao Marcar serie habilitado. Fix: app/milon/today/page.tsx:22-33 (retry wired, handleExecutionSettled) + :94 onExecutionSettled -> secao; components/milon/WorkoutDetailSection.tsx:288-289 notifySettled, :292-299 confirmFinish, :306-313 confirmCancel, :319-326 requestFinish (settle so no sucesso).",
+    "Ramo tooltip nulo (bloqueado true + nomeAtivo null em page.tsx:59-62 quando a aberta nao esta na lista carregada) sem cobertura — plano argumenta inalcancavel via R6/R7; aceito, sem assercao.",
+    "EC3 corrida entre dispositivos coberta so em nivel de contrato/fake (contract-07c-active-owner 11 tests) — aceito pela spec AC7, sem cenario deterministico manual.",
+    "Guarda R6 nos ramos colaterais (create-ativo / update-ativo desativando outros, programs.ts:104-138) sem teste de contrato — UI cobre via R7, repositorio nao."
+  ],
+  "questions": [
+    "Bump de version em package.json e esperado por feature neste repo? (pratica mostra que nao)"
+  ]
+}

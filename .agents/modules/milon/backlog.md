@@ -35,7 +35,8 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 | 6 | **Timer de descanso auto + PWA push** | Ao marcar uma série como feita, o timer do descanso daquela série inicia sozinho. Notificação push via PWA avisa o fim mesmo com tela apagada/app em segundo plano. MVP inclui o PWA mínimo para isso funcionar. | | | |
 | 7 | **Encerrar treino com confirmação** | Botão "Encerrar treino" com confirmação que lista o que falta (exercícios/séries pendentes). Ao confirmar, registra o treino com `encerrado_em`. Permite encerrar parcial (falta vira dado, não bloqueio). | Concluído (2026-10-13 — `Finalizar` no fim + `Cancelar` no topo, 4 casos + vazio-oculto, `finishExecution` sem migração, suite 1519, coverage 85.12/84.1, review approved) | [.agents/modules/milon/07-encerrar-treino/spec.md](.agents/modules/milon/07-encerrar-treino/spec.md) | [.agents/modules/milon/07-encerrar-treino/plan.md](.agents/modules/milon/07-encerrar-treino/plan.md) |
 | 7b | **Rotação do Treino do Dia por histórico** | Treino do Dia exibe o próximo treino da rotação a partir do último executado (histórico de execuções seladas), em vez do primeiro por criação (v1 da #4). Desmembrado da #4 (spec §4, adiado para pós-#7) + reafirmado na #7 (pedido humano 2026-10-12: não esquecer). Ordem própria dos treinos com reordenação por arrastar + D10 (aberta vence) entraram no escopo. | Concluído (2026-10-14 — seleção por aberta→histórico com wrap + ordem própria com reorder por arrastar, migração 0015, suite 1573, coverage 84.5, review approved) | [.agents/modules/milon/07b-rotacao-treino-dia/spec.md](.agents/modules/milon/07b-rotacao-treino-dia/spec.md) | [.agents/modules/milon/07b-rotacao-treino-dia/plan.md](.agents/modules/milon/07b-rotacao-treino-dia/plan.md) |
-| 7c | **Troca com execução ativa** | Com execução aberta, a troca de treino no Treino do Dia segue permitida para consulta, mas nenhuma escrita é permitida fora do treino com execução ativa (bloqueio visual, sem modal). Invariante: no máximo uma execução aberta por dono (global). (Pedido humano 2026-10-14, desmembrado da 7b; simplificado sem modal.) | | | |
+| 7b-1 | **Avançar para o próximo treino ao finalizar** | Ao `Finalizar` (ou `Cancelar`?) um treino no Treino do Dia, a página avança automaticamente para o próximo treino da rotação em vez de permanecer no treino atual com marcações limpas. Comportamento atual: permanece no mesmo treino. (Pedido humano 2026-10-15, achado na homologação da 7c; escopo a descobrir: vale para Cancelar? e com execução ainda aberta em outro treino?) | | | |
+| 7c | **Troca com execução ativa** | Com execução aberta, a troca de treino no Treino do Dia segue permitida para consulta, mas nenhuma escrita é permitida fora do treino com execução ativa (bloqueio visual, sem modal). Invariante: no máximo uma execução aberta por dono (global). (Pedido humano 2026-10-14, desmembrado da 7b; simplificado sem modal.) | Concluído (2026-10-15 — guarda visual sem modal + índice único por dono 0016 + hook useActiveExecution; R6/R7/R8 com textos exatos; suite 1620, coverage 84.53/83.49, review approved pós-fix AC6) | [.agents/modules/milon/07c-troca-execucao-ativa/spec.md](.agents/modules/milon/07c-troca-execucao-ativa/spec.md) | [.agents/modules/milon/07c-troca-execucao-ativa/plan.md](.agents/modules/milon/07c-troca-execucao-ativa/plan.md) |
 | 8 | **Layout responsivo para telas pequenas (celular)** | Garantir que telas de montagem/execução caibam na viewport do celular, com listas roláveis internas, ações sempre visíveis e sem estouro. | | | |
 
 ### Bloco 3 — Histórico mínimo
@@ -107,6 +108,20 @@ Re-review aprovado 2026-10-13 (0 blockers). 3 minors viram backlog; decisão D2 
 | 1 | `lib/milon/repositories/executions.ts:102` | `finishExecution` grava `finished_at` com relógio do cliente (`new Date().toISOString`) em vez do relógio do banco (`now()`, plan D2). Impacto só na duração futura da #9. | backlog (decidir na #9: normalizar para banco ou aceitar cliente) |
 | 2 | `components/milon/WorkoutConfirmModal.tsx:60` | 4 textos exatos duplicados (`MSG_*` em `workout-utils.ts` + literais no modal). Travado por testes dos dois lados. | backlog (modal importar constantes ou teste cruzado) |
 | 3 | `components/milon/WorkoutConfirmModal.tsx:139` | Cor do botão de confirmação (`default` vs `destructive`) sem asserção — regressão de cor só pega no olho. | backlog (Minos: asserção de `variant` por variante) |
+
+---
+
+## Achados de review (Argos) — feature #7c Troca com execução ativa
+
+Re-review aprovado 2026-10-15 (1 blocker AC6 corrigido no loop: `onExecutionSettled` → `retry()`, stale liberado sem reload; suite 1620, coverage 84.53/83.49). 3 minors viram backlog; homologação humana apontou ainda: Cenário 5 inexistente removido dos cenários (sem botão "arquivar programa" na UI) + item novo 7b-1 (avançar ao próximo treino ao finalizar).
+
+| # | Arquivo:linha | Achado | Encaminhamento |
+|---|---|---|---|
+| 1 | `lib/milon/repositories/programs.ts:104-138` | Ramos colaterais (create-ativo / update-ativo desativando outros) contornam a guarda R6 (só o ramo inativo explícito é guardado). UI segura hoje (cria `rascunho`, R7 no hook), mas o repositório permite arquivamento colateral fora da UI. | backlog (cobrir guarda nos colaterais ou documentar ponto de estrangulamento como decisão) |
+| 2 | `lib/milon/hooks/useActiveExecution.ts:26-30` | Falha de `getEmail` vira `null` silencioso (fail-open visual; trava real segue no `startExecution` + índice, R1 intacto). | backlog (propagar como origem `carga` ou registrar fail-open como aceito) |
+| 3 | `package.json:3` | Sem bump de versão (prática do repo: features não bumpam; rubrica SemVer diverge da prática). | backlog (definir política de bump por feature) |
+
+**Gaps de teste aceitos:** tooltip nulo (aberta fora da lista, inalcançável via R6/R7); EC3 corrida só em contrato/fake (spec AC7); R6 colateral sem contrato (UI cobre via R7); AC6 agora coberta por `page-ac6.test.tsx` 2/2.
 
 ---
 

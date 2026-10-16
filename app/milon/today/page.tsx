@@ -1,8 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { MilonLayout } from "@/components/milon/MilonLayout";
 import { TodayWorkoutSwitcher } from "@/components/milon/TodayWorkoutSwitcher";
-import { WorkoutDetailSection } from "@/components/milon/WorkoutDetailSection";
+import {
+  WorkoutDetailSection,
+  type ExecutionSettledOutcome,
+} from "@/components/milon/WorkoutDetailSection";
 import { AsyncState } from "@/components/ui/AsyncState";
 import { Button } from "@/components/ui/button";
 import { useActiveExecution } from "@/lib/milon/hooks/useActiveExecution";
@@ -27,10 +31,27 @@ export default function TodayPage() {
       | { activeWorkoutId?: string | null; retry?: () => Promise<void> }
       | undefined) ?? {};
   const activeWorkoutId = activeWorkoutIdBruto ?? null;
-  // Troca de execução ativa (Mílon 07c, AC6): após Finalizar/Cancelar, a
-  // seção avisa via `onExecutionSettled` e a fonte única é invalidada para
-  // que outro treino libere escrita sem reload.
-  const handleExecutionSettled = () => void retryActiveExecution?.();
+  // Foco pós-ação (Mílon 07b-1, DA5): sinal numérico incrementado a cada
+  // desfecho emitido (sealed ou cancelled) e enviado à seção, que foca o
+  // cabeçalho do treino exibido ao montar/com sinal novo.
+  const [focusHeaderSignal, setFocusHeaderSignal] = useState<number | null>(
+    null,
+  );
+  // Avançar para o próximo treino (Mílon 07b-1, DA4/DA2): após desfecho da
+  // seção, invalida a fonte única de execução ativa; com `sealed` recarrega
+  // também a seleção (aguardada a fonte), que recalcula o próximo da
+  // rotação 7b — a seleção nova vem exclusivamente do recálculo do hook,
+  // nunca de `selectWorkout` manual. `cancelled` e chamada sem argumento
+  // (retrocompat 7c AC6, DA3) invalidam somente a fonte única.
+  const handleExecutionSettled = async (
+    desfecho?: ExecutionSettledOutcome,
+  ): Promise<void> => {
+    await retryActiveExecution?.();
+    if (desfecho === "sealed") {
+      await retry();
+    }
+    setFocusHeaderSignal((sinal) => (sinal ?? 0) + 1);
+  };
 
   const hasSelection = selectedWorkoutId !== null;
   const empty = !loading && !errorMsg && !hasSelection;
@@ -92,6 +113,7 @@ export default function TodayPage() {
               writeBlocked={bloqueado}
               blockedTooltip={tooltipBloqueio}
               onExecutionSettled={handleExecutionSettled}
+              focusHeaderSignal={focusHeaderSignal}
               headerActions={
                 somenteLeitura ? null : (
                   <Button type="button" variant="outline" size="sm">

@@ -70,9 +70,9 @@ Só atua em `APPROVED` (humano já `approve-review` após homologação manual).
   Todas as alterações notáveis...
   O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e adere ao [SemVer](https://semver.org/spec/v2.0.0.html).
   ```
-- Nova seção `## [X.Y.Z] - YYYY-MM-DD` (X.Y.Z do `package.json` já bumpado; data local)
+- Sem seção versionada nova por feature (decisão A 2026-10-15): acumular em `[Não lançado]`; release versiona depois
 - Agrupe em `### Adicionado | Alterado | Corrigido | Removido | Segurança` — omita seção vazia; itens curtos em Português
-- **SemVer:** `feat`→minor, `fix`→patch, `breaking`→major — se dúvida, `BLOCKED: Missing version bump decision`
+- **SemVer:** features não bumpam (decisão A 2026-10-15) — sem `BLOCKED` por bump; versionamento só em release
 
 ### 3) README.md (guia para humanos)
 Avalie se feature afeta:

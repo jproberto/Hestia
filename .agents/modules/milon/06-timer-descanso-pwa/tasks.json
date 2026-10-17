@@ -28,7 +28,7 @@
       "produces": [
         "RED do conteúdo auditado da migração 0017"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-002",
@@ -55,7 +55,7 @@
       "produces": [
         "Migração 0017 aplicável e auditável (tabelas push_subscriptions e rest_push_schedules)"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-003",

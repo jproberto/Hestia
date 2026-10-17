@@ -179,7 +179,7 @@ Crie execution plan interno:
 1. [DELEGATE] hera: brainstorming + spec.md
 2. [DELEGATE] atena: plan.md + tasks.json
 3. [DELEGATE] minos → hefesto (par): Minos escreve teste de contrato (RED) → Hefesto implementa mínimo para GREEN → refatora → caronte commita `feat: <task>` (repete por task em ordem de deps)
-4. [DELEGATE] minos: suite completa + test-report.json + test-scenarios.md
+4. [DELEGATE] minos: suite completa + test-report.json + test-scenarios.md (**somente cenários manuais de homologação** — a cobertura automatizada é do test-report.json; Zeus NUNCA pede "automatizado ou manual" no test-scenarios, e valida no gate TESTING→REVIEW que o arquivo não contém tags `[Automatizado]` nem paths `__tests__/` — decisão 2026-10-16)
 5. [DELEGATE] argos: review-report.json
 6. [DELEGATE] mnemosine: docs
 7. [DELEGATE] caronte: push + PR

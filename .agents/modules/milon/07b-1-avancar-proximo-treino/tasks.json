@@ -29,7 +29,7 @@
         "RED da ausência de desfecho no erro",
         "RED do foco do cabeçalho pelo sinal"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-002",
@@ -59,7 +59,7 @@
         "onExecutionSettled com desfecho sealed|cancelled na seção",
         "focusHeaderSignal e cabeçalho com tabindex -1 na seção"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-003",
@@ -95,7 +95,7 @@
         "RED da permanência no cancelar e do sinal de foco",
         "RED da falha de carga com retry e do vazio preservado"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-004",
@@ -124,7 +124,7 @@
       "produces": [
         "Página que avança no sealed e permanece no cancelled, com sinal de foco nos dois desfechos"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-005",
@@ -158,7 +158,7 @@
         "Coverage mantida ≥ 80",
         "test-report.json, test-scenarios.md e regression.md prontos para o review do Argos"
       ],
-      "status": "pending"
+      "status": "completed"
     }
   ]
 }

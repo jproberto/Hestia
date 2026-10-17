@@ -18,6 +18,10 @@ import type {
   MarkExecutionSeriesInput,
   CreateWorkoutInput,
   UpdateWorkoutInput,
+  CreateRestPushScheduleInput,
+  DevicePushSubscription,
+  RestPushSchedule,
+  UpsertPushSubscriptionInput,
 } from "../types";
 
 export interface IExerciseRepository {
@@ -130,4 +134,27 @@ export interface IWorkoutExecutionRepository {
     email: string,
   ): Promise<WorkoutExecutionSeries>;
   unmarkSeries(executionId: string, seriesId: string): Promise<void>;
+}
+
+// Push do fim de descanso (Mílon #06, migração 0017): assinatura de push por
+// dispositivo e agendamento de descanso por sessão de cliente. As funções do
+// módulo (lib/milon/repositories/push.ts) recebem db: IDatabaseClient; este
+// contrato é o do em memória (fakes-only, decisão 57), mesmo regime de
+// IWorkoutExecutionRepository.
+export interface IPushRepository {
+  upsertSubscription(
+    input: UpsertPushSubscriptionInput,
+    email: string,
+  ): Promise<DevicePushSubscription>;
+  createRestSchedule(
+    input: CreateRestPushScheduleInput,
+    email: string,
+  ): Promise<RestPushSchedule>;
+  findRestScheduleById(
+    scheduleId: string,
+  ): Promise<RestPushSchedule | null>;
+  cancelRestSchedule(scheduleId: string, email: string): Promise<boolean>;
+  markRestScheduleSent(scheduleId: string): Promise<void>;
+  markRestScheduleFailed(scheduleId: string): Promise<void>;
+  deleteSubscriptionByEndpoint(endpoint: string): Promise<void>;
 }

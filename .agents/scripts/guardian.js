@@ -168,6 +168,12 @@ if (next === "REVIEW") {
   if (!rep) fail("test-report.json ausente");
   if ((rep.summary?.failed ?? 1) > 0) fail(`suite com falhas: ${rep.summary.failed} failed — corrija antes do review`);
   if ((rep.summary?.coverage ?? 0) < 80) fail(`coverage ${rep.summary?.coverage} < 80`);
+  // Trava anti-mistura (decisão 2026-10-16): test-scenarios.md é SÓ para homologação manual.
+  const scenarios = read(path.join(dir, "test-scenarios.md"));
+  if (scenarios) {
+    if (/\[Automatizado\]/i.test(scenarios)) fail("test-scenarios.md contém tag [Automatizado] — arquivo é só para homologação manual; cobertura automatizada vive em test-report.json");
+    if (/__tests__\//.test(scenarios)) fail("test-scenarios.md contém path __tests__/ — arquivo é só para homologação manual; referências a testes automatizados ficam em test-report.json");
+  }
 }
 if (next === "APPROVED") {
   if (!ctx || ctx.approvals?.review !== "approved") fail("checkpoint 3 pendente: approvals.review !== approved");

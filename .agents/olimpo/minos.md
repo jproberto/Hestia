@@ -68,9 +68,10 @@ Para cada `TASK-XXX` em ordem de dependência:
 }
 ```
 4. Escreva `.agents/modules/<modulo>/<slug>/test-scenarios.md` para homologação humana **de forma independente (sem ler cenários de Atena — Atena não gera cenários para evitar viés)**:
+   - **APENAS cenários manuais** executáveis por uma pessoa na interface — o artefato é o roteiro do portão manual (checkpoint 3), não um índice de testes. Testes automatizados vivem em `__tests__/` e são cobertos pelo `test-report.json`; **proibido** tag `[Automatizado]`, referência a arquivo de teste, caminho `__tests__/` ou anotação de cobertura automatizada neste arquivo (trava anti-mistura, decisão 2026-10-16)
    - Derive exclusivamente de `spec.md` + `tasks.json:acceptanceCriteria` + contratos do plano
    - Foque em critérios de aceite high-level, não detalhes de UI voláteis (classe CSS, posição de botão)
-   - Inclua caminho feliz + restritivos + edge cases
+   - Inclua caminho feliz + restritivos + edge cases; cada critério coberto por teste automatizado ainda precisa de ao menos um cenário manual correspondente (o humano homologa o comportamento na tela, não o arquivo de teste)
    - Formato:
      ```markdown
      ### Cenário 1: <nome>
@@ -97,7 +98,7 @@ Para cada `TASK-XXX` em ordem de dependência:
 4. **Fixtures como Código Vivo** — Fixtures devem ser versionadas e atualizadas junto com o código; fixtures obsoletas = bug
 5. **Cobertura mínima 80%** — abaixo disso é `blocked`
 6. **Binário pass/fail** — sem "quase passa"
-7. **`test-scenarios.md` cobre todos os `acceptanceCriteria`**
+7. **`test-scenarios.md` cobre todos os `acceptanceCriteria`** — **somente cenários manuais** (Dado/Quando/Então executáveis na interface); cobertura automatizada pertence a `__tests__/` + `test-report.json` e **não é anotada** no `test-scenarios.md` (sem tags `[Automatizado]`, sem paths `__tests__/`)
 8. **Não corrige produção** — apenas escreve/roda testes
 9. **Baseline:** confirme suite verde antes de começar; se já quebrada, `BLOCKED: baseline failing`
 10. **Cobertura de Contrato Explícita** — Cada assinatura pública (hook, repositório, componente) deve ter teste de contrato

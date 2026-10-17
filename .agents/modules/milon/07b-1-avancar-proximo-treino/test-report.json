@@ -1,0 +1,96 @@
+{
+  "byTask": {
+    "TASK-001": "passed",
+    "TASK-002": "passed",
+    "TASK-003": "passed",
+    "TASK-004": "passed",
+    "TASK-005": "passed"
+  },
+  "commands": {
+    "coverage": "npm test -- --coverage (vitest run --coverage, reporter v8)",
+    "suite": "npm test",
+    "storybook": "npm run build-storybook",
+    "tsc": "npx tsc --noEmit",
+    "lint": "npm run lint",
+    "todoSearch": "Select-String case-sensitive \\bTODO\\b|\\bTBD\\b|\\bFIXME\\b em lib, components, app, __tests__, utils/migrations"
+  },
+  "coverage": {
+    "branches": 83.63,
+    "functions": 75.54,
+    "lines": 84.74,
+    "reporter": "v8",
+    "statements": 84.74
+  },
+  "feature": "07b-1-avancar-proximo-treino",
+  "filesTouched": [
+    "app/milon/today/page.tsx",
+    "components/milon/WorkoutDetailSection.tsx"
+  ],
+  "gaps": [
+    "Gates globais aprovam (lines 84.74 >= 80 e branch 83.63 >= 80). Arquivos legados fora do escopo seguem abaixo de 80 e nao bloqueiam (pre-existentes, idem 07c): lib/pluto/repositories 17.66% stmts, lib/pluto/db 42.85%, lib/shared 57.67%, utils/supabase 0%.",
+    "Pontos tocados pela 7b-1 medidos no coverage-final.json (statements/branch): app/milon/today/page.tsx 100% (95/95) / 96.97% (32/33); components/milon/WorkoutDetailSection.tsx 79.75% (563/706) / 82.3% (93/113); lib/milon/hooks/useTodayWorkout.ts 77.25% / 65.38%; useActiveExecution.ts 93.15% / 76.19%; useWorkoutExecution.ts 89.55% / 67.82% — ramos restantes sao majoritariamente caminhos de erro/legados ja exercitados indiretamente; gate do modulo e global (lines+branch).",
+    "Functions global 75.54% segue abaixo de 80 (idem 07c com 74.76%) — o critério de aceite e do plano pede lines e branch >= 80, ambos atendidos.",
+    "Branch variou entre 83.57 e 83.63 em duas execucoes do mesmo comando (ambas >= 80); reportado o valor da execucao final salva.",
+    "Cenarios manuais nao exercitaveis em jsdom ficam declarados no test-scenarios.md (giro real em dispositivo, teclado/leitor de tela no foco, queda real de rede) — sem tentativa de automatizacao falsa.",
+    "Minos tocou somente artefatos de teste (test-report.json, test-scenarios.md, regression.md); nenhum arquivo de producao foi alterado nesta task."
+  ],
+  "gates": {
+    "coverageBranchesGte80": {
+      "actual": 83.63,
+      "expected": "branches >= 80",
+      "status": "passed"
+    },
+    "coverageLinesGte80": {
+      "actual": 84.74,
+      "expected": "lines >= 80",
+      "status": "passed"
+    },
+    "suiteZeroFailures": {
+      "actual": "127 files passed, 1636 tests passed, 0 failed",
+      "expected": "0 falhas",
+      "status": "passed"
+    },
+    "todoZero": {
+      "actual": 0,
+      "expected": 0,
+      "note": "Busca case-sensitive \\bTODO\\b|\\bTBD\\b|\\bFIXME\\b retorna 0 em lib, components, app, __tests__, utils/migrations (a busca case-insensitive da 8 ocorrencias de 'todo'/'Todo' — comentarios e texto 'Todo Vapor' — falsos positivos, nao placeholders).",
+      "status": "passed"
+    },
+    "tscExit0": {
+      "actual": "TSC_EXIT:0",
+      "expected": "exit 0",
+      "status": "passed"
+    },
+    "lintExit0": {
+      "actual": "0 errors, 73 warnings",
+      "expected": "exit 0 (0 errors)",
+      "status": "passed",
+      "note": "Warnings pre-existentes (ex.: useMonthsData.ts silent, fakeBudgetRepository.ts _email) — nenhum erro, nenhum deles criado pela 7b-1."
+    },
+    "storybookExit0": {
+      "actual": "SB_EXIT:0 (Storybook build completed successfully, output storybook-static)",
+      "expected": "exit 0",
+      "status": "passed"
+    }
+  },
+  "outputs": {
+    "coverageTail": "Test Files 127 passed (127) | Tests 1636 passed (1636) | Coverage report from v8 | All files 84.74 stmts, 83.63 branch, 75.54 funcs, 84.74 lines",
+    "suiteTail": "Test Files 127 passed (127) | Tests 1636 passed (1636)",
+    "storybookTail": "Vite built in 16.86s | Output directory: P:/workspace/IA/hestia/storybook-static | Storybook build completed successfully"
+  },
+  "spotChecks": {
+    "__tests__/app/milon/today/page-7b1-advance.test.tsx": "7 tests passed (novo da 7b-1: sealed, cancelled, sem desfecho, retrocompat DA3, falha de carga, 2 vazios)",
+    "__tests__/components/milon/WorkoutDetailSection.test.tsx": "63 tests passed no arquivo, sendo 9 do bloco 07b-1 (desfecho por caminho + ausencia no erro + foco)",
+    "__tests__/app/milon/today/page.test.tsx": "37 tests passed (regressao 07/7c preservada com a assinatura nova)",
+    "__tests__/app/milon/today/page-ac6.test.tsx": "2 tests passed (7c AC6: liberacao de escrita apos settle sem reload)",
+    "comando dirigido dos 4 arquivos": "Test Files 4 passed (4) | Tests 109 passed (109) | exit 0"
+  },
+  "status": "passed",
+  "summary": {
+    "coverage": 84.74,
+    "failed": 0,
+    "passed": 1636,
+    "skipped": 0,
+    "testFiles": 127
+  }
+}

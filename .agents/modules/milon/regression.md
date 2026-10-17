@@ -280,6 +280,21 @@
 **Quando** a pessoa finaliza com todas as séries marcadas (sela direto) ou confirma a pergunta de parcial/vazio
 **Então** a execução some da aberta, o badge apaga e a manutenção volta a ficar livre, sem navegar para fora
 
+### REG-60: Quatro casos de confirmação da #7 — textos exatos inalterados (promovido 7b-1)
+**Dado** o Treino do Dia com execução aberta (parcial, completa e vazio de marcadas; mais o Cancelar)
+**Quando** a pessoa aciona `Finalizar` parcial e confirma, `Finalizar` completo direto, `Finalizar` completando a última pendente e confirma, ou `Cancelar` e confirma
+**Então** cada caso exibe o texto exato congelado da #7, os três caminhos de `Finalizar` selam com término e o `Cancelar` exclui a aberta com cascata — nenhum texto novo da #7b-1 participa
+
+### REG-61: Vazio de borda — aberta com zero marcadas conduz ao cancelamento (promovido 7b-1)
+**Dado** execução aberta com nenhuma série marcada
+**Quando** a pessoa aciona `Finalizar` e confirma a condução ao cancelamento
+**Então** nada é selado (sem término gravado, sem histórico novo), a execução é excluída e a tela permanece no mesmo treino
+
+### REG-62: Imutabilidade pós-selo — selada não volta a ser aberta (promovido 7b-1)
+**Dado** treino recém-finalizado (execução selada com término)
+**Quando** a pessoa reabre o Treino do Dia ou tenta selar de novo
+**Então** a selada não conta como aberta (busca de aberta volta vazia, badge apagado), o duplo selamento vira erro de operação sem selo duplicado e o treino seguinte monta limpo, sem marcações herdadas
+
 ---
 
 ## Feature #7b — Rotação do Treino do Dia por histórico
@@ -289,15 +304,44 @@
 **Quando** a pessoa sela o treino e volta à aba
 **Então** o treino seguinte da ordem aparece (com volta ao primeiro)
 
+### REG-63: Prioridade da execução aberta vence a rotação (promovido 7b-1)
+**Dado** execução aberta em um treino do programa ativo, com histórico de selados no programa
+**Quando** a pessoa abre ou recalcula o Treino do Dia
+**Então** o treino da aberta é exibido, vencendo o próximo pelo último selado
+
+### REG-64: Giro com volta ao primeiro (promovido 7b-1)
+**Dado** programa com treinos em ordem própria e o último selado sendo o derradeiro (sem aberta)
+**Quando** a seleção é recalculada (abertura, nova tentativa ou avanço pós-selo)
+**Então** o exibido é o primeiro da ordem; com o último selado no meio da ordem, o vizinho seguinte
+
+### REG-65: Troca manual entre treinos do programa ativo (promovido 7b-1)
+**Dado** o Treino do Dia com dois ou mais treinos no programa ativo
+**Quando** a pessoa troca de treino pelo seletor para consulta
+**Então** a troca acontece livre entre treinos do programa ativo, sem reescrever histórico e sem travar a próxima seleção automática
+
 ---
 
 ## Feature #07c — Troca com execução ativa (2026-10-15 — suite 1618/1618, cov 84.59% lines / 83.49% branch)
 
-### REG-59: Escrita bloqueada no outro treino com tooltip, libera após Finalizar/Cancelar
+### REG-59: Escrita bloqueada no outro treino com tooltip, libera após Finalizar/Cancelar (liberação de escrita após settle — repassado/verificado na 7b-1)
 **Dado** execução aberta no Treino A (badge "Em execução") com Treino B no mesmo programa ativo
 **Quando** a pessoa troca para o Treino B e tenta marcar/editar série
 **Então** a escrita é bloqueada com tooltip "Finalize o Treino A para marcar séries aqui"
 **E** após Finalizar ou Cancelar no Treino A, o Treino B aceita escrita sem reload
+
+### REG-66: Guarda por dono — no máximo uma aberta por dono global, sem desvio cruzado (promovido 7b-1)
+**Dado** um dono com execução aberta em um treino (e o outro dono com a própria aberta em treino distinto)
+**Quando** se tenta abrir uma segunda execução do mesmo dono em outro treino
+**Então** a segunda abertura é recusada (índice único parcial por autor — R1) e cada dono enxerga apenas a própria aberta, avançando na própria rotação
+
+---
+
+## Feature #7b-1 — Avançar para o próximo treino ao finalizar (2026-10-16 — suite 1636/1636, cov 84.74% lines / 83.63% branch)
+
+### REG-67: Smoke — Finalizar exibe o próximo; Cancelar permanece no mesmo treino
+**Dado** o Treino do Dia com execução aberta no treino corrente (programa com dois ou mais treinos)
+**Quando** a pessoa confirma o `Finalizar` (e, em nova execução, confirma o `Cancelar`)
+**Então** após o Finalizar a tela passa a exibir o próximo da rotação sem reload do navegador e sem marcações herdadas; após o Cancelar a tela permanece no mesmo treino, sem execução aberta e sem séries marcadas
 
 ---
 
@@ -338,4 +382,4 @@ npm run build-storybook
 **Dado** exercício com séries
 **Então** grid responsivo (1/2/4 col), campo único com rótulo pelo modo da entry, toggle kg/lb abaixo da carga persistindo na entry
 
-**Critério de passagem:** 1618 testes passados, 0 falhas, coverage ≥ 80% (atual: 84.59% lines, 83.49% branch — 07c em 2026-10-15).
+**Critério de passagem:** 1636 testes passados, 0 falhas, coverage ≥ 80% (atual: 84.74% lines, 83.63% branch — 7b-1 em 2026-10-16; referência 07c em 2026-10-15: 1618 testes, 84.59% lines, 83.49% branch).

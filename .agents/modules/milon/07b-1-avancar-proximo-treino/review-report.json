@@ -1,0 +1,100 @@
+{
+  "status": "approved",
+  "category": "none",
+  "feature": "07b-1-avancar-proximo-treino",
+  "reviewedAt": "2026-10-16",
+  "diffSource": "diff.patch ausente no FEATURE_DIR (gerado por Zeus nao persistido); review conduzido sobre `git diff develop...HEAD` ao vivo em worktree limpo, HEAD=d9ec43c (4 commits da feature: 89c13e8, 6813e68, 5beabee, d9ec43c).",
+  "eixos": {
+    "1_spec": {
+      "verdict": "aprovado",
+      "notes": "Criterios 1-9 da spec §5 cobertos: 1/2/3 (sealed → recarga em ordem DA4, avanco e giro pela regra pura 7b sem mudanca) em app/milon/today/page.tsx:46-54 + WorkoutDetailSection.tsx:322-367; 4/5 (cancelled sem recarga de selecao; vazio conduzido emite cancelled) WorkoutDetailSection.tsx:327-344; 6 (vazio 04/7b herdado, sem erro) page.tsx:56-61 inalterado + testes de regressao; 7 (falha de carga com AsyncState/Tentar novamente; operacao/bloqueio sem retry) via fetchSelection existente que grava origem carga; 8 (falha no selar/cancelar: modal preservado, nenhum desfecho) WorkoutDetailSection.tsx:331-334/345-347/364-366; 9 (suite verde + cobertura) re-executada pelo Argos. §3 preservada (selamento em dados intocado — hook/repositories intocados); §4 YAGNI sem vazamento (diff = 2 arquivos de producao + testes + artefatos Olympus; nenhum texto novo, nenhuma tela nova, sem timer/historico/reordenacao)."
+    },
+    "2_plan": {
+      "verdict": "aprovado",
+      "notes": "DA1-DA9 conformes: DA2 page.tsx:49-52 (cancelled so invalida fonte unica); DA3 retrocompat sem argumento tratada como nao-selamento (page.tsx:46-54 + teste dedicado); DA4 ordem fonte-unica→selecao assertada com resolucao atardada no teste; DA5 focusHeaderSignal numerico + tabindex -1 nos dois cabecalhos (WorkoutDetailSection.tsx:438-442, 762-767, 891-896); DA6 nenhuma migração (diff sem utils/migrations, nenhum inteiro consumido); DA7 confirmClearExecution legado sem emissao (WorkoutDetailSection.tsx:300-306 nao chama notifySettled); DA8/DA9 sem mudanca em hooks/repos/utils/tipos (diff confirma: apenas page.tsx e WorkoutDetailSection.tsx). Buscas zeradas verificadas em vivo: `void retryActiveExecution?.()` = 0 e `void onExecutionSettled?.()` = 0 em app/, components/, lib/."
+    },
+    "3_qualidade": {
+      "verdict": "aprovado",
+      "notes": "Padroes do modulo preservados: AsyncState centralizado (page.tsx:87-97, sem reimplementar Tentar novamente), tipos importados do modulo certo (ExecutionSettledOutcome exportado da seção e importado pela pagina — precedente de WorkoutDetailBackTarget; types.ts intocado conforme plan §3), zero `@supabase/*` fora de lib/shared, zero use-cases/schemas/services/mappers, promise-chain com catch nos pontos de emissao, nenhum comportamento extra fora do contrato. Captura síncrona do caso antes da chamada do hook (WorkoutDetailSection.tsx:327, 358) conforme TASK-002 AC3."
+    },
+    "4_testes": {
+      "verdict": "aprovado",
+      "notes": "RED/GREEN corretos por camada (bloco 07b-1 da seção: 9 casos cobrindo sealed nos 3 caminhos, cancelled nos 2, ausencia no erro, foco nas duas ramificacoes + travas verdes; page-7b1-advance: 7 casos cobrindo ordem DA4, permanencia no cancelar, sem-desfecho, retrocompat DA3, falha de carga com nova tentativa e vazio 04/7b). Regressoes 07/7b/7c preservadas: page.test.tsx 37/37, page-ac6.test.tsx 2/2, useTodayWorkout-rotation e contratos verdes — suite completa 127 arquivos / 1636 testes / 0 falhas RE-EXECUTADA pelo Argos. Gates re-executados: tsc exit 0, lint 0 errors (73 warnings pre-existentes), coverage 84.74 lines / 83.57-83.63 branch (>=80), next build exit 0; build-storybook registrado no test-report.json (SB_EXIT:0, nao re-executado pelo Argos)."
+    },
+    "5_riscos": {
+      "verdict": "aprovado",
+      "notes": "Nota do Hefesto sobre `requestFinish` deixando de emitir ao abrir o modal: CORRETO, nao viola spec/plan — plan §3 exige `sealed` somente apos `finishExecution` bem-sucedido e invocacao 'uma vez por operacao bem-sucedida'; abrir modal (parcial/vazio) nao e operacao concluida (o desfecho sai em confirmFinish). A emissao incondicional anterior (codigo 7c: `.then(() => notifySettled())`) e que desviava do contrato novo. Nao ha teste travando essa ausencia (registrado em testGaps). Nota sobre core.autocrlf: repo com core.autocrlf=true + `.gitattributes` `* text=auto`; o diff gerado tem 0 linhas terminadas em CR, sem ruido de fim-de-linha, sem impacto na avaliao. Edge residual: requestFinish com caso completo retorna cedo quando `finishProcessing` ja e true (useWorkoutExecution.ts:370-372) e ainda emite `sealed` — mesmo grau de edge do codigo anterior, impacto cosmético (recarga/foco extras) com estado final correto, registrado como minor."
+    }
+  },
+  "findings": [
+    {
+      "severity": "minor",
+      "category": "tasks",
+      "file": ".agents/modules/milon/07b-1-avancar-proximo-treino/tasks.json",
+      "line": 32,
+      "evidence": "As 5 tasks continuam com \"status\": \"pending\" (linhas 32, 62, 98, 127, 161) apesar dos commits 6813e68 (TASK-001+002), 5beabee (TASK-003+004) e d9ec43c (TASK-005); ultimo toque do arquivo foi 89c13e8 (spec+plan). O input de delegacao afirma 'todas completed' — falso em disco. Regra AGENTS.md (Zeus): vira cada task para completed no commit do Caronte daquela task; 07c flutuou incrementalmente (a2c84af=2, 123ea35=4, 6a600a3=6, fd70acd=7) e 07b corrigiu no chore final de COMMITTED (8d3db01).",
+      "impact": "Rastro de auditoria inconsistente com os commits existentes; sem impacto funcional. Precedente 07b mostra que a correcao no chore final de COMMITTED ja foi aceita, daí a severidade minor e nao blocker.",
+      "suggestion": "Zeus/humano: normalizar os 5 status para completed antes (ou junto) da promocao APPROVED/COMMITTED, como no chore final da 07b; a partir do COMMITTED nao ha mais writes."
+    },
+    {
+      "severity": "minor",
+      "category": "tasks",
+      "file": ".agents/modules/milon/07b-1-avancar-proximo-treino/checkpoint.json",
+      "line": 1,
+      "evidence": "checkpoint.currentPhase = \"PLAN_APPROVED\" (phaseHistory termina em PLAN_APPROVED) enquanto context.json (linha 1) declara currentPhase = \"TASKS_READY\" — divergencia entre os dois arquivos desde 89c13e8. Em 07b e 07c, no mesmo ponto pos-approve-plan, ambos os arquivos estavam em TASKS_READY. Nenhuma fase TASKS_READY/CODING/TESTING/REVIEW foi registrada durante a implementacao (07c registrou ate TESTING antes do review; 07b backfillou a sequencia completa so no chore final 8d3db01).",
+      "impact": "Se o fluxo terminar sem normalizacao, o phaseHistory da 7b-1 fica incompleto em relacao ao historico das irma. Sem impacto funcional.",
+      "suggestion": "Zeus: ao promover APPROVED/COMMITTED, alinhar checkpoint e context (TASKS_READY→CODING→TESTING→REVIEW→APPROVED→COMMITTED), como o backfill feito na 07b."
+    },
+    {
+      "severity": "minor",
+      "category": "contract",
+      "file": "components/milon/WorkoutDetailSection.tsx",
+      "line": 362,
+      "evidence": "requestFinish captura o caso sincronamente (linha 358) e emite `sealed` em `.then()` quando `caso === \"completo\"`; porem o hook tem early-return que resolve SEM selar quando `finishProcessing` ja e true (useWorkoutExecution.ts:370-372) — nesse caminho a promise resolve e o desfecho e emitido mesmo sem selamento novo. O codigo antigo tambem emitia incondicionalmente aqui, entao nao ha regressao, e o estado final se corrige (o clique que iniciou o selamento emite o desfecho proprio).",
+      "impact": "Edge de duplo clique rapido: recarga de selecao e incremento de foco extras, com estado final correto. Cosmetico.",
+      "suggestion": "Backlog: emitir somente se o hook de fato selou (ex.: requestFinish devolver o desfecho, ou a secao checar `finishProcessing` apos o then) + teste de regressao — pode ser feito junto com o testGap da emissao ausente ao abrir o modal."
+    },
+    {
+      "severity": "minor",
+      "category": "semver",
+      "file": "package.json",
+      "line": 3,
+      "evidence": "git diff develop...HEAD -- package.json vazio; version permanece 1.0.0 sem bump (idem 07c, minor 745 registrado na review da 07c; decisao A 2026-10-15: sem bump por feature).",
+      "impact": "Nenhum impacto funcional; apenas divergencia registrada da rubrica vs pratica do repo.",
+      "suggestion": "Manter sem bump por feature; aplicar bump apenas na release, se o humano decidir."
+    },
+    {
+      "severity": "minor",
+      "category": "quality",
+      "file": ".agents/modules/milon/07b-1-avancar-proximo-treino/diff.patch",
+      "line": 1,
+      "evidence": "Artefato diff.patch ausente no FEATURE_DIR (o modulo o lista entre spec/plan/tasks/context/checkpoint/test-report/review-report/test-scenarios). O review foi conduzido sobre `git diff develop...HEAD` ao vivo em worktree limpo, cobrindo os 13 arquivos da feature.",
+      "impact": "Sem impacto na avaliacao (diff equivalente foi usado e reproduzivel); apenas o artefato consolidado nao esta persistido para posteridade.",
+      "suggestion": "Zeus: persistir diff.patch (develop...HEAD) no FEATURE_DIR na proxima escrita de estado, antes do COMMITTED."
+    }
+  ],
+  "blockers": [],
+  "testGaps": [
+    "Nenhum teste trava que `requestFinish` NAO emite desfecho ao abrir o modal (casos parcial/vazio) — a remocao da emissao incondicional do codigo 7c esta correta por contrato (plan §3), mas sem trava de regressao; uma recaida reintroduziria emissao ao abrir o modal (incremento de foco/recarga de selecao sem selamento). Sugestao de caso: finishCase=parcial → requestFinish → settled nunca chamado.",
+    "Sem teste de integracao secao REAL + pagina REAL cobrindo 'o proximo abre limpo, sem marcacoes herdadas do treino anterior' (spec §3) — coberto por construcao (useWorkoutExecution recarrega por workoutId ao remontar) e pelo Cenario 2 manual; a composicao pagina↔secao so e testada com secao mockada.",
+    "Foco com leitor de tela e ordem de tabulacao real (Cenarios 18b/18c) permanece manual — declarado em test-scenarios.md; jsdom cobre so document.activeElement e tabindex.",
+    "Functions global 75.54% segue abaixo de 80 (gate do plano e lines+branch, ambos atendidos; idem 07c com 74.76%) — declarado no test-report.json."
+  ],
+  "questions": [
+    "Zeus/humano confirmam a normalizacao do estado (5 status de tasks.json + checkpoint/context) antes do APPROVED/COMMITTED, no padrao do chore final da 07b? Nao bloqueia a revisao de produto.",
+    "Nota Hefesto sobre requestFinish: comportamento novo (nao emitir ao abrir modal) foi confirmado como correto pelo contrato — o humanizador quer um teste de regressao especifico para isso nesta feature ou aceita o registro em backlog/testGaps?"
+  ],
+  "verification": {
+    "gatesReExecutedByArgos": {
+      "npmTest": "127 arquivos / 1636 testes / 0 falhas (bate com test-report.json)",
+      "npxTscNoEmit": "exit 0",
+      "npmRunLint": "exit 0 (0 errors, 73 warnings pre-existentes)",
+      "npmTestCoverage": "All files 84.74 lines / 83.57 branch / 75.54 funcs (branch variou 83.57-83.63, disclose no test-report)",
+      "npmRunBuild": "exit 0 (build Next.js com /milon/today)",
+      "buildStorybook": "nao re-executado pelo Argos; registrado no test-report.json como SB_EXIT:0",
+      "buscaZeradaLegacy": "void retryActiveExecution?.() = 0 e void onExecutionSettled?.() = 0 em app/, components/, lib/",
+      "foraDeEscopoDiff": "sem utils/migrations, sem package.json, sem .env, sem lib/milon/hooks ou repositories alterados"
+    },
+    "commitsReviewados": ["89c13e8", "6813e68", "5beabee", "d9ec43c"]
+  }
+}

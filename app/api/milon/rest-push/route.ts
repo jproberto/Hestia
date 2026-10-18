@@ -24,6 +24,7 @@ import {
   createRestSchedule,
   deleteSubscriptionByEndpoint,
   findRestScheduleById,
+  findSubscriptionByEndpoint,
   markRestScheduleFailed,
   markRestScheduleSent,
   upsertSubscription,
@@ -48,6 +49,7 @@ const CORPO_SEM_NOME = "O descanso terminou.";
 
 const MENSAGEM_401 = "Não autenticado.";
 const MENSAGEM_400 = "Requisição inválida.";
+const MENSAGEM_403 = "Assinatura de push pertence a outro usuário.";
 const MENSAGEM_503 = "Configuração de push ausente no servidor.";
 
 type Corpo = Record<string, unknown>;
@@ -141,6 +143,15 @@ async function agendar(
     endpoint: string;
     keys: { p256dh: string; auth: string };
   };
+  // Propriedade da assinatura (DA2 / spec: o endpoint nunca envia o push do
+  // descanso para outro usuário): endpoint já inscrito pertence ao dono da
+  // linha — recusa ANTES de qualquer escrita/envio quando a sessão não é o
+  // dono (sem reatribuir created_by alheio; a reinscrição do próprio dono
+  // e o endpoint novo seguem o fluxo normal).
+  const existente = await findSubscriptionByEndpoint(db, endpoint);
+  if (existente && existente.created_by !== dono) {
+    return resposta(403, { error: MENSAGEM_403 });
+  }
   const assinatura = await upsertSubscription(
     db,
     { endpoint, p256dh: keys.p256dh, auth: keys.auth },

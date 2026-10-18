@@ -68,6 +68,23 @@ export async function upsertSubscription(
   return toSubscriptionDomain(data);
 }
 
+// Leitura da assinatura já gravada por endpoint (checagem de propriedade
+// antes do upsert — blocker B2 / DA2: uma sessão não pode reatribuir
+// created_by de linha alheia nem receber o push do descanso do outro dono).
+export async function findSubscriptionByEndpoint(
+  db: IDatabaseClient,
+  endpoint: string,
+): Promise<DevicePushSubscription | null> {
+  const { data, error } = await db
+    .from<PushSubscriptionRow>("push_subscriptions")
+    .select("*")
+    .eq("endpoint", endpoint)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? toSubscriptionDomain(data) : null;
+}
+
 // INSERT com o id gerado no cliente (DA3: cancelável durante a espera da
 // rota) e status inicial agendado.
 export async function createRestSchedule(

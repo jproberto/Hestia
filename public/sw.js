@@ -37,17 +37,32 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const data = event.notification.data || {};
-  const url = typeof data.url === "string" ? data.url : "/milon/today";
+  const alvo = typeof data.url === "string" ? data.url : "/milon/today";
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
         for (const client of clientList) {
-          if ("focus" in client) {
+          if (!("focus" in client)) continue;
+          // Já no alvo (compara o caminho — no navegador client.url é
+          // absoluto): só foca, sem janela nova (contrato plan §3/DA11).
+          if (client.url === alvo || client.url.endsWith(alvo)) {
             return client.focus();
           }
+          // Outra rota do app: foca e navega até o alvo; sem navigate
+          // (navegadores sem WindowClient.navigate) ou se ele falhar,
+          // abre janela nova — o clique sempre leva a data.url.
+          if ("navigate" in client) {
+            return client
+              .focus()
+              .then(() => client.navigate(alvo))
+              .catch(() => self.clients.openWindow(alvo));
+          }
+          return self.clients.openWindow(alvo);
         }
-        return self.clients.openWindow(url);
+        // Nenhuma janela aberta: abre no alvo do payload (fallback
+        // /milon/today quando o payload não traz url).
+        return self.clients.openWindow(alvo);
       }),
   );
 });

@@ -73,6 +73,15 @@ export class FakePushRepository implements IPushRepository {
     return { ...nova };
   }
 
+  async findSubscriptionByEndpoint(
+    endpoint: string,
+  ): Promise<DevicePushSubscription | null> {
+    const existente = [...this.subscriptions.values()].find(
+      (subscription) => subscription.endpoint === endpoint,
+    );
+    return existente ? { ...existente } : null;
+  }
+
   async createRestSchedule(
     input: CreateRestPushScheduleInput,
     email: string,

@@ -146,6 +146,9 @@ export interface IPushRepository {
     input: UpsertPushSubscriptionInput,
     email: string,
   ): Promise<DevicePushSubscription>;
+  findSubscriptionByEndpoint(
+    endpoint: string,
+  ): Promise<DevicePushSubscription | null>;
   createRestSchedule(
     input: CreateRestPushScheduleInput,
     email: string,

@@ -91,9 +91,22 @@ import type {
 // módulos-alvo" do tsc do RED).
 // ---------------------------------------------------------------------------
 
-const { sendNotificationMock } = vi.hoisted(() => ({
-  sendNotificationMock: vi.fn(),
-}));
+const { sendNotificationMock, findSubscriptionByEndpointMock } = vi.hoisted(
+  () => ({
+    sendNotificationMock: vi.fn(),
+    // Leitura de assinatura por endpoint — operação exigida pela correção do
+    // blocker B2 da review (Argos, finding security): localizar a assinatura
+    // existente ANTES do upsert e recusar quando `created_by` difere da
+    // sessão. O barrel real ainda não a exporta (é a correção do Hefesto);
+    // declarar aqui no hoisted mantém o `tsc --noEmit` do RED apontando só
+    // para o código real (sem import de export inexistente) e deixa o mock
+    // pronto para a rota consumir. Nome espelha a convenção do módulo
+    // (`deleteSubscriptionByEndpoint`/`findRestScheduleById`) + a sugestão do
+    // finding; se a correção adotar outro nome, Minos ajusta este mock
+    // (regra 3 — atualização proativa de testes).
+    findSubscriptionByEndpointMock: vi.fn(),
+  }),
+);
 
 vi.mock("web-push", () => ({
   default: { sendNotification: sendNotificationMock },
@@ -133,6 +146,7 @@ vi.mock("@/lib/milon/db/push", () => ({
   markRestScheduleSent: vi.fn(),
   markRestScheduleFailed: vi.fn(),
   deleteSubscriptionByEndpoint: vi.fn(),
+  findSubscriptionByEndpoint: findSubscriptionByEndpointMock,
 }));
 
 // ---------------------------------------------------------------------------
@@ -271,6 +285,9 @@ beforeEach(() => {
 
   sessaoComEmail(DONO);
   sendNotificationMock.mockResolvedValue({});
+  // Sem linha prévia por padrão: a leitura por endpoint (correção do blocker
+  // B2) só encontra assinatura quando o teste semeia explicitamente.
+  findSubscriptionByEndpointMock.mockResolvedValue(null);
   vi.mocked(upsertSubscription).mockResolvedValue(ASSINATURA);
   vi.mocked(createRestSchedule).mockResolvedValue(agendamento());
   vi.mocked(findRestScheduleById).mockResolvedValue(agendamento());
@@ -677,6 +694,99 @@ describe("Mílon #06 — POST /api/milon/rest-push (contrato RED, TASK-007)", ()
         body: "O descanso terminou.",
         url: "/milon/today",
       });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 10. Propriedade da assinatura — blocker B2 da review (security): DA2
+  //    (plan.md:224 "ainda que chamasse a rota, só agendaria para a própria
+  //    sessão/assinatura") e spec.md:59 ("o endpoint nunca envia o push do
+  //    descanso para outro usuário"). Convenção de status escolhida por Minos:
+  //    403 (Forbidden) para "o recurso pertence a outro dono" — o plan não
+  //    congela mensagem para esta recusa (os textos congelados 401/400/503
+  //    continuam valendo), por isso o caso exige apenas um corpo JSON com
+  //    `error` e não um texto específico.
+  // -------------------------------------------------------------------------
+  describe("10. propriedade da assinatura (B2 — sessão não agenda endpoint alheio)", () => {
+    const DONO_A = "dono-a@hestia.lan";
+    const DONO_B = "dono-b@hestia.lan";
+
+    // Estado "em banco" da assinatura, semeado com created_by de A. O upsert
+    // emulado espelha o repositório REAL (lib/milon/repositories/push.ts:44-69):
+    // por conflito no endpoint ele REATRIBUI created_by ao chamador — exata-
+    // mente a vulnerabilidade que a checagem de dono do servidor precisa
+    // impedir (a fake nunca pode "consertar" sozinha o que a rota permite).
+    let assinaturaArmazenada: DevicePushSubscription = ASSINATURA;
+
+    function semearAssinaturaDe(dono: string): void {
+      assinaturaArmazenada = { ...ASSINATURA, created_by: dono };
+    }
+
+    function instalarUpsertEstadual(): void {
+      vi.mocked(upsertSubscription).mockImplementation(
+        async (...args: Parameters<typeof upsertSubscription>) => {
+          const [, input, email] = args;
+          assinaturaArmazenada = {
+            ...assinaturaArmazenada,
+            ...input,
+            created_by: email,
+          };
+          return assinaturaArmazenada;
+        },
+      );
+    }
+
+    it("sessão B agenda com subscription cujo endpoint já pertence a A → 403, sem envio e sem reatribuição de created_by", async () => {
+      semearAssinaturaDe(DONO_A);
+      findSubscriptionByEndpointMock.mockResolvedValue({
+        ...assinaturaArmazenada,
+      });
+      sessaoComEmail(DONO_B);
+      instalarUpsertEstadual();
+
+      const promessa = POST(requisicao(corpoSchedule()));
+      await drenarMicrotarefas();
+      // Se a rota falhar a checagem, ela dorme o descanso e envia — avança o
+      // relógio para que o comportamento errado se complete e seja flagrado.
+      await vi.advanceTimersByTimeAsync(90_000);
+      const res = await promessa;
+
+      expect(res.status).toBe(403);
+      expect(await corpoDe(res)).toHaveProperty("error");
+      // O push do descanso NUNCA sai para a sessão de quem não é o dono
+      // (spec.md:59) e nada é agendado para a assinatura alheia.
+      expect(sendNotificationMock).not.toHaveBeenCalled();
+      expect(createRestSchedule).not.toHaveBeenCalled();
+      // Nenhuma escrita na linha alheia: a recusa acontece ANTES do upsert
+      // (review-report finding B2 — a reinscrição do próprio dono continua
+      // válida, mas a de outro dono não pode sequer tocar a linha).
+      expect(upsertSubscription).not.toHaveBeenCalled();
+      expect(assinaturaArmazenada.created_by).toBe(DONO_A);
+    });
+
+    it("regressão: sessão A agenda com o próprio endpoint (linha já existente de A) segue funcionando", async () => {
+      semearAssinaturaDe(DONO_A);
+      findSubscriptionByEndpointMock.mockResolvedValue({
+        ...assinaturaArmazenada,
+      });
+      sessaoComEmail(DONO_A);
+      instalarUpsertEstadual();
+
+      const promessa = POST(requisicao(corpoSchedule()));
+      await drenarMicrotarefas();
+      await vi.advanceTimersByTimeAsync(90_000);
+      const res = await promessa;
+
+      expect(res.status).toBe(200);
+      expect(await corpoDe(res)).toEqual({
+        scheduleId: SCHEDULE_ID,
+        status: "enviado",
+      });
+      // Upsert do próprio dono segue válido (DA2 — a própria assinatura).
+      expect(upsertSubscription).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(upsertSubscription).mock.calls[0][2]).toBe(DONO_A);
+      expect(assinaturaArmazenada.created_by).toBe(DONO_A);
+      expect(sendNotificationMock).toHaveBeenCalledTimes(1);
     });
   });
 });

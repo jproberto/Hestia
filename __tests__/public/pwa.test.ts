@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -158,6 +158,145 @@ describe("Mílon #06 TASK-013 — public/sw.js (contrato RED, F2)", () => {
     const sw = loadSw();
     expect(sw).not.toMatch(/addEventListener\s*\(\s*["']fetch["']/);
     expect(sw).not.toMatch(/\.onfetch\s*=/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Contrato COMPORTAMENTAL do notificationclick — blocker B1 da review do Argos
+// (review-report.json findings[0], important): o sw.js anterior focava
+// qualquer janela existente e NUNCA navegava para data.url, contrariando
+// plan.md:33 ("notificationclick (abre/foca /milon/today ou a url do
+// payload)"), plan.md:191 ("openWindow em data.url ou /milon/today"), DA11
+// (plan.md:233 "notificationclick reabre o Treino do Dia") e o Cenário 4 de
+// homologação — exatamente o caso de uso "app aberto em outra página do
+// Héstia" da spec §2.
+//
+// Abordagem (NÃO regex): o `public/sw.js` real é avaliado como script em
+// contexto stub — `new Function("self", fonte)(stub)` executa o arquivo e
+// captura o handler registrado via `addEventListener`, ou seja, exatamente o
+// código que o navegador executaria. O evento de clique é então simulado com
+// `clients` mockados e o resultado (navigate/openWindow/focus) é observado.
+// ---------------------------------------------------------------------------
+
+type HandlerSw = (event: EventoNotificationClick) => void;
+
+interface EventoNotificationClick {
+  notification: { close: ReturnType<typeof vi.fn>; data?: { url?: string } };
+  waitUntil: (promessa: Promise<unknown>) => void;
+}
+
+interface ClienteJanelaStub {
+  url: string;
+  focus: ReturnType<typeof vi.fn>;
+  navigate: ReturnType<typeof vi.fn>;
+}
+
+function carregarSwEmContextoStub() {
+  const handlers = new Map<string, HandlerSw>();
+  const stub = {
+    handlers,
+    addEventListener: (tipo: string, handler: HandlerSw): void => {
+      handlers.set(tipo, handler);
+    },
+    clients: {
+      matchAll: vi.fn(async (): Promise<ClienteJanelaStub[]> => []),
+      openWindow: vi.fn(async (url: string): Promise<string> => url),
+      claim: vi.fn(async (): Promise<undefined> => undefined),
+    },
+    registration: {
+      showNotification: vi.fn(async (): Promise<string> => "ok"),
+    },
+    skipWaiting: vi.fn(),
+  };
+  // O sw.js é JavaScript estático sem import/export: avaliar a fonte real com
+  // `self` injetado exercita os handlers de verdade (sem regex).
+  const executar = new Function("self", loadSw());
+  executar(stub);
+  return stub;
+}
+
+/** Janela de navegador stub (superfície WindowClient: focus + navigate). */
+function janela(url: string): ClienteJanelaStub {
+  return {
+    url,
+    focus: vi.fn(async (): Promise<null> => null),
+    navigate: vi.fn(async (alvo: string): Promise<string> => alvo),
+  };
+}
+
+/**
+ * Dispara o `notificationclick` capturado e aguarda as promessas passadas a
+ * `event.waitUntil` (é por ali que a navegação/abertura acontece).
+ */
+async function clicarNaNotificacao(
+  stub: ReturnType<typeof carregarSwEmContextoStub>,
+  data?: { url?: string },
+): Promise<void> {
+  const pendencias: Promise<unknown>[] = [];
+  const evento: EventoNotificationClick = {
+    notification: { close: vi.fn(), data },
+    waitUntil: (promessa) => {
+      pendencias.push(promessa);
+    },
+  };
+  const handler = stub.handlers.get("notificationclick");
+  if (!handler) {
+    throw new Error("handler de notificationclick não registrado em public/sw.js");
+  }
+  handler(evento);
+  await Promise.all(pendencias);
+}
+
+describe("Mílon #06 — public/sw.js notificationclick (contrato COMPORTAMENTAL, blocker B1)", () => {
+  it("com janela existente em OUTRA rota, o clique leva a data.url (navigate ou openWindow) — nunca só focar", async () => {
+    const stub = carregarSwEmContextoStub();
+    const emOutraRota = janela("/milon/programs");
+    stub.clients.matchAll.mockResolvedValue([emOutraRota]);
+
+    await clicarNaNotificacao(stub, { url: "/milon/today" });
+
+    const alvo = "/milon/today";
+    const navegouParaAlvo = emOutraRota.navigate.mock.calls.some(
+      (chamada) => chamada[0] === alvo,
+    );
+    const abriuAlvo = stub.clients.openWindow.mock.calls.some(
+      (chamada) => chamada[0] === alvo,
+    );
+    expect(
+      navegouParaAlvo || abriuAlvo,
+      "o clique na notificação deve levar a data.url (client.navigate ou clients.openWindow), não apenas focar a janela de outra rota",
+    ).toBe(true);
+  });
+
+  it("com a janela já no alvo /milon/today, foca e NÃO abre janela nova", async () => {
+    const stub = carregarSwEmContextoStub();
+    const noAlvo = janela("/milon/today");
+    stub.clients.matchAll.mockResolvedValue([noAlvo]);
+
+    await clicarNaNotificacao(stub, { url: "/milon/today" });
+
+    expect(noAlvo.focus).toHaveBeenCalledTimes(1);
+    expect(stub.clients.openWindow).not.toHaveBeenCalled();
+  });
+
+  it("sem janela aberta, openWindow na data.url do payload", async () => {
+    const stub = carregarSwEmContextoStub();
+    stub.clients.matchAll.mockResolvedValue([]);
+
+    await clicarNaNotificacao(stub, { url: "/milon/programs" });
+
+    expect(stub.clients.openWindow).toHaveBeenCalledTimes(1);
+    expect(stub.clients.openWindow).toHaveBeenCalledWith("/milon/programs");
+  });
+
+  it("sem janela aberta e sem data.url, openWindow no fallback /milon/today (caminho exato do Treino do Dia)", async () => {
+    const stub = carregarSwEmContextoStub();
+    stub.clients.matchAll.mockResolvedValue([]);
+
+    await clicarNaNotificacao(stub, undefined);
+
+    expect(stub.clients.openWindow).toHaveBeenCalledTimes(1);
+    expect(stub.clients.openWindow).toHaveBeenCalledWith("/milon/today");
   });
 });
 

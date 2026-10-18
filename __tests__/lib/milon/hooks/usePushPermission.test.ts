@@ -56,14 +56,9 @@ const UA_DESKTOP =
 
 type PushPermission = "default" | "granted" | "denied" | "unsupported";
 
-interface UsePushPermissionReturn {
-  supported: boolean;
-  permission: PushPermission;
-  isStandalone: boolean;
-  isIOS: boolean;
-  requesting: boolean;
-  requestPermission: () => Promise<void>;
-}
+// (Removido `interface UsePushPermissionReturn` — declaração nunca usada,
+// warning de lint da própria feature apontado pelo Argos em review-report.json
+// findings[4]. O contrato do retorno é exercitado pelos casos abaixo.)
 
 // ---------------------------------------------------------------------------
 // Helpers de ambiente

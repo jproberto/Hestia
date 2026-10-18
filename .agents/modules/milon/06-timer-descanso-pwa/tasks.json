@@ -88,7 +88,7 @@
         "RED do contrato fakes-only de push",
         "RED das cadeias de query e standalones do repositório"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-004",
@@ -121,7 +121,7 @@
       "produces": [
         "Contrato de push consumível pela rota: tipos + IPushRepository + repository + fake + barrel"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-005",

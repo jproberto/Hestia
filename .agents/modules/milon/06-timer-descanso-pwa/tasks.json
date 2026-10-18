@@ -375,7 +375,7 @@
         "RED de onSeriesMarked/onExecutionCleared na seção",
         "RED da composição da página (ligações, cancel nos desfechos, painel por treino de origem, hint)"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-012",
@@ -407,7 +407,7 @@
       "produces": [
         "Timer iniciado na marcação bem-sucedida com descanso, substituído por nova marcação e cancelado em finalizar, cancelar e confirmar-limpar — nunca na troca de treino"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-013",

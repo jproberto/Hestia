@@ -81,3 +81,12 @@ export function compareExercisesByName(
   if (nameA > nameB) return 1;
   return 0;
 }
+
+// Mílon #06 (plan §3): mm:ss com dois dígitos para o painel de descanso
+// (90 → "01:30", 5 → "00:05", 0 → "00:00"). Regra pura, sem I/O.
+export function formatarContagemDescanso(segundos: number): string {
+  const total = Math.max(0, Math.floor(segundos));
+  const minutos = Math.floor(total / 60);
+  const resto = total % 60;
+  return `${String(minutos).padStart(2, "0")}:${String(resto).padStart(2, "0")}`;
+}

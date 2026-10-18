@@ -25,12 +25,12 @@
     "untouchedCheck": "git diff develop...HEAD --name-only vs lista intocados do plan.md §2"
   },
   "coverage": {
-    "branches": 84.08,
-    "functions": 76.29,
-    "lines": 85.16,
+    "branches": 84.1,
+    "functions": 76.58,
+    "lines": 85.31,
     "reporter": "v8",
-    "statements": 85.16,
-    "note": "Sem sourcemap de linha separado no reporter v8, a coluna Lines do text-report equivale aos Statements; agregacao recalculada a partir de coverage/coverage-final.json (s/b/f): statements 11577/13593=85.17, branches 2489/2960=84.09, functions 531/696=76.29."
+    "statements": 85.31,
+    "note": "Sem sourcemap de linha separado no reporter v8, a coluna Lines do text-report equivale aos Statements; agregacao recalculada a partir de coverage/coverage-final.json (s/b/f): statements 11596/13593=85.31, branches 2497/2969=84.10, functions 533/696=76.58. Re-execucao na re-review (2026-10-18) apos os testes de findSubscriptionByEndpoint: statements 11577->11596 e functions 531->533 (a funcao do B2 + o metodo da fake, antes 0 hits); denominador de branches variou 2960->2969 entre execucoes (regioes dinamicas do provedor v8 — mesma ordem da recontagem 84.05/84.08 da review)."
   },
   "coverageByFeatureFile": {
     "app/api/milon/rest-push/route.ts": "97.32% stmts (145/149), 92.59% branch (50/54), 100% funcs (8/8) — presente no relatório (coverage.include app/**/*.ts da T008); +2 casos do B2 (propriedade da assinatura) subiram a base",
@@ -38,7 +38,7 @@
     "lib/milon/hooks/usePushPermission.ts": "96.49% stmts, 86.36% branch, 100% funcs",
     "lib/milon/rest-push-client.ts": "92.21% stmts, 88.89% branch, 100% funcs",
     "lib/milon/rest-push-sender.ts": "92.31% stmts, 88.89% branch, 100% funcs",
-    "lib/milon/repositories/push.ts": "70.62% stmts, 52.38% branch, 52.94% funcs — ramos restantes majoritariamente caminhos de erro/servidor exercitados via rota"
+    "lib/milon/repositories/push.ts": "77.40% stmts (137/177), 56.00% branch (14/25), 58.82% funcs (10/17) — findSubscriptionByEndpoint (8a operacao do IPushRepository, B2) coberta nesta re-review: 2 hits em coverage-final.json (antes 0), cadeia de query em db/push.test.ts e caso fakes-only em contract-push.test.ts; restante = os 7 *Standalone de browser e ramos de erro de banco exercitados so pela rota"
   },
   "feature": "06-timer-descanso-pwa",
   "reviewFixes": {
@@ -52,6 +52,13 @@
       "fix": "app/api/milon/rest-push/route.ts agendar() localiza a assinatura existente por endpoint (IPushRepository.findSubscriptionByEndpoint, novas em interfaces/push/fake) e recusa com 403 antes do upsert quando created_by difere da sessao; reatribuicao de created_by alheio eliminada; reinsercao do proprio dono segue valida",
       "behavioralTests": "__tests__/app/api/milon/rest-push/route.test.ts describe '10. propriedade da assinatura (B2 — sessao nao agenda endpoint alheio)': (1) 'sessao B agenda com subscription cujo endpoint ja pertence a A → 403, sem envio e sem reatribuicao de created_by' (criado_by permanece A; sendNotification nao chamado); (2) 'sessao A agenda com o proprio endpoint → 200' (upsert proprio do dono valido)",
       "status": "covered"
+    },
+    "minor_findSubscriptionByEndpoint_sem_teste_dedicado": {
+      "finding": "re-review (finding minor do Argos): spotChecks afirmava que contract-push.test.ts e db/push.test.ts cobriam findSubscriptionByEndpoint — grep 0 nos dois arquivos e funcao 0% no coverage (coverage-final.json: statements 74-86 e fn 0 hits)",
+      "fix": "somente artefatos de teste: db/push.test.ts ganhou a cadeia de query da 8a operacao (from push_subscriptions .select('*') .eq('endpoint') .maybeSingle, linha em dominio e null, no padrao das demais cadeias, stubFindDb generalizado + contador de maybeSingle) e a assercao de re-export do barrel; contract-push.test.ts ganhou findSubscriptionByEndpoint no contrato espelhado da fake e na lista de operacoes checadas em interfaces.ts (as 7 originais preservadas, lista agora com 8) + 3 casos fakes-only (linha por endpoint, null para endpoint sem assinatura, leitura sem efeito na linha)",
+      "divergenciaImplementacao": "nenhuma — a funcao ja existia desde 8eec148 (push.ts:74-86 select/eq/maybeSingle; fakePushRepository.ts:76-83) e os novos testes passaram de primeira (GREEN, nao RED); nenhum byte de producao alterado",
+      "tests": "__tests__/lib/milon/db/push.test.ts 11->13 testes; __tests__/lib/milon/repositories/contract-push.test.ts 19->22 testes",
+      "status": "fixed — suite 1831/1831, tsc --noEmit exit 0, lint 0 errors/73 warnings (baseline)"
     },
     "lint_warning_removed": {
       "fix": "__tests__/lib/milon/hooks/usePushPermission.test.ts — import/type nao usado removido (finding minor da review)",
@@ -86,29 +93,30 @@
     "vitest.config.ts"
   ],
   "gaps": [
-    "Gates globais aprovam (lines 85.16 >= 80 e branch 84.08 >= 80). Arquivos legados fora do escopo seguem abaixo de 80 e nao bloqueiam (pre-existentes, idem 07b-1): lib/pluto/repositories 17.66% stmts, lib/pluto/db 42.85%, lib/shared 57.67%, utils/supabase 0%.",
-    "Functions global 76.29% segue abaixo de 80 (idem 07b-1 com 75.54% e suite anterior com 76.51%) — o critério de aceite do plano pede lines e branch >= 80, ambos atendidos.",
-    "repositories/push.ts com 70.62% stmts / 52.38% branch / 52.94% funcs: ramos de erro de banco e standalones de servico; o comportamento de dono/cancelamento/propriedade (B2) e coberto pelo contract fakes-only e pela rota (97.32/92.59).",
+    "Gates globais aprovam (lines 85.31 >= 80 e branch 84.10 >= 80). Arquivos legados fora do escopo seguem abaixo de 80 e nao bloqueiam (pre-existentes, idem 07b-1): lib/pluto/repositories 17.66% stmts, lib/pluto/db 42.85%, lib/shared 57.67%, utils/supabase 0%.",
+    "Functions global 76.58% segue abaixo de 80 (idem 07b-1 com 75.54% e suite anterior com 76.29%; +2 nesta re-review = findSubscriptionByEndpoint do repository e da fake) — o critério de aceite do plano pede lines e branch >= 80, ambos atendidos.",
+    "repositories/push.ts com 77.40% stmts (137/177) / 56.00% branch (14/25) / 58.82% funcs (10/17) depois de cobrir findSubscriptionByEndpoint: nao cobertos restam os 7 *Standalone (criam o client singleton do browser, sem exercicio direto — mesmo regime dos standalones de executions) e ramos de erro de banco; o comportamento de dono/propriedade (B2) fica coberto pela rota (97.32/92.59), pela cadeia de query em db/push.test.ts e pelo contract fakes-only.",
+    "findSubscriptionByEndpoint: coberta nesta re-review por teste de cadeia (db/push.test.ts) e por contrato fakes-only (contract-push.test.ts); a rota continua sendo o unico exercicio do caminho de negocio do 403 (route.test.ts, barrel mockado) — nao ha teste de integracao da rota contra o repository real (por desenho: a rota mocka o barrel).",
     "@vitest/coverage-v8 nao esta declarado em devDependencies (nem no develop; confirmado novamente nesta re-execucao). Instalado temporariamente com npm install --no-save @vitest/coverage-v8@2.1.9 apenas para medir — package.json e package-lock intactos no diff (version 1.0.0). Se a medicao de coverage virar gate recorrente, Atena/humano podem decide declara-lo.",
     "Cenarios manuais nao exercitaveis em jsdom ficam declarados no test-scenarios.md (push com tela apagada/outro app em iPhone real, cancelamento efetivo sem push orfao, instalacao iOS, permissao por gesto, queda real de rede) — sem tentativa de automatizacao falsa.",
-    "Minos tocou somente artefatos de teste (test-report.json, test-scenarios.md, regression.md); nenhum arquivo de producao foi alterado nesta re-execucao."
+    "Minos tocou somente artefatos de teste (test-report.json e, nesta re-review, __tests__/lib/milon/db/push.test.ts + __tests__/lib/milon/repositories/contract-push.test.ts); nenhum arquivo de producao foi alterado e nenhum outro artefato da feature foi editado."
   ],
   "gates": {
     "coverageBranchesGte80": {
-      "actual": 84.08,
+      "actual": 84.1,
       "expected": "branches >= 80",
       "status": "passed"
     },
     "coverageLinesGte80": {
-      "actual": 85.16,
+      "actual": 85.31,
       "expected": "lines >= 80",
       "status": "passed"
     },
     "suiteZeroFailures": {
-      "actual": "140 files passed, 1826 tests passed, 0 failed",
+      "actual": "140 files passed, 1831 tests passed, 0 failed",
       "expected": "0 falhas",
       "status": "passed",
-      "note": "+6 testes vs suite anterior (1820): casos comportamentais do notificationclick (B1) em pwa.test.ts e de propriedade da assinatura (B2) em route.test.ts (20→22)."
+      "note": "+6 testes vs suite da review (1820) e +5 vs a suite imediatamente anterior (1826): 2 cadeias de findSubscriptionByEndpoint em db/push.test.ts e 3 casos fakes-only da 8a operacao em contract-push.test.ts (re-review do finding minor); os +6 anteriores foram os casos comportamentais de notificationclick (B1) e de propriedade da assinatura (B2)."
     },
     "storybookExit0": {
       "actual": "SB_EXIT:0 (Storybook build completed successfully, output storybook-static; 14 stories da feature no index.json: RestTimerPanel (6), RestPushEnableHint (7), PwaRegistration (1))",
@@ -134,15 +142,17 @@
     }
   },
   "outputs": {
-    "coverageRecalc": "coverage-final.json agregado: ALL FILES statements 85.17 (11577/13593), branches 84.09 (2489/2960), functions 76.29 (531/696); ROUTE app/api/milon/rest-push/route.ts statements 97.32 (145/149), branch 92.59 (50/54), functions 100 (8/8)",
-    "suiteTail": "Test Files 140 passed (140) | Tests 1826 passed (1826)",
-    "directedTail": "route.test.ts 22 tests (20→22 com B2); pwa.test.ts com contrato comportamental de notificationclick (B1) — todos passaram na suite completa",
-    "storybookTail": "Vite built in 15.98s | Output directory: P:/workspace/IA/hestia/storybook-static | Storybook build completed successfully",
-    "buildTail": "✓ Compiled successfully in 10.8s | ƒ /api/milon/rest-push no mapa de rotas"
+    "coverageRecalc": "coverage-final.json agregado (re-review 2026-10-18): ALL FILES statements 85.31 (11596/13593), branches 84.10 (2497/2969), functions 76.58 (533/696); ROUTE app/api/milon/rest-push/route.ts statements 97.32 (145/149), branch 92.59 (50/54), functions 100 (8/8); REPO lib/milon/repositories/push.ts statements 77.40 (137/177), branch 56.00 (14/25), functions 58.82 (10/17) com findSubscriptionByEndpoint em 2 hits (antes 0)",
+    "suiteTail": "Test Files 140 passed (140) | Tests 1831 passed (1831)",
+    "directedTail": "route.test.ts 22 tests (20→22 com B2); pwa.test.ts com contrato comportamental de notificationclick (B1); contract-push.test.ts 22 tests (+3 da 8a operacao) e db/push.test.ts 13 tests (+2 cadeias de findSubscriptionByEndpoint) — todos passaram na suite completa",
+    "tscTail": "npx tsc --noEmit exit 0 (re-review)",
+    "lintTail": "npm run lint exit 0 — 0 errors, 73 warnings (baseline)",
+    "storybookTail": "Vite built in 15.98s | Output directory: P:/workspace/IA/hestia/storybook-static | Storybook build completed successfully (execucao anterior da re-review — producao intocada, mesmo diff)",
+    "buildTail": "✓ Compiled successfully in 10.8s | ƒ /api/milon/rest-push no mapa de rotas (execucao anterior da re-review — producao intocada, mesmo diff)"
   },
   "spotChecks": {
     "__tests__/lib/milon/migration-0017.test.ts": "migração 0017 (duas tabelas push, RLS, índices, rollback, auditoria milon-06) — verdes na suite completa",
-    "__tests__/lib/milon/repositories/contract-push.test.ts + db/push.test.ts": "contrato fakes-only (inclui findSubscriptionByEndpoint do B2) + cadeias de query do repositório de push — verdes na suite completa",
+    "__tests__/lib/milon/repositories/contract-push.test.ts + db/push.test.ts": "contrato fakes-only com as 8 operacoes do IPushRepository (inclui findSubscriptionByEndpoint do B2: linha por endpoint, null para endpoint sem assinatura e leitura sem efeito — 3 casos novos) + cadeias de query do repositório de push, agora com a de findSubscriptionByEndpoint (push_subscriptions .select('*') .eq('endpoint') .maybeSingle; linha em dominio e null) — verdes na suite completa (35 testes somados nos dois arquivos)",
     "__tests__/app/api/milon/rest-push/route.test.ts": "22 testes (401/400/503, janela 280s, re-leitura, 404/410, cancel por dono, payload exato + 2 do B2: 403 com endpoint alheio e re-inserção válida do próprio dono) — verdes na suite completa",
     "__tests__/lib/milon/hooks/useRestTimer.test.ts + usePushPermission.test.ts": "contagem/substituição/cancel/fire-and-forget e gesto de permissão — verdes (usePushPermission.test.ts sem warning de lint)",
     "__tests__/lib/milon/hooks/useWorkoutExecution.test.ts": "45 tests passados (retorno ToggleSeriesOutcome marked/unmarked, perguntas #5/#7 intactas)",
@@ -153,10 +163,17 @@
   },
   "status": "passed",
   "summary": {
-    "coverage": 85.16,
+    "coverage": 85.31,
     "failed": 0,
-    "passed": 1826,
+    "passed": 1831,
     "skipped": 0,
     "testFiles": 140
+  },
+  "reReview": {
+    "date": "2026-10-18",
+    "finding": "review-report.json (minor): spotChecks de contract-push.test.ts + db/push.test.ts afirmava cobertura de findSubscriptionByEndpoint sem que os arquivos a exercitassem",
+    "option": "a — testes acrescentados (nenhuma correcao de producao)",
+    "executed": ["npm test (140 files, 1831 tests, 0 failed)", "npm test -- --coverage (recompoe coverage)", "npx tsc --noEmit (exit 0)", "npm run lint (exit 0, 0 errors, 73 warnings)"],
+    "files": ["__tests__/lib/milon/db/push.test.ts", "__tests__/lib/milon/repositories/contract-push.test.ts", ".agents/modules/milon/06-timer-descanso-pwa/test-report.json"]
   }
 }

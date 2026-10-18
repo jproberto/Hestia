@@ -1,0 +1,109 @@
+{
+  "status": "approved",
+  "category": "none",
+  "feature": "06-timer-descanso-pwa",
+  "reviewedAt": "2026-10-18",
+  "reviewType": "re-review",
+  "previousReview": "blocked (B1 contract notificationclick + B2 security rota assinatura alheia)",
+  "diffSource": "diff.patch regerado em UTF-8 sem BOM (503736 bytes, primeiros bytes 100,105=\"di\", LF, 557 em-dashes e 1095 c-cedillas intactos); byte-identico a git diff develop...HEAD no worktree (equal:true) — minor UTF-16 da review anterior RESOLVIDA. Commits novos: 8eec148 (fix B1+B2) e c94eda4 (re-teste). HEAD=c94eda4 na branch feature/milon/06-timer-descanso-pwa.",
+  "eixos": {
+    "1_spec": {
+      "verdict": "aprovado",
+      "notes": "12 criterios da spec §5: 1/3/4/5/6/9/10/11/12 seguem cobertos (sem regressao na suite); 7 coberto (trava page-rest-timer); 2/8 manuais em iPhone real (test-scenarios.md). B1 RESOLVIDO: public/sw.js:37-68 — notificationclick fecha, resolve alvo de data.url (fallback /milon/today linha 40), foca somente janela ja no alvo (comparacao de caminho linhas 49-51), janela em outra rota e focada E navegada via client.navigate com fallback openWindow (55-59), sem navigate suportado openWindow (61), sem janela openWindow (65) — cumpre plan.md:33 (abre/foca /milon/today ou a url do payload), plan.md:191 (openWindow em data.url ou /milon/today), DA11 plan.md:233 (notificationclick reabre o Treino do Dia) e Cenario 4 (test-scenarios.md:41 ajustado: janela em outra rota e navegada; sem janela abre direto). B2 RESOLVIDO: app/api/milon/rest-push/route.ts:151-154 localiza a assinatura por endpoint antes de qualquer escrita e responde 403 (MENSAGEM_403 linha 52) quando created_by difere da sessao — cumpre DA2/plan.md:224 e spec.md:59; upsert/createRestSchedule/sendNotification nao rocam no caminho alheio. Fora de escopo sem vazamento: nenhum push de outro modulo, nenhum campo novo de treino, diff sem workout_executions/*, workouts, exercises."
+    },
+    "2_plan": {
+      "verdict": "aprovado",
+      "notes": "DA1-DA15 seguem mapeados da review anterior; as duas ressalvas (DA11 notificationclick e 2a metade da DA2 assinatura do dono) foram corrigidas em 8eec148 sem desviar dos demais DAs. findSubscriptionByEndpoint e a 8a operacao do IPushRepository sem remover as 7 originais (lib/milon/repositories/interfaces.ts:144-163). Lista Explicitamente NAO tocados do plan §2 segue sem violacoes (untouchedListRespected re-confirmado)."
+    },
+    "3_qualidade": {
+      "verdict": "aprovado",
+      "notes": "Padroes preservados: tipos na fonte unica lib/milon/types.ts; repositories via IDatabaseClient (push.ts:7; findSubscriptionByEndpoint em push.ts:74-86 usa db.from().select.eq.maybeSingle); barrel lib/milon/db/push.ts (export * — re-exporta a 8a op; rota importa em route.ts:27); zero @supabase fora de lib/shared; nenhuma escrita do timer em workout_executions/*; textos congelados intactos. A nova mensagem 403 (Assinatura de push pertence a outro usuario., route.ts:52) nao consta da lista congelada do plan.md:203 porque o plan nao previa o caso B2; so trafega para o cliente que faz fire-and-forget (nunca vira texto de UI) e o teste so exige corpo JSON com error (route.test.ts:704-708) — aceitavel. TOCTOU teorico find-then-upsert irrelevante neste volume (casal, 1 dono)."
+    },
+    "4_testes": {
+      "verdict": "aprovado",
+      "notes": "Re-executado pelo Argos em 2026-10-18: npm test = 140 arquivos / 1826 testes / 0 falhas; coverage All files Stmts 85.16 / Branch 84.05 / Funcs 76.29 / Lines 85.16 (lines e branch >= 80); lint exit 0, 0 errors e 73 warnings (baseline 7b-1; warning de usePushPermission.test.ts removida em 8eec148); build exit 0 com rota /api/milon/rest-push. B1: __tests__/public/pwa.test.ts:164-301 — contrato COMPORTAMENTAL que executa a fonte real de public/sw.js via new Function com clients mockados (nao regex): 4 casos (outra rota navega; no alvo so foca; sem janela openWindow na data.url; sem data.url openWindow no fallback). B2: __tests__/app/api/milon/rest-push/route.test.ts:710-790 — describe 10: sessao B com endpoint de A → 403 com sendNotification/createRestSchedule/upsertSubscription nao chamados e created_by de A intacto (upsert emulado espelhando a reatribuicao real); regressao sessao A com proprio endpoint → 200 enviado. Cobertura route.ts 97.31 stmts / 92.59 branch / 100 funcs."
+    },
+    "5_riscos": {
+      "verdict": "aprovado",
+      "notes": "Segredos: nenhum (.env.local.example so com nomes vazios; package.json version 1.0.0 sem bump — decisao A 2026-10-15). Enforcement B2 agora e do SERVIDOR: identidade so de auth.getUser (route.ts:222) e propriedade da assinatura checada em route.ts:151-154 ANTES de upsert/envio — spoof e reatribuicao de created_by alheio eliminados no caminho normal da rota; cancel segue filtrado por id+created_by+status (push.ts:133-148). RLS permissivo da 0017 segue como minor de backlog ja aceito (regime do modulo, DA14) — nao reaberto. Nenhum achado novo de seguranca nos commits de fix."
+    }
+  },
+  "findings": [
+    {
+      "severity": "minor",
+      "category": "test",
+      "file": ".agents/modules/milon/06-timer-descanso-pwa/test-report.json",
+      "line": 145,
+      "evidence": "spotChecks afirma que contract-push.test.ts e db/push.test.ts incluem findSubscriptionByEndpoint do B2. Falso: grep por findSubscriptionByEndpoint em ambos os arquivos retorna 0 ocorrencias (contrato local ainda so tem as 7 operacoes em contract-push.test.ts:100-116; o check de interfaces em 519-533 so exige as 7 via toContain). coverage-final.json confirma: em lib/milon/repositories/push.ts a funcao findSubscriptionByEndpoint@74 tem 0% (uncovered stmts 73-85). O comportamento de seguranca do B2 e coberto na rota (route.test.ts:710-790) via barrel mockado, mas a cadeia de query real nao tem teste direto.",
+      "impact": "Imprecisao do relatorio de teste (classe da minor de lint note da review anterior) + lacuna de contrato/query-chain da 8a operacao: se o eq endpoint ou o maybeSingle fossem quebrados no repository real, a suite ficaria verde. Nao afeta a correcao do B2 no nivel da rota (onde a propriedade e exigida).",
+      "suggestion": "Minos: (a) acrescentar em db/push.test.ts a cadeia de findSubscriptionByEndpoint (select * → eq endpoint → maybeSingle, linha e null) e em contract-push.test.ts o caso fakes-only da 8a operacao (incluindo o mirror da interface e a lista de operacoes); OU (b) corrigir a nota do test-report.json para dizer que a cobertura do B2 e da rota (mock do barrel) e que a query-chain real nao tem teste direto. Nao bloqueia a aprovacao (gates globais verdes; propriedade testada onde e exigida)."
+    }
+  ],
+  "blockers": [],
+  "testGaps": [
+    "findSubscriptionByEndpoint real (lib/milon/repositories/push.ts:74-86) sem teste de cadeia de query em db/push.test.ts e sem caso no contract fakes-only — coberto indiretamente pela rota com barrel mockado (ver finding minor).",
+    "Criterio 5 (editar restSeconds com timer rodando) segue coberto so por construcao (duracao capturada em useRestTimer) — sem teste de integracao da edicao durante contagem ativa (gap da review anterior, nao reaberto como bloqueio).",
+    "As duas intercalacoes de push orfao (cancel antes do INSERT; reload sem scheduleId) seguem em backlog com aceite registrado — nao reabertos.",
+    "Criterios 2 e 8 (push em iPhone real do casal) e 10 (instalacao/permissao iOS) permanecem manuais por natureza — Cenarios 3-6, 13-17, 19-20 em test-scenarios.md; Cenario 4 agora descreve o comportamento navegavel pos-fix.",
+    "Concorrencia de invocacoes da rota (280s de sleep + novo agendamento) nao tratada nem testada — gap da review anterior, homologar com descansos encadeados.",
+    "Functions global 76.29% < 80 e repositories/push.ts 70.62/52.38 — aceitos no plano (gate e lines+branch) e em backlog das reviews anteriores; @vitest/coverage-v8 segue nao declarado (pre-existente no develop)."
+  ],
+  "questions": [
+    "Humano: sem perguntas bloqueantes — B1 e B2 seguem o contrato de spec/plan aprovados; restam apenas minors de backlog (RLS permissivo, push orfao intercalacoes, functions <80, coverage-v8) ja aceitos nas rodadas anteriores.",
+    "Zeus: ao promover APPROVED/COMMITTED, atualizar migrations.0017 em context.json (status pending-application + file) e alinhar checkpoint (TASKS_READY→CODING→TESTING→REVIEW→APPROVED→COMMITTED) no mesmo commit — minor de auditoria da review anterior que permanece."
+  ],
+  "verification": {
+    "gatesReExecutedByArgos": {
+      "npmTest": "140 arquivos / 1826 testes / 0 falhas (bate com test-report.json)",
+      "npmTestCoverage": "All files statements/lines 85.16, branches 84.05 (recontagem Argos; report 84.08), functions 76.29; route.ts 97.31/92.59/100; repositories/push.ts 70.62/52.38/52.94 (findSubscriptionByEndpoint 0% — finding minor)",
+      "npmRunLint": "exit 0 (0 errors, 73 warnings — baseline 7b-1; warning de usePushPermission.test.ts removida)",
+      "npmRunBuild": "exit 0 com rota /api/milon/rest-push no mapa de rotas",
+      "diffPatch": "UTF-8 sem BOM, LF, 503736 bytes, byte-identico a git diff develop...HEAD (equal:true) — minor UTF-16 RESOLVIDA",
+      "packageJson": "version 1.0.0 inalterada; web-push ^3.6.7 em dependencies e @types/web-push ^3.6.4 em devDependencies (unica dependencia nova — DA7)"
+    },
+    "b1Resolvido": {
+      "contrato": "plan.md:33 abre/foca /milon/today ou url do payload; plan.md:191 openWindow em data.url ou /milon/today; DA11 plan.md:233 notificationclick reabre o Treino do Dia; Cenario 4 test-scenarios.md:41",
+      "implementacao": "public/sw.js:37-68 (alvo de data.url com fallback; so-foca no alvo; focus+navigate com fallback openWindow em outra rota; openWindow sem janela)",
+      "testes": "__tests__/public/pwa.test.ts:250-301 — 4 casos comportamentais executando a fonte real do sw.js"
+    },
+    "b2Resolvido": {
+      "contrato": "DA2 plan.md:224 so agendaria para a propria sessao/assinatura; spec.md:59 o endpoint nunca envia o push do descanso para outro usuario",
+      "implementacao": "app/api/milon/rest-push/route.ts:146-154 (findSubscriptionByEndpoint + 403 antes de upsert/createRestSchedule/sendNotification); mensagem route.ts:52",
+      "testes": "__tests__/app/api/milon/rest-push/route.test.ts:710-790 — 403 sem escrita/envio e created_by alheio intacto; regressao proprio dono → 200"
+    },
+    "findSubscriptionByEndpoint": {
+      "repository": "lib/milon/repositories/push.ts:74-86 via IDatabaseClient (select * → eq endpoint → maybeSingle)",
+      "interface": "lib/milon/repositories/interfaces.ts:149-151 (8a operacao; 7 originais intactas em 144-163)",
+      "fake": "lib/milon/repositories/fakes/fakePushRepository.ts:76-83 (implements IPushRepository — tsc garante as 8)",
+      "barrel": "lib/milon/db/push.ts:4 (export * — re-exporta a nova funcao; rota importa em route.ts:27)"
+    },
+    "regressao": {
+      "minorsNaoReabertos": "RLS permissivo 0017 (regime do modulo/DA14), push orfao intercalacoes (aceite em backlog), functions <80, @vitest/coverage-v8 — conforme instrucao, nao reabertos",
+      "minorsFixados": "diff.patch UTF-16→UTF-8 sem BOM; lint warning usePushPermission.test.ts removida",
+      "minorsAindaAbertos": "scheduleId nao-uuid → 500 (route sem try/catch); fallback Descanso sem-exercicio fora da lista congelada; ensureDeviceSubscription sem timeout; context.json/checkpoint stale (migrations.0017 reserved, fase TASKS_READY em HEAD) — nenhum novo",
+      "intocadosPlan2": "0 violacoes (sem migracoes 0001-0016, sem repositories/hooks/componentes legados, app/milon/programs/**, next.config.ts, lib/shared/*, utils/supabase/server.ts fora do diff)"
+    },
+    "commitsReviewados": [
+      "aec9264",
+      "657d553",
+      "692712a",
+      "b69354d",
+      "d97878e",
+      "939d1ef",
+      "f9ae404",
+      "b4bf634",
+      "b112c35",
+      "e9125fb",
+      "cf8b623",
+      "86653ac",
+      "86fe1a1",
+      "14a66af",
+      "7a10d95",
+      "cf30135",
+      "e0e4b54",
+      "d25ef29",
+      "8eec148",
+      "c94eda4"
+    ]
+  }
+}

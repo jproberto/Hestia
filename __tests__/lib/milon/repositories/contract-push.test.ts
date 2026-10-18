@@ -10,10 +10,16 @@ import {
 // Contrato RED da TASK-003 (Mílon #06 — Timer de descanso auto + PWA push) —
 // consumido pela TASK-004.
 // Fonte: plan.md §3 (Tipos novos e Interfaces de repositório — assinaturas
-// exatas das sete operações do IPushRepository) + tasks.json TASK-003 (casos
-// do contract fakes-only) + migração 0017 (push_subscriptions.endpoint
+// exatas das sete operações originais do IPushRepository) + tasks.json
+// TASK-003 (casos do contract fakes-only) + migração 0017 (push_subscriptions.endpoint
 // único; rest_push_schedules com FK em cascata, status
 // agendado/enviado/cancelado/erro e sent_at anulável).
+//
+// 8ª operação (re-review da feature, fix 8eec148 / blocker B2):
+// findSubscriptionByEndpoint(endpoint) → linha em domínio ou null. Acrescentada
+// AO CONTRATO SEM REMOVER as sete originais — antes esta nota a afirmava coberta
+// e o arquivo não a exercitava (grep 0); agora a fake e a lista de operações da
+// fonte única incluem a 8ª.
 //
 // Contrato fakes-only (decisão 57): só o fake em memória é exercitado; o
 // repository real é verificado pelas cadeias de query em `db/push.test.ts`
@@ -94,7 +100,8 @@ interface PushSeed {
   schedules?: RestPushScheduleMirror[];
 }
 
-// Contrato das sete operações do IPushRepository no fake (sem db: o fake
+// Contrato das oito operações do IPushRepository no fake (as sete do plan §3
+// + findSubscriptionByEndpoint do B2; sem db: o fake
 // em memória segue o regime de IWorkoutExecutionRepository; o repository
 // real recebe db: IDatabaseClient nas funções do módulo — plan §3).
 interface PushRepositoryContract {
@@ -102,6 +109,9 @@ interface PushRepositoryContract {
     input: UpsertPushSubscriptionInputMirror,
     email: string,
   ): Promise<DevicePushSubscriptionMirror>;
+  findSubscriptionByEndpoint(
+    endpoint: string,
+  ): Promise<DevicePushSubscriptionMirror | null>;
   createRestSchedule(
     input: CreateRestPushScheduleInputMirror,
     email: string,
@@ -243,6 +253,53 @@ describe("IPushRepository contract (fakes-only, decisão 57): fake em memória",
       expect(outra.id).not.toBe(SUBSCRIPTION_ID);
       expect(outra.endpoint).toBe(OUTRO_ENDPOINT);
       expect(outra.created_by).toBe(EMAIL);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // findSubscriptionByEndpoint — 8ª operação (B2 / DA2): devolve a assinatura
+  // já gravada para o endpoint informado (a rota usa para recusar 403 antes do
+  // upsert) ou nulo quando o endpoint ainda não tem dono.
+  // -------------------------------------------------------------------------
+  describe("findSubscriptionByEndpoint", () => {
+    it("devolve a linha do endpoint em domínio camelCase", async () => {
+      const seeded = build({
+        subscriptions: [makeSubscription()],
+        schedules: [makeSchedule()],
+      });
+
+      const found = await seeded.findSubscriptionByEndpoint(ENDPOINT);
+
+      expect(found).toEqual({
+        id: SUBSCRIPTION_ID,
+        endpoint: ENDPOINT,
+        p256dh: P256DH,
+        auth: AUTH,
+        createdAt: CRIADO_EM,
+        created_by: EMAIL,
+      });
+    });
+
+    it("devolve nulo para endpoint sem assinatura cadastrada", async () => {
+      const seeded = build({ subscriptions: [makeSubscription()] });
+
+      await expect(
+        seeded.findSubscriptionByEndpoint("https://fcm.googleapis.com/fcm/send/sem-cadastro"),
+      ).resolves.toBeNull();
+      await expect(
+        seeded.findSubscriptionByEndpoint(OUTRO_ENDPOINT),
+      ).resolves.toBeNull();
+    });
+
+    it("a leitura nao altera a assinatura existente (a rota decide o 403 sem escrever)", async () => {
+      const seeded = build({ subscriptions: [makeSubscription()] });
+
+      await seeded.findSubscriptionByEndpoint(ENDPOINT);
+
+      const alheia = await seeded.findSubscriptionByEndpoint(ENDPOINT);
+      expect(alheia?.created_by).toBe(EMAIL);
+      expect(alheia?.p256dh).toBe(P256DH);
+      expect(alheia?.id).toBe(SUBSCRIPTION_ID);
     });
   });
 
@@ -495,7 +552,8 @@ describe("IPushRepository contract (fakes-only, decisão 57): fake em memória",
 // contrato IPushRepository. Testado pelo contract fakes-only"). Leitura por
 // texto para manter o tsc do RED limpo (só Cannot find module nos módulos
 // novos) — precedente de types.test.ts; em GREEN a leitura garante que a
-// interface foi criada com as sete operações.
+// interface foi criada com as oito operações (7 originais do plan §3 + a 8ª
+// findSubscriptionByEndpoint do B2).
 // ---------------------------------------------------------------------------
 describe("IPushRepository na fonte única (lib/milon/repositories/interfaces.ts)", () => {
   function fonteInterfaces(): string {
@@ -516,10 +574,11 @@ describe("IPushRepository na fonte única (lib/milon/repositories/interfaces.ts)
     expect(fonteInterfaces()).toMatch(/export interface IPushRepository\b/);
   });
 
-  it("expõe as sete operações do contrato de push", () => {
+  it("expõe as oito operações do contrato de push (7 originais + findSubscriptionByEndpoint)", () => {
     const bloco = blocoIpPushRepository();
     const operacoes = [
       "upsertSubscription",
+      "findSubscriptionByEndpoint",
       "createRestSchedule",
       "findRestScheduleById",
       "cancelRestSchedule",
@@ -527,6 +586,7 @@ describe("IPushRepository na fonte única (lib/milon/repositories/interfaces.ts)
       "markRestScheduleFailed",
       "deleteSubscriptionByEndpoint",
     ];
+    expect(operacoes).toHaveLength(8);
     for (const operacao of operacoes) {
       expect(bloco).toContain(operacao);
     }

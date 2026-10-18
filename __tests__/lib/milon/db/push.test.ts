@@ -4,6 +4,7 @@ import * as dbBarrel from "@/lib/milon/db/push";
 import * as pushRepository from "@/lib/milon/repositories/push";
 import {
   upsertSubscription,
+  findSubscriptionByEndpoint,
   createRestSchedule,
   findRestScheduleById,
   cancelRestSchedule,
@@ -34,6 +35,10 @@ import {
 //   - upsertSubscription: from("push_subscriptions").upsert({ endpoint,
 //     p256dh, auth, created_by }, { onConflict: "endpoint" }).select()
 //     .single() — endpoint UNIQUE da 0017; reinscrição atualiza chaves/autoria;
+//   - findSubscriptionByEndpoint: from("push_subscriptions").select("*")
+//     .eq("endpoint", endpoint).maybeSingle() — linha em domínio ou null;
+//     leitura da assinatura já gravada p/ a checagem de propriedade do B2
+//     (8ª operação do IPushRepository, adicionada em 8eec148);
 //   - createRestSchedule: from("rest_push_schedules").insert({ id (uuid do
 //     cliente), subscription_id, duration_seconds, fire_at, status:
 //     "agendado", created_by }).select().single();
@@ -54,6 +59,7 @@ import {
 
 const EMAIL = "barrel-push@hestia.lan";
 const ENDPOINT = "https://fcm.googleapis.com/fcm/send/dispositivo-1";
+const ENDPOINT_DESCONHECIDO = "https://fcm.googleapis.com/fcm/send/sem-cadastro";
 const SUBSCRIPTION_ID = "3f1c8f9e-1a2b-4c5d-8e6f-0a1b2c3d4e5f";
 const SCHEDULE_ID = "7c2d9b4e-5f60-4a71-9c82-1d2e3f4a5b6c";
 const FIRE_AT = "2026-10-16T10:01:30.000Z";
@@ -181,6 +187,7 @@ interface Recorded {
   updatePayload?: Record<string, unknown>;
   eqs?: [string, unknown][];
   selects?: number;
+  maybeSingles?: number;
 }
 
 // Upsert da assinatura: upsert(payload, onConflict endpoint) + select single.
@@ -257,17 +264,20 @@ function stubInsertDb(
   } as unknown as IDatabaseClient;
 }
 
-// Leitura por id: select + eq("id") + maybeSingle (ou thenable de lista).
-function stubFindDb(
-  row: RestPushScheduleRowMirror | null,
-  recorded: Recorded,
-): IDatabaseClient {
+// Leitura por filtro (id do agendamento / endpoint da assinatura): select +
+// eq(filtro) + maybeSingle (ou thenable de lista). Genérica p/ cobrir tanto
+// findRestScheduleById quanto findSubscriptionByEndpoint — mesmo formato de
+// cadeia das duas no repository real.
+function stubFindDb<T>(row: T | null, recorded: Recorded): IDatabaseClient {
   const chain = {
     eq: (col: string, val: unknown): unknown => {
       (recorded.eqs ??= []).push([col, val]);
       return chain;
     },
-    maybeSingle: () => Promise.resolve({ data: row, error: null }),
+    maybeSingle: () => {
+      recorded.maybeSingles = (recorded.maybeSingles ?? 0) + 1;
+      return Promise.resolve({ data: row, error: null });
+    },
     single: () => Promise.resolve({ data: row, error: null }),
     then: (
       onfulfilled: (value: unknown) => unknown,
@@ -361,6 +371,9 @@ function stubDeleteDb(recorded: Recorded): IDatabaseClient {
 describe("lib/milon/db/push (barrel oficial da rota/UI, TASK-003)", () => {
   it("re-exporta o repository (mesmas referências, sem lógica própria)", () => {
     expect(dbBarrel.upsertSubscription).toBe(pushRepository.upsertSubscription);
+    expect(dbBarrel.findSubscriptionByEndpoint).toBe(
+      pushRepository.findSubscriptionByEndpoint,
+    );
     expect(dbBarrel.createRestSchedule).toBe(pushRepository.createRestSchedule);
     expect(dbBarrel.findRestScheduleById).toBe(
       pushRepository.findRestScheduleById,
@@ -427,6 +440,35 @@ describe("lib/milon/db/push (barrel oficial da rota/UI, TASK-003)", () => {
     expect(recorded.upsertOptions).toEqual({ onConflict: "endpoint" });
     expect(recorded.selects).toBeGreaterThan(0);
     expect(sub).toEqual(SUB_ESPERADA);
+  });
+
+  it("localiza a assinatura por endpoint (checagem de propriedade do B2) mapeando para o domínio", async () => {
+    const recorded: Recorded = {};
+    const found = await findSubscriptionByEndpoint(
+      stubFindDb(SUB_ROW, recorded),
+      ENDPOINT,
+    );
+
+    expect(recorded.table).toBe("push_subscriptions");
+    expect(recorded.selects).toBe(1);
+    expect(recorded.eqs).toEqual([["endpoint", ENDPOINT]]);
+    expect(recorded.maybeSingles).toBe(1);
+    expect(found).toEqual(SUB_ESPERADA);
+  });
+
+  it("endpoint sem assinatura cadastrada devolve null (a rota segue para o upsert proprio)", async () => {
+    const recorded: Recorded = {};
+    await expect(
+      findSubscriptionByEndpoint(
+        stubFindDb(null, recorded),
+        ENDPOINT_DESCONHECIDO,
+      ),
+    ).resolves.toBeNull();
+
+    expect(recorded.table).toBe("push_subscriptions");
+    expect(recorded.selects).toBe(1);
+    expect(recorded.eqs).toEqual([["endpoint", ENDPOINT_DESCONHECIDO]]);
+    expect(recorded.maybeSingles).toBe(1);
   });
 
   it("cria o agendamento em rest_push_schedules com o id do cliente e status agendado", async () => {

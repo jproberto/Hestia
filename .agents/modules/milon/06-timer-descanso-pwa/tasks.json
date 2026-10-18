@@ -157,7 +157,7 @@
         "RED da contagem, da substituição, do cancelamento e do agendamento fire-and-forget",
         "RED dos helpers ensureDeviceSubscription/scheduleRestPush/cancelRestPush e da conversão da chave VAPID"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-006",
@@ -186,7 +186,7 @@
         "useRestTimer com start/cancel/dismiss consumível pela página do Treino do Dia",
         "rest-push-client com ensureDeviceSubscription/scheduleRestPush/cancelRestPush/urlBase64ToUint8Array"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-007",

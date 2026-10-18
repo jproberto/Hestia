@@ -298,7 +298,7 @@
       "produces": [
         "RED do painel de contagem/alerta, do hint de permissão/instalação e da formatação mm:ss"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-010",
@@ -331,7 +331,7 @@
       "produces": [
         "RestTimerPanel, RestPushEnableHint, usePushPermission e formatarContagemDescanso prontos para a página"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-011",

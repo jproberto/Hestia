@@ -506,7 +506,7 @@
         "Coverage mantida ≥ 80 com a rota contabilizada",
         "test-report.json, test-scenarios.md e regression.md prontos para o review do Argos"
       ],
-      "status": "pending"
+      "status": "completed"
     }
   ]
 }

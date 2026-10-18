@@ -437,7 +437,7 @@
       "produces": [
         "RED do manifest, do service worker (exibição obrigatória), do registro e das metadados do layout"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-014",
@@ -470,7 +470,7 @@
       "produces": [
         "PWA mínimo instalável com service worker de push e registro na raiz"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-015",

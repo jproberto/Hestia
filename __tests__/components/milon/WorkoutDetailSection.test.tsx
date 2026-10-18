@@ -2176,3 +2176,404 @@ describe("WorkoutDetailSection — desfecho do aviso e foco do cabeçalho (07b-1
     expect(cabecalhoDoTreino()).not.toHaveFocus();
   });
 });
+
+/**
+ * Contrato RED — Mílon 06 Timer de descanso (TASK-011): eventos novos da
+ * seção que disparam/encerram o timer no nível da página, preservando o
+ * desfecho da 7b-1.
+ *
+ * Fonte da verdade: `.agents/modules/milon/06-timer-descanso-pwa/`
+ * - `plan.md` §3 "Props novas em WorkoutDetailSection" (+ tipo exportado
+ *   `RestMarkedInfo` = `{workoutId, entryId, exerciseName, restSeconds}`):
+ *   `onSeriesMarked?: (info: RestMarkedInfo) => void` invocada exatamente
+ *   uma vez após `toggleSeries` bem-sucedido com direção `marked` e
+ *   `entry.restSeconds > 0` (nome do exercício vindo do `findTarget`);
+ *   nunca em erro, nunca em desmarcação, nunca com descanso nulo/zero;
+ *   `onExecutionCleared?: () => void` invocada exatamente uma vez após
+ *   `confirmClearExecution` bem-sucedido (confirmar a pergunta de
+ *   limpeza da #5); nunca no fechar da pergunta, nunca no erro. As duas
+ *   NÃO substituem nem estendem `onExecutionSettled` (7b-1 intacta);
+ * - `plan.md` §3 (hook) — `toggleSeries` devolve `ToggleSeriesOutcome`
+ *   (`"marked"` no caminho de marca, `inclusive` quando abre a pergunta
+ *   de completa; `"unmarked"` no de desmarca);
+ * - `tasks.json` TASK-011 `acceptanceCriteria` (casos da seção).
+ *
+ * ESTADO VIGENTE DA PRODUÇÃO (lido do disco — é o que faz os casos RED
+ * caírem):
+ * - `WorkoutDetailSectionProps` NÃO declara `onSeriesMarked` nem
+ *   `onExecutionCleared`; o destructuring só lê as props conhecidas,
+ *   então as funções recebidas são silenciosamente ignoradas;
+ * - `ExecutionHost.handleToggle` faz `await exec.toggleSeries(...)`
+ *   descartando o retorno (assinatura atual `Promise<void>`) e
+ *   `confirmClear` só alterna `clearProcessing` — nenhum canal novo de
+ *   notificação existe.
+ *
+ * Expected: FAIL nos 3 casos de emissão (a seção nunca invoca os
+ * callbacks novos). Os demais são TRAVAS VERDES do comportamento
+ * inalterado: não-emitir nos caminhos inválidos (#5) e as três emissões
+ * de `onExecutionSettled` da 7b-1 seguem intactas ao lado do canal novo.
+ * Padrão do repositório: props inexistentes via cast
+ * (`as unknown as SectionProps`) — precedente da 7b-1, `tsc --noEmit`
+ * segue exit 0 no RED.
+ */
+describe("WorkoutDetailSection — eventos do descanso 06 (TASK-011 — RED)", () => {
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  /** Máquina da #5/#7 completa com o retorno novo já no mock (contrato). */
+  function setupExecDescanso(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null as Record<string, unknown> | null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      totalSeriesCount: 0,
+      finishCase: null as "vazio" | "parcial" | "completo" | null,
+      toggleSeries: vi.fn(async () => "marked"),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      finishConfirmOpen: false,
+      finishConfirmCase: null as "parcial" | "completa" | "vazio" | null,
+      cancelConfirmOpen: false,
+      finishProcessing: false,
+      cancelProcessing: false,
+      requestFinish: vi.fn(async () => {}),
+      confirmFinish: vi.fn(async () => {}),
+      cancelFinish: vi.fn(),
+      requestCancel: vi.fn(),
+      confirmCancelExecution: vi.fn(async () => {}),
+      cancelCancelExecution: vi.fn(),
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  /** Conteúdo com UMA entrada de descanso configurável (nulo/zero). */
+  function conteudoComDescanso(restSeconds: number | null) {
+    const view = makeView(
+      makeEntry({ id: "ent-1", position: 1, restSeconds }),
+      makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" }),
+      [makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, value: 10 })],
+    );
+    return setupHook({
+      workout: makeWorkout({ name: "Treino A" }),
+      program: makeProgram(),
+      entries: [view],
+      exercises: [makeExercise({ id: "ex-1", name: "Supino reto" })],
+      workoutUsedExerciseIds: ["ex-1"],
+    });
+  }
+
+  /** Composição de execução com o canal novo recebido (cast do RED). */
+  function comDescanso(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backNone,
+      executionEnabled: true,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExecDescanso();
+  });
+
+  // --- onSeriesMarked (plan §3 — gatilho do timer) — casos RED ------------
+
+  it("marcação com descanso emite onSeriesMarked uma única vez com o RestMarkedInfo do plano", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExecDescanso({
+      // Contrato da TASK-011: o caminho de marca devolve "marked".
+      toggleSeries: vi.fn(async () => "marked"),
+    });
+    const marcado = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onSeriesMarked: marcado })}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(execState.toggleSeries).toHaveBeenCalledTimes(1));
+
+    // RED: a seção ainda não tem o canal — nunca invoca a prop nova.
+    await waitFor(() => expect(marcado).toHaveBeenCalledTimes(1));
+    expect(marcado).toHaveBeenCalledWith({
+      workoutId: "wout-1",
+      entryId: "ent-1",
+      exerciseName: "Supino reto",
+      restSeconds: 60,
+    });
+  });
+
+  it("marcação que abre a pergunta de completa também emite onSeriesMarked (outcome 'marked' + pergunta intacta)", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExecDescanso();
+    // Modela o hook real: a marca da última pendente devolve "marked" e
+    // abre a pergunta de completa no mesmo caminho (plan §3, hook).
+    execState.toggleSeries = vi.fn(async () => {
+      mockedUseWorkoutExecution.mockReturnValue({
+        ...execState,
+        doneSeriesIds: ["ser-1", "ser-2"],
+        markedCount: 2,
+        totalSeriesCount: 2,
+        finishConfirmOpen: true,
+        finishConfirmCase: "completa",
+      });
+      return "marked";
+    });
+    const marcado = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onSeriesMarked: marcado })}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(execState.toggleSeries).toHaveBeenCalledTimes(1));
+    // A pergunta de completa continua abrindo no mesmo caminho (#5 intacta).
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          /Você executou todas as séries, deseja finalizar o treino\?/i,
+        ),
+      ).toBeInTheDocument(),
+    );
+    // RED: sem o canal novo nada é emitido, mesmo com outcome "marked".
+    await waitFor(() => expect(marcado).toHaveBeenCalledTimes(1));
+    expect(marcado).toHaveBeenCalledWith({
+      workoutId: "wout-1",
+      entryId: "ent-1",
+      exerciseName: "Supino reto",
+      restSeconds: 60,
+    });
+  });
+
+  // --- onSeriesMarked: caminhos que NÃO emitem — travas verdes -----------
+
+  it("trava: marcação em entry com restSeconds nulo NÃO emite onSeriesMarked", async () => {
+    conteudoComDescanso(null);
+    const execState = setupExecDescanso({
+      toggleSeries: vi.fn(async () => "marked"),
+    });
+    const marcado = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onSeriesMarked: marcado })}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(execState.toggleSeries).toHaveBeenCalledTimes(1));
+
+    expect(marcado).not.toHaveBeenCalled();
+  });
+
+  it("trava: marcação em entry com restSeconds zero NÃO emite onSeriesMarked", async () => {
+    conteudoComDescanso(0);
+    const execState = setupExecDescanso({
+      toggleSeries: vi.fn(async () => "marked"),
+    });
+    const marcado = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onSeriesMarked: marcado })}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(execState.toggleSeries).toHaveBeenCalledTimes(1));
+
+    expect(marcado).not.toHaveBeenCalled();
+  });
+
+  it("trava: desmarcação (outcome 'unmarked') NÃO emite onSeriesMarked", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExecDescanso({
+      doneSeriesIds: ["ser-1"],
+      markedCount: 1,
+      toggleSeries: vi.fn(async () => "unmarked"),
+    });
+    const marcado = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onSeriesMarked: marcado })}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(execState.toggleSeries).toHaveBeenCalledTimes(1));
+
+    expect(marcado).not.toHaveBeenCalled();
+  });
+
+  it("trava: falha do toggleSeries NÃO emite onSeriesMarked (erro engolido, sem rejeição não tratada)", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExecDescanso({
+      toggleSeries: vi.fn(async () => {
+        throw new Error("Erro ao alternar série");
+      }),
+    });
+    const marcado = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onSeriesMarked: marcado })}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(execState.toggleSeries).toHaveBeenCalledTimes(1));
+
+    expect(marcado).not.toHaveBeenCalled();
+  });
+
+  // --- onExecutionCleared (plan §3 — confirmar a limpeza da #5) ----------
+
+  it("confirmar a limpeza da última série emite onExecutionCleared uma única vez", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExecDescanso({
+      execution: {
+        id: "exec-1",
+        workoutId: "wout-1",
+        programId: "prog-1",
+        startedAt: "2026-10-18T10:00:00.000Z",
+        finishedAt: null,
+        createdAt: "2026-10-18T10:00:00.000Z",
+        created_by: DONO,
+      },
+      doneSeriesIds: [],
+      markedCount: 0,
+      clearConfirmOpen: true,
+    });
+    const limpo = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onExecutionCleared: limpo })}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        /Todas as séries foram desmarcada\. Deseja cancelar a execução desse treino\?/i,
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /limpar/i }));
+    await waitFor(() =>
+      expect(execState.confirmClearExecution).toHaveBeenCalledTimes(1),
+    );
+
+    // RED: a seção ainda não tem o canal — nunca invoca a prop nova.
+    await waitFor(() => expect(limpo).toHaveBeenCalledTimes(1));
+  });
+
+  it("trava: fechar a pergunta de limpeza (Cancelar) NÃO emite onExecutionCleared", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExecDescanso({
+      doneSeriesIds: [],
+      markedCount: 0,
+      clearConfirmOpen: true,
+    });
+    const limpo = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onExecutionCleared: limpo })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^cancelar$/i }));
+    await waitFor(() =>
+      expect(execState.cancelClearExecution).toHaveBeenCalledTimes(1),
+    );
+
+    expect(limpo).not.toHaveBeenCalled();
+  });
+
+  it("trava: falha do confirmClearExecution NÃO emite onExecutionCleared (modal preservado)", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExecDescanso({
+      doneSeriesIds: [],
+      markedCount: 0,
+      clearConfirmOpen: true,
+      confirmClearExecution: vi.fn(async () => {
+        throw new Error("Erro ao limpar execução");
+      }),
+    });
+    const limpo = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onExecutionCleared: limpo })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /limpar/i }));
+    await waitFor(() =>
+      expect(execState.confirmClearExecution).toHaveBeenCalledTimes(1),
+    );
+
+    // Trava #5: erro não fecha a pergunta (mensagem segue visível).
+    expect(
+      screen.getByText(
+        /Todas as séries foram desmarcada\. Deseja cancelar a execução desse treino\?/i,
+      ),
+    ).toBeInTheDocument();
+    expect(limpo).not.toHaveBeenCalled();
+  });
+
+  // --- Regressão 7b-1: desfecho intacto ao lado do canal novo ------------
+
+  it("regressão 7b-1: confirmar o Finalizar parcial emite onExecutionSettled('sealed') e NUNCA onExecutionCleared", async () => {
+    conteudoComUmaEntrada();
+    setupExecDescanso({
+      execution: {
+        id: "exec-1",
+        workoutId: "wout-1",
+        programId: "prog-1",
+        startedAt: "2026-10-18T10:00:00.000Z",
+        finishedAt: null,
+        createdAt: "2026-10-18T10:00:00.000Z",
+        created_by: DONO,
+      },
+      doneSeriesIds: ["ser-1"],
+      markedCount: 1,
+      finishConfirmOpen: true,
+      finishConfirmCase: "parcial",
+    });
+    const assentado = vi.fn();
+    const limpo = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({
+          onExecutionSettled: assentado,
+          onExecutionCleared: limpo,
+        })}
+      />,
+    );
+
+    await clickConnectedButton(/^finalizar$/i);
+
+    await waitFor(() => expect(assentado).toHaveBeenCalledWith("sealed"));
+    expect(assentado).toHaveBeenCalledTimes(1);
+    // O canal novo da 06 não pode sequestrar o desfecho da 7b-1.
+    expect(limpo).not.toHaveBeenCalled();
+  });
+});

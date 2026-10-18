@@ -1487,6 +1487,152 @@ describe("Milon 07c TASK-003 RED — pré-cheque por dono em toggle/salvar (R2, 
   });
 });
 
+// ---------------------------------------------------------------------------
+// Contrato RED — Mílon 06 Timer de descanso (TASK-011): `toggleSeries` passa
+// a devolver a união textual `ToggleSeriesOutcome` (`"marked"` no caminho de
+// marca — inclusive quando abre a pergunta de completa; `"unmarked"` no
+// caminho de desmarca — inclusive quando abre a de limpar); erro continua
+// RELANÇANDO sem retorno; demais comportamentos intactos (os describes
+// anteriores deste arquivo são as travas de regressão).
+//
+// Fonte da verdade: `.agents/modules/milon/06-timer-descanso-pwa/plan.md`
+// §3 (Props novas — `useWorkoutExecution`: toggleSeries devolve
+// ToggleSeriesOutcome) + §1 Mudança 6 + `tasks.json` TASK-011
+// (acceptanceCriteria) + spec §3 (só a marcação é gatilho do timer — a
+// direção precisa chegar à seção).
+//
+// Estado vigente (verdade para o RED): `lib/milon/hooks/useWorkoutExecution.ts`
+// declara `toggleSeries: (...) => Promise<void>` e os ramos `return;` devolvem
+// `undefined` — Expected: FAIL nos 4 casos de direção (recebem `undefined`,
+// nunca `"marked"`/`"unmarked"`); o caso de falha é TRAVA VERDE do
+// relançamento já vigente. Convenção tsc: captura em `unknown` (o tipo novo
+// `ToggleSeriesOutcome` ainda não existe — precedente da 7b-1; nenhum import
+// de tipo inexistente, `tsc --noEmit` segue exit 0). Hefesto fará GREEN na
+// TASK-012 sem mudar estes testes.
+// ---------------------------------------------------------------------------
+
+describe("Milon 06 TASK-011 RED — toggleSeries devolve ToggleSeriesOutcome (marked|unmarked)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    for (const mock of mocksDoArquivo) {
+      vi.mocked(mock).mockReset();
+    }
+    vi.useRealTimers();
+  });
+
+  it("marcar uma série desmarcada devolve 'marked' (caminho de marca)", async () => {
+    const sim: BancoSimulado = { execution: makeExecution(), dones: [] };
+    instalarBanco(sim);
+    const { result } = renderHook(() => useWorkoutExecution(WORKOUT_ID));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let retorno: unknown = Symbol("sem-retorno");
+    await executar(async () => {
+      retorno = await result.current.toggleSeries(
+        makeEntry({ id: "ent-1" }),
+        makeSerie({ id: "s-1", entryId: "ent-1", position: 1 }),
+      );
+    });
+
+    await waitFor(() => expect(result.current.markedCount).toBe(1));
+    // RED: o hook atual devolve void (undefined) — a direção nunca chega.
+    expect(retorno).toBe("marked");
+  });
+
+  it("marcar a última pendente que abre a pergunta de completa devolve 'marked' e a pergunta segue abrindo", async () => {
+    const sim: BancoSimulado = {
+      execution: makeExecution(),
+      dones: [makeDone({ seriesId: "s-1" })],
+    };
+    instalarBanco(sim);
+    const { result } = renderHook(() =>
+      useWorkoutExecution(WORKOUT_ID, [viewComSeries(["s-1", "s-2"])]),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let retorno: unknown = Symbol("sem-retorno");
+    await executar(async () => {
+      retorno = await result.current.toggleSeries(
+        makeEntry({ id: "ent-1" }),
+        makeSerie({ id: "s-2", entryId: "ent-1", position: 2 }),
+      );
+    });
+
+    // Caso 4 da #7 intacto: a pergunta de completa abre no mesmo caminho.
+    expect(campoHook(result, "finishConfirmOpen")).toBe(true);
+    expect(campoHook(result, "finishConfirmCase")).toBe("completa");
+    // RED: caminho de marca com pergunta ainda devolve void.
+    expect(retorno).toBe("marked");
+  });
+
+  it("desmarcar série com restantes devolve 'unmarked' (caminho de desmarca imediato)", async () => {
+    const sim: BancoSimulado = {
+      execution: makeExecution(),
+      dones: [makeDone({ seriesId: "s-1" }), makeDone({ seriesId: "s-2" })],
+    };
+    instalarBanco(sim);
+    const { result } = renderHook(() => useWorkoutExecution(WORKOUT_ID));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let retorno: unknown = Symbol("sem-retorno");
+    await executar(async () => {
+      retorno = await result.current.toggleSeries(
+        makeEntry({ id: "ent-1" }),
+        makeSerie({ id: "s-1", entryId: "ent-1", position: 1 }),
+      );
+    });
+
+    await waitFor(() => expect(result.current.markedCount).toBe(1));
+    // RED: desmarca devolve void — a direção 'unmarked' nunca chega.
+    expect(retorno).toBe("unmarked");
+  });
+
+  it("desmarcar a última marcada que abre a pergunta de limpar devolve 'unmarked' e a pergunta segue abrindo", async () => {
+    const sim: BancoSimulado = {
+      execution: makeExecution(),
+      dones: [makeDone({ seriesId: "s-1" })],
+    };
+    instalarBanco(sim);
+    const { result } = renderHook(() => useWorkoutExecution(WORKOUT_ID));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let retorno: unknown = Symbol("sem-retorno");
+    await executar(async () => {
+      retorno = await result.current.toggleSeries(
+        makeEntry({ id: "ent-1" }),
+        makeSerie({ id: "s-1", entryId: "ent-1", position: 1 }),
+      );
+    });
+
+    // Pergunta da #5 intacta: abre no mesmo caminho de desmarca da última.
+    await waitFor(() => expect(result.current.clearConfirmOpen).toBe(true));
+    // RED: caminho de desmarca com pergunta ainda devolve void.
+    expect(retorno).toBe("unmarked");
+  });
+
+  it("trava verde: falha ao alternar continua RELANÇANDO sem retorno (nenhum valor marked/unmarked escapa)", async () => {
+    const sim: BancoSimulado = { execution: null, dones: [] };
+    instalarBanco(sim);
+    const { result } = renderHook(() => useWorkoutExecution(WORKOUT_ID));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    vi.mocked(startExecutionStandalone).mockRejectedValueOnce(
+      new Error("falha ao abrir execução"),
+    );
+
+    await act(async () => {
+      await expect(
+        result.current.toggleSeries(
+          makeEntry({ id: "ent-1" }),
+          makeSerie({ id: "s-1", entryId: "ent-1" }),
+        ),
+      ).rejects.toThrow("falha ao abrir execução");
+    });
+
+    expect(result.current.errorOrigin).toBe("operacao");
+  });
+});
+
 
 
 

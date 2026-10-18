@@ -345,7 +345,7 @@
 
 ---
 
-## Feature #06 — Timer de descanso auto + PWA push (2026-10-18 — suite 1820/1820, cov 85.28% lines / 84.13% branch)
+## Feature #06 — Timer de descanso auto + PWA push (2026-10-18 — suite 1826/1826 pós-fix B1/B2, cov 85.16% lines / 84.08% branch)
 
 > Integração por composição: a feature adiciona painel/hint/push sobre a marcação da #5, o desfecho da 7b-1 e a guarda da 7c, sem alterar as máquinas existentes. `toggleSeries` devolve `marked`/`unmarked` (adição em runtime); a seção ganha `onSeriesMarked`/`onExecutionCleared`; a página liga os eventos ao `useRestTimer`. Os testes de regressão das features 05, 07, 7b, 7b-1 e 7c estão verdes nesta entrega (suite completa; spot checks no `test-report.json`).
 
@@ -400,4 +400,4 @@ npm run build-storybook
 **Dado** exercício com séries
 **Então** grid responsivo (1/2/4 col), campo único com rótulo pelo modo da entry, toggle kg/lb abaixo da carga persistindo na entry
 
-**Critério de passagem:** 1820 testes passados, 0 falhas, coverage ≥ 80% (atual: 85.28% lines, 84.13% branch — 06-timer-descanso-pwa em 2026-10-18; referência 7b-1 em 2026-10-16: 1636 testes, 84.74% lines, 83.63% branch).
+**Critério de passagem:** 1826 testes passados, 0 falhas, coverage ≥ 80% (atual: 85.16% lines, 84.08% branch — 06-timer-descanso-pwa re-executada em 2026-10-18 pós-fix B1/B2; referência 7b-1 em 2026-10-16: 1636 testes, 84.74% lines, 83.63% branch).

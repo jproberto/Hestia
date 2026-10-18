@@ -3,7 +3,7 @@
 > Derivados exclusivamente de `spec.md` (§5 critérios 1–12, §3 regras de negócio, §Decisões resolvidas) + contratos do `plan.md` §3. Sem cenários de Atena (não gerada por ela, sem viés).
 > **Somente cenários manuais** (decisão 2026-10-16): a cobertura automatizada vive na suíte e no `test-report.json`; este arquivo é o roteiro do portão manual de homologação.
 > Textos das features citados entre aspas exatas quando relevantes — sem paráfrase nova.
-> Gerado em 2026-10-18 pós-suite verde: 1820 testes / 140 arquivos / 0 falhas, coverage 85.28% lines e 84.13% branch, Storybook exit 0 (ver `test-report.json`).
+> Gerado em 2026-10-18, re-executado pós-correção dos blockers B1/B2 (commit 8eec148): 1826 testes / 140 arquivos / 0 falhas, coverage 85.16% lines e 84.08% branch, Storybook exit 0 (ver `test-report.json`).
 
 **Pré-requisitos comuns (homologação em produção/staging com os dois donos):**
 - Ambos os donos logados em iPhone instalado ("Adicionar à Tela Inicial", display standalone) com permissão de notificação concedida; chaves VAPID configuradas no ambiente (sem elas o agendamento responde 503 e só a camada visual funciona).
@@ -36,9 +36,9 @@
 **Então** a notificação `Descanso terminado` / `Descanso de <exercício> terminou.` é entregue e exibida no iPhone do dono A; o iPhone do dono B **não** recebe notificação alguma
 
 ### Cenário 4: Push em outra página do Héstia [iPhone real]
-**Dado** dono A com o Treino do Dia em segundo plano dentro do app instalado (ex.: na página de Programas ou no dashboard do Héstia)
-**Quando** o descanso de A zera
-**Então** a notificação chega ao iPhone de A e, ao tocá-la, o app abre/foca no Treino do Dia (`/milon/today`)
+**Dado** dono A com o app do Héstia instalado em segundo plano aberto em outra página (ex.: Programas ou o dashboard — não no Treino do Dia)
+**Quando** o descanso de A zera e ela toca na notificação
+**Então** a notificação chega ao iPhone de A e o clique leva o app até o Treino do Dia (`/milon/today`): se uma janela do app já estava em outra rota, ela é focada **e navegada** até o Treino do Dia; se nenhuma janela estava aberta, o app abre direto no Treino do Dia
 
 ### Cenário 5: Push com outro aplicativo em primeiro plano [iPhone real]
 **Dado** dono A com o Héstia em segundo plano e outro aplicativo (ex.: mensagens, música) em primeiro plano, tela ligada
@@ -170,7 +170,7 @@
 ### Cenário 22: Gates da entrega
 **Dado** o repositório na feature 06-timer-descanso-pwa
 **Quando** os comandos de verificação rodam
-**Então** `npm test` termina com 1820 testes / 140 arquivos / 0 falhas (sem quebra das features 01 a 07b-1), `npm test -- --coverage` termina com 85.28% lines e 84.13% branch (ambos ≥ 80%), `npm run lint` e `npm run build-storybook` terminam em exit 0 e o `test-report.json` desta feature está regenerado com `failed = 0`
+**Então** `npm test` termina com 1826 testes / 140 arquivos / 0 falhas (sem quebra das features 01 a 07b-1), `npm test -- --coverage` termina com 85.16% lines e 84.08% branch (ambos ≥ 80%), `npm run lint` (0 errors), `npm run build` e `npm run build-storybook` terminam em exit 0 e o `test-report.json` desta feature está regenerado com `failed = 0`
 
 ---
 

@@ -225,7 +225,7 @@
         "RED da autenticação por sessão, das validações, da janela de 280 s, da re-leitura de status e do envio",
         "RED do sender com env vars e propagação de statusCode"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-008",
@@ -265,7 +265,7 @@
         "Sender com VAPID via env vars e payload congelado",
         "Dependência web-push instalada e exemplo de env atualizado"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "TASK-009",

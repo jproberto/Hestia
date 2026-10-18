@@ -1,0 +1,135 @@
+{
+  "byTask": {
+    "TASK-001": "passed",
+    "TASK-002": "passed",
+    "TASK-003": "passed",
+    "TASK-004": "passed",
+    "TASK-005": "passed",
+    "TASK-006": "passed",
+    "TASK-007": "passed",
+    "TASK-008": "passed",
+    "TASK-009": "passed",
+    "TASK-010": "passed",
+    "TASK-011": "passed",
+    "TASK-012": "passed",
+    "TASK-013": "passed",
+    "TASK-014": "passed",
+    "TASK-015": "passed"
+  },
+  "commands": {
+    "coverage": "npm test -- --coverage (vitest run --coverage, reporter v8)",
+    "suite": "npm test",
+    "storybook": "npm run build-storybook",
+    "lint": "npm run lint",
+    "untouchedCheck": "git diff develop...HEAD --name-only vs lista intocados do plan.md §2"
+  },
+  "coverage": {
+    "branches": 84.13,
+    "functions": 76.51,
+    "lines": 85.28,
+    "reporter": "v8",
+    "statements": 85.28,
+    "note": "Sem sourcemap de linha separado no reporter v8, a coluna Lines do text-report equivale aos Statements; agregacao recalculada a partir de coverage/coverage-final.json (s/b/f)."
+  },
+  "coverageByFeatureFile": {
+    "app/api/milon/rest-push/route.ts": "97.22% stmts (140/144), 92.16% branch (47/51), 100% funcs — presente no relatório (coverage.include app/**/*.ts da T008)",
+    "lib/milon/hooks/useRestTimer.ts": "100% stmts, 91.66% branch, 100% funcs",
+    "lib/milon/hooks/usePushPermission.ts": "96.49% stmts, 86.36% branch, 100% funcs",
+    "lib/milon/repositories/push.ts": "75.75% stmts, 52.38% branch — ramos restantes majoritariamente caminhos de erro/servidor exercitados via rota"
+  },
+  "feature": "06-timer-descanso-pwa",
+  "filesTouched": [
+    "utils/migrations/migration-0017-milon-timer-descanso-push.sql",
+    "lib/milon/types.ts",
+    "lib/milon/repositories/interfaces.ts",
+    "lib/milon/repositories/push.ts",
+    "lib/milon/repositories/fakes/fakePushRepository.ts",
+    "lib/milon/db/push.ts",
+    "lib/milon/rest-push-client.ts",
+    "lib/milon/rest-push-sender.ts",
+    "lib/milon/hooks/useRestTimer.ts",
+    "lib/milon/hooks/usePushPermission.ts",
+    "lib/milon/hooks/useWorkoutExecution.ts",
+    "lib/milon/utils.ts",
+    "app/api/milon/rest-push/route.ts",
+    "app/milon/today/page.tsx",
+    "app/layout.tsx",
+    "components/milon/RestTimerPanel.tsx",
+    "components/milon/RestPushEnableHint.tsx",
+    "components/milon/WorkoutDetailSection.tsx",
+    "components/PwaRegistration.tsx",
+    "public/manifest.webmanifest",
+    "public/sw.js",
+    ".env.local.example",
+    "package.json",
+    "package-lock.json",
+    "vitest.config.ts"
+  ],
+  "gaps": [
+    "Gates globais aprovam (lines 85.28 >= 80 e branch 84.13 >= 80). Arquivos legados fora do escopo seguem abaixo de 80 e nao bloqueiam (pre-existentes, idem 07b-1): lib/pluto/repositories 17.66% stmts, lib/pluto/db 42.85%, lib/shared 57.67%, utils/supabase 0%.",
+    "Functions global 76.51% segue abaixo de 80 (idem 07b-1 com 75.54%) — o critério de aceite do plano pede lines e branch >= 80, ambos atendidos.",
+    "repositories/push.ts com 75.75% stmts / 52.38% branch: ramos de erro de banco e standalones de servico; o comportamento de dono/cancelamento e coberto pelo contract fakes-only e pela rota (97.22/92.16).",
+    "@vitest/coverage-v8 nao esta declarado em devDependencies (nem no develop; ausente de node_modules nesta sessao). Instalado temporariamente com npm install --no-save @vitest/coverage-v8@2.1.9 apenas para medir — package.json e package-lock intactos no diff. Se a medicao de coverage virar gate recorrente, Atena/humano podem decidir declara-lo.",
+    "Cenarios manuais nao exercitaveis em jsdom ficam declarados no test-scenarios.md (push com tela apagada/outro app em iPhone real, cancelamento efetivo sem push orfao, instalacao iOS, permissao por gesto, queda real de rede) — sem tentativa de automatizacao falsa.",
+    "Minos tocou somente artefatos de teste (test-report.json, test-scenarios.md, regression.md); nenhum arquivo de producao foi alterado nesta task."
+  ],
+  "gates": {
+    "coverageBranchesGte80": {
+      "actual": 84.13,
+      "expected": "branches >= 80",
+      "status": "passed"
+    },
+    "coverageLinesGte80": {
+      "actual": 85.28,
+      "expected": "lines >= 80",
+      "status": "passed"
+    },
+    "suiteZeroFailures": {
+      "actual": "140 files passed, 1820 tests passed, 0 failed",
+      "expected": "0 falhas",
+      "status": "passed"
+    },
+    "storybookExit0": {
+      "actual": "SB_EXIT:0 (Storybook build completed successfully, output storybook-static; stories de RestTimerPanel (6), RestPushEnableHint (7) e PwaRegistration (1) presentes no index.json do build)",
+      "expected": "exit 0",
+      "status": "passed"
+    },
+    "lintExit0": {
+      "actual": "0 errors, 74 warnings",
+      "expected": "exit 0 (0 errors)",
+      "status": "passed",
+      "note": "Warnings pre-existentes (ex.: useMonthsData.ts silent, fakeBudgetRepository.ts _email, block-navigation.js da pasta coverage) — nenhum erro; nenhuma warning nova de arquivo da feature 06."
+    },
+    "untouchedListRespected": {
+      "actual": "0 violacoes: nenhuma entrada da lista 'Explicitamente NÃO tocados' do plan.md §2 aparece em git diff develop...HEAD --name-only",
+      "expected": "nenhum arquivo intocado no diff",
+      "status": "passed",
+      "note": "Migracoes 0001-0016 intactas (so a 0017 nova aparece); repositories/executions|workouts|programs|exercises e fakes intactos; hooks useTodayWorkout/useActiveExecution/useWorkoutDetail intactos; workout-utils.ts intacto; WorkoutEntriesList/SeriesCard/SeriesEditModal/ExerciseEntryCard/TodayWorkoutSwitcher/WorkoutConfirmModal intactos; app/milon/programs/** intacto; next.config.ts, lib/shared/* e utils/supabase/server.ts intactos."
+    }
+  },
+  "outputs": {
+    "coverageRecalc": "coverage-final.json agregado: ALL FILES statements 85.28, branches 84.13, functions 76.51; ROUTE app/api/milon/rest-push/route.ts statements 97.22 (140/144), branch 92.16 (47/51), functions 100",
+    "suiteTail": "Test Files 140 passed (140) | Tests 1820 passed (1820)",
+    "directedTail": "16 arquivos da feature: Test Files 16 passed (16) | Tests 304 passed (304) | exit 0",
+    "storybookTail": "Vite built in 13.16s | Output directory: P:/workspace/IA/hestia/storybook-static | Storybook build completed successfully"
+  },
+  "spotChecks": {
+    "__tests__/lib/milon/migration-0017.test.ts": "migração 0017 (duas tabelas push, RLS, índices, rollback, auditoria milon-06) — passou no dirigido",
+    "__tests__/lib/milon/repositories/contract-push.test.ts + db/push.test.ts": "contrato fakes-only + cadeias de query do repositório de push — passou no dirigido",
+    "__tests__/app/api/milon/rest-push/route.test.ts": "primeiro route handler (401/400/503, janela 280s, re-leitura, 404/410, cancel por dono) — passou no dirigido",
+    "__tests__/lib/milon/hooks/useRestTimer.test.ts + usePushPermission.test.ts": "contagem/substituição/cancel/fire-and-forget e gesto de permissão — passaram no dirigido",
+    "__tests__/lib/milon/hooks/useWorkoutExecution.test.ts": "45 tests passados (retorno ToggleSeriesOutcome marked/unmarked, perguntas #5/#7 intactas)",
+    "__tests__/components/milon/WorkoutDetailSection.test.tsx": "73 tests passados (10 novos: onSeriesMarked/onExecutionCleared; 7b-1 onExecutionSettled preservado)",
+    "__tests__/app/milon/today/page-rest-timer.test.tsx": "composicao da pagina (start no marked, cancel em settled/cleared, painel por treino de origem, hint) — passou no dirigido",
+    "__tests__/app/milon/today/page.test.tsx + page-ac6.test.tsx + page-7b1-advance.test.tsx": "regressoes 07/7c/7b-1 verdes na suite completa",
+    "__tests__/public/pwa.test.ts + PwaRegistration.test.tsx": "manifest/sw/layout (showNotification obrigatório, sem fetch handler) e registro engolido — passaram no dirigido"
+  },
+  "status": "passed",
+  "summary": {
+    "coverage": 85.28,
+    "failed": 0,
+    "passed": 1820,
+    "skipped": 0,
+    "testFiles": 140
+  }
+}

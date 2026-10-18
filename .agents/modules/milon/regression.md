@@ -345,6 +345,24 @@
 
 ---
 
+## Feature #06 — Timer de descanso auto + PWA push (2026-10-18 — suite 1820/1820, cov 85.28% lines / 84.13% branch)
+
+> Integração por composição: a feature adiciona painel/hint/push sobre a marcação da #5, o desfecho da 7b-1 e a guarda da 7c, sem alterar as máquinas existentes. `toggleSeries` devolve `marked`/`unmarked` (adição em runtime); a seção ganha `onSeriesMarked`/`onExecutionCleared`; a página liga os eventos ao `useRestTimer`. Os testes de regressão das features 05, 07, 7b, 7b-1 e 7c estão verdes nesta entrega (suite completa; spot checks no `test-report.json`).
+
+### REG-68: Smoke — Marcar série inicia o descanso; Finalizar/Cancelar encerram sem aviso residual
+**Dado** o Treino do Dia com exercício de descanso preenchido e série desmarcada
+**Quando** a pessoa marca a série e, com a contagem rodando, finaliza (ou cancela) o treino com sucesso
+**Então** o painel de descanso inicia automaticamente com o `restSeconds` da entry e, após o Finalizar/Cancelar, o painel some e nenhum aviso de fim de descanso chega depois (push cancelado no servidor)
+
+### Cenários que a homologação deve re-checar (integração composição — verdes na suite, re-cheque manual recomendado)
+
+- **#5 — toggle/marcação/pergunta da última série (agora com retorno `marked`/`unmarked`):** REG-49 (marcar série), REG-51 (badge/bloqueio/aviso e cancelamento ao desmarcar tudo com a pergunta exata), REG-55 (texto de cancelamento) — a pergunta da última desmarcada continua sem desfecho 7b-1 e ganhou o canal próprio `onExecutionCleared` (encerra timer e push); ao fechar a pergunta sem confirmar, timer e push seguem.
+- **#7 — quatro confirmações:** REG-57 (completo direto + parcial) e REG-60 (quatro textos exatos) — inalterados; finalizar qualquer caso emite o desfecho 7b-1 que a página usa para cancelar o timer como primeiro efeito; REG-61 (vazio conduzido ao cancelamento) emite `cancelled` e também cancela timer/push.
+- **7b/7b-1 — rotação, desfecho `sealed`/`cancelled` e foco:** REG-58/REG-63/REG-64 (rotação) e REG-67 (smoke avanço/permanência com foco) — `onExecutionSettled` intacto; a página só acrescenta `restTimer.cancel()` antes das recargas já existentes; a troca de treino para consulta (REG-65) NÃO cancela timer nem push (emenda da spec).
+- **7c — guarda por dono e liberação de escrita:** REG-59 (escrita bloqueada com tooltip e liberação após settle) e REG-66 (uma aberta por dono) — pré-cheque 7c intacto; o parceiro espectador que consulta o treino do outro nunca dispara o gatilho e nunca recebe o push do descanso (homologação em iPhone real nos cenários de dispositivo do `test-scenarios.md`).
+
+---
+
 ## Execução de regressão
 
 ```bash
@@ -382,4 +400,4 @@ npm run build-storybook
 **Dado** exercício com séries
 **Então** grid responsivo (1/2/4 col), campo único com rótulo pelo modo da entry, toggle kg/lb abaixo da carga persistindo na entry
 
-**Critério de passagem:** 1636 testes passados, 0 falhas, coverage ≥ 80% (atual: 84.74% lines, 83.63% branch — 7b-1 em 2026-10-16; referência 07c em 2026-10-15: 1618 testes, 84.59% lines, 83.49% branch).
+**Critério de passagem:** 1820 testes passados, 0 falhas, coverage ≥ 80% (atual: 85.28% lines, 84.13% branch — 06-timer-descanso-pwa em 2026-10-18; referência 7b-1 em 2026-10-16: 1636 testes, 84.74% lines, 83.63% branch).

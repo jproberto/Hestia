@@ -15,6 +15,16 @@
  * Hefesto fará GREEN (TASK-006) apenas com o contrato descrito no plano —
  * sem inventar APIs.
  *
+ * EMENDA 2026-10-23 (fix-01-server, Alavanca 1/DA16 — TASK-018 RED): o
+ * contrato acima ganha o campo `elapsed` — `ScheduleRestPushInput.elapsed:
+ * number` OBRIGATÓRIO no tipo do cliente (plan §Emenda, texto S7) e o corpo
+ * de `action: "schedule"` SEMPRE carrega `elapsed` ≥ 0 (ms entre o clique que
+ * iniciou o timer e o disparo do POST). O corpo OPCIONAL é contrato da rota
+ * (servidor trata ausente/inválido → 0 — compat da PWA antiga, TASK-020);
+ * no cliente novo o campo nunca falta, por isso o tipo é obrigatório. Casos da
+ * seção 6 escritos ANTES da TASK-019: Expected: FAIL — `elapsed` ausente no
+ * tipo (sinal `tsc` citando `ScheduleRestPushInput`) e `undefined` nos corpos.
+ *
  * Padrão: helpers de navegador simulados por `Object.defineProperty` em
  * `navigator.serviceWorker` (configurável) + `vi.stubGlobal` de
  * `Notification`/`PushManager`/`fetch` (mesmo harness da RED do hook);
@@ -36,8 +46,9 @@
  *   por `urlBase64ToUint8Array`; devolve o JSON da assinatura (`endpoint` +
  *   `keys`); qualquer falha interna devolve `null` (nunca lança);
  * - `scheduleRestPush(input { scheduleId, subscription, durationSeconds,
- *   exerciseName? }): Promise<void>` — POST em `/api/milon/rest-push` com
- *   `action: "schedule"`; lança em resposta não-2xx;
+ *   exerciseName?, elapsed }): Promise<void>` — POST em `/api/milon/rest-push`
+ *   com `action: "schedule"` e `elapsed` (número inteiro ≥ 0, obrigatório
+ *   desde a Emenda 2026-10-23 — DA16); lança em resposta não-2xx;
  * - `cancelRestPush(scheduleId: string): Promise<void>` — POST com
  *   `action: "cancel"`; lança em resposta não-2xx;
  * - `urlBase64ToUint8Array(base64: string): Uint8Array` — regra pura de
@@ -50,6 +61,7 @@ import {
   cancelRestPush,
   urlBase64ToUint8Array,
 } from "@/lib/milon/rest-push-client";
+import type { ScheduleRestPushInput } from "@/lib/milon/rest-push-client";
 
 // ---------------------------------------------------------------------------
 // Constantes do contrato
@@ -154,11 +166,14 @@ function instalarNavegador(opcoes: OpcoesNavegador = {}): {
   return { getSubscription, subscribe };
 }
 
+// Input do agendamento no contrato emendado (DA16): `elapsed` é obrigatório
+// no tipo do cliente desde a Emenda 2026-10-23 (o corpo sempre o carrega).
 const INPUT_AGENDAMENTO = {
   scheduleId: SCHEDULE_ID,
   subscription: { endpoint: ENDPOINT, keys: { p256dh: P256DH, auth: AUTH } },
   durationSeconds: 90,
   exerciseName: EXERCICIO,
+  elapsed: 1500,
 };
 
 // ---------------------------------------------------------------------------
@@ -324,16 +339,18 @@ describe("Mílon #06 — rest-push-client (contrato RED, TASK-005)", () => {
   // 4. cancelRestPush — POST com action cancel; lança em não-2xx
   // -------------------------------------------------------------------------
   describe("4. cancelRestPush", () => {
-    it("faz POST em /api/milon/rest-push com action cancel e o scheduleId", async () => {
+    it("faz POST em /api/milon/rest-push com action cancel e o scheduleId (sem elapsed — o campo é exclusivo do schedule)", async () => {
       await cancelRestPush(SCHEDULE_ID);
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(fetchMock.mock.calls[0][0]).toBe(ROTA);
       expect((fetchMock.mock.calls[0][1] as RequestInit).method).toBe("POST");
-      expect(corpoDaChamada(0)).toMatchObject({
+      const corpo = corpoDaChamada(0);
+      expect(corpo).toMatchObject({
         action: "cancel",
         scheduleId: SCHEDULE_ID,
       });
+      expect("elapsed" in corpo).toBe(false);
     });
 
     it("lança em resposta não-2xx (400)", async () => {
@@ -371,6 +388,53 @@ describe("Mílon #06 — rest-push-client (contrato RED, TASK-005)", () => {
       const b = Array.from(urlBase64ToUint8Array(CHAVE_PUBLICA));
       expect(a).toEqual(b);
       expect(a.length).toBeGreaterThan(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 6. Emenda 2026-10-23 — campo elapsed no corpo de schedule (TASK-018 RED)
+  // -------------------------------------------------------------------------
+  describe("6. Emenda 2026-10-23 — campo elapsed no corpo de schedule (TASK-018 RED)", () => {
+    it("Dado input com elapsed 1500, Quando scheduleRestPush, Então o JSON de action schedule carrega elapsed: 1500", async () => {
+      // Litera anotada com o tipo do cliente: em RED o `elapsed` não existe
+      // em `ScheduleRestPushInput` (sinal tsc citando o tipo) e o corpo sai
+      // sem o campo (falha de runtime esperada até a TASK-019).
+      const inputComElapsed: ScheduleRestPushInput = {
+        scheduleId: SCHEDULE_ID,
+        subscription: { endpoint: ENDPOINT, keys: { p256dh: P256DH, auth: AUTH } },
+        durationSeconds: 90,
+        exerciseName: EXERCICIO,
+        elapsed: 1500,
+      };
+
+      await scheduleRestPush(inputComElapsed);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock.mock.calls[0][0]).toBe(ROTA);
+      const corpo = corpoDaChamada(0);
+      expect(corpo.action).toBe("schedule");
+      expect(corpo.elapsed).toBe(1500);
+    });
+
+    it("Dado input com elapsed 0 (relógio congelado no clique), Quando scheduleRestPush, Então a chave elapsed está presente no corpo com valor 0", async () => {
+      // O corpo do cliente SEMPRE carrega `elapsed` ≥ 0 (plan §Emenda, S7) —
+      // nem o caso mínimo pode omitir a chave. Input sem anotação de tipo
+      // (o sinal tsc do RED é o caso anotado acima; aqui a falha é de
+      // runtime: a chave nem sai no JSON até a TASK-019).
+      const inputZerado = {
+        scheduleId: SCHEDULE_ID,
+        subscription: { endpoint: ENDPOINT, keys: { p256dh: P256DH, auth: AUTH } },
+        durationSeconds: 90,
+        exerciseName: EXERCICIO,
+        elapsed: 0,
+      };
+
+      await scheduleRestPush(inputZerado);
+
+      const corpo = corpoDaChamada(0);
+      expect("elapsed" in corpo).toBe(true);
+      expect(corpo.elapsed).toBe(0);
+      expect(Number.isInteger(corpo.elapsed as number)).toBe(true);
     });
   });
 });

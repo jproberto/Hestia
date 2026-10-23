@@ -1,8 +1,11 @@
-// Helpers de push do fim de descanso no cliente (Mílon #06, TASK-006):
-// ensureDeviceSubscription (assinatura do navegador sob permissão granted),
-// scheduleRestPush/cancelRestPush (POST na rota /api/milon/rest-push) e a
-// regra pura urlBase64ToUint8Array (chave pública VAPID base64url → bytes).
-// Push é melhor esforço: indisponibilidade vira null/silêncio e nunca
+// Helpers de push do fim de descanso no cliente (Mílon #06, TASK-006 +
+// Emenda 2026-10-23, Alavanca 1/DA16): ensureDeviceSubscription (assinatura
+// do navegador sob permissão granted), scheduleRestPush/cancelRestPush (POST
+// na rota /api/milon/rest-push) e a regra pura urlBase64ToUint8Array (chave
+// pública VAPID base64url → bytes). O schedule carrega `elapsed` (ms entre o
+// clique que iniciou o timer e o disparo do POST — medido pelo useRestTimer);
+// o corpo sem o campo é compat da rota antiga (TASK-020), não do cliente
+// novo. Push é melhor esforço: indisponibilidade vira null/silêncio e nunca
 // bloqueia a marcação (spec critério 10); agendamento/cancelamento são
 // sempre chamados fire-and-forget pelo useRestTimer.
 
@@ -19,6 +22,8 @@ export interface ScheduleRestPushInput {
   subscription: RestPushSubscriptionPayload;
   durationSeconds: number;
   exerciseName?: string;
+  /** Ms entre o clique que iniciou o timer e o disparo do POST (DA16). */
+  elapsed: number;
 }
 
 /**
@@ -108,6 +113,7 @@ export async function scheduleRestPush(input: ScheduleRestPushInput): Promise<vo
     durationSeconds: input.durationSeconds,
     exerciseName: input.exerciseName,
     subscription: input.subscription,
+    elapsed: input.elapsed,
   });
 }
 

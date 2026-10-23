@@ -15,6 +15,19 @@
  * Hefesto fará GREEN (TASK-006) apenas com o contrato descrito no plano —
  * sem inventar APIs.
  *
+ * EMENDA 2026-10-23 (fix-01-server, Alavanca 1/DA16 — TASK-018 RED): o
+ * contrato do `start` ganha a ancoragem do push no clique — `t0 =
+ * Date.now()` como primeira instrução do caminho válido (após o no-op de
+ * `restSeconds` nulo/zero, antes de limpar/cancelar o agendamento anterior e
+ * antes de `ensureDeviceSubscription()`) e `elapsed = Date.now() − t0`
+ * (inteiro ms, ≥ 0) no corpo do POST de `schedule`, medido NO MOMENTO do
+ * disparo (a latência da assinatura entra no campo). Fake timers com `Date`
+ * faked (default do Vitest 2) + `vi.setSystemTime`/`vi.advanceTimersByTime`
+ * tornam a latência observável de forma determinística. Casos da seção 10
+ * escritos ANTES da TASK-019: Expected: FAIL — `corpo.elapsed === undefined`
+ * onde se espera o número medido (o cancel e o no-op permanecem sem
+ * `elapsed`/sem POST — invariantes já verdes, preservadas aqui).
+ *
  * Padrão espelhado de `__tests__/lib/milon/hooks/useWorkoutExecution.test.ts`
  * (renderHook + act, fake timers para o setInterval de 1 s) + verificação de
  * ambiente do precedente jsdom: `crypto.randomUUID` é espiado com
@@ -46,6 +59,12 @@
  *   `schedule`), grava `originWorkoutId`/`exerciseName`/`remainingSeconds` e
  *   inicia `setInterval` de 1000 ms; a duração é SEMPRE a capturada na
  *   chamada (nada relê `restSeconds`);
+ * - EMENDA 2026-10-23 (DA16, TASK-018): o `start` captura `t0 = Date.now()`
+ *   no início do caminho válido e o POST de `schedule` carrega
+ *   `elapsed = Date.now() − t0` (inteiro ms, ≥ 0) no instante do disparo — a
+ *   latência de `ensureDeviceSubscription` (e de qualquer espera anterior ao
+ *   fetch) conta no campo; `elapsed` NÃO aparece no `cancel` (exclusivo do
+ *   `schedule`);
  * - ao alcançar zero: para o intervalo, `active = false`,
  *   `remainingSeconds = 0`, `finished = true` (origem/exercício preservados
  *   para o alerta);
@@ -158,6 +177,35 @@ function instalarNavegadorComPush(): {
   return { getSubscription, subscribe };
 }
 
+/**
+ * Variante com assinatura LENTA (Emenda 2026-10-23 — DA16, TASK-018): o
+ * `getSubscription` só resolve depois de `atrasoMs` de relógio fake
+ * (`setTimeout`). É a latência física entre o clique e o POST de `schedule` —
+ * exatamente o intervalo que o campo `elapsed` precisa medir no corpo.
+ */
+function instalarNavegadorComAssinaturaLenta(atrasoMs: number): void {
+  vi.stubGlobal("Notification", { permission: "granted" });
+  vi.stubGlobal("PushManager", class PushManager {});
+  const assinatura = fazerAssinatura();
+  const getSubscription = vi.fn(
+    () =>
+      new Promise<ReturnType<typeof fazerAssinatura>>((resolve) => {
+        setTimeout(() => resolve(assinatura), atrasoMs);
+      }),
+  );
+  const subscribe = vi.fn(async () => assinatura);
+  const registration = { pushManager: { getSubscription, subscribe } };
+  Object.defineProperty(window.navigator, "serviceWorker", {
+    configurable: true,
+    value: {
+      ready: Promise.resolve(registration),
+      getRegistration: async () => registration,
+      register: async () => registration,
+    },
+  });
+  process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY = CHAVE_PUBLICA;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers de atuação (fake timers + dreno de microtarefas dentro de act)
 // ---------------------------------------------------------------------------
@@ -175,6 +223,26 @@ async function iniciar(
 ): Promise<void> {
   await act(async () => {
     (result.current.start as (i: StartRestTimerInput) => void)(input);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+  });
+}
+
+/**
+ * Executa `start` com latência controlada entre o clique e o POST (DA16):
+ * drena a cadeia até `ensureDeviceSubscription` ficar pendurada na assinatura
+ * lenta, avança o relógio fake em `latenciaMs` (o `setTimeout` da assinatura
+ * resolve e `Date.now()` anda exatamente o mesmo tanto) e drena até o
+ * `fetch` de `schedule` — o `elapsed` medido tem de ser `latenciaMs`.
+ */
+async function iniciarComLatencia(
+  result: { current: { start: unknown } },
+  input: StartRestTimerInput,
+  latenciaMs: number,
+): Promise<void> {
+  await act(async () => {
+    (result.current.start as (i: StartRestTimerInput) => void)(input);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    vi.advanceTimersByTime(latenciaMs);
     for (let i = 0; i < 20; i++) await Promise.resolve();
   });
 }
@@ -576,6 +644,102 @@ describe("Mílon #06 — useRestTimer (contrato RED, TASK-005)", () => {
       expect(vi.getTimerCount()).toBe(0);
       expect(() => vi.advanceTimersByTime(5000)).not.toThrow();
       expect(vi.getTimerCount()).toBe(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 10. Emenda 2026-10-23 — elapsed ancorado ao clique (TASK-018 RED)
+  // -------------------------------------------------------------------------
+  describe("10. Emenda 2026-10-23 — elapsed ancorado ao clique (DA16, TASK-018 RED)", () => {
+    it("Dado relógio congelado (zero latência entre clique e POST), Quando start, Então o corpo de schedule carrega elapsed === 0 — sempre enviado, inteiro e nunca negativo", async () => {
+      instalarNavegadorComPush();
+      vi.setSystemTime(new Date("2026-10-23T12:00:00.000Z"));
+      const { result } = renderHook(() => useRestTimer());
+
+      await iniciar(result, entrada({ restSeconds: 90 }));
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const corpo = corpoDaChamada(0);
+      expect(corpo.action).toBe("schedule");
+      // RED (TASK-018): o hook ainda não envia `elapsed` — undefined ≠ 0.
+      expect(corpo.elapsed).toBe(0);
+      expect(Number.isInteger(corpo.elapsed as number)).toBe(true);
+      expect(corpo.elapsed as number).toBeGreaterThanOrEqual(0);
+    });
+
+    // A latência da assinatura (tempo entre clique e POST) tem de entrar no
+    // campo — t0 é capturado ANTES de ensureDeviceSubscription (DA16).
+    for (const latenciaMs of [700, 2000, 2500]) {
+      it(`Dado a assinatura de push resolvendo ${latenciaMs} ms depois do clique, Quando o POST de schedule sai, Então o corpo carrega elapsed === ${latenciaMs}`, async () => {
+        instalarNavegadorComAssinaturaLenta(latenciaMs);
+        const { result } = renderHook(() => useRestTimer());
+
+        await iniciarComLatencia(result, entrada({ restSeconds: 90 }), latenciaMs);
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(fetchMock.mock.calls[0][0]).toBe(ROTA);
+        const corpo = corpoDaChamada(0);
+        expect(corpo.action).toBe("schedule");
+        // RED (TASK-018): o corpo ainda não traz a medição t0→POST.
+        expect(corpo.elapsed).toBe(latenciaMs);
+        expect(Number.isInteger(corpo.elapsed as number)).toBe(true);
+      });
+    }
+
+    it("Dado um timer anterior em curso, Quando nova marcação substitui, Então o elapsed do novo POST conta do novo clique (t0 antes do cancel anterior e da assinatura), não do primeiro", async () => {
+      instalarNavegadorComAssinaturaLenta(700);
+      const { result } = renderHook(() => useRestTimer());
+
+      // Primeiro agendamento completa com 700 ms de latência.
+      await iniciarComLatencia(result, entrada({ restSeconds: 90 }), 700);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // 5 s de relógio entre as duas marcações (contagem segue correndo).
+      await avancar(5000);
+
+      // Substituição: cancel do anterior + novo schedule (outras 700 ms).
+      await iniciarComLatencia(
+        result,
+        entrada({
+          entryId: OUTRA_ENTRY_ID,
+          exerciseName: OUTRO_EXERCICIO,
+          restSeconds: 60,
+        }),
+        700,
+      );
+
+      // Ordem: schedule(id1) → cancel(id1) → schedule(id2).
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(corpoDaChamada(1)).toMatchObject({
+        action: "cancel",
+        scheduleId: UUID_1,
+      });
+      // O cancel segue sem elapsed (campo exclusivo do schedule) — e o novo
+      // POST mede 700 ms, não 700 + 5000 + 700: t0 é o do segundo start.
+      expect("elapsed" in corpoDaChamada(1)).toBe(false);
+      expect(corpoDaChamada(2).elapsed).toBe(700);
+    });
+
+    it("Dado restSeconds zero ou nulo com o relógio avançando, Quando start e depois cancel/dismiss, Então nenhum POST sai (sem schedule, sem cancel) e o caminho permanece no-op", async () => {
+      instalarNavegadorComPush();
+      const { result } = renderHook(() => useRestTimer());
+
+      await iniciar(result, entrada({ restSeconds: 0 }));
+      await iniciar(result, entrada({ restSeconds: null }));
+      await avancar(800);
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+
+      await agir(() => {
+        result.current.cancel();
+        result.current.dismiss();
+      });
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(result.current.active).toBe(false);
+      expect(result.current.remainingSeconds).toBeNull();
+      expect(result.current.finished).toBe(false);
     });
   });
 });

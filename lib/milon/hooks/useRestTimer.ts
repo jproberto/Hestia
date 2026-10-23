@@ -1,12 +1,16 @@
 "use client";
 
-// Timer de descanso do Treino do Dia (Mílon #06, TASK-006): contagem
-// regressiva em memória da página + orquestração fire-and-forget do push de
-// fim de descanso (agendamento/cancelamento via rota /api/milon/rest-push).
-// A duração é SEMPRE a capturada no argumento de `start` (edição posterior do
-// restSeconds não reescreve); falha de push nunca propaga nem impede a
-// contagem (spec critério 10 — a camada visual é a garantia). A troca de
-// treino não desmonta a página: o estado sobrevive em memória da sessão.
+// Timer de descanso do Treino do Dia (Mílon #06, TASK-006 + Emenda
+// 2026-10-23, Alavanca 1/DA16): contagem regressiva em memória da página +
+// orquestração fire-and-forget do push de fim de descanso
+// (agendamento/cancelamento via rota /api/milon/rest-push). O push é
+// ancorado ao clique: `t0` capturado no início do caminho válido do `start`
+// e `elapsed = Date.now() − t0` enviado no corpo de `schedule` (o servidor
+// usa só a diferença — imune a clock-skew). A duração é SEMPRE a capturada
+// no argumento de `start` (edição posterior do restSeconds não reescreve);
+// falha de push nunca propaga nem impede a contagem (spec critério 10 — a
+// camada visual é a garantia). A troca de treino não desmonta a página: o
+// estado sobrevive em memória da sessão.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -62,6 +66,12 @@ export function useRestTimer(): UseRestTimerReturn {
       // Sem descanso (nulo ou zero): no-op — nada muda (spec critério 3).
       if (duracao === null || duracao <= 0) return;
 
+      // Âncora do push no clique (DA16): t0 é a primeira instrução do
+      // caminho válido — antes de limpar/cancelar o agendamento anterior e
+      // de ensureDeviceSubscription — para que elapsed meça até o disparo
+      // real do POST (latência da assinatura inclusa).
+      const t0 = Date.now();
+
       // Substituição (spec critério 4): o agendamento anterior é cancelado
       // antes do novo; o intervalo anterior é limpo.
       limparIntervalo();
@@ -96,7 +106,8 @@ export function useRestTimer(): UseRestTimerReturn {
       }, 1000);
 
       // Agendamento do push fire-and-forget: falha de rede ou não-2xx é
-      // engolida; a contagem visual segue independente.
+      // engolida; a contagem visual segue independente. O elapsed é medido
+      // imediatamente antes do fetch (a latência da assinatura conta).
       ensureDeviceSubscription()
         .then((subscription) => {
           if (!subscription) return;
@@ -105,6 +116,7 @@ export function useRestTimer(): UseRestTimerReturn {
             subscription,
             durationSeconds: duracao,
             exerciseName: input.exerciseName,
+            elapsed: Date.now() - t0,
           });
         })
         .catch(() => {});

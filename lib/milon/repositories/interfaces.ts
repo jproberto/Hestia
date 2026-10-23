@@ -157,6 +157,10 @@ export interface IPushRepository {
     scheduleId: string,
   ): Promise<RestPushSchedule | null>;
   cancelRestSchedule(scheduleId: string, email: string): Promise<boolean>;
+  // Emenda 2026-10-23 (Alavanca 3 / DA18): cancel-all por dono no INSERT —
+  // cancela todo agendamento do próprio dono que estiver `agendado`,
+  // nunca por id; sem standalone (consumidor único é a rota).
+  cancelAllRestSchedulesByOwner(email: string): Promise<void>;
   markRestScheduleSent(scheduleId: string): Promise<void>;
   markRestScheduleFailed(scheduleId: string): Promise<void>;
   deleteSubscriptionByEndpoint(endpoint: string): Promise<void>;

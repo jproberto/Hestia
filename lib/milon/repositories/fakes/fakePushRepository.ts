@@ -124,6 +124,17 @@ export class FakePushRepository implements IPushRepository {
     return true;
   }
 
+  // Espelho do cancel-all por dono (DA18): muda para cancelado TODO
+  // agendamento do próprio dono no estado agendado; terminais e linhas de
+  // outro dono permanecem intactos.
+  async cancelAllRestSchedulesByOwner(email: string): Promise<void> {
+    for (const [id, schedule] of this.schedules) {
+      if (schedule.created_by === email && schedule.status === "agendado") {
+        this.schedules.set(id, { ...schedule, status: "cancelado" });
+      }
+    }
+  }
+
   async markRestScheduleSent(scheduleId: string): Promise<void> {
     const schedule = this.schedules.get(scheduleId);
     if (!schedule) return;

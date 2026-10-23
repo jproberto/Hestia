@@ -8,6 +8,7 @@ import {
   createRestSchedule,
   findRestScheduleById,
   cancelRestSchedule,
+  cancelAllRestSchedulesByOwner,
   markRestScheduleSent,
   markRestScheduleFailed,
   deleteSubscriptionByEndpoint,
@@ -47,6 +48,12 @@ import {
 //   - cancelRestSchedule: update({ status: "cancelado" }) filtrando eq("id"),
 //     eq("created_by") e eq("status", "agendado") com select de retorno —
 //     devolve true somente quando uma linha foi efetivamente cancelada;
+//   - cancelAllRestSchedulesByOwner (Emenda 2026-10-23, Alavanca 3/DA18 —
+//     TASK-016): from("rest_push_schedules").update({ status: "cancelado" })
+//     filtrando eq("created_by", email) e eq("status", "agendado") — SEM
+//     filtro por id (cancel-all por dono); devolve void (plan §Emenda +
+//     tasks.json TASK-016; o prompt de delegação pedia count, mas o plano
+//     humanamente aprovado prevalece — sem standalone novo, TASK-017);
 //   - markRestScheduleSent: update({ status: "enviado", sent_at }) eq("id");
 //   - markRestScheduleFailed: update({ status: "erro" }) eq("id") — sem
 //     sent_at (nunca enviado);
@@ -54,7 +61,8 @@ import {
 //     eq("endpoint").
 // O barrel lib/milon/db/push.ts re-exporta tudo (export *, caminho oficial da
 // rota/UI) e espelha os standalones <fn>Standalone (próprio client singleton
-// por aba) — mesmo regime de db/executions.test.ts.
+// por aba) — mesmo regime de db/executions.test.ts; o cancel-all re-exporta
+// a função-módulo (db explícito) sem standalone, conforme DA18.
 // ---------------------------------------------------------------------------
 
 const EMAIL = "barrel-push@hestia.lan";
@@ -379,6 +387,13 @@ describe("lib/milon/db/push (barrel oficial da rota/UI, TASK-003)", () => {
       pushRepository.findRestScheduleById,
     );
     expect(dbBarrel.cancelRestSchedule).toBe(pushRepository.cancelRestSchedule);
+    // Emenda 2026-10-23 (DA18): o barrel re-exporta a função-módulo do
+    // cancel-all sem edição (export *); typeof explícito sinaliza RED —
+    // em RED ambos são undefined e o toBe passaria fraco.
+    expect(typeof dbBarrel.cancelAllRestSchedulesByOwner).toBe("function");
+    expect(dbBarrel.cancelAllRestSchedulesByOwner).toBe(
+      pushRepository.cancelAllRestSchedulesByOwner,
+    );
     expect(dbBarrel.markRestScheduleSent).toBe(
       pushRepository.markRestScheduleSent,
     );
@@ -541,6 +556,42 @@ describe("lib/milon/db/push (barrel oficial da rota/UI, TASK-003)", () => {
     expect(recorded.updatePayload).toEqual({ status: "cancelado" });
     expect(recorded.eqs).toHaveLength(3);
     expect(cancelado).toBe(false);
+  });
+
+  // -------------------------------------------------------------------------
+  // cancelAllRestSchedulesByOwner — Emenda 2026-10-23 (Alavanca 3 / DA18,
+  // TASK-016): UPDATE cancelado filtrando created_by + status agendado,
+  // SEM filtro por id (cancel-all por dono; invariante de no máximo 1
+  // agendado por created_by imposta no INSERT da rota).
+  // -------------------------------------------------------------------------
+  it("cancel-all por dono: update cancelado filtrando created_by + status agendado, sem filtro de id", async () => {
+    const recorded: Recorded = {};
+    await expect(
+      cancelAllRestSchedulesByOwner(stubUpdateDb([SCHED_ROW], recorded), EMAIL),
+    ).resolves.toBeUndefined();
+
+    expect(recorded.table).toBe("rest_push_schedules");
+    expect(recorded.updatePayload).toEqual({ status: "cancelado" });
+    expect(recorded.eqs).toHaveLength(2);
+    expect(recorded.eqs).toContainEqual(["created_by", EMAIL]);
+    expect(recorded.eqs).toContainEqual(["status", "agendado"]);
+    // Nunca por id: o alvo é o dono inteiro (plan §Emenda, DA18).
+    for (const [col] of recorded.eqs ?? []) {
+      expect(col).not.toBe("id");
+    }
+  });
+
+  it("cancel-all devolve void mesmo quando nenhuma linha casa o filtro (dono sem agendado)", async () => {
+    const recorded: Recorded = {};
+    await expect(
+      cancelAllRestSchedulesByOwner(stubUpdateDb([], recorded), EMAIL),
+    ).resolves.toBeUndefined();
+
+    expect(recorded.table).toBe("rest_push_schedules");
+    expect(recorded.updatePayload).toEqual({ status: "cancelado" });
+    expect(recorded.eqs).toHaveLength(2);
+    expect(recorded.eqs).toContainEqual(["created_by", EMAIL]);
+    expect(recorded.eqs).toContainEqual(["status", "agendado"]);
   });
 
   it("marca enviado com sent_at preenchido", async () => {

@@ -147,6 +147,24 @@ export async function cancelRestSchedule(
   return (data ?? []).length > 0;
 }
 
+// Cancel-all por dono (Emenda 2026-10-23, Alavanca 3/DA18): cancela TODOS os
+// agendamentos do próprio dono ainda `agendado` no momento da chamada — nunca
+// por id, nunca sem dono; terminais (enviado/cancelado/erro) e agendamentos de
+// outro dono ficam intactos. Chamado antes de createRestSchedule em todo
+// schedule (invariante: no máximo 1 agendado por created_by).
+export async function cancelAllRestSchedulesByOwner(
+  db: IDatabaseClient,
+  email: string,
+): Promise<void> {
+  const { error } = await db
+    .from<RestPushScheduleRow>("rest_push_schedules")
+    .update({ status: "cancelado" })
+    .eq("created_by", email)
+    .eq("status", "agendado");
+
+  if (error) throw error;
+}
+
 export async function markRestScheduleSent(
   db: IDatabaseClient,
   scheduleId: string,

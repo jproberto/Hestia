@@ -30,6 +30,19 @@ import {
 // este arquivo falha na coleta até Hefesto entregá-lo (Expected: FAIL por
 // módulo inexistente — precedente das fakes-only da Mílon #5).
 //
+// Emenda 2026-10-23 (fix-01-server, Alavanca 3 / DA18 — RED da TASK-016):
+// cancelAllRestSchedulesByOwner(email) → Promise<void> — nova operação do
+// contrato (contagem vigente: 9ª, após findSubscriptionByEndpoint do B2; o
+// plano a chama "oitava" contando só as sete originais). Cancela (status
+// cancelado) TODOS os agendamentos do próprio dono que estiverem `agendado`
+// no momento da chamada — nunca filtra por id, nunca sem dono; não toca
+// terminais (enviado/cancelado/erro) nem agendamentos de outro dono. Assinatura
+// e semântica: plan.md §Emenda 2026-10-23 (Alavanca 3/DA18) + tasks.json
+// TASK-016 ("devolve void" — decisão registrada pelo Minos: o prompt de
+// delegação pedia Promise<number> + standalone, mas o plano/tasks humanamente
+// aprovados prevalecem; TASK-017 exige busca por
+// cancelAllRestSchedulesByOwnerStandalone == 0, portanto SEM standalone).
+//
 // Seed no padrão controlado das fakes do módulo (precedente
 // WorkoutExecutionSeed):
 //   createFakePushRepository(seed?) com
@@ -52,6 +65,13 @@ const SUBSCRIPTION_ID = "3f1c8f9e-1a2b-4c5d-8e6f-0a1b2c3d4e5f";
 const OUTRO_SUBSCRIPTION_ID = "0b2c4d6e-8f90-4a1b-8c2d-3e4f5a6b7c8d";
 const SCHEDULE_ID = "7c2d9b4e-5f60-4a71-9c82-1d2e3f4a5b6c";
 const OUTRO_SCHEDULE_ID = "e4f5a6b7-c8d9-4e0f-a1b2-3c4d5e6f7a8b";
+// Ids extras do cancel-all (Emenda 2026-10-23, TASK-016): segundas linhas do
+// mesmo dono (incl. terminais) e o agendamento criado DEPOIS do cancel-all.
+const SEGUNDO_AGENDADO_ID = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d";
+const TERMINAL_ENVIADO_ID = "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e";
+const TERMINAL_CANCELADO_ID = "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f";
+const TERMINAL_ERRO_ID = "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80";
+const NOVO_SCHEDULE_ID = "e5f6a7b8-c9d9-4e1f-2a3b-4c5d6e7f8091";
 const FIRE_AT = "2026-10-16T10:01:30.000Z";
 const CRIADO_EM = "2026-10-16T10:00:00.000Z";
 const ENVIADO_EM = "2026-10-16T10:01:40.000Z";
@@ -100,8 +120,9 @@ interface PushSeed {
   schedules?: RestPushScheduleMirror[];
 }
 
-// Contrato das oito operações do IPushRepository no fake (as sete do plan §3
-// + findSubscriptionByEndpoint do B2; sem db: o fake
+// Contrato das nove operações do IPushRepository no fake (as sete do plan §3
+// + findSubscriptionByEndpoint do B2 + cancelAllRestSchedulesByOwner da
+// emenda 2026-10-23; sem db: o fake
 // em memória segue o regime de IWorkoutExecutionRepository; o repository
 // real recebe db: IDatabaseClient nas funções do módulo — plan §3).
 interface PushRepositoryContract {
@@ -120,6 +141,7 @@ interface PushRepositoryContract {
     scheduleId: string,
   ): Promise<RestPushScheduleMirror | null>;
   cancelRestSchedule(scheduleId: string, email: string): Promise<boolean>;
+  cancelAllRestSchedulesByOwner(email: string): Promise<void>;
   markRestScheduleSent(scheduleId: string): Promise<void>;
   markRestScheduleFailed(scheduleId: string): Promise<void>;
   deleteSubscriptionByEndpoint(endpoint: string): Promise<void>;
@@ -442,6 +464,115 @@ describe("IPushRepository contract (fakes-only, decisão 57): fake em memória",
   });
 
   // -------------------------------------------------------------------------
+  // cancelAllRestSchedulesByOwner — Emenda 2026-10-23 (Alavanca 3 / DA18,
+  // TASK-016): cancel-all por dono no INSERT. Muda para cancelado TODOS os
+  // agendamentos do próprio dono existentes no momento da chamada e só
+  // esses (sem filtro por id); terminais do mesmo dono e agendamentos de
+  // outro dono ficam intactos; devolve void (plan §Emenda + tasks.json).
+  // Invariante resultante: no máximo 1 agendado por created_by.
+  // -------------------------------------------------------------------------
+  describe("cancelAllRestSchedulesByOwner", () => {
+    it("devolve void e cancela TODOS os agendamentos do proprio dono no estado agendado", async () => {
+      const seeded = build({
+        schedules: [
+          makeSchedule(),
+          makeSchedule({ id: SEGUNDO_AGENDADO_ID }),
+        ],
+      });
+
+      await expect(
+        seeded.cancelAllRestSchedulesByOwner(EMAIL),
+      ).resolves.toBeUndefined();
+
+      await expect(seeded.findRestScheduleById(SCHEDULE_ID)).resolves.toMatchObject(
+        { status: "cancelado", created_by: EMAIL },
+      );
+      await expect(
+        seeded.findRestScheduleById(SEGUNDO_AGENDADO_ID),
+      ).resolves.toMatchObject({ status: "cancelado", created_by: EMAIL });
+    });
+
+    it("preserva terminais do mesmo dono e agendamento agendado de outro dono (seed multi-dono, quatro status)", async () => {
+      const seeded = build({
+        schedules: [
+          // Dono EMAIL: um agendado (cancela) + os três terminais (ficam).
+          makeSchedule(),
+          makeSchedule({
+            id: TERMINAL_ENVIADO_ID,
+            status: "enviado",
+            sentAt: ENVIADO_EM,
+          }),
+          makeSchedule({ id: TERMINAL_CANCELADO_ID, status: "cancelado" }),
+          makeSchedule({ id: TERMINAL_ERRO_ID, status: "erro" }),
+          // OUTRO_EMAIL agendado: linha alheia (fica agendado).
+          makeSchedule({ id: OUTRO_SCHEDULE_ID, created_by: OUTRO_EMAIL }),
+        ],
+      });
+
+      await expect(
+        seeded.cancelAllRestSchedulesByOwner(EMAIL),
+      ).resolves.toBeUndefined();
+
+      await expect(seeded.findRestScheduleById(SCHEDULE_ID)).resolves.toMatchObject(
+        { status: "cancelado" },
+      );
+      await expect(
+        seeded.findRestScheduleById(TERMINAL_ENVIADO_ID),
+      ).resolves.toMatchObject({ status: "enviado", sentAt: ENVIADO_EM });
+      await expect(
+        seeded.findRestScheduleById(TERMINAL_CANCELADO_ID),
+      ).resolves.toMatchObject({ status: "cancelado" });
+      await expect(seeded.findRestScheduleById(TERMINAL_ERRO_ID)).resolves.toMatchObject(
+        { status: "erro" },
+      );
+      await expect(
+        seeded.findRestScheduleById(OUTRO_SCHEDULE_ID),
+      ).resolves.toMatchObject({ status: "agendado", created_by: OUTRO_EMAIL });
+    });
+
+    it("dono sem nenhum agendado nao tem efeito colateral (nem nos terminais, nem nos alheios)", async () => {
+      const seeded = build({
+        schedules: [
+          makeSchedule({ status: "enviado", sentAt: ENVIADO_EM }),
+          makeSchedule({ id: OUTRO_SCHEDULE_ID, created_by: OUTRO_EMAIL }),
+        ],
+      });
+
+      await expect(
+        seeded.cancelAllRestSchedulesByOwner(EMAIL),
+      ).resolves.toBeUndefined();
+
+      await expect(seeded.findRestScheduleById(SCHEDULE_ID)).resolves.toMatchObject(
+        { status: "enviado", sentAt: ENVIADO_EM },
+      );
+      await expect(
+        seeded.findRestScheduleById(OUTRO_SCHEDULE_ID),
+      ).resolves.toMatchObject({ status: "agendado", created_by: OUTRO_EMAIL });
+    });
+
+    it("um createRestSchedule feito DEPOIS da chamada permanece agendado (o cancel-all so afeta o que ja existia)", async () => {
+      const seeded = build({ schedules: [makeSchedule()] });
+
+      await seeded.cancelAllRestSchedulesByOwner(EMAIL);
+
+      const novo = await seeded.createRestSchedule(
+        makeCreateInput({ id: NOVO_SCHEDULE_ID }),
+        EMAIL,
+      );
+      expect(novo.status).toBe("agendado");
+      await expect(
+        seeded.findRestScheduleById(NOVO_SCHEDULE_ID),
+      ).resolves.toMatchObject({ status: "agendado", created_by: EMAIL });
+
+      // A linha anterior segue cancelada — a ordem cancel-all → INSERT da
+      // rota (TASK-020) garante que o recém-criado sobrevive.
+      await expect(seeded.findRestScheduleById(SCHEDULE_ID)).resolves.toMatchObject(
+        { status: "cancelado" },
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // markRestScheduleSent / markRestScheduleFailed — desfechos do envio
   // (plan §3: enviado + sent_at preenchido; erro só com status).
   // -------------------------------------------------------------------------
@@ -552,8 +683,9 @@ describe("IPushRepository contract (fakes-only, decisão 57): fake em memória",
 // contrato IPushRepository. Testado pelo contract fakes-only"). Leitura por
 // texto para manter o tsc do RED limpo (só Cannot find module nos módulos
 // novos) — precedente de types.test.ts; em GREEN a leitura garante que a
-// interface foi criada com as oito operações (7 originais do plan §3 + a 8ª
-// findSubscriptionByEndpoint do B2).
+// interface foi criada com as nove operações (7 originais do plan §3 + a 8ª
+// findSubscriptionByEndpoint do B2 + a 9ª cancelAllRestSchedulesByOwner da
+// emenda 2026-10-23 / DA18).
 // ---------------------------------------------------------------------------
 describe("IPushRepository na fonte única (lib/milon/repositories/interfaces.ts)", () => {
   function fonteInterfaces(): string {
@@ -574,7 +706,7 @@ describe("IPushRepository na fonte única (lib/milon/repositories/interfaces.ts)
     expect(fonteInterfaces()).toMatch(/export interface IPushRepository\b/);
   });
 
-  it("expõe as oito operações do contrato de push (7 originais + findSubscriptionByEndpoint)", () => {
+  it("expõe as nove operações do contrato de push (7 originais + findSubscriptionByEndpoint + cancelAllRestSchedulesByOwner)", () => {
     const bloco = blocoIpPushRepository();
     const operacoes = [
       "upsertSubscription",
@@ -582,11 +714,12 @@ describe("IPushRepository na fonte única (lib/milon/repositories/interfaces.ts)
       "createRestSchedule",
       "findRestScheduleById",
       "cancelRestSchedule",
+      "cancelAllRestSchedulesByOwner",
       "markRestScheduleSent",
       "markRestScheduleFailed",
       "deleteSubscriptionByEndpoint",
     ];
-    expect(operacoes).toHaveLength(8);
+    expect(operacoes).toHaveLength(9);
     for (const operacao of operacoes) {
       expect(bloco).toContain(operacao);
     }

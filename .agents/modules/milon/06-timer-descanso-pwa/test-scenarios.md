@@ -4,6 +4,7 @@
 > **Somente cenários manuais** (decisão 2026-10-16): a cobertura automatizada vive na suíte e no `test-report.json`; este arquivo é o roteiro do portão manual de homologação.
 > Textos das features citados entre aspas exatas quando relevantes — sem paráfrase nova.
 > Gerado em 2026-10-18, re-executado pós-correção dos blockers B1/B2 (commit 8eec148): 1826 testes / 140 arquivos / 0 falhas, coverage 85.16% lines e 84.08% branch, Storybook exit 0 (ver `test-report.json`).
+> **Emenda 2026-10-23 (fix-01-server):** seção "Emenda 2026-10-23 — cenários manuais" acrescentada ao final (cenários E1–E6b) para re-homologar o timing do push com as Alavancas 1–3 (elapsed ancorado ao clique, 202 + background, cancel-all por dono); estado da suíte da emenda no `test-report.json` (1854 testes / 140 arquivos / 0 falhas, coverage 85.33% lines e 84.14% branch).
 
 **Pré-requisitos comuns (homologação em produção/staging com os dois donos):**
 - Ambos os donos logados em iPhone instalado ("Adicionar à Tela Inicial", display standalone) com permissão de notificação concedida; chaves VAPID configuradas no ambiente (sem elas o agendamento responde 503 e só a camada visual funciona).
@@ -190,3 +191,47 @@
 **Dado** ambiente sem chaves VAPID (ou com rede do servidor indisponível no momento do agendamento)
 **Quando** a pessoa marca uma série com descanso
 **Então** a marcação conclui normalmente e a contagem visual roda (camada 1 é a garantia); sem VAPID o agendamento responde 503 e nenhum push é entregue, sem erro visível que trave o treino
+
+---
+
+## Emenda 2026-10-23 — cenários manuais
+
+> **Emenda fix-01-server (Alavancas 1–3):** o instante de disparo do push passa a ser ancorado ao clique que iniciou o timer (campo `elapsed`), a resposta de agendamento é imediata (202) com o envio em background no servidor, e todo novo agendamento cancela os anteriores do mesmo dono (cancel-all por `created_by`). Estes cenários re-homologam o **timing** — os critérios 2/8/9/10/11 e os cenários 1–25 acima permanecem válidos como roteiro das demais camadas. Pré-requisitos comuns idênticos aos do topo (iPhone instalado, VAPID, programa com exercícios de descanso preenchido).
+> Janela de timing aceita com o humano: **±1–2 segundos do zero do contador** (limite físico FCM/APNs).
+
+### Cenário E1: Push chega na janela do zero do contador (aba em primeiro plano)
+**Dado** o iPhone do dono com o Treino do Dia aberto em primeiro plano e permissão de notificação concedida; a pessoa está olhando o painel de descanso (exercício com `restSeconds` 90)
+**Quando** ela marca a série e observa a contagem até o fim
+**Então** a notificação `Descanso terminado` / `Descanso de <exercício> terminou.` é entregue no mesmo instante do zero do contador visual, com desvio máximo de ±1–2 segundos; o aviso visual em tela e a notificação podem ocorrer juntos, sem conflito
+
+### Cenário E2: Marcar nova série com reload no meio — push antigo nunca chega
+**Dado** descanso de 90s rodando com agendamento criado no servidor (ex.: 30s decorridos)
+**Quando** a pessoa recarrega a página (a contagem visual se perde — sem restauração por decisão) e, já de volta ao Treino do Dia, marca outra série com descanso de 60s
+**Então** o agendamento antigo é cancelado no servidor pelo novo registro (cancel-all por dono): o push do descanso antigo **nunca** é entregue aos ~90s do primeiro clique; um único push, do novo descanso, é entregue ~60s após a nova marcação
+
+### Cenário E3: Duas abas simultâneas — só o último agendamento dispara
+**Dado** o mesmo dono com o Treino do Dia aberto em duas abas (ou dois dispositivos do mesmo dono) e nenhuma contagem em curso
+**Quando** ela marca uma série com descanso em uma aba e, em seguida, marca outra série com descanso (na outra aba ou na mesma) antes do fim do primeiro
+**Então** no servidor permanece no máximo um agendamento ativo por dono: somente o do último clique dispara; nenhum push do primeiro clique é entregue, mesmo que nenhuma das abas tenha cancelado explicitamente
+
+### Cenário E4: Latência de rede alta entre clique e agendamento — push ainda no lugar certo
+**Dado** o iPhone do dono com conexão lenta (rede 3G/4G degradada ou Wi-Fi fraco) no momento da marcação, de modo que o POST de agendamento demore alguns segundos após o clique
+**Quando** a pessoa marca uma série com descanso de 90s e mantém o app aberto
+**Então** a contagem visual inicia no clique (90s) e a notificação chega alinhada ao zero visual (±1–2s) — o atraso de rede é compensado pelo tempo já decorrido desde o clique (`elapsed`); o push não atrasa em segundos na entrega por causa da latência do agendamento
+
+### Cenário E5: Descanso maior que a janela do servidor (~280s) — decisão 7 intacta
+**Dado** exercício com descanso de 600s e o iPhone do dono com a tela apagada após a marcação
+**Quando** o agendamento é criado e o tempo passa além da janela de espera da função de servidor
+**Então** o push é entregue o mais perto possível do fim planejado, assim que a janela do servidor permite (limite físico da função, decisão 7); não há push no instante exato de 600s se o fim planejado estiver fora da janela, e nenhuma notificação duplicada chega depois
+
+### Cenário E6: Entrega com tela apagada / outra página / outro app — re-homologação do iPhone [iPhone real]
+> A emenda muda **quando** o push é agendado e disparado no servidor; a **entrega** no iPhone precisa ser re-homologada de ponta a ponta com o novo agendamento.
+
+**Dado** os mesmos aparatos e preparação dos cenários 3 a 6 (dono A e dono B, ambos com iPhone instalado e notificações ativas)
+**Quando** a pessoa re-executa, com o build da emenda: o cenário 3 (tela apagada — notificação só no iPhone de A), o cenário 4 (outra página do Héstia — clique leva ao Treino do Dia, focando e navegando a janela existente ou abrindo direto), o cenário 5 (outro aplicativo em primeiro plano — notificação exibida pelo sistema com mesmo título e corpo) e o cenário 6 (parceiro espectador nunca recebe)
+**Então** todos os quatro comportamentos de entrega permanecem idênticos aos homologados em 2026-10-18, agora com o disparo ancorado ao clique — e, em cada um deles com a tela apagada, a notificação chega na janela ±1–2s do zero do contador (critério 13 emendado)
+
+### Cenário E6b: Cancelamento efetivo sem push órfão — re-homologação do iPhone [iPhone real]
+**Dado** descanso de 90s rodando com agendamento criado (dono A no iPhone)
+**Quando** ela finaliza (cenário 14) ou cancela a execução (cenário 15) aos ~30s do descanso, e em nova rodada troca para consulta aos ~30s deixando a tela apagada (cenário 16) e substitui com nova marcação (cenário 17)
+**Então** o contrato de cancelamento segue idêntico: nenhum push após finalizar/cancelar; o push **é** entregue após a troca para consulta; um único push do novo descanso após a substituição — processável de imediato no servidor (o cancelamento não espera agendamento pendurado algum)

@@ -1,5 +1,7 @@
 # Spec: Timer de descanso auto + PWA push
 
+> **Contém a Emenda 2026-10-23 — correção de temporização do push** (3 alavancas aprovadas pelo humano: relógio de referência no clique com campo `elapsed`, resposta 202 imediata com espera em background, cancel-all por dono no INSERT). Em caso de conflito com o texto anterior, vale a emenda — ver seção própria.
+
 ## 1. Problema Real
 
 Na execução série a série (Mílon #5), cada exercício no treino já tem um descanso planejado em segundos (`restSeconds` na entrada do exercício). Ao marcar uma série como feita, a pessoa descansa — mas o sistema não faz nada com esse número: não inicia contagem, não avisa o fim. O descanso planejado é só um rótulo na tela.
@@ -35,7 +37,7 @@ Estados de tela: o timer é estado de cliente, sem novo estado assíncrono de ca
 - O gatilho é a marcação bem-sucedida de série como feita no Treino do Dia, pelo caminho já existente de alternância da #5 (`toggleSeries` no fluxo de execução). Só a marcação inicia; a desmarcação não inicia timer.
 - O valor de duração é sempre o `restSeconds` da entrada do exercício (entry) da série marcada — o mesmo descanso único por exercício já planejado na #3 e editável na manutenção e no Treino do Dia. Não existe descanso por série no modelo atual e esta feature não cria.
 - Só inicia quando `restSeconds` for um número maior que zero. Nulo ou zero: nenhuma contagem, nenhum agendamento, nenhum aviso; marcação comporta-se exatamente como hoje.
-- O timer de contagem é de cliente: regressiva em memória da sessão aberta, para a camada visual. Junto à marcação, o **fim do descanso é agendado no servidor** (contrato textual: o cliente solicita ao endpoint o agendamento de um push para o instante T mais a duração da entry, para a assinatura do dispositivo do dono que iniciou o timer — o dono do treino, o mesmo que está com a execução e que registrou a marcação). O push só é enviado para esse dono, nunca para outra pessoa.
+- O timer de contagem é de cliente: regressiva em memória da sessão aberta, para a camada visual. Junto à marcação, o **fim do descanso é agendado no servidor** (contrato textual: o cliente solicita ao endpoint o agendamento de um push para o instante T mais a duração da entry, para a assinatura do dispositivo do dono que iniciou o timer — o dono do treino, o mesmo que está com a execução e que registrou a marcação). **Emenda 2026-10-23:** T é ancorado ao **clique do usuário** que iniciou o timer — o cliente envia o campo opcional `elapsed` (ms entre o clique e o disparo do POST de agendamento) e o servidor calcula o instante de disparo como `agora_servidor + max(0, durationSeconds − elapsed/1000)`; `elapsed` ausente mantém o comportamento retrocompatível (`agora + duração`) — ver seção da emenda. O push só é enviado para esse dono, nunca para outra pessoa.
 - Nenhuma escrita em `workout_executions`, `workout_execution_series` ou template por conta do timer nem do agendamento. As tabelas tocadas são só as da migração 0017 (assinaturas de push e agendamentos), sem alteração das existentes.
 
 ### Aviso no fim do descanso — duas camadas
@@ -54,15 +56,15 @@ Estados de tela: o timer é estado de cliente, sem novo estado assíncrono de ca
 
 ### Endpoint de agendamento e cancelamento de push
 
-- A feature cria o **primeiro endpoint de rota (route handler) do app**, responsável por agendar e enviar o push no fim do descanso: a chamada do cliente agrega o agendamento para T mais `restSeconds`, com sleep no próprio endpoint cobrindo descansos dentro da janela de execução da função da Vercel (limite real de 300 segundos). Para descansos maiores que 300 segundos vale a regra resolvida no approve-spec: o push é entregue assim que a janela da função permitir (o mais perto possível do fim planejado), com a camada visual cobrindo o atraso.
-- Todo evento de "encerramento silencioso" do timer descrito abaixo ganha **obrigação de cancelar o push agendado no servidor**, além de parar a contagem de cliente: sem isso, um push órfão chegaria após finalizar ou cancelar. A troca de treino para consulta **não** é encerramento silencioso — não cancela o push.
+- A feature cria o **primeiro endpoint de rota (route handler) do app**, responsável por agendar e enviar o push no fim do descanso: a chamada do cliente agrega o agendamento para T mais `restSeconds`, com sleep no próprio endpoint cobrindo descansos dentro da janela de execução da função da Vercel (limite real de 300 segundos). **Emenda 2026-10-23: o sono dentro do request foi substituído** — a rota responde `202` imediatamente após o INSERT (status `agendado`) e a espera + re-leitura + envio rodam em background via `after()` do Next.js (estável na versão ^16.2.10 do projeto); o limite de janela da função permanece. Para descansos maiores que 300 segundos vale a regra resolvida no approve-spec: o push é entregue assim que a janela da função permitir (o mais perto possível do fim planejado), com a camada visual cobrindo o atraso — **mantida sem alteração (decisão 7)**.
+- Todo evento de "encerramento silencioso" do timer descrito abaixo ganha **obrigação de cancelar o push agendado no servidor**, além de parar a contagem de cliente: sem isso, um push órfão chegaria após finalizar ou cancelar. **Emenda 2026-10-23:** o `cancel` passa a ser processado **de imediato** no servidor (sem fila atrás de POSTs de agendamento pendurados — consequência da resposta 202 imediata); além disso, o INSERT de um novo agendamento cancela (status `cancelado`) **todo** agendamento anterior no estado `agendado` do **mesmo dono** (`created_by`) — cancel-all por dono, cobrindo reload, aba dupla e cancel perdido. A troca de treino para consulta **não** é encerramento silencioso — não cancela o push.
 - O agendamento é do dono que iniciou o timer: o destinatário registrado no agendamento é a assinatura daquele dono, e o endpoint nunca envia o push do descanso para outro usuário.
-- Substituir o timer por nova marcação também cancela o agendamento anterior e cria o novo (um agendamento ativo por sessão de cliente).
+- Substituir o timer por nova marcação também cancela o agendamento anterior e cria o novo — **Emenda 2026-10-23: invariante por dono no servidor, no máximo um agendamento ativo por `created_by`**, imposta no INSERT via cancel-all (substitui "um agendamento ativo por sessão de cliente").
 - Falha no agendamento, no cancelamento ou no envio alimenta o tratamento de erro já existente (marcação nunca falha por conta disso) e é observável pelo desenvolvedor; o usuário não vira refém de infraestrutura de push.
 
 ### Timer e fluxos de execução existentes
 
-- Marcar outra série com timer rodando: o timer vigente é substituído pelo da nova série marcada (reinicia com o `restSeconds` da entry recém-marcada) e o push agendado anterior é cancelado no servidor. Só um timer e um agendamento ativos por vez.
+- Marcar outra série com timer rodando: o timer vigente é substituído pelo da nova série marcada (reinicia com o `restSeconds` da entry recém-marcada) e o push agendado anterior é cancelado no servidor. Só um timer e um agendamento ativos por vez — **Emenda 2026-10-23: no servidor, no máximo um agendamento `agendado` por dono (invariante imposta no INSERT via cancel-all por `created_by`)**.
 - Desmarcar série com timer rodando: o timer e o push seguem — o descanso em curso é independente da desmarcação pontual. Se a desmarcação for a última marcada e abrir a pergunta de cancelamento da #5, o timer é encerrado e o push agendado é cancelado ao confirmar o cancelamento; ao apenas fechar a pergunta sem confirmar, timer e push seguem.
 - Editar o descanso (`restSeconds`) da entrada com timer rodando: o timer em curso e o push agendado mantêm a duração com a qual foram iniciados (valor capturado no início). A edição vale para marcações futuras. Não há reinício retroativo nem reagendamento do que está em andamento.
 - Finalizar ou cancelar o treino com timer rodando: o timer é encerrado silenciosamente e o push agendado é cancelado (sem aviso de fim de descanso após o selamento ou o cancelamento).
@@ -86,18 +88,20 @@ Fora, item por item: descanso por série (só por entry, como já é); múltiplo
 
 | número | Critério | Verificação |
 |---|---|---|
-| 1 | Dado o Treino do Dia com execução, quando marco uma série como feita em exercício com `restSeconds` maior que zero, então o timer inicia automaticamente com esse valor e o fim do descanso é agendado no servidor, sem gesto adicional | Manual e automatizado |
+| 1 | Dado o Treino do Dia com execução, quando marco uma série como feita em exercício com `restSeconds` maior que zero, então o timer inicia automaticamente com esse valor e o fim do descanso é agendado no servidor, sem gesto adicional, com o instante de disparo do push ancorado ao clique do usuário que iniciou o timer (campo `elapsed`), mirando o mesmo instante físico do zero do contador visual — viés máximo de ±1–2s (limite físico do FCM/APNs); `elapsed` ausente cai no comportamento retrocompatível (agora + duração) | Manual e automatizado (Emenda 2026-10-23) |
 | 2 | Dado o push agendado para o fim do descanso, quando o tempo se esgota, então a notificação é entregue somente no dispositivo do dono que iniciou o timer, com a tela apagada, em outra página do Héstia ou em outro aplicativo em primeiro plano, no iPhone e em Android; nunca para o parceiro espectador | Manual (dispositivo real, iPhone do casal) |
 | 3 | Dado exercício com `restSeconds` nulo ou zero, quando marco uma série, então nenhum timer é iniciado, nenhum push é agendado e nenhum aviso de fim de descanso ocorre; a marcação é idêntica à da #5 | Automatizado |
-| 4 | Dado timer e push agendados, quando marco outra série (em outro exercício ou no mesmo), então o timer vigente é substituído pelo da nova série com o `restSeconds` da entry recém-marcada, o agendamento anterior é cancelado e o novo é criado | Automatizado |
+| 4 | Dado timer e push agendados, quando marco outra série (em outro exercício ou no mesmo), então o timer vigente é substituído pelo da nova série com o `restSeconds` da entry recém-marcada, todo agendamento pendente anterior do MESMO dono é cancelado no servidor (invariante: no máximo um agendamento ativo por dono — cancel-all por `created_by` no INSERT) e o novo é criado | Automatizado (Emenda 2026-10-23) |
 | 5 | Dado timer e push agendados, quando edito o `restSeconds` da entry, então o timer em curso e o agendamento mantêm a duração com a qual foram iniciados e a edição vale para as próximas marcações | Automatizado |
 | 6 | Dado timer rodando, quando finalizo ou cancelo o treino com sucesso, então o timer é encerrado, o push agendado é cancelado no servidor e nenhum aviso de fim de descanso é disparado depois disso | Automatizado |
 | 7 | Dado timer rodando no treino exibido, quando troco para outro treino no Treino do Dia apenas para consultar, então timer e push permanecem ativos; ao voltar ao treino de origem a contagem visual continua de onde parou, e se o descanso zerar enquanto estou em outro treino o push é entregue normalmente | Manual e automatizado |
-| 8 | Dado um push agendado, quando finalizar ou cancelar acontecem com sucesso, então nenhum push de fim de descanso é entregue após esse cancelamento; a troca de treino para consulta não cancela o agendamento | Manual (dispositivo real) e automatizado (contrato de cancelamento) |
+| 8 | Dado um push agendado, quando finalizar ou cancelar acontecem com sucesso, então nenhum push de fim de descanso é entregue após esse cancelamento — o cancelamento é processado de imediato no servidor (sem fila atrás de agendamentos pendentes); o cancel-all por dono ao criar novo agendamento é um cancelamento por dono, coerente com RLS; a troca de treino para consulta não cancela o agendamento | Manual (dispositivo real) e automatizado (contrato de cancelamento e cancel-all — Emenda 2026-10-23) |
 | 9 | Dado o aviso de fim de descanso, quando ele aparece (visual ou notificação), então o usuário pode descartá-lo e marcar a próxima série normalmente, sem bloqueio nem navegação forçada | Manual |
 | 10 | Dado o app sem instalação no iPhone, sem permissão de notificação ou sem service worker registrado, quando o timer termina com a aba em primeiro plano, então o aviso visual em tela ainda ocorre; a marcação nunca é impedida por falta de instalação ou permissão | Manual |
 | 11 | Dado o fluxo de marcação, desmarcação, finalizar, cancelar e rotação existentes, quando comparo com o comportamento anterior à feature, então nada mudou além do timer, do agendamento e dos avisos | Manual e automatizado (regressão) |
 | 12 | Suíte completa verde, sem quebra de testes existentes, cobertura mantida em pelo menos oitenta por cento, relatório de testes regenerado antes da revisão | Automatizado |
+| 13 | Dado o clique que inicia o timer, quando o POST de agendamento é disparado, então o push mira o mesmo instante físico do zero do contador (clique + duração), com viés máximo de ±1–2s (limite FCM/APNs); `elapsed` ausente mantém o comportamento retrocompatível (agora + duração) | Automatizado (contrato do cálculo do instante de disparo) e manual (homologação com dispositivo real — Emenda 2026-10-23) |
+| 14 | Dado o POST de agendamento, quando o servidor responde, então a resposta é imediata (202) com o corpo expondo o estado `agendado` — a resposta não significa "enviado"; `sent_at` só é preenchido após o envio real em background; o `cancel` é processável de imediato, sem fila atrás de POSTs pendurados | Automatizado (contrato da rota — Emenda 2026-10-23) |
 
 ## 6. Riscos e Dependências
 
@@ -133,6 +137,107 @@ Alternativa 1 (mantida): timer de contagem em memória do cliente, sem persistir
 
 Alternativa 2: persistir o fim do timer em armazenamento local do dispositivo para restaurar a contagem ao reabrir. Descartada nesta versão: acrescenta estado a ser invalidado a cada finalizar e cancelar, e não é necessária para o push (que é agendado no servidor e dispara mesmo com o app fechado — decisão resolvida no approve-spec).
 
+## Emenda 2026-10-23 — correção de temporização do push
+
+**Status:** emenda aprovada pelo humano em 2026-10-23 (delegação a Hera, sem decisão própria). Substitui, em caso de conflito, os pontos de contrato listados nesta seção; todo o resto da spec permanece válido, inclusive as decisões de 2026-10-16.
+
+### Contexto (defeito real de homologação)
+
+Homologação em localhost/Windows com o casal em iPhone encontrou defeito intermitente: a notificação chega **antes** do contador visual zerar (em outras janelas/outras abas) e **muito depois** do contador zerar. Investigação (duas rodadas de exploração) confirmou causas estruturais:
+
+1. **Dois relógios independentes:** o contador visual é um `setInterval` no cliente; o instante de disparo do servidor é calculado depois de ~4 roundtrips (auth + busca + upsert) — o push nasce com viés estrutural de atraso de 0,3–3s.
+2. **Agendamentos órfãos:** reload sem cancelar (o id do agendamento só na memória da aba; cancel fire-and-forget com `.catch` vazio; corrida cancel-vs-INSERT) → pushes extras contra o contador novo.
+3. **POST de agendamento mantém a resposta aberta até o disparo** (sono de até 280s dentro do request) → enfileiramento de pool HTTP/1.1 em dev e cancel atrasado.
+4. **Limite físico de plataforma:** FCM/APNs entrega com latência variável ~0,5–3s — exatidão absoluta não é garantível. Janela aceitável acordada com o humano: **±1–2s do zero do contador**.
+
+O humano **rejeitou** o híbrido (camada client de notificação complementar ao push) e **rejeitou** o modelo 100% cliente. **Server-side é o único caminho de entrega** — requisito original intocado: aviso com tela apagada no iPhone, que exige push de servidor.
+
+### Alavanca 1 — relógio de referência = clique do usuário (substitui "duração relativa ao servidor")
+
+- O cliente envia ao agendamento um campo opcional `elapsed` (ms entre o clique que iniciou o timer e o disparo do POST de agendamento), medido com o relógio do próprio cliente — imune a clock-skew entre cliente e servidor, pois **só a diferença é usada**.
+- O servidor calcula o instante de disparo como: `agora_servidor + max(0, durationSeconds − elapsed/1000)`.
+- O contador visual continua com `fim = t0 + duração` no cliente — os dois miram o mesmo instante físico (zero do clique + duração).
+- **Retrocompat obrigatória:** `elapsed` ausente (PWA já instalada em produção sem atualizar) → comportamento atual (`agora + duração`).
+
+### Alavanca 2 — desacoplar a resposta do sono (substitui "sleep no próprio endpoint")
+
+- A rota de agendamento responde **`202` imediatamente após o INSERT** (status `agendado`); a espera + re-leitura + envio rodam em **background** via `after()` do Next.js (estável na versão ^16.2.10 do projeto).
+- `cancel` passa a ser processável **na hora** (sem fila atrás de POSTs pendurados).
+- O cancelamento continua matando o envio pela **re-leitura de status antes do envio** (invariante já existente, mantida).
+- A resposta `202` **não significa mais "enviado"**: o corpo expõe o estado `agendado`; o envio final acontece em background; `sent_at` continua sendo a marca de envio real.
+
+### Alavanca 3 — cancel-all por dono no INSERT (substitui "um agendamento ativo por sessão de cliente")
+
+- Ao criar um novo agendamento, o servidor cancela (status `cancelado`) **todo** agendamento anterior no estado `agendado` do **mesmo dono** (`created_by`).
+- Invariante: **no máximo 1 agendamento ativo por dono**, imposta no servidor. Mata órfãos de reload, aba dupla e cancel perdido.
+- Sem migração nova: os campos necessários (`created_by`, `status`, `fire_at`, `sent_at`) já existem na migração 0017.
+- O cancel-all **é** um cancelamento por dono — coerente com o cancel-by-owner-and-status e com o RLS por email já vigente.
+
+### Semântica de `cancel` (reforço da emenda)
+
+- Processamento **imediato** no servidor (sem fila atrás de agendamentos pendurados — consequência da Alavanca 2).
+- O cancelamento de encerramento silencioso (finalizar, cancelar treino, confirmar cancelamento da última série desmarcada) segue obrigatório no cliente; o cancel-all no INSERT cobre o caso de o cliente não conseguir cancelar (reload, aba fechada, corrida).
+- Cancel durante o background permanece inalterado: a re-leitura de status antes do envio mata o push.
+
+### Edge cases da emenda (cobertos como contrato)
+
+| Cenário | Comportamento esperado |
+|---|---|
+| `elapsed` negativo ou não-numérico | Tratar como 0 (comportamento idêntico ao campo ausente: `agora + duração`). |
+| `elapsed ≥ durationSeconds` | `fire_at = agora` — envio imediato; comportamento aceitável (o usuário demorou mais que o descanso para o POST sair). |
+| `elapsed` muito grande por aba suspensa entre clique e POST | Idem ao caso anterior: `fire_at = agora`, envio imediato. |
+| Dois POSTs de agendamento concorrentes do mesmo dono (duas abas) | O segundo INSERT cancela o primeiro (invariante por dono no servidor); só o segundo sobrevive como `agendado`. |
+| Resposta `202` do agendamento | Não significa "enviado"; o corpo expõe o estado `agendado`; `sent_at` só é preenchido após o envio real em background. |
+| Cancel durante o background (entre resposta e envio) | Inalterado: a re-leitura de status antes do envio mata o push. |
+| Reload/aba fechada sem cancel (agendamento órfão) | Cancelado pelo cancel-all na próxima marcação do mesmo dono; se não houver nova marcação, o agendamento vigente segue e dispara (decisão 6 de 2026-10-16 mantida). |
+
+### Decisões rejeitadas (auditoria — registrado como tal, não é hipótese aberta)
+
+| Decisão | Resultado |
+|---|---|
+| Camada client de notificação (híbrido: aviso local do cliente + push de servidor) | **Rejeitada** pelo humano em 2026-10-23. |
+| Modelo 100% cliente (sem push de servidor) | **Rejeitada** pelo humano em 2026-10-23 — perderia o aviso com tela apagada (requisito original do iPhone). |
+| Contador visual por timestamp absoluto (em vez de `t0 + duração`) | **Fora desta emenda**; candidato a backlog — o drift de throttling em aba oculta é conhecido e documentado, não corrigido aqui. |
+
+### O que NÃO muda com esta emenda (reafirmado)
+
+- Decisão 7 (2026-10-16): descanso acima da janela da função envia no fim da janela, com `min(restante, 280s)` — mantida sem alteração.
+- TTL 300s do agendamento/envio — mantido.
+- Texto da notificação — mantido.
+- Requisito de que falha de agendamento/envio **nunca bloqueia a marcação** — mantido.
+- Resposta `503` sem chaves VAPID — mantida.
+- Resposta `403` para endpoint alheio — mantida.
+- RLS e dono por email — mantidos; cancel-all é cancelamento por dono, coerente com o RLS.
+- Cancel-by-owner-and-status — mantido.
+- Destinatário exclusivo: dono que iniciou o timer/execução; casal, leitura livre; parceiro espectador nunca recebe — mantido.
+- PWA mínimo, exibição obrigatória da notificação pelo service worker, instrução de instalação no iPhone — mantidos.
+- Migração única 0017 (sem nova migração para esta emenda) — mantido.
+- Descanso nulo/zero sem timer e sem push; edição de `restSeconds` não reescreve timer em curso; troca de treino para consulta não encerra timer — mantidos.
+
+### Critérios de aceite afetados pela emenda (substituição textual)
+
+| Critério anterior (resumo) | Novo critério (vale daqui em diante) |
+|---|---|
+| Push agendado como "duração relativa ao instante da marcação no servidor" (edge case de relógio) | Push relativo ao **clique do usuário** (campo `elapsed`), com viés máximo de **±1–2s do zero do contador** (limite físico do FCM/APNs); clock-skew entre cliente e servidor não importa (só a diferença é usada). |
+| "Um agendamento ativo por sessão de cliente" / "o agendamento anterior é cancelado e o novo é criado" | **Invariante por dono no servidor:** no máximo um agendamento `agendado` por `created_by`; todo INSERT novo cancela (status `cancelado`) os anteriores do mesmo dono (cancel-all). |
+| Cancelamento de push agendado em encerramento silencioso | Cancelamento **processado de imediato** no servidor (sem fila atrás de POSTs pendurados), somado ao **cancel-all por dono** no INSERT de novo agendamento; a re-leitura de status antes do envio continua matando o push (inclusive durante o background). |
+| POST de agendamento com resposta aberta até o disparo (sono no request) | Resposta **`202` imediata** após o INSERT com estado `agendado`; espera + re-leitura + envio em background via `after()`; `sent_at` = marca do envio real. |
+
+As linhas correspondentes da tabela de critérios (seção 5) e da tabela de edge cases da spec já refletem estas substituições.
+
+### Decisões resolvidas (humano, 2026-10-23 — emenda de temporização)
+
+| # | Decisão | Resolução do humano |
+|---|---|---|
+| A1 | Relógio de referência do push | **Clique do usuário**: cliente envia `elapsed` (ms); servidor calcula o instante de disparo como `agora + max(0, duração − elapsed)`; retrocompat com `elapsed` ausente (comportamento atual) |
+| A2 | Resposta do POST de agendamento | **`202` imediata** após INSERT (estado `agendado`); espera/envio em background via `after()` do Next; `cancel` processável na hora; `sent_at` = envio real |
+| A3 | Unicidade de agendamento | **Cancel-all por dono no INSERT**: no máximo 1 `agendado` por `created_by`, invariante no servidor; sem migração nova (campos da 0017) |
+| A4 | Híbrido (camada client de notificação) | **Rejeitado** |
+| A5 | 100% cliente (sem push de servidor) | **Rejeitado** (perderia tela apagada) |
+| A6 | Contador visual por timestamp absoluto | **Fora desta emenda** — candidato a backlog (drift de throttling em aba oculta conhecido, não corrigido aqui) |
+
+**Nenhuma decisão pendente permanece aberta nesta emenda.**
+
 ## Modelo de Domínio
 
 Entidades existentes, sem alteração nesta feature:
@@ -143,7 +248,7 @@ Entidades novas, persistidas pela migração 0017 (descrição conceitual, sem d
 
 Assinatura de push: registro por dispositivo de um dono, criado quando o usuário concede permissão no app instalado; guarda o material de inscrição de notificação do navegador naquele aparelho. Cada dono pode ter uma ou mais assinaturas (um por dispositivo); nunca é compartilhada entre os dois donos.
 
-Agendamento de push de descanso: registro do fim do descanso pendente, associado a uma assinatura de um dono e originado por uma marcação de série; tem o instante de disparo (marcação mais a duração da entry) e um estado de ativo ou cancelado/entregue. O destinatário do push é exclusivamente o dono que iniciou o timer/execução — o dono do treino, o mesmo da marcação; o agendamento nunca se destina ao parceiro espectador. No máximo um agendamento ativo por sessão de cliente, substituído em nova marcação e cancelado em todo encerramento silencioso (finalizar, cancelar, confirmar cancelamento da última série — nunca na troca de treino para consulta).
+Agendamento de push de descanso: registro do fim do descanso pendente, associado a uma assinatura de um dono e originado por uma marcação de série; tem o instante de disparo (marcação mais a duração da entry) e um estado de ativo ou cancelado/entregue. O destinatário do push é exclusivamente o dono que iniciou o timer/execução — o dono do treino, o mesmo da marcação; o agendamento nunca se destina ao parceiro espectador. **Emenda 2026-10-23: no máximo um agendamento ativo por dono (invariante no servidor via cancel-all no INSERT — `created_by`)**, cancelado em todo encerramento silencioso (finalizar, cancelar, confirmar cancelamento da última série — nunca na troca de treino para consulta); o texto anterior "por sessão de cliente, substituído em nova marcação" é substituído por esta invariante. O instante de disparo é ancorado ao clique do usuário via `elapsed` (ver emenda); `sent_at` continua a marca do envio real, preenchida só em background.
 
 Timer de descanso: estado transitório de cliente (contagem visual), não é entidade persistida; duração capturada do `restSeconds` da entry no momento do início.
 
@@ -157,7 +262,7 @@ Entrada de exercício um para muitos Série planejada, com descanso único na en
 Treino um para muitos Execução, no máximo uma aberta por dono (trava 7c).
 Execução um para muitos Série realizada; marcar série é o gatilho do timer e do agendamento.
 Dono um para muitos Assinatura de push, uma por dispositivo, criada por gesto de permissão.
-Assinatura de push um para muitos Agendamento de descanso; agendamento ativo substituído por nova marcação e cancelado em encerramento silencioso (finalizar, cancelar, confirmar cancelamento da última; não na troca de treino para consulta).
+Assinatura de push um para muitos Agendamento de descanso; **Emenda 2026-10-23: agendamento no estado `agendado` cancelado via cancel-all por dono em novo INSERT do mesmo `created_by`** e cancelado em encerramento silencioso (finalizar, cancelar, confirmar cancelamento da última; não na troca de treino para consulta).
 Agendamento de descanso tem destinatário único: o dono que iniciou o timer/execução; nunca enviado ao parceiro espectador.
 Timer de descanso: um por sessão de cliente, duração vinda da entrada, sem linha em banco; segue ativo durante troca de treino para consulta; o agendamento de push é o reflexo persistente do fim no servidor.
 
@@ -206,7 +311,7 @@ Timer de descanso: um por sessão de cliente, duração vinda da entrada, sem li
 | Falha no agendamento ou envio do push | Nenhuma falha na marcação; camada visual é a garantia com aba visível; erro tratado no tratamento padrão de operação |
 | Dois donos treinando ao mesmo tempo | Timers de cliente independentes e assinaturas/agendamentos próprios, um por dono e por dispositivo |
 | Dois dispositivos do mesmo dono | Cada dispositivo com a própria assinatura; o agendamento segue a assinatura do dispositivo da marcação |
-| Fuso, sono prolongado do celular, relógio do cliente impreciso | O push é agendado como duração relativa ao instante da marcação no servidor; imprecisão extrema do cliente não muda o disparo do push; perfeição de relógio é YAGNI |
+| Fuso, clock-skew entre cliente e servidor, sono prolongado do celular, `elapsed` inválido ou exagerado | Relógio de referência é o **clique do usuário**: o `elapsed` é medido no cliente e só a diferença é usada — imune a clock-skew entre cliente e servidor (Emenda 2026-10-23); `elapsed` negativo ou não-numérico trata como 0 (idem ao campo ausente: agora + duração); `elapsed ≥ duração` (ou aba suspensa entre clique e POST) → envio imediato (`fire_at = agora`); viés aceitável do push é ±1–2s do zero do contador (limite físico FCM/APNs); perfeição de relógio continua YAGNI |
 | Falha ao registrar service worker, solicitar permissão ou instalar | Aviso visual em tela ainda ocorre com a aba visível; fluxo de marcação nunca falha por isso |
 
 ## Decisões resolvidas (humano, 2026-10-16)
@@ -229,6 +334,12 @@ Resolvidas anteriormente nesta revisão (mantidas): notificação do sistema com
 
 Registro de aprovação: o humano autorizou prosseguir sem aguardar nova leitura — "Ajuste isso na spec, passe para o planejamento de Atena, mas não precisa aguardar minha aprovação. Pode seguir diretamente para a implementação depois".
 
+### Decisões resolvidas (humano, 2026-10-23 — emenda de temporização do push)
+
+Após homologação real que encontrou notificação intermitente fora do zero do contador, o humano aprovou as 3 alavancas da Emenda 2026-10-23 (relógio de referência no clique com `elapsed`, resposta 202 imediata com espera em background, cancel-all por dono no INSERT) e rejeitou o híbrido (camada client de notificação) e o 100% cliente — server-side permanece o único caminho de entrega. Contador visual por timestamp absoluto ficou fora desta emenda, como candidato a backlog. **Nenhuma decisão pendente aberta** — tabela completa na seção "Emenda 2026-10-23".
+
 ## 8. Alternativas Consideradas — síntese para Atena
 
 Decisão humana de 2026-10-16 fecha o mecanismo: **Alternativa C — push de servidor (Web Push com VAPID) + PWA mínimo como pré-requisito**, com a Alternativa A mantida como camada 1 (aviso visual em tela com a aba visível, só card/banner) e a Alternativa B descartada. O estado do timer segue a **Alternativa 1** (contagem em cliente, inclusive durante troca de treino para consulta; o push agendado no servidor é o aviso de segundo plano e dispara mesmo com o app fechado). Hospedagem do envio: route handler na Vercel, com Supabase Edge Functions descartada. Migração única esperada: 0017. Destinatário do push: somente o dono que iniciou o timer. **Todas as 7 decisões de micro-UX/escopo foram resolvidas pelo humano no approve-spec de 2026-10-16 (ver seção "Decisões resolvidas") — nenhuma decisão pendente aberta.** O humano autorizou o prosseguimento direto para o planejamento da Atena e, após ele, para a implementação, sem nova aprovação de spec.
+
+**Emenda 2026-10-23** ajusta o contrato de temporização sem mudar o mecanismo: `elapsed` ancorado ao clique do usuário (viés ±1–2s, limite FCM), resposta `202` imediata com espera/envio em background, cancel-all por dono no INSERT (invariante de no máximo 1 `agendado` por `created_by`), cancel processável de imediato; híbrido e 100% cliente rejeitados — ver seção da emenda para o contrato completo, edge cases e decisões A1–A6.

@@ -363,6 +363,35 @@
 
 ---
 
+## Feature #06 — Emenda 2026-10-23 (fix-01-server — timing do push; suite 1854/1854, cov 85.33% lines / 84.14% branch)
+
+> A emenda (Alavancas 1–3: `elapsed` ancorado ao clique, resposta 202 + envio em background, cancel-all por dono no INSERT) é aditiva à #06: só toca o cliente de push, o hook do timer, o repositório de push e a rota. Integração com as demais features permanece por composição, sem mudança de camadas. Os testes de regressão das features 01–07b-1 estão verdes nesta entrega (suite completa; spot checks no `test-report.json`).
+
+### REG-69: Agendamento único por dono no servidor (cancel-all no INSERT)
+**Dado** o dono com qualquer agendamento de push ainda ativo no servidor (inclusive os órfãos de reload, de aba dupla ou de cancelamento perdido)
+**Quando** uma nova marcação de série com descanso agenda o push
+**Então** no máximo um agendamento permanece ativo por dono: o novo agendamento é o único `agendado`, os anteriores do mesmo dono são cancelados no servidor e nenhum push deles chega ao fim do descanso antigo — o parceiro e os agendamentos de outro dono não são afetados
+
+### REG-70: `elapsed` no corpo do agendamento e compatibilidade do cliente antigo
+**Dado** uma marcação de série com descanso (clique que inicia o timer)
+**Quando** o agendamento é enviado ao servidor
+**Então** o tempo decorrido desde o clique viaja no corpo (`elapsed`, inteiro ≥ 0) e o push mira o zero do contador visual (viés ±1–2s); um cliente antigo que envie o corpo **sem** o campo continua funcionando (fallback para o comportamento antigo: duração contada a partir do servidor, sem erro), e o cancelamento explícito nunca carrega o campo
+
+### REG-71: Resposta de agendamento imediata e cancelamento sem fila
+**Dado** o agendamento de um push em andamento (o servidor já respondeu e o envio espera em background)
+**Quando** a pessoa finaliza, cancela a execução ou substitui o descanso com nova marcação
+**Então** o cancelamento é processado de imediato no servidor (sem esperar agendamento algum pendurado) e nenhum push órfão é entregue — a troca de treino para consulta continua não cancelando (REG-68 e cenário 16 intactos)
+
+### Cenários que a homologação deve re-checar (emenda — verdes na suite, re-cheque manual em iPhone real obrigatório para o timing)
+
+- **Janela ±1–2s do zero do contador:** cenário E1 do `test-scenarios.md` (push com aba em primeiro plano alinhado ao zero visual).
+- **Cancel-all e órfãos:** cenários E2 (reload no meio) e E3 (duas abas) — nenhum push do agendamento antigo.
+- **Latência de rede:** cenário E4 — `elapsed` compensa o atraso do POST; push no lugar certo.
+- **Decisão 7 (janela do servidor):** cenário E5 — descanso >280s segue o comportamento acordado, sem duplicata.
+- **Entrega iPhone:** cenário E6 (re-execução dos cenários 3–6 com o novo agendamento) e E6b (cancelamento efetivo sem órfão, contraste com troca para consulta).
+
+---
+
 ## Execução de regressão
 
 ```bash
@@ -400,4 +429,4 @@ npm run build-storybook
 **Dado** exercício com séries
 **Então** grid responsivo (1/2/4 col), campo único com rótulo pelo modo da entry, toggle kg/lb abaixo da carga persistindo na entry
 
-**Critério de passagem:** 1826 testes passados, 0 falhas, coverage ≥ 80% (atual: 85.16% lines, 84.08% branch — 06-timer-descanso-pwa re-executada em 2026-10-18 pós-fix B1/B2; referência 7b-1 em 2026-10-16: 1636 testes, 84.74% lines, 83.63% branch).
+**Critério de passagem:** 1854 testes passados, 0 falhas, coverage ≥ 80% (atual: 85.33% lines, 84.14% branch — 06-timer-descanso-pwa com a Emenda 2026-10-23 re-executada em 2026-10-23; referência 06-base em 2026-10-18 pós-fix B1/B2: 1831 testes, 85.31% lines, 84.10% branch; referência 7b-1 em 2026-10-16: 1636 testes, 84.74% lines, 83.63% branch).

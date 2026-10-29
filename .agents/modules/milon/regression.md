@@ -392,6 +392,32 @@
 
 ---
 
+## Feature #06 — Emenda 2 (2026-10-29 — supressão da notificação com aba ativa + graça 800 ms; suite 1871/1871, cov 85.35% lines / 84.20% branch)
+
+> A Emenda 2 (DA21–DA24: cancel no zero por visibilidade no cliente, janela de graça `JANELA_GRACA_ENVIO_MS = 800` no servidor, decisão exclusiva do tick de zero) é aditiva à #06: só toca `useRestTimer.ts` (branch do tick de zero) e `route.ts` (constante + um `dormir` entre espera e re-leitura). Todas as demais camadas permanecem intocadas — os testes de regressão das features 01–07b-1 e da Emenda 1 estão verdes nesta entrega (suite completa; spot checks no `test-report.json`).
+
+### REG-72: Sem notificação criada com aba visível no zero (supressão mantendo o alerta)
+**Dado** o Treino do Dia com descanso rodando e a aba do treino **visível** no instante do zero
+**Quando** a contagem chega a zero
+**Então** nenhum push do fim de descanso é entregue (nem no instante, nem represado ao trocar de aba depois): o agendamento é cancelado no servidor no tick de zero e **nenhuma notificação do sistema é criada**; o alerta visual `Descanso de <exercício> terminou.` permanece em tela até `Fechar` — a semântica é "cancela mantendo o alerta", diferente do `cancel()` de finalizar/cancelar que zera a UI
+
+### REG-73: Re-leitura do servidor só após `fire_at` + graça de 800 ms
+**Dado** um agendamento `agendado` cujo instante de disparo (`fire_at`) chegou, com a aba oculta no zero (nenhum cancel)
+**Quando** o background do servidor completa a espera
+**Então** o servidor espera **mais** a janela de graça de 800 ms antes de reler o status e enviar — com a aba oculta a notificação chega em zero + graça + FCM (tipicamente +1–2s, pior ~+2,5s); se o status relído pós-graça não for mais `agendado` (cancel chegado), termina sem enviar e sem graça adicional; descansos maiores que 280s seguem cap + graça (decisão 7 intacta)
+
+### Cenários que a homologação deve re-checar (Emenda 2 — verdes na suite, re-cheque manual em iPhone real obrigatório para a visibilidade no zero)
+
+- **Aba visível no zero:** cenário A1 do `test-scenarios.md` — nenhuma notificação, alerta visual permanece; trocar de aba depois não revela notificação represada.
+- **Aba oculta no zero:** cenário A2 — entrega em zero + graça + FCM (reexecução dos cenários 2/3/4/5 originais com este build).
+- **iPhone com tela apagada:** cenário A3 — requisito original preservado (sem tick → sem cancel → servidor envia; reexecução das seções 3–6 originais).
+- **Tela ligada e app visível:** cenário A4 — só camada visual, aparelho silencioso.
+- **Cancel falhado/corrida perdida:** cenário A5 — notificação extra rara **aceita**; sem falha visível.
+- **Reload/fechar antes do zero:** cenário A6 — decisão 6 preservada: o push dispara no horário (zero + graça + FCM).
+- **Re-homologação da Emenda 1:** cenário A7 — E1–E6b re-executados com a regra nova (E1 visível no zero → sem notificação; E1 oculto → janela ±1–2s).
+
+---
+
 ## Execução de regressão
 
 ```bash
@@ -429,4 +455,4 @@ npm run build-storybook
 **Dado** exercício com séries
 **Então** grid responsivo (1/2/4 col), campo único com rótulo pelo modo da entry, toggle kg/lb abaixo da carga persistindo na entry
 
-**Critério de passagem:** 1854 testes passados, 0 falhas, coverage ≥ 80% (atual: 85.33% lines, 84.14% branch — 06-timer-descanso-pwa com a Emenda 2026-10-23 re-executada em 2026-10-23; referência 06-base em 2026-10-18 pós-fix B1/B2: 1831 testes, 85.31% lines, 84.10% branch; referência 7b-1 em 2026-10-16: 1636 testes, 84.74% lines, 83.63% branch).
+**Critério de passagem:** testes passados, 0 falhas, coverage ≥ 80% (atual: 1871 testes, 85.35% lines, 84.20% branch — 06-timer-descanso-pwa com a Emenda 2 re-executada em 2026-10-29; referência Emenda 1 em 2026-10-23: 1854 testes, 85.33% lines, 84.14% branch; referência 06-base em 2026-10-18 pós-fix B1/B2: 1831 testes, 85.31% lines, 84.10% branch; referência 7b-1 em 2026-10-16: 1636 testes, 84.74% lines, 83.63% branch).

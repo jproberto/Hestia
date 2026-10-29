@@ -21,7 +21,38 @@
     "TASK-019": "passed",
     "TASK-020": "passed",
     "TASK-021": "passed",
-    "TASK-022": "passed"
+    "TASK-022": "passed",
+    "TASK-023": "passed",
+    "TASK-024": "passed",
+    "TASK-025": "passed",
+    "TASK-026": "passed",
+    "TASK-027": "passed"
+  },
+  "amendment2": {
+    "date": "2026-10-29",
+    "name": "Emenda 2 — 2026-10-23 — supressão da notificação com aba ativa + janela de graça no servidor",
+    "scope": "DA21-DA24 + TASK-023 a TASK-027 — bloco aditivo aprovado como Emenda 2 da spec; TASK-001 a TASK-022 permanecem passed intactas",
+    "mechanisms": {
+      "DA21_mecanismo1_cliente": "no tick em que remainingSeconds chega a 0 com document.visibilityState === 'visible', o useRestTimer dispara cancelRestPush(scheduleId) fire-and-forget (.catch vazio), mantém o alerta visual 'Descanso terminado' (finished/active/remainingSeconds/origem consolidados ANTES da rede) e limpa scheduleIdRef sincronamente; 'hidden'/outro valor → no-op total (servidor segue responsável); ref nulo → no-op; SEM listener visibilitychange (busca 0) e SEM setTimeout/graça no hook (graça é só do servidor)",
+      "DA22_mecanismo2_servidor": "constante JANELA_GRACA_ENVIO_MS = 800 em app/api/milon/rest-push/route.ts ao lado de JANELA_ESPERA_MS; a callback de after() dorme até fire_at (cap 280 s intacto) → dorme a graça → SÓ ENTÃO re-lê findRestScheduleById → envia somente se ainda 'agendado'; cancelado/nula → término imediato sem envio e sem segunda graça; busca 'dormir(800' retorna 0 (valor sempre via constante)",
+      "DA23_mecanismo3_tick": "remainingSeconds === 0 só é alcançável pelo tick de um timer ativo → reload/fechar/reabrir não cancelam (decisão 6 preservada), iPhone com tela apagada sem JS → sem tick → servidor envia (requisito original preservado), browser fechado no zero → servidor envia"
+    },
+    "coverageAmendmentFiles": {
+      "useRestTimer.test.ts": "31+1 tests (Emenda 2: cancel no zero com visible + estado preservado, hidden/prerender sem POST, visibilidade lida no instante do tick (não cacheada), ref nulo no-op, cancel rejeitado engolido, scheduleIdRef limpo (start seguinte não cancela o id antigo), consolidação antes da rede, busca visibilitychange 0, busca setTimeout/JANELA_GRACA/dormir 0 no hook)",
+      "route.test.ts": "36 tests (Emenda 2: seção 13 da janela de graça — agendado espera fire_at + 800 antes de re-ler/enviar, cancelado pós-graça sem envio e sem segunda graça, linha nula idem, cap 280 s + graça composta, declaração JANELA_GRACA_ENVIO_MS = 800 e busca dormir(800 literal = 0)"
+    },
+    "preservation": {
+      "cliente_sem_visibilitychange": "busca /visibilitychange/ em lib/milon/hooks/useRestTimer.ts retorna 0 (decisão exclusiva do tick — DA21)",
+      "cliente_sem_graca_setTimeout": "busca de 'setTimeout', 'JANELA_GRACA' e 'dormir' no fonte do hook retorna 0 (a graça de 800 ms é exclusiva do servidor — DA21/DA22)",
+      "cancel_completo_byte_a_byte": "useRestTimer.test.ts seção 6 — cancel zera active/remainingSeconds/originWorkoutId/exerciseName/finished + cancelRestPush do scheduleId corrente + sem timers, idêntico ao contrato prévio",
+      "dismiss_somente_finished": "useRestTimer.test.ts seção 7 — dismiss limpa só finished; estado e agendamento intactos; nenhum POST novo",
+      "rota_sem_dormir_800_literal": "route.test.ts — fonte não contém 'dormir(800'; dormir recebe sempre JANELA_GRACA_ENVIO_MS; constante 800 declarada ao lado de JANELA_ESPERA_MS",
+      "rota_202_e_after_preservados": "route.test.ts seções 4 e 13 — resposta 202 imediata sem avançar timers, after registrado, envio só no background pós-graça",
+      "rota_cancel_all_preservado": "route.test.ts seção 7 — cancelAllRestSchedulesByOwner antes do INSERT (ordem por espião), dois schedules do mesmo dono → só o segundo agendado",
+      "rota_elapsed_fire_at_preservados": "route.test.ts seções 6/8 — elapsed 20000/1500 → fire_at = agora + 40 s / + 88,5 s; ausente/inválido → agora + duração; >= duração → fire_at = agora",
+      "regressao_01_07b_1_e_emenda1": "suite completa 1871/1871 cobre features 01-07b-1 + Emenda 1 (fix-01-server) sem alteração de produção pela Emenda 2 além dos 2 Modify do plan (hook, rota)"
+    },
+    "status": "passed"
   },
   "amendment": {
     "date": "2026-10-23",
@@ -51,21 +82,21 @@
     "untouchedCheck": "git diff develop...HEAD --name-only vs lista intocados do plan.md §2"
   },
   "coverage": {
-    "branches": 84.14,
+    "branches": 84.2,
     "functions": 76.68,
-    "lines": 85.33,
+    "lines": 85.35,
     "reporter": "v8",
-    "statements": 85.33,
-    "note": "Execucao da Emenda 2026-10-23 (2026-10-23, TASK-022): agregacao recalculada a partir de coverage/coverage-final.json (s/b/f): statements 11619/13616=85.33, branches 2509/2982=84.14, functions 536/699=76.68. Linhas da emenda presentes e cobertas: route.ts 97.35 stmts / 95.00 branch / 100 funcs (subiu vs 97.32/92.59 da base — after()/cancel-all/elapsed exercitados); repositories/push.ts 78.72 stmts / 55.56 branch / 61.11 funcs (cancel-all da 9a operacao coberto; restante = os 7 *Standalone de browser e ramos de erro de banco, idem baseline)."
+    "statements": 85.35,
+    "note": "Execucao da Emenda 2 (TASK-027, 2026-10-29): agregacao recalculada a partir de coverage/coverage-final.json (s/b/f): statements 11633/13630=85.35, branches 2516/2988=84.20 (reporter v8 84.2), functions 536/699=76.68. Gates lines >= 80 e branches >= 80 atendidos. Arquivos da Emenda 2 saudaveis: route.ts 97.39 stmts / 95.00 branch / 100 funcs; useRestTimer.ts 100 stmts / 96.43 branch / 100 funcs (branch 91.67 -> 96.43 com o cancel por visibilidade do zero exercitado nos 3 sentidos: visible/hidden/outro). Execucao anterior (Emenda 1, 2026-10-23): lines 85.33 / branches 84.14."
   },
   "coverageByFeatureFile": {
-    "app/api/milon/rest-push/route.ts": "97.35% stmts (147/151), 95.00% branch (57/60), 100% funcs (9/9) — emenda: after()/cancel-all/elapsed exercitados (+2 stmts e +3 branches vs base)",
-    "lib/milon/hooks/useRestTimer.ts": "100% stmts, 91.67% branch, 100% funcs",
+    "app/api/milon/rest-push/route.ts": "97.39% stmts (149/153), 95.00% branch (57/60), 100% funcs (9/9) — Emenda 2: graça (JANELA_GRACA_ENVIO_MS) exercitada nos 4 desfechos (agendado/cancelado/nula/cap 280 s)",
+    "lib/milon/hooks/useRestTimer.ts": "100% stmts (109/109), 96.43% branch (27/28), 100% funcs — Emenda 2: branch de visibilidade do zero coberto em visible/hidden/outro; único branch aberto = linha 99 (guarda defensiva `atual === null` do espelho do intervalo — o cancel/unmount já zera o ref antes do próximo tick, caminho inalcançável em teste)",
     "lib/milon/hooks/usePushPermission.ts": "96.49% stmts, 86.36% branch, 100% funcs",
-    "lib/milon/rest-push-client.ts": "92.31% stmts, 88.89% branch, 100% funcs",
+    "lib/milon/rest-push-client.ts": "92.31% stmts, 89.66% branch, 100% funcs",
     "lib/milon/rest-push-sender.ts": "92.31% stmts, 88.89% branch, 100% funcs",
-    "lib/milon/repositories/push.ts": "78.72% stmts (148/188), 55.56% branch (15/27), 61.11% funcs (11/18) — cancel-all (9a operacao) coberto; restante = os 7 *Standalone de browser e ramos de erro de banco exercitados so pela rota",
-    "lib/milon/repositories/fakes/fakePushRepository.ts": "100% stmts, 94.74% branch, 100% funcs — fake espelha o cancel-all"
+    "lib/milon/repositories/push.ts": "78.72% stmts (148/188), 55.56% branch (15/27), 61.11% funcs (11/18) — inalterado pela Emenda 2 (intocada: repositories/* na lista de intocados)",
+    "lib/milon/repositories/fakes/fakePushRepository.ts": "100% stmts, 94.74% branch, 100% funcs"
   },
   "feature": "06-timer-descanso-pwa",
   "reviewFixes": {
@@ -126,57 +157,60 @@
     "after() de next/server e exercitado apenas via mock que captura as callbacks registradas (por desenho: after real lança fora de request scope — DA17); a espera de background usa fake timers disparando a callback capturada, sem sleep real.",
     "@vitest/coverage-v8 nao esta declarado em devDependencies (nem no develop; confirmado novamente nesta execucao). Instalado temporariamente com npm install --no-save @vitest/coverage-v8@2.1.9 apenas para medir — package.json e package-lock intactos no diff (version 1.0.0). Se a medicao de coverage virar gate recorrente, Atena/humano podem decide declara-lo.",
     "Cenarios manuais nao exercitaveis em jsdom ficam declarados no test-scenarios.md (push com tela apagada/outro app em iPhone real, janela +/-1-2s do zero do contador, duas abas reais, latencia de rede alta, instalacao iOS, permissao por gesto, queda real de rede) — sem tentativa de automatizacao falsa.",
-    "Minos tocou somente artefatos de teste (test-report.json, test-scenarios.md, regression.md nesta TASK-022); nenhum arquivo de producao foi alterado pela emenda alem dos Modify do plan (rota, cliente, hook, repository, interface, fake) ja commitados por Hefesto nas TASK-017/019/021."
+    "Minos tocou somente artefatos de teste (test-report.json, test-scenarios.md, regression.md nesta TASK-027) e __tests__/lib/milon/hooks/useRestTimer.test.ts (caso novo de ausência de graça/setTimeout no hook); nenhum arquivo de producao foi alterado pela Emenda 2 alem dos 2 Modify do plan (useRestTimer.ts, route.ts) ja commitados por Hefesto nas TASK-024/026 (b74dd16, 255dd4d)."
   ],
   "gates": {
     "coverageBranchesGte80": {
-      "actual": 84.14,
+      "actual": 84.2,
       "expected": "branches >= 80",
-      "status": "passed"
+      "status": "passed",
+      "note": "Execucao da Emenda 2 (2026-10-29); baseline antes da Emenda 2 (2026-10-23): 84.14."
     },
     "coverageLinesGte80": {
-      "actual": 85.33,
+      "actual": 85.35,
       "expected": "lines >= 80",
-      "status": "passed"
+      "status": "passed",
+      "note": "Execucao da Emenda 2 (2026-10-29); baseline antes da Emenda 2 (2026-10-23): 85.33."
     },
     "suiteZeroFailures": {
-      "actual": "140 files passed, 1854 tests passed, 0 failed",
+      "actual": "140 files passed, 1871 tests passed, 0 failed",
       "expected": "0 falhas",
       "status": "passed",
-      "note": "+23 testes vs suite da re-review (1831): +9 route.test.ts (202/after/elapsed/cancel-all), +6 useRestTimer.test.ts (elapsed/t0), +4 contract-push.test.ts (cancel-all fakes-only), +2 rest-push-client.test.ts (elapsed no corpo), +2 db/push.test.ts (cadeia do cancel-all). Regressao das features 01-07b-1 e das TASK-001-015 intacta (suite completa verde)."
+      "note": "+17 testes vs suite da Emenda 1 (1854): +12 useRestTimer.test.ts (11 da visibilidade no zero/tick DA21/DA23 — visible com cancel + estado preservado, hidden e 'prerender' sem POST, visibilidade lida no instante do tick, ref nulo no-op, cancel rejeitado engolido, scheduleIdRef limpo, consolidação antes da rede, busca visibilitychange = 0 — e +1 da TASK-027: busca de ausência de setTimeout/JANELA_GRACA/dormir no hook), +5 route.test.ts (graça DA22: agendado só pós-graça, cancelado pós-graça sem segunda graça, linha nula pós-graça, cap 280 s + graça, declaração JANELA_GRACA_ENVIO_MS com busca dormir(800 = 0). Regressao das features 01-07b-1 e das TASK-001-022 intacta (suite completa verde)."
     },
     "storybookExit0": {
       "actual": "SB_EXIT:0 (Storybook build completed successfully, output storybook-static; 14 stories da feature no index.json: RestTimerPanel (6), RestPushEnableHint (7), PwaRegistration (1))",
       "expected": "exit 0",
       "status": "passed",
-      "note": "Producao intocada pela emenda alem dos Modify do plan — mesmas stories da base; execucao da TASK-022 em 2026-10-23."
+      "note": "Producao intocada pela Emenda 2 alem dos 2 Modify do plan (hook, rota) — mesmas stories da base; execucao da TASK-027 em 2026-10-29."
     },
     "lintExit0": {
       "actual": "0 errors, 73 warnings",
       "expected": "exit 0 (0 errors)",
       "status": "passed",
-      "note": "73 warnings = baseline da 7b-1, inalterado pela emenda (nenhuma warning nova de arquivo da feature ou da emenda)."
+      "note": "73 warnings = baseline da 7b-1, inalterado pela Emenda 2 (nenhuma warning nova de arquivo da feature ou da emenda)."
     },
     "buildExit0": {
       "actual": "BUILD_EXIT:0 (Next.js 16.2.10 Turbopack; TypeScript ok; rota dinamica ƒ /api/milon/rest-push presente no mapa de rotas)",
       "expected": "exit 0",
-      "status": "passed"
+      "status": "passed",
+      "note": "Execucao da TASK-027 em 2026-10-29."
     },
     "untouchedListRespected": {
-      "actual": "0 violacoes da emenda: git diff b84b750..HEAD contem apenas os 6 Modify de producao do plan (route.ts, rest-push-client.ts, useRestTimer.ts, repositories/push.ts, interfaces.ts, fakePushRepository.ts) + os 5 arquivos de teste; nenhuma entrada da lista 'Explicitamente NÃO tocados pela emenda' aparece (types.ts, rest-push-sender.ts, db/push.ts barrel, page.tsx, WorkoutDetailSection.tsx, useWorkoutExecution.ts, usePushPermission.ts, RestTimerPanel, RestPushEnableHint, PwaRegistration, sw.js, manifest, layout.tsx, .env.local.example, package.json, package-lock.json, vitest.config.ts, lib/shared, utils/supabase, utils/migrations — inclusive 0017 e 0001-0016, inteiro 0018 nao consumido)",
-      "expected": "nenhum arquivo intocado da emenda no diff da emenda",
+      "actual": "0 violacoes da Emenda 2: a emenda so toca lib/milon/hooks/useRestTimer.ts e app/api/milon/rest-push/route.ts na producao (Modify do plan) + os 2 arquivos de teste; nenhuma entrada da lista 'Explicitamente NÃO tocados pela emenda' aparece (migrations — inteiro 0018 nao consumido, types.ts, repositories/*, db/push.ts, rest-push-client.ts, rest-push-sender.ts, page.tsx, WorkoutDetailSection.tsx, RestTimerPanel, RestPushEnableHint, PwaRegistration, sw.js, manifest, layout.tsx, package.json, vitest.config.ts, lib/shared, utils/supabase)",
+      "expected": "nenhum arquivo intocado da Emenda 2 no diff",
       "status": "passed",
-      "note": "Diff develop...HEAD segue com o escopo da feature 06 completo (emenda aditiva aos commits 2ee12b2/efe6100/1dba700 apos b84b750)."
+      "note": "Commits da Emenda 2: b74dd16 (hook — DA21/DA23) e 255dd4d (rota — DA22). Minos alterou somente __tests__/lib/milon/hooks/useRestTimer.test.ts (novo teste de ausência de graça/setTimeout no hook) e artefatos de teste nesta TASK-027."
     }
   },
   "outputs": {
-    "coverageRecalc": "coverage-final.json agregado (emenda 2026-10-23): ALL FILES statements 85.33 (11619/13616), branches 84.14 (2509/2982), functions 76.68 (536/699); ROUTE app/api/milon/rest-push/route.ts statements 97.35 (147/151), branch 95.00 (57/60), functions 100 (9/9); REPO lib/milon/repositories/push.ts statements 78.72 (148/188), branch 55.56 (15/27), functions 61.11 (11/18) com cancelAllRestSchedulesByOwner coberto",
-    "suiteTail": "Test Files 140 passed (140) | Tests 1854 passed (1854)",
-    "directedTail": "route.test.ts 31 tests (22→31 com a emenda); rest-push-client.test.ts 19 (17→19); useRestTimer.test.ts 20 (14→20); contract-push.test.ts 26 (22→26); db/push.test.ts 15 (13→15) — todos passaram na suite completa (111 testes somados nos 5 arquivos da emenda)",
+    "coverageRecalc": "coverage-final.json agregado (Emenda 2, 2026-10-29): ALL FILES statements 85.35 (11633/13630), branches 84.20 (2516/2988), functions 76.68 (536/699); ROUTE app/api/milon/rest-push/route.ts statements 97.39 (149/153), branch 95.00 (57/60), functions 100 (9/9); HOOK lib/milon/hooks/useRestTimer.ts statements 100 (109/109), branch 96.43 (27/28), functions 100 (1/1)",
+    "suiteTail": "Test Files 140 passed (140) | Tests 1871 passed (1871)",
+    "directedTail": "route.test.ts 36 tests (31 da Emenda 1 → 36 com a Emenda 2: +5 da graça); useRestTimer.test.ts 32 (20 da Emenda 1 → 32: +11 da visibilidade no zero + 1 de ausência de graça/setTimeout no hook) — todos passaram na suite completa",
     "tscTail": "npx tsc --noEmit exit 0 (gate indireto: suite e build compilam; lint 0 errors)",
     "lintTail": "npm run lint exit 0 — 0 errors, 73 warnings (baseline)",
-    "storybookTail": "SB_EXIT:0 | Vite built in 11.44s | Output directory: P:/workspace/IA/hestia/storybook-static | Storybook build completed successfully (execucao da TASK-022 em 2026-10-23)",
-    "buildTail": "BUILD_EXIT:0 | ƒ /api/milon/rest-push no mapa de rotas (execucao da TASK-022 em 2026-10-23)"
+    "storybookTail": "SB_EXIT:0 | Vite built in 13.23s | Output directory: P:/workspace/IA/hestia/storybook-static | Storybook build completed successfully (execucao da TASK-027 em 2026-10-29)",
+    "buildTail": "BUILD_EXIT:0 | ƒ /api/milon/rest-push no mapa de rotas (execucao da TASK-027 em 2026-10-29)"
   },
   "spotChecks": {
     "__tests__/lib/milon/migration-0017.test.ts": "migração 0017 (duas tabelas push, RLS, índices (created_by, status) usado pelo cancel-all, rollback, auditoria milon-06) — verdes na suite completa",
@@ -185,15 +219,48 @@
     "__tests__/lib/milon/rest-push-client.test.ts": "19 testes — corpo de schedule SEMPRE com elapsed ≥ 0 inteiro (1500 e 0), cancelRestPush sem elapsed (campo exclusivo do schedule) — verdes na suite completa",
     "__tests__/lib/milon/hooks/useRestTimer.test.ts": "20 testes — t0 no início do caminho válido (antes de cancel anterior e ensureDeviceSubscription), elapsed = Date.now() − t0 (relógio congelado → 0; assinatura lenta 2500 ms → 2500; substituição conta do novo clique), no-op nulo/zero e fire-and-forget preservados — verdes na suite completa",
     "__tests__/lib/milon/hooks/usePushPermission.test.ts + useWorkoutExecution.test.ts + WorkoutDetailSection.test.tsx + page-rest-timer.test.tsx + page*.test.tsx": "regressões 05/07/7b/7b-1/7c e composição da página intactas na suite completa (o cancel-all e o elapsed são aditivos — nenhuma dessas camadas mudou na emenda)",
-    "__tests__/public/pwa.test.ts + PwaRegistration.test.tsx + rest-push-sender.test.ts": "PWA (manifest/sw/notificationclick B1) e sender (TTL/textos congelados) intactos — intocados pela emenda, verdes na suite completa"
+    "__tests__/public/pwa.test.ts + PwaRegistration.test.tsx + rest-push-sender.test.ts": "PWA (manifest/sw/notificationclick B1) e sender (TTL/textos congelados) intactos — intocados pela emenda, verdes na suite completa",
+    "Emenda 2 — __tests__/lib/milon/hooks/useRestTimer.test.ts (seção 11)": "32 testes da supressão por visibilidade — aba visível no zero: POST action cancel com o scheduleId da sessão disparado, finished verdadeiro, active falso, remainingSeconds 0 e originWorkoutId/exerciseName preservados (estado ANTES da rede); aba oculta/prerender: NENHUM POST e estado visual idêntico; visibilidade lida no instante do tick (não no start, sem listener); scheduleIdRef limpo; ref nulo no-op; cancel rejeitado engolido; mais a busca de ausência de 'setTimeout'/'JANELA_GRACA'/'dormir' no fonte do hook — verdes na suite completa",
+    "Emenda 2 — __tests__/app/api/milon/rest-push/route.test.ts (seção 13)": "36 testes com a janela de graça — em fire_at exato a re-leitura ainda NÃO ocorreu; após JANELA_GRACA_ENVIO_MS (800) re-lê/envia/marca enviado; cancelado pós-graça → sem envio, sem marcações e término imediato (sem segunda graça); linha nula idem; cap 280 s composto com a graça; fonte declara const JANELA_GRACA_ENVIO_MS = 800 ao lado de JANELA_ESPERA_MS e busca 'dormir(800' retorna 0 — verdes na suite completa"
   },
   "status": "passed",
   "summary": {
-    "coverage": 85.33,
+    "coverage": 85.35,
+    "coverageBranches": 84.2,
     "failed": 0,
-    "passed": 1854,
+    "passed": 1871,
     "skipped": 0,
     "testFiles": 140
+  },
+  "amendment2Close": {
+    "date": "2026-10-29",
+    "task": "TASK-027",
+    "amendment": "Emenda 2 — supressão da notificação com aba ativa (DA21/DA23 no cliente) + janela de graça de 800 ms no servidor (DA22), decisão exclusiva do tick de zero (DA23)",
+    "executed": [
+      "npm test (140 files, 1871 tests, 0 failed)",
+      "npm test -- --coverage (recompoe coverage: lines 85.35, branches 84.20)",
+      "npm run lint (exit 0, 0 errors, 73 warnings)",
+      "npm run build (exit 0)",
+      "npm run build-storybook (exit 0)",
+      "verificação de intocados da Emenda 2 (git log: b74dd16 = hook, 255dd4d = rota; nenhum outro arquivo de produção)"
+    ],
+    "artifacts": [
+      ".agents/modules/milon/06-timer-descanso-pwa/test-report.json",
+      ".agents/modules/milon/06-timer-descanso-pwa/test-scenarios.md",
+      ".agents/modules/milon/regression.md"
+    ],
+    "preservationChecks": {
+      "cliente_sem_visibilitychange": "busca /visibilitychange/ em lib/milon/hooks/useRestTimer.ts = 0 (decisão no instante do tick, sem listener — DA21)",
+      "cliente_sem_graca_setTimeout": "buscas de 'setTimeout', 'JANELA_GRACA' e 'dormir' no fonte do hook = 0 (graça de 800 ms exclusiva do servidor — DA22)",
+      "cancel_completo_byte_a_byte": "seção 6 do useRestTimer.test.ts — zera active/remainingSeconds/originWorkoutId/exerciseName/finished + cancel POST + sem timers; contrato prévio idêntico",
+      "dismiss_somente_finished": "seção 7 do useRestTimer.test.ts — só finished muda; nenhum POST novo",
+      "rota_sem_dormir_800_literal": "busca 'dormir(800' no fonte da rota = 0; constante JANELA_GRACA_ENVIO_MS = 800 usada no dormir (seção 13 do route.test.ts)",
+      "rota_202_after_preservados": "seção 4 — 202 {scheduleId, status: 'agendado'} imediato + after registrado, sem avançar timers",
+      "rota_cancel_all_preservado": "seção 7 — cancelAllRestSchedulesByOwner antes do INSERT (ordem por espião); dois schedules do mesmo dono → só o segundo agendado",
+      "rota_elapsed_fire_at_preservados": "seção 6 — elapsed 20000 → agora+40 s; 1500 → agora+88,5 s; ausente/inválido → agora+duração; >= duração → agora",
+      "regressao_01_07b_1_e_emenda1": "suite completa 1871/1871 — features 01-07b-1 + Emenda 1 intactas; a Emenda 2 só modificou hook e rota na produção"
+    },
+    "gapAddition": "__tests__/lib/milon/hooks/useRestTimer.test.ts ganhou o caso 'O hook não contém janela de graça nem setTimeout' (preservação da TASK-027 que faltava); nenhum arquivo de produção alterado por Minos"
   },
   "reReview": {
     "date": "2026-10-18",

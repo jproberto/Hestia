@@ -5,6 +5,7 @@
 > Textos das features citados entre aspas exatas quando relevantes — sem paráfrase nova.
 > Gerado em 2026-10-18, re-executado pós-correção dos blockers B1/B2 (commit 8eec148): 1826 testes / 140 arquivos / 0 falhas, coverage 85.16% lines e 84.08% branch, Storybook exit 0 (ver `test-report.json`).
 > **Emenda 2026-10-23 (fix-01-server):** seção "Emenda 2026-10-23 — cenários manuais" acrescentada ao final (cenários E1–E6b) para re-homologar o timing do push com as Alavancas 1–3 (elapsed ancorado ao clique, 202 + background, cancel-all por dono); estado da suíte da emenda no `test-report.json` (1854 testes / 140 arquivos / 0 falhas, coverage 85.33% lines e 84.14% branch).
+> **Emenda 2 — supressão com aba ativa + graça 800 ms (2026-10-29):** seção "Emenda 2 — 2026-10-29 — cenários manuais" (cenários A1–A7) acrescentada ao final — com a aba visível no zero nenhuma notificação do sistema é criada; com a aba oculta o push chega após zero + graça + FCM; re-homologação dos cenários E1–E6b com a regra nova. Estado da suíte no `test-report.json` (1871 testes / 140 arquivos / 0 falhas, coverage 85.35% lines e 84.20% branch).
 
 **Pré-requisitos comuns (homologação em produção/staging com os dois donos):**
 - Ambos os donos logados em iPhone instalado ("Adicionar à Tela Inicial", display standalone) com permissão de notificação concedida; chaves VAPID configuradas no ambiente (sem elas o agendamento responde 503 e só a camada visual funciona).
@@ -235,3 +236,44 @@
 **Dado** descanso de 90s rodando com agendamento criado (dono A no iPhone)
 **Quando** ela finaliza (cenário 14) ou cancela a execução (cenário 15) aos ~30s do descanso, e em nova rodada troca para consulta aos ~30s deixando a tela apagada (cenário 16) e substitui com nova marcação (cenário 17)
 **Então** o contrato de cancelamento segue idêntico: nenhum push após finalizar/cancelar; o push **é** entregue após a troca para consulta; um único push do novo descanso após a substituição — processável de imediato no servidor (o cancelamento não espera agendamento pendurado algum)
+
+---
+
+## Emenda 2 — 2026-10-29 — cenários manuais
+
+> **Emenda 2 da spec (supressão com aba ativa + janela de graça de 800 ms):** com a aba do treino **visível** no zero do contador, o agendamento é cancelado no servidor no tick de zero e **nenhuma notificação do sistema é criada** — só existe a camada visual; com a aba **oculta** no zero, o servidor espera a janela de graça de 800 ms após o instante de disparo antes de reler o status e enviar (entrega em zero + graça + FCM, tipicamente +1–2s, pior caso ~+2,5s — critério 13 ajustado). Os cenários acima (1–25, E1–E6b) permanecem válidos onde não conflitarem; onde conflitarem, valem estes (notavelmente o cenário E1 e o "duas camadas" do cenário 2: com aba visível no zero **não** há mais notificação do sistema). Pré-requisitos comuns idênticos aos do topo (iPhone instalado, VAPID, programa com exercícios de descanso preenchido). A causa raiz do represamento de plataforma segue em backlog — a emenda é neutra ao mecanismo.
+
+### Cenário A1: Aba visível no zero — nenhuma notificação do sistema, alerta visual permanece
+**Dado** o iPhone ou desktop do dono com o Treino do Dia em primeiro plano e a aba visível no instante em que a contagem do descanso (ex.: 30s) chega a zero
+**Quando** a contagem zera com a aba permanecendo visível
+**Então** nenhuma notificação do sistema aparece — nem no instante do zero, nem represada depois ao trocar de aba/app e voltar ao Héstia (trocar de aba após o zero e retornar não revela notificação alguma); o alerta visual `Descanso de <exercício> terminou.` permanece em tela até a pessoa tocar `Fechar`
+
+### Cenário A2: Aba oculta no zero (outra aba em foco) — notificação chega após a graça de 800 ms
+**Dado** o dono com o Treino do Dia em uma aba e **outra aba em foco** no mesmo navegador (ou o Héstia em segundo plano) no instante do zero — ex.: descanso de 90s
+**Quando** a contagem do cliente zera com a aba oculta
+**Então** a notificação `Descanso terminado` / `Descanso de <exercício> terminou.` é entregue em zero + janela de graça (800 ms) + latência FCM, tipicamente +1–2 segundos após o zero (pior caso aceito ~+2,5s); reexecutar com este build os cenários 2, 3, 4 e 5 originais (duas camadas com aba oculta, tela apagada, outra página do Héstia e outro aplicativo) confirmando a entrega
+
+### Cenário A3: iPhone com tela APAGADA no zero — notificação chega (requisito original preservado) [iPhone real]
+**Dado** o dono A com o Héstia instalado e o descanso de 90s rodando; a pessoa apaga a tela do iPhone após a marcação (sem chegar ao zero)
+**Quando** os 90 segundos se esgotam com a tela apagada
+**Então** a notificação é entregue e exibida (sem JS do cliente no zero → sem cancel → o servidor espera a graça e envia); reexecutar as seções 3 a 6 originais (tela apagada só no iPhone de A; outra página do Héstia; outro aplicativo em primeiro plano; parceiro espectador nunca recebe) com o build da Emenda 2 — todos os quatro comportamentos de entrega permanecem idênticos
+
+### Cenário A4: iPhone/desktop com tela LIGADA e app VISÍVEL no zero — só camada visual
+**Dado** o dono com o Treino do Dia aberto, tela ligada, aba do Héstia visível no instante do zero
+**Quando** a contagem zera
+**Então** nenhuma notificação do sistema é criada; o alerta visual cobre o fim do descanso (a pessoa o descarta com `Fechar` e segue treinando); o aparelho permanece silencioso para aquele descanso mesmo que a pessoa troque de aba minutos depois
+
+### Cenário A5: Cancel falhado ou corrida perdida no zero (rede ruim) — notificação pode aparecer (aceito)
+**Dado** descanso rodando e a conexão do aparelho degradada ou caindo exatamente no momento do zero, com a aba visível
+**Quando** a contagem zera e o cancelamento disparado pelo cliente não chega ao servidor a tempo (rede pobre ou indisponível)
+**Então** o alerta visual aparece normalmente em tela e **pode** ocorrer de a notificação do sistema também chegar (aceito como contrato — mesma classe da falha de cancelamento já tolerada); nenhuma falha de aplicação é visível e a marcação/contagem seguinte segue normalmente
+
+### Cenário A6: Reload ou fechar ANTES do zero — notificação dispara no horário (decisão 6 preservada)
+**Dado** descanso de 90s rodando com agendamento criado no servidor (ex.: 30s decorridos)
+**Quando** a pessoa recarrega a página ou fecha o app **antes** do zero (sem que o tick de zero rode)
+**Então** nenhum cancel é disparado (sem tick, sem decisão): o push vigente dispara no horário previsto — chega após zero + graça (800 ms) + FCM, servindo de aviso do descanso que a pessoa perdeu de vista; a contagem visual não é restaurada ao reabrir (Alternativa 1, intacta)
+
+### Cenário A7: Re-homologação completa da Emenda 1 (E1–E6b) com a regra nova do cancel no zero visível [iPhone real]
+**Dado** os mesmos aparatos e preparação da seção "Emenda 2026-10-23 — cenários manuais" (dono A e dono B, iPhone instalado, VAPID, descansos preenchidos)
+**Quando** a pessoa re-executa com este build os cenários E1 (push na janela do zero), E2 (reload no meio — push antigo nunca chega), E3 (duas abas — só o último agendamento dispara), E4 (rede lenta — elapsed compensa), E5 (descanso > janela do servidor — decisão 7), E6 (entrega tela apagada/outra página/outra aplicativo/parceiro) e E6b (cancelamento efetivo sem órfão)
+**Então** todos seguem válidos sob a regra nova — com o ajuste do critério 15: no E1, se a aba estava **visível** no zero, agora **não** há notificação do sistema (só o alerta visual); o push na janela do zero do E1 só se observa com a aba **oculta** no zero (entrega em zero + graça + FCM, ±1–2s); E2–E6b permanecem sem mudança observável (todos partem de aba oculta/tela apagada ou de cancelamentos prévios ao zero)

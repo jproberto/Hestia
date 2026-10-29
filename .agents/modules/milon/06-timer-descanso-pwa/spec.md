@@ -1,6 +1,6 @@
 # Spec: Timer de descanso auto + PWA push
 
-> **Contém a Emenda 2026-10-23 — correção de temporização do push** (3 alavancas aprovadas pelo humano: relógio de referência no clique com campo `elapsed`, resposta 202 imediata com espera em background, cancel-all por dono no INSERT). Em caso de conflito com o texto anterior, vale a emenda — ver seção própria.
+> **Contém a Emenda 2026-10-23 — correção de temporização do push** (3 alavancas aprovadas pelo humano: relógio de referência no clique com campo `elapsed`, resposta 202 imediata com espera em background, cancel-all por dono no INSERT) e a **Emenda 2 — 2026-10-23 — supressão da notificação com aba ativa + janela de graça no servidor** (com a aba visível no zero, cancel do agendamento sem criar a notificação; com a aba oculta, espera de 800ms no servidor antes de reler o status e enviar). Em caso de conflito com o texto anterior, vale a emenda mais recente — ver seções próprias.
 
 ## 1. Problema Real
 
@@ -26,7 +26,7 @@ Cenário 4: descanso ausente ou zerado. Exercício com `restSeconds` nulo ou zer
 
 Cenário 5: instalação do app no iPhone. Para o push funcionar, a pessoa precisa ter o Héstia em "Adicionar à Tela Inicial" e concedido a permissão de notificação por gesto; o fluxo da feature instrui essa instalação e esse gesto, sem bloquear a marcação se ela não acontecer.
 
-Jornada passo a passo: a pessoa abre o Treino do Dia, tem o treino com execução aberta ou inicia pela primeira marcação (regras da #5 e #7c intactas). Ao conceder permissão (uma vez por dispositivo), a assinatura de push do dispositivo fica registrada. Ao tocar no card de uma série desmarcada, o `toggleSeries` marca a série e, se a entrada daquele exercício tiver `restSeconds` maior que zero, o timer inicia no cliente e o fim do descanso é agendado no servidor para o instante T mais `restSeconds`. A contagem regressiva corre no cliente para a camada visual. Ao chegar a zero, as duas camadas disparam: aviso visual na interface (aba visível) e push de servidor (tela apagada, outra página ou outro app). A pessoa retoma a próxima série. O timer de cliente não altera execução, marcações, selamento nem rotação; o único dado persistente novo é assinatura e agendamento de push (migração 0017).
+Jornada passo a passo: a pessoa abre o Treino do Dia, tem o treino com execução aberta ou inicia pela primeira marcação (regras da #5 e #7c intactas). Ao conceder permissão (uma vez por dispositivo), a assinatura de push do dispositivo fica registrada. Ao tocar no card de uma série desmarcada, o `toggleSeries` marca a série e, se a entrada daquele exercício tiver `restSeconds` maior que zero, o timer inicia no cliente e o fim do descanso é agendado no servidor para o instante T mais `restSeconds`. A contagem regressiva corre no cliente para a camada visual. Ao chegar a zero, as duas camadas disparam: aviso visual na interface (aba visível) e push de servidor (tela apagada, outra página ou outro app). **Emenda 2 — 2026-10-23:** no zero com a aba visível só existe a camada visual — a notificação do sistema não é criada (cancel do agendamento no servidor no tick de zero); com a aba oculta, o push segue do servidor, entregue em zero + janela de graça (800ms) + latência FCM. A pessoa retoma a próxima série. O timer de cliente não altera execução, marcações, selamento nem rotação; o único dado persistente novo é assinatura e agendamento de push (migração 0017).
 
 Estados de tela: o timer é estado de cliente, sem novo estado assíncrono de carga remota. O aviso visual segue a linguagem de feedback do módulo (cor do Mílon, tokens de conteúdo). Erros de operação de marcação continuam no banner de operação da #5, sem relação nova com o timer. O aviso de fim de descanso não é banner de erro nem de sucesso do hook — é componente de feedback próprio da feature. Falha ao agendar ou enviar push nunca bloqueia nem falha a marcação: a camada visual é a garantia de feedback com a aba visível; a camada de push é melhor esforço sujeita à plataforma.
 
@@ -43,10 +43,10 @@ Estados de tela: o timer é estado de cliente, sem novo estado assíncrono de ca
 ### Aviso no fim do descanso — duas camadas
 
 - **Camada 1, sempre que a aba estiver visível:** aviso visual no Treino do Dia indicando que o descanso do exercício terminou. Não abre modal, não navega, não muda foco de forma destrutiva, não marca nem desmarca série sozinho. A pessoa pode ignorar e continuar; marcar a próxima série a qualquer momento é sempre permitido.
-- **Camada 2, com tela apagada, em outra página do Héstia ou em outro aplicativo:** push de servidor (Web Push com VAPID) entregue no instante do fim do descanso, exibido como notificação pelo sistema no iPhone do usuário (e em Android), **exclusivamente para o dono que iniciou o timer/execução** — o casal pode consultar o treino um do outro, mas o parceiro espectador nunca recebe esse push. O envio é sempre do servidor: os serviços de push removeram CORS e o cliente não pode enviar push sozinho.
+- **Camada 2, com tela apagada, em outra página do Héstia ou em outro aplicativo:** push de servidor (Web Push com VAPID) entregue no instante do fim do descanso, exibido como notificação pelo sistema no iPhone do usuário (e em Android), **exclusivamente para o dono que iniciou o timer/execução** — o casal pode consultar o treino um do outro, mas o parceiro espectador nunca recebe esse push. O envio é sempre do servidor: os serviços de push removeram CORS e o cliente não pode enviar push sozinho. **Emenda 2 — 2026-10-23:** a camada 2 só existe quando a aba está oculta no zero — nesse caso o servidor espera a janela de graça de 800ms após o instante de disparo antes de reler o status e enviar (entrega em zero + graça + FCM); com a aba visível no zero, o agendamento é cancelado no cliente e nenhuma notificação do sistema é criada.
 - O service worker do app **exibe obrigatoriamente a notificação ao receber o push** — no iOS, push recebido sem exibição faz o Safari revogar a permissão de notificação do app. Esse tratamento é requisito do handler de push, não opcional.
 - O conteúdo da notificação nomeia o contexto mínimo: que o descanso do exercício terminou. Mesma semântica da camada 1.
-- Duas camadas podem ocorrer na mesma finalização do descanso (push com aba visível também chega); não há conflito — o usuário descarta ambos.
+- Duas camadas podem ocorrer na mesma finalização do descanso (push com aba visível também chega); não há conflito — o usuário descarta ambos. **Emenda 2 — 2026-10-23 (substitui o parêntese acima):** com a aba **visível** no instante do zero a notificação do sistema **não é criada** (cancel do agendamento no servidor no tick de zero), então existe só a camada visual; as duas camadas coincidem apenas quando a aba está **oculta** no zero e o push chega depois (zero + graça + FCM).
 
 ### Infraestrutura PWA + push (pré-requisito obrigatório)
 
@@ -100,8 +100,9 @@ Fora, item por item: descanso por série (só por entry, como já é); múltiplo
 | 10 | Dado o app sem instalação no iPhone, sem permissão de notificação ou sem service worker registrado, quando o timer termina com a aba em primeiro plano, então o aviso visual em tela ainda ocorre; a marcação nunca é impedida por falta de instalação ou permissão | Manual |
 | 11 | Dado o fluxo de marcação, desmarcação, finalizar, cancelar e rotação existentes, quando comparo com o comportamento anterior à feature, então nada mudou além do timer, do agendamento e dos avisos | Manual e automatizado (regressão) |
 | 12 | Suíte completa verde, sem quebra de testes existentes, cobertura mantida em pelo menos oitenta por cento, relatório de testes regenerado antes da revisão | Automatizado |
-| 13 | Dado o clique que inicia o timer, quando o POST de agendamento é disparado, então o push mira o mesmo instante físico do zero do contador (clique + duração), com viés máximo de ±1–2s (limite FCM/APNs); `elapsed` ausente mantém o comportamento retrocompatível (agora + duração) | Automatizado (contrato do cálculo do instante de disparo) e manual (homologação com dispositivo real — Emenda 2026-10-23) |
+| 13 | Dado o clique que inicia o timer, quando o POST de agendamento é disparado, então o push mira o mesmo instante físico do zero do contador (clique + duração), com viés composto no cenário de aba oculta por zero + janela de graça do servidor (800ms) + latência FCM/APNs (~0,5–1,5s) → tipicamente +1–2s e pior caso ~+2,5s aceito; `elapsed` ausente mantém o comportamento retrocompatível (agora + duração) — **Emenda 2 — 2026-10-23** | Automatizado (contrato do cálculo do instante de disparo e da janela de graça) e manual (homologação com dispositivo real — Emendas 2026-10-23) |
 | 14 | Dado o POST de agendamento, quando o servidor responde, então a resposta é imediata (202) com o corpo expondo o estado `agendado` — a resposta não significa "enviado"; `sent_at` só é preenchido após o envio real em background; o `cancel` é processável de imediato, sem fila atrás de POSTs pendurados | Automatizado (contrato da rota — Emenda 2026-10-23) |
+| 15 | Dado o timer chegando a zero, quando a aba do treino está visível no instante do zero, então NENHUMA notificação do sistema é criada — o agendamento é cancelado no servidor no tick de zero e o alerta visual "Descanso terminado" permanece na tela; quando a aba está oculta, fechada, é outro app ou a tela está apagada, o push chega em zero + janela de graça (800ms) + latência FCM (~+1–2s, pior caso ~+2,5s) | Manual (dispositivo real, alternando a visibilidade da aba no zero) e automatizado (contrato do cancel no zero com `visible` e da janela de graça do servidor — Emenda 2 — 2026-10-23) |
 
 ## 6. Riscos e Dependências
 
@@ -238,6 +239,100 @@ As linhas correspondentes da tabela de critérios (seção 5) e da tabela de edg
 
 **Nenhuma decisão pendente permanece aberta nesta emenda.**
 
+## Emenda 2 — 2026-10-23 — supressão da notificação com aba ativa + janela de graça no servidor
+
+**Status:** emenda aprovada pelo humano em 2026-10-23 (delegação a Hera, sem decisão própria). Substitui, em caso de conflito, os pontos de contrato listados nesta seção; todo o resto da spec permanece válido, inclusive a Emenda 2026-10-23 (Alavancas 1–3) e as decisões de 2026-10-16. As duas emendas convivem: a Emenda 2 altera apenas (a) quem decide o envio no instante do zero e (b) quando o servidor re-lê o status antes de enviar.
+
+### Contexto (defeito real de homologação da Emenda 1)
+
+Após a homologação da Emenda 1 (elapsed, resposta 202, cancel-all), o humano rodou 4 testes alternados:
+
+1. Clicou, ficou na aba ATIVA o tempo todo → timer zerou e **nenhuma notificação do sistema apareceu**;
+2. Clicou na 2ª série e TROCOU de aba → notificação apareceu **imediatamente** (como se vinda do zero anterior) e depois outra no tempo correto;
+3. Clicou e trocou → nenhuma imediata; notificação no tempo correto;
+4. Clicou e ficou ATIVO → nada no zero; **trocou de aba depois (sem clicar) → notificação imediata**.
+
+Diagnóstico consolidado: o toast do sistema fica **REPRESADO enquanto a aba do treino está visível** e é exibido ao trocar de aba (correlação forte com a visibilidade no instante do zero). O servidor envia no horário correto — o bloqueio é na exibição. O mecanismo exato de plataforma está em pesquisa de fundo e a emenda é **neutra a ele** (não depende do mecanismo — ver "Decisão fora desta emenda" abaixo).
+
+**Decisão do humano registrada (2026-10-23):** "se eu mantive a aba ativa, a notificação não precisa ser criada." Confirmado possível e adotado como contrato: **se a aba do treino está visível no zero, a notificação do sistema não é criada**; com a aba oculta, o servidor segue sendo o responsável pelo envio.
+
+### Mecanismo 1 — cliente: o tick de zero decide (supressão por visibilidade)
+
+- No instante em que `remainingSeconds` chega a 0 (tick de zero do `useRestTimer`), o cliente observa `document.visibilityState`:
+  - **`visible` (aba do treino visível no zero):** cancela o agendamento no servidor — reusa a ação `cancel` existente com o `scheduleId` da sessão, em fire-and-forget —, de modo que a notificação do sistema **não será criada**. **O estado visual não pode ser destruído:** o alerta "Descanso terminado" (estado `finished`) e o painel permanecem exatamente como hoje. A semântica nova desse cancel é "**cancela o agendamento mantendo o alerta visual**" — diferente do `cancel()` de encerramento silencioso (finalizar, cancelar treino), que zera a UI também. Depois do cancel, o `scheduleIdRef` da sessão é **limpo**, para que um novo `start` não cancele nada por engano.
+  - **`hidden` (ou qualquer outro valor):** **não faz nada** — o servidor segue responsável pelo envio. É o caso em que o toast é desejado: outra aba, outro app, tela apagada, app fechado.
+- O tomador de decisão é **só** o tick de zero de um timer ATIVO — ver edge cases: reload e fechamento sem chegar ao zero não cancelam, e a decisão 6 de 2026-10-16 permanece intacta.
+
+### Mecanismo 2 — servidor: janela de graça antes do envio
+
+- Hoje a callback de `after()` dorme até `fire_at` e **imediatamente** re-lê o status. Passa a: dormir até `fire_at`, esperar a **janela de graça `JANELA_GRACA_ENVIO_MS = 800`** (constante nomeada; **800ms congelados nesta spec**) e **só então** re-ler o agendamento (`findRestScheduleById`).
+- Se o status lido for diferente de `agendado` (o cancel do cliente chegou) → **não envia**. Se `agendado` → envia normalmente.
+- A graça existe para que o cancel do cliente (disparado ~no zero, RTT de dezenas de ms) chegue **antes** do envio.
+- Nada mais muda no background: resposta `202`, `sent_at`, cancel-all por dono, TTL e re-leitura de status seguem a Emenda 1.
+
+### Mecanismo 3 — tolerância total do envio (caso oculto)
+
+- No caso oculto o envio é zero + graça (800ms) + latência FCM (~0,5–1,5s) → tipicamente **+1–2s**, pior caso **~+2,5s** — dentro da tolerância já aprovada (±1–2s, pior ~+2,5s aceito).
+- O critério 13 da Emenda 1 é ajustado para refletir a graça na composição do viés (ver seção 5 e a tabela de critérios desta emenda).
+
+### Edge cases da emenda (cobertos como contrato)
+
+| Cenário | Comportamento esperado |
+|---|---|
+| Aba do treino visível no zero | Cancel no servidor disparado no tick de zero → **nenhuma notificação do sistema é criada**; alerta `finished` e painel intactos |
+| Aba oculta, outro app, tela apagada ou app fechado no zero | Sem cancel (o servidor é o responsável); envio após a janela de graça de 800ms |
+| Corrida perdida (cancel demorou mais que 800ms / rede ruim) | O servidor já enviou → notificação extra rara; **aceita** — mesma classe da "falha no cancelamento" já tolerada |
+| Cancel falhou (rede/offline no zero) | Idem: o toast pode aparecer; **aceito** e observável (log) |
+| Aba fica visível ENTRE zero e graça (tick rodou com `hidden`, usuário voltou em menos de 800ms) | Sem cancel (o tick já decidiu) → o envio acontece; se a aba estiver visível na exibição, o toast pode represar — caso raro, **aceito e registrado** |
+| Reload ou fechar sem chegar ao zero | Decisão 6 preservada: o tomador de decisão é **só** o tick de zero de um timer ATIVO; reload perde o timer em memória e portanto **não cancela**; o push antigo dispara normalmente. O cancel-all da Emenda 1 continua valendo para novas marcações |
+| Substituição (marca série B durante descanso de A) | Inalterado — cancel do agendamento do A na hora do start do B |
+| Finalizar ou cancelar treino no meio do descanso | Inalterado — `cancel()` completo (zera a UI também) |
+| iPhone com tela APAGADA no zero | JS suspenso, o tick **não roda** → sem cancel → o servidor envia → APNs entrega — **o requisito original de tela apagada é preservado** |
+| iPhone/desktop com tela ligada e app VISÍVEL no zero | Cancel → sem toast; o alerta visual em tela (camada 1) é o aviso — o "evento" de tela cheia continua coberto |
+| Browser fechado no zero | Sem tick → o servidor envia |
+| Split-screen visível no zero | `visible` → cancel (o usuário está vendo o timer) |
+| `dismiss` do painel | Inalterado (só limpa `finished`) |
+| Duplicatas (notificação represada que aparece depois ao trocar de aba) | Com o cancel no zero visível o cenário **some**: não há notificação criada para represar |
+
+### Decisão fora desta emenda (auditoria — registrado como tal, não é hipótese aberta)
+
+| Decisão | Resultado |
+|---|---|
+| Investigar a causa raiz exata do represamento da notificação pelo sistema (research em curso) | **Fora desta emenda — fica em backlog**; a emenda é neutra ao mecanismo (não depende do mecanismo exato de plataforma) e a investigação **não é pré-condição** dela |
+
+### O que NÃO muda com esta emenda (reafirmado)
+
+Tudo da Emenda 2026-10-23 (Alavancas 1–3) permanece:
+
+- `elapsed` ancorado ao clique do usuário, com retrocompat quando ausente — mantido.
+- Cancel-all por dono no INSERT (invariante: no máximo 1 agendamento `agendado` por `created_by`) — mantido.
+- Resposta `202` imediata com espera/re-leitura/envio em background via `after()`, `sent_at` como marca do envio real e `cancel` processável de imediato — mantidos.
+- Decisão 7 (2026-10-16): descanso acima da janela da função entrega no fim da janela com `min(restante, 280s)` — mantida.
+- TTL 300s, payloads e textos da notificação — mantidos.
+- Respostas `401`, `400`, `403` e `503` — mantidas.
+- RLS e dono por email; cancel-by-owner-and-status — mantidos; destinatário exclusivo continua sendo o dono que iniciou o timer (parceiro espectador nunca recebe) — mantido.
+- Decisão 6 (2026-10-16): reload ou fechar sem chegar ao zero → o push dispara — mantida (só o tick de zero decide a supressão).
+- Substituição por nova marcação: cancel do agendamento anterior no start do novo — inalterado.
+- Finalizar/cancelar treino (e confirmar o cancelamento da última série): `cancel()` completo, zera UI e push — inalterado.
+- PWA mínimo, exibição obrigatória da notificação pelo service worker, instrução de instalação no iPhone, migração única 0017 e "falha de push nunca bloqueia a marcação" — mantidos.
+
+### Critérios de aceite afetados pela emenda (substituição textual)
+
+| Critério anterior (resumo) | Novo critério (vale daqui em diante) |
+|---|---|
+| Critério 13 (Emenda 1): viés máximo ±1–2s (limite FCM/APNs) | Viés composto no cenário de aba oculta: zero + **janela de graça de 800ms** + latência FCM (~0,5–1,5s) → tipicamente **+1–2s**, pior caso **~+2,5s aceito**; `elapsed` ausente mantém o comportamento retrocompatível |
+| Push do fim do descanso sempre enviado no zero | **Critério 15 (novo):** com a aba do treino visível no zero, **nenhuma notificação do sistema é criada**; com a aba oculta/fechada, o push chega em zero + graça (800ms) + FCM (~+1–2s) |
+
+As linhas correspondentes da tabela de critérios (seção 5) já refletem estas substituições.
+
+### Decisões resolvidas (humano, 2026-10-23 — Emenda 2)
+
+| # | Decisão | Resolução do humano |
+|---|---|---|
+| 2b/2c | Supressão da notificação com aba ativa + janela de graça no servidor | "se eu mantive a aba ativa, a notificação não precisa ser criada" → **adotado como contrato**: no zero com a aba visível, cancel do agendamento no servidor preservando o alerta visual (nenhuma notificação criada); com a aba oculta, o servidor envia após janela de graça de **800ms** (valor congelado na spec) |
+
+**Nenhuma decisão pendente permanece aberta nesta emenda.**
+
 ## Modelo de Domínio
 
 Entidades existentes, sem alteração nesta feature:
@@ -248,7 +343,7 @@ Entidades novas, persistidas pela migração 0017 (descrição conceitual, sem d
 
 Assinatura de push: registro por dispositivo de um dono, criado quando o usuário concede permissão no app instalado; guarda o material de inscrição de notificação do navegador naquele aparelho. Cada dono pode ter uma ou mais assinaturas (um por dispositivo); nunca é compartilhada entre os dois donos.
 
-Agendamento de push de descanso: registro do fim do descanso pendente, associado a uma assinatura de um dono e originado por uma marcação de série; tem o instante de disparo (marcação mais a duração da entry) e um estado de ativo ou cancelado/entregue. O destinatário do push é exclusivamente o dono que iniciou o timer/execução — o dono do treino, o mesmo da marcação; o agendamento nunca se destina ao parceiro espectador. **Emenda 2026-10-23: no máximo um agendamento ativo por dono (invariante no servidor via cancel-all no INSERT — `created_by`)**, cancelado em todo encerramento silencioso (finalizar, cancelar, confirmar cancelamento da última série — nunca na troca de treino para consulta); o texto anterior "por sessão de cliente, substituído em nova marcação" é substituído por esta invariante. O instante de disparo é ancorado ao clique do usuário via `elapsed` (ver emenda); `sent_at` continua a marca do envio real, preenchida só em background.
+Agendamento de push de descanso: registro do fim do descanso pendente, associado a uma assinatura de um dono e originado por uma marcação de série; tem o instante de disparo (marcação mais a duração da entry) e um estado de ativo ou cancelado/entregue. O destinatário do push é exclusivamente o dono que iniciou o timer/execução — o dono do treino, o mesmo da marcação; o agendamento nunca se destina ao parceiro espectador. **Emenda 2026-10-23: no máximo um agendamento ativo por dono (invariante no servidor via cancel-all no INSERT — `created_by`)**, cancelado em todo encerramento silencioso (finalizar, cancelar, confirmar cancelamento da última série — nunca na troca de treino para consulta); o texto anterior "por sessão de cliente, substituído em nova marcação" é substituído por esta invariante. O instante de disparo é ancorado ao clique do usuário via `elapsed` (ver emenda); `sent_at` continua a marca do envio real, preenchida só em background. **Emenda 2 — 2026-10-23:** o agendamento é cancelado também pelo tick de zero do timer quando a aba do treino está visível (supressão da notificação do sistema), sem destruir o alerta visual do cliente.
 
 Timer de descanso: estado transitório de cliente (contagem visual), não é entidade persistida; duração capturada do `restSeconds` da entry no momento do início.
 
@@ -313,6 +408,8 @@ Timer de descanso: um por sessão de cliente, duração vinda da entrada, sem li
 | Dois dispositivos do mesmo dono | Cada dispositivo com a própria assinatura; o agendamento segue a assinatura do dispositivo da marcação |
 | Fuso, clock-skew entre cliente e servidor, sono prolongado do celular, `elapsed` inválido ou exagerado | Relógio de referência é o **clique do usuário**: o `elapsed` é medido no cliente e só a diferença é usada — imune a clock-skew entre cliente e servidor (Emenda 2026-10-23); `elapsed` negativo ou não-numérico trata como 0 (idem ao campo ausente: agora + duração); `elapsed ≥ duração` (ou aba suspensa entre clique e POST) → envio imediato (`fire_at = agora`); viés aceitável do push é ±1–2s do zero do contador (limite físico FCM/APNs); perfeição de relógio continua YAGNI |
 | Falha ao registrar service worker, solicitar permissão ou instalar | Aviso visual em tela ainda ocorre com a aba visível; fluxo de marcação nunca falha por isso |
+| Aba do treino visível no instante do zero do contador | Cancel do agendamento no servidor disparado no tick de zero → **nenhuma notificação do sistema é criada**; o alerta visual "Descanso terminado" e o painel permanecem intactos (Emenda 2 — 2026-10-23) |
+| Aba oculta, outro app, tela apagada ou app fechado no instante do zero | Sem cancel no zero (o servidor é o responsável pelo aviso); o envio acontece após a janela de graça de 800ms — push em zero + graça + FCM (~+1–2s, pior ~+2,5s) (Emenda 2 — 2026-10-23) |
 
 ## Decisões resolvidas (humano, 2026-10-16)
 
@@ -338,8 +435,14 @@ Registro de aprovação: o humano autorizou prosseguir sem aguardar nova leitura
 
 Após homologação real que encontrou notificação intermitente fora do zero do contador, o humano aprovou as 3 alavancas da Emenda 2026-10-23 (relógio de referência no clique com `elapsed`, resposta 202 imediata com espera em background, cancel-all por dono no INSERT) e rejeitou o híbrido (camada client de notificação) e o 100% cliente — server-side permanece o único caminho de entrega. Contador visual por timestamp absoluto ficou fora desta emenda, como candidato a backlog. **Nenhuma decisão pendente aberta** — tabela completa na seção "Emenda 2026-10-23".
 
+### Decisões resolvidas (humano, 2026-10-23 — Emenda 2, supressão com aba ativa)
+
+Após a homologação da Emenda 1, o humano reportou o defeito do toast represado com aba visível e decidiu (2b/2c): **"se eu mantive a aba ativa, a notificação não precisa ser criada"** — supressão por visibilidade no tick de zero (cancel do agendamento mantendo o alerta visual) somada à **janela de graça de 800ms no servidor** antes do envio. A investigação da causa raiz exata do represamento em plataforma ficou em backlog, registrada como decisão fora — a emenda é neutra ao mecanismo e a investigação não é pré-condição. **Nenhuma decisão pendente aberta** — tabela completa na seção "Emenda 2 — 2026-10-23".
+
 ## 8. Alternativas Consideradas — síntese para Atena
 
 Decisão humana de 2026-10-16 fecha o mecanismo: **Alternativa C — push de servidor (Web Push com VAPID) + PWA mínimo como pré-requisito**, com a Alternativa A mantida como camada 1 (aviso visual em tela com a aba visível, só card/banner) e a Alternativa B descartada. O estado do timer segue a **Alternativa 1** (contagem em cliente, inclusive durante troca de treino para consulta; o push agendado no servidor é o aviso de segundo plano e dispara mesmo com o app fechado). Hospedagem do envio: route handler na Vercel, com Supabase Edge Functions descartada. Migração única esperada: 0017. Destinatário do push: somente o dono que iniciou o timer. **Todas as 7 decisões de micro-UX/escopo foram resolvidas pelo humano no approve-spec de 2026-10-16 (ver seção "Decisões resolvidas") — nenhuma decisão pendente aberta.** O humano autorizou o prosseguimento direto para o planejamento da Atena e, após ele, para a implementação, sem nova aprovação de spec.
 
 **Emenda 2026-10-23** ajusta o contrato de temporização sem mudar o mecanismo: `elapsed` ancorado ao clique do usuário (viés ±1–2s, limite FCM), resposta `202` imediata com espera/envio em background, cancel-all por dono no INSERT (invariante de no máximo 1 `agendado` por `created_by`), cancel processável de imediato; híbrido e 100% cliente rejeitados — ver seção da emenda para o contrato completo, edge cases e decisões A1–A6.
+
+**Emenda 2 — 2026-10-23** ajusta a decisão de envio no zero sem mudar o mecanismo de entrega: com a aba do treino visível no zero, o cliente cancela o agendamento no servidor (semântica nova: cancelar mantendo o alerta visual) e **nenhuma notificação do sistema é criada**; com a aba oculta, o servidor espera a janela de graça de 800ms antes de reler o status e enviar (entrega em zero + graça + FCM, tipicamente +1–2s, pior ~+2,5s). Reload ou fechamento sem chegar ao zero seguem a decisão 6 (sem cancel); iPhone com tela apagada no zero segue sem tick e com envio do servidor — requisito original de tela apagada preservado. Causa raiz exata do represamento em plataforma: fora, em backlog (a emenda é neutra ao mecanismo). Ver seção da emenda para o contrato completo, edge cases e decisão 2b/2c.

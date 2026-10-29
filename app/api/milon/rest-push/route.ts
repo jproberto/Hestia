@@ -1,5 +1,5 @@
 // Primeiro route handler do app (Mílon #06, TASK-008 + Emenda 2026-10-23,
-// TASK-021):
+// TASK-021 + Emenda 2 — janela de graça, TASK-026):
 // POST /api/milon/rest-push com as ações `schedule` e `cancel`.
 //
 // Contrato emendado (plan §Emenda — Alavancas 1–3, DA16–DA18): dono
@@ -15,8 +15,10 @@
 // e responde `202` imediatamente com `{scheduleId, status: "agendado"}` — a
 // resposta não espera o envio e `202` não significa "enviado". A callback de
 // background espera até `fire_at` (cap de 280 s sob o limite de 300 s da
-// função — F6/DA9, decisão 7 intacta), re-lê o status (mata push órfão) e
-// envia; 404/410 remove a assinatura morta; demais falhas viram erro com log
+// função — F6/DA9, decisão 7 intacta), espera a janela de graça de 800 ms
+// (Emenda 2 — DA22: o cancel do cliente no zero com aba visível chega antes
+// do envio), re-lê o status (mata push órfão) e envia; 404/410 remove a
+// assinatura morta; demais falhas viram erro com log
 // (nunca exceção escapando da callback — DA13). `sent_at` é preenchido só por
 // `markRestScheduleSent` após o envio real. O `cancel` permanece síncrono no
 // request (`200` `{scheduleId, cancelled}`).
@@ -52,6 +54,11 @@ export const maxDuration = 300;
 
 // Margem de segurança sob o limite real de 300 s (DA9).
 const JANELA_ESPERA_MS = 280_000;
+// Janela de graça da Emenda 2 (Mecanismo 2 / DA22 — valor congelado na spec):
+// espera-se após a janela ANTES da re-leitura para que o cancel do cliente
+// (disparado ~no zero com aba visível, RTT de dezenas de ms) chegue ao
+// servidor antes de qualquer envio.
+const JANELA_GRACA_ENVIO_MS = 800;
 const DURACAO_MIN_SEGUNDOS = 1;
 const DURACAO_MAX_SEGUNDOS = 86_400;
 
@@ -220,9 +227,15 @@ async function agendar(
       const restanteMs = new Date(fireAt).getTime() - Date.now();
       await dormir(Math.min(Math.max(restanteMs, 0), JANELA_ESPERA_MS));
 
-      // Re-leitura: um cancelamento (ou cancel-all de novo agendamento do
-      // dono) durante a espera não pode virar push órfão. Sem linha (ex.:
-      // remoção em cascata) o desfecho é o mesmo de cancelado: nunca enviar.
+      // Janela de graça da Emenda 2 (DA22): composta DEPOIS da espera (e
+      // depois do cap, nunca dentro) — o cancel do cliente no zero com aba
+      // visível chega ao servidor dentro dela.
+      await dormir(JANELA_GRACA_ENVIO_MS);
+
+      // Re-leitura (pós-graça): um cancelamento (ou cancel-all de novo
+      // agendamento do dono) durante a espera não pode virar push órfão. Sem
+      // linha (ex.: remoção em cascata) o desfecho é o mesmo de cancelado:
+      // nunca enviar, terminando sem espera adicional (a graça é UMA).
       const atual = await findRestScheduleById(db, scheduleId);
       if (!atual || atual.status !== "agendado") return;
 

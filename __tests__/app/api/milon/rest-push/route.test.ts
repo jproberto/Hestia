@@ -15,6 +15,16 @@
  * registrado e `cancelAllRestSchedulesByOwner` nunca chamado. Hefesto fará
  * GREEN na TASK-021 apenas com o contrato da emenda — sem inventar APIs.
  *
+ * Emenda 2 — 2026-10-23 (Mecanismo 2 / DA22, RED da TASK-025): a callback de
+ * `after()` passa a dormir até `fire_at` (cap `JANELA_ESPERA_MS` = 280000
+ * intacto), esperar a janela de graça `JANELA_GRACA_ENVIO_MS = 800` (constante
+ * nomeada congelada na spec) e SÓ ENTÃO re-ler `findRestScheduleById` —
+ * composição da espera `min(max(fire_at − agora, 0), 280_000) + 800`. Status ≠
+ * 'agendado' ou linha nula → termina sem envio e SEM espera adicional (a graça
+ * é UMA na composição — nenhuma segunda graça). Os casos da seção 13 + os casos
+ * de envio da seção 4 (fire_at exato) falham até a TASK-026 (a rota ainda re-lê
+ * em `fire_at` puro, sem graça).
+ *
  * Alavancas sob teste:
  * - Alavanca 1 (DA16): `elapsed` opcional no corpo de `schedule` (ms; número
  *   finito ≥ 0 → usado; ausente/negativo/não-numérico/não-finito → 0, retro-
@@ -72,6 +82,8 @@
  *   TTL 300 e VAPID details observados no `sendNotification`.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import { POST, maxDuration } from "@/app/api/milon/rest-push/route";
 import { createClient } from "@/utils/supabase/server";
 import { SupabaseDatabaseClient } from "@/lib/shared/supabaseClient";
@@ -180,6 +192,17 @@ const EXERCICIO = "Supino reto";
 // `fire_at` e da janela de espera.
 const AGORA = new Date("2026-10-18T12:00:00.000Z");
 const JANELA_MS = 280_000; // margem sob o limite real de 300 s (F6, DA9)
+// Janela de graça da Emenda 2 (Mecanismo 2 / DA22 — valor 800 ms CONGELADO na
+// spec): espelha `JANELA_GRACA_ENVIO_MS` de app/api/milon/rest-push/route.ts.
+// Composição da espera: `min(max(fire_at − agora, 0), 280_000) + 800` — a
+// re-leitura de status do background acontece SÓ após a graça (fire_at + 800),
+// nunca em fire_at puro; ela é UMA na composição (cancelado/nula terminam sem
+// espera adicional).
+const JANELA_GRACA_ENVIO_MS = 800;
+
+// Raiz do projeto (leitura da fonte da rota — mesmo padrão de
+// `__tests__/lib/shared/error-origin.test.ts`).
+const RAIZ = path.resolve(__dirname, "../../../../..");
 
 const SUBJECT = "mailto:dono@hestia.lan";
 const VAPID_PUBLIC = "chave-publica-vapid";
@@ -516,7 +539,7 @@ describe("Mílon #06 — POST /api/milon/rest-push (contrato RED emendado, TASK-
       expect(typeof afterMock.mock.calls[0][0]).toBe("function");
     });
 
-    it("a callback de background sem avanço de timers não envia; após avançar até fire_at envia e marca enviado", async () => {
+    it("a callback de background sem avanço de timers não envia; em fire_at exato a graça ainda pendura (sem envio); após JANELA_GRACA_ENVIO_MS envia e marca enviado", async () => {
       const { respondeu, response } = await scheduleSemEsperar(
         corpoSchedule({ durationSeconds: 90 }),
       );
@@ -528,7 +551,15 @@ describe("Mílon #06 — POST /api/milon/rest-push (contrato RED emendado, TASK-
       // Sem avanço de relógio a espera não terminou: nenhum envio ainda.
       expect(sendNotificationMock).not.toHaveBeenCalled();
 
+      // Até fire_at EXATO a janela de graça da Emenda 2 ainda não venceu
+      // (DA22): o envio só pode acontecer após `fire_at + 800 ms`.
       await vi.advanceTimersByTimeAsync(90_000);
+      expect(
+        sendNotificationMock,
+        "em fire_at exato a janela de graça (JANELA_GRACA_ENVIO_MS = 800) ainda não venceu — nenhum envio antes dela (Mecanismo 2 da Emenda 2)",
+      ).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(JANELA_GRACA_ENVIO_MS);
       await background;
 
       expect(sendNotificationMock).toHaveBeenCalledTimes(1);
@@ -540,7 +571,7 @@ describe("Mílon #06 — POST /api/milon/rest-push (contrato RED emendado, TASK-
       expect(markRestScheduleFailed).not.toHaveBeenCalled();
     });
 
-    it("janela da espera em background: durationSeconds 400 espera o cap de 280 s — não envia antes, envia ao fim da janela (decisão 7 intacta)", async () => {
+    it("janela da espera em background: durationSeconds 400 espera o cap de 280 s e só envia após cap + janela de graça (decisão 7 intacta, graça após o cap)", async () => {
       const { respondeu, response } = await scheduleSemEsperar(
         corpoSchedule({ durationSeconds: 400 }),
       );
@@ -559,10 +590,20 @@ describe("Mílon #06 — POST /api/milon/rest-push (contrato RED emendado, TASK-
       await vi.advanceTimersByTimeAsync(JANELA_MS - 1);
       expect(sendNotificationMock).not.toHaveBeenCalled();
 
+      // Cap de 280 s atingido: a janela de graça da Emenda 2 é composta
+      // DEPOIS do cap (não dentro dele) — em 280_000 ms exatos ainda não há
+      // re-leitura nem envio.
       await vi.advanceTimersByTimeAsync(1);
-      expect(sendNotificationMock).toHaveBeenCalledTimes(1);
+      expect(
+        findRestScheduleById,
+        "no cap de 280 s a graça (JANELA_GRACA_ENVIO_MS = 800) ainda não venceu — a re-leitura espera cap + 800 ms (Mecanismo 2 da Emenda 2)",
+      ).not.toHaveBeenCalled();
+      expect(sendNotificationMock).not.toHaveBeenCalled();
 
+      await vi.advanceTimersByTimeAsync(JANELA_GRACA_ENVIO_MS);
       await background;
+
+      expect(sendNotificationMock).toHaveBeenCalledTimes(1);
       expect(markRestScheduleSent).toHaveBeenCalledWith(
         expect.anything(),
         SCHEDULE_ID,
@@ -742,7 +783,9 @@ describe("Mílon #06 — POST /api/milon/rest-push (contrato RED emendado, TASK-
       const backgroundDoSegundo = ultimaCallbackAfter();
       const p1 = backgroundDoPrimeiro();
       const p2 = backgroundDoSegundo();
-      await vi.advanceTimersByTimeAsync(90_000);
+      // Emenda 2 (DA22): a re-leitura/envio acontecem só após fire_at +
+      // janela de graça — o total cobre a composição inteira.
+      await vi.advanceTimersByTimeAsync(90_000 + JANELA_GRACA_ENVIO_MS);
       await p1;
       await p2;
 
@@ -772,7 +815,9 @@ describe("Mílon #06 — POST /api/milon/rest-push (contrato RED emendado, TASK-
       expect(response!.status).toBe(202);
 
       const background = dispararBackground();
-      await vi.advanceTimersByTimeAsync(90_000);
+      // Emenda 2 (DA22): a re-leitura é pós-graça — o total cobre
+      // `fire_at + JANELA_GRACA_ENVIO_MS` para a callback terminar.
+      await vi.advanceTimersByTimeAsync(90_000 + JANELA_GRACA_ENVIO_MS);
       await background;
 
       expect(sendNotificationMock).not.toHaveBeenCalled();
@@ -790,7 +835,8 @@ describe("Mílon #06 — POST /api/milon/rest-push (contrato RED emendado, TASK-
       expect(response!.status).toBe(202);
 
       const background = dispararBackground();
-      await vi.advanceTimersByTimeAsync(90_000);
+      // Emenda 2 (DA22): re-leitura pós-graça — total `fire_at + 800`.
+      await vi.advanceTimersByTimeAsync(90_000 + JANELA_GRACA_ENVIO_MS);
       await background;
 
       expect(sendNotificationMock).not.toHaveBeenCalled();
@@ -818,7 +864,9 @@ describe("Mílon #06 — POST /api/milon/rest-push (contrato RED emendado, TASK-
         expect(response!.status).toBe(202);
 
         const background = dispararBackground();
-        await vi.advanceTimersByTimeAsync(90_000);
+        // Emenda 2 (DA22): o envio (que falha aqui) só acontece após
+        // `fire_at + JANELA_GRACA_ENVIO_MS` — total cobre a composição.
+        await vi.advanceTimersByTimeAsync(90_000 + JANELA_GRACA_ENVIO_MS);
         // A callback inteira roda em try/catch: nenhuma exceção escapa para o
         // runtime (nenhum unhandled rejection) — await sem .catch.
         await background;
@@ -850,7 +898,8 @@ describe("Mílon #06 — POST /api/milon/rest-push (contrato RED emendado, TASK-
       expect(response!.status).toBe(202);
 
       const background = dispararBackground();
-      await vi.advanceTimersByTimeAsync(90_000);
+      // Emenda 2 (DA22): re-leitura/envio pós-graça — total `fire_at + 800`.
+      await vi.advanceTimersByTimeAsync(90_000 + JANELA_GRACA_ENVIO_MS);
       await background;
 
       expect(markRestScheduleFailed).toHaveBeenCalledWith(
@@ -935,7 +984,8 @@ describe("Mílon #06 — POST /api/milon/rest-push (contrato RED emendado, TASK-
       expect(respondeu, "202 imediato obrigatório").toBe(true);
 
       const background = dispararBackground();
-      await vi.advanceTimersByTimeAsync(90_000);
+      // Emenda 2 (DA22): envio pós-graça — total `fire_at + 800`.
+      await vi.advanceTimersByTimeAsync(90_000 + JANELA_GRACA_ENVIO_MS);
       await background;
 
       expect(sendNotificationMock).toHaveBeenCalledTimes(1);
@@ -967,7 +1017,8 @@ describe("Mílon #06 — POST /api/milon/rest-push (contrato RED emendado, TASK-
       expect(respondeu, "202 imediato obrigatório").toBe(true);
 
       const background = dispararBackground();
-      await vi.advanceTimersByTimeAsync(90_000);
+      // Emenda 2 (DA22): envio pós-graça — total `fire_at + 800`.
+      await vi.advanceTimersByTimeAsync(90_000 + JANELA_GRACA_ENVIO_MS);
       await background;
 
       expect(JSON.parse(chamadaSend(0)[1])).toEqual({
@@ -1066,7 +1117,8 @@ describe("Mílon #06 — POST /api/milon/rest-push (contrato RED emendado, TASK-
       expect(assinaturaArmazenada.created_by).toBe(DONO_A);
 
       const background = dispararBackground();
-      await vi.advanceTimersByTimeAsync(90_000);
+      // Emenda 2 (DA22): envio pós-graça — total `fire_at + 800`.
+      await vi.advanceTimersByTimeAsync(90_000 + JANELA_GRACA_ENVIO_MS);
       await background;
 
       expect(sendNotificationMock).toHaveBeenCalledTimes(1);
@@ -1074,6 +1126,191 @@ describe("Mílon #06 — POST /api/milon/rest-push (contrato RED emendado, TASK-
         expect.anything(),
         SCHEDULE_ID,
       );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 13. Emenda 2 — janela de graça antes da re-leitura (Mecanismo 2 / DA22,
+  //     TASK-025): a callback de after() dorme até fire_at (cap 280 s
+  //     intacto) → espera MAIS `JANELA_GRACA_ENVIO_MS` (800 ms) → SÓ ENTÃO
+  //     re-lê findRestScheduleById. Composição: espera =
+  //     min(max(fire_at − agora, 0), 280_000) + 800. Status ≠ 'agendado' ou
+  //     linha nula → termina sem envio e SEM espera adicional (a graça é UMA —
+  //     nenhuma segunda graça). A graça existe para o cancel do cliente
+  //     (disparado ~no zero com aba visível) chegar antes do envio.
+  //
+  // RED (TASK-025): a rota entregue na TASK-021 re-lê/envia IMEDIATAMENTE ao
+  // fim da espera (sem graça) — os 5 casos abaixo falham pelo motivo certo
+  // até a TASK-026.
+  // -------------------------------------------------------------------------
+  describe("13. Emenda 2 — janela de graça antes da re-leitura (Mecanismo 2, DA22)", () => {
+    it("agendado: em fire_at exato ainda sem re-leitura/envio; após a graça re-lê, envia e marca enviado", async () => {
+      const { respondeu, response } = await scheduleSemEsperar(
+        corpoSchedule({ durationSeconds: 90 }),
+      );
+      expect(respondeu, "202 imediato obrigatório").toBe(true);
+      expect(response!.status).toBe(202);
+
+      const background = dispararBackground();
+      await drenarMicrotarefas();
+
+      // fire_at EXATO (agora + 90 s): a janela de graça ainda não venceu.
+      await vi.advanceTimersByTimeAsync(90_000);
+      expect(
+        findRestScheduleById,
+        "a re-leitura só acontece APÓS a janela de graça (JANELA_GRACA_ENVIO_MS = 800) — em fire_at exato ela ainda não ocorreu (Mecanismo 2 / DA22)",
+      ).not.toHaveBeenCalled();
+      expect(
+        sendNotificationMock,
+        "sem re-leitura não há envio: em fire_at exato a graça pendura a callback",
+      ).not.toHaveBeenCalled();
+
+      // Vencida a graça: re-lê (status 'agendado') → envia → marca enviado.
+      await vi.advanceTimersByTimeAsync(JANELA_GRACA_ENVIO_MS);
+      await background;
+
+      expect(findRestScheduleById).toHaveBeenCalledTimes(1);
+      expect(sendNotificationMock).toHaveBeenCalledTimes(1);
+      expect(markRestScheduleSent).toHaveBeenCalledTimes(1);
+      expect(markRestScheduleSent).toHaveBeenCalledWith(
+        expect.anything(),
+        SCHEDULE_ID,
+      );
+      expect(markRestScheduleFailed).not.toHaveBeenCalled();
+    });
+
+    it("cancelado na re-leitura pós-graça: sem envio, sem marcações e término imediato (sem segunda graça)", async () => {
+      vi.mocked(findRestScheduleById).mockResolvedValue(
+        agendamento({ status: "cancelado" }),
+      );
+
+      const { respondeu, response } = await scheduleSemEsperar(
+        corpoSchedule({ durationSeconds: 90 }),
+      );
+      expect(respondeu, "202 imediato obrigatório").toBe(true);
+      expect(response!.status).toBe(202);
+
+      const background = dispararBackground();
+      await drenarMicrotarefas();
+
+      // fire_at exato: a graça (UMA na composição) ainda pendura a callback —
+      // nenhum status é lido antes dela.
+      await vi.advanceTimersByTimeAsync(90_000);
+      expect(
+        findRestScheduleById,
+        "nenhuma re-leitura antes da janela de graça: em fire_at exato a graça de 800 ms ainda não venceu (DA22)",
+      ).not.toHaveBeenCalled();
+
+      // Pós-graça: re-lê 'cancelado' → a callback termina sem enviar (await
+      // sem avanço extra já resolve — se houvesse SEGUNDA graça, o await
+      // abaixo penduraria até um avanço de timers que não acontece).
+      await vi.advanceTimersByTimeAsync(JANELA_GRACA_ENVIO_MS);
+      await background;
+
+      expect(sendNotificationMock).not.toHaveBeenCalled();
+      expect(markRestScheduleSent).not.toHaveBeenCalled();
+      expect(markRestScheduleFailed).not.toHaveBeenCalled();
+
+      // Avançar tempo extra não muda nada: uma re-leitura só, sem novo envio.
+      await vi.advanceTimersByTimeAsync(JANELA_GRACA_ENVIO_MS * 5);
+      expect(findRestScheduleById).toHaveBeenCalledTimes(1);
+      expect(sendNotificationMock).not.toHaveBeenCalled();
+    });
+
+    it("linha nula na re-leitura pós-graça: mesmo desfecho de cancelado (sem envio, sem espera extra)", async () => {
+      vi.mocked(findRestScheduleById).mockResolvedValue(null);
+
+      const { respondeu, response } = await scheduleSemEsperar(
+        corpoSchedule({ durationSeconds: 90 }),
+      );
+      expect(respondeu, "202 imediato obrigatório").toBe(true);
+      expect(response!.status).toBe(202);
+
+      const background = dispararBackground();
+      await drenarMicrotarefas();
+
+      await vi.advanceTimersByTimeAsync(90_000);
+      expect(
+        findRestScheduleById,
+        "nenhuma re-leitura antes da janela de graça (linha nula só é descoberta pós-graça)",
+      ).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(JANELA_GRACA_ENVIO_MS);
+      await background;
+
+      expect(sendNotificationMock).not.toHaveBeenCalled();
+      expect(markRestScheduleSent).not.toHaveBeenCalled();
+      expect(markRestScheduleFailed).not.toHaveBeenCalled();
+
+      // Sem segunda graça nem re-leitura extra (mesmo desfecho de cancelado).
+      await vi.advanceTimersByTimeAsync(JANELA_GRACA_ENVIO_MS * 5);
+      expect(findRestScheduleById).toHaveBeenCalledTimes(1);
+      expect(sendNotificationMock).not.toHaveBeenCalled();
+    });
+
+    it("cap 280 s + graça: descanso de 400 s só re-lê/envia após 280_000 + 800 ms (a graça é aplicada DEPOIS do cap)", async () => {
+      const { respondeu, response } = await scheduleSemEsperar(
+        corpoSchedule({ durationSeconds: 400 }),
+      );
+      expect(respondeu, "202 imediato obrigatório").toBe(true);
+      expect(response!.status).toBe(202);
+
+      // O INSERT grava fire_at completo (agora + 400 s); só a espera é
+      // cortada pelo cap — a graça entra depois do cap, nunca dentro dele.
+      const inputCreate = vi.mocked(createRestSchedule).mock.calls[0][1];
+      expect(inputCreate.durationSeconds).toBe(400);
+      expect(new Date(inputCreate.fireAt).getTime()).toBe(
+        AGORA.getTime() + 400_000,
+      );
+
+      const background = dispararBackground();
+      await drenarMicrotarefas();
+
+      await vi.advanceTimersByTimeAsync(JANELA_MS - 1);
+      expect(findRestScheduleById).not.toHaveBeenCalled();
+      expect(sendNotificationMock).not.toHaveBeenCalled();
+
+      // Exatamente o cap de 280_000 ms: a graça ainda não venceu.
+      await vi.advanceTimersByTimeAsync(1);
+      expect(
+        findRestScheduleById,
+        "a graça entra DEPOIS do cap: em 280_000 ms exatos a re-leitura ainda não ocorreu (espera = cap + JANELA_GRACA_ENVIO_MS)",
+      ).not.toHaveBeenCalled();
+      expect(sendNotificationMock).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(JANELA_GRACA_ENVIO_MS);
+      await background;
+
+      expect(findRestScheduleById).toHaveBeenCalledTimes(1);
+      expect(sendNotificationMock).toHaveBeenCalledTimes(1);
+      expect(markRestScheduleSent).toHaveBeenCalledTimes(1);
+      expect(markRestScheduleSent).toHaveBeenCalledWith(
+        expect.anything(),
+        SCHEDULE_ID,
+      );
+      expect(markRestScheduleFailed).not.toHaveBeenCalled();
+    });
+
+    it("a rota declara a constante nomeada JANELA_GRACA_ENVIO_MS = 800 ao lado de JANELA_ESPERA_MS e a usa no dormir (nunca o literal 800)", () => {
+      const fonte = fs.readFileSync(
+        path.join(RAIZ, "app/api/milon/rest-push/route.ts"),
+        "utf8",
+      );
+      expect(
+        fonte,
+        "constante nomeada JANELA_GRACA_ENVIO_MS = 800 ausente em app/api/milon/rest-push/route.ts (Mecanismo 2 / DA22 — 800 ms congelados na spec)",
+      ).toMatch(/const\s+JANELA_GRACA_ENVIO_MS\s*=\s*800\s*;/);
+      expect(
+        fonte,
+        "JANELA_ESPERA_MS (cap 280 s) deve continuar declarada — a graça vive ao lado dela",
+      ).toMatch(/const\s+JANELA_ESPERA_MS\s*=\s*280_000\s*;/);
+      // O valor da graça passa SEMPRE pela constante (TASK-026: busca
+      // `dormir(800` retorna 0 — sem literal mágico no sono).
+      expect(
+        fonte.includes("dormir(800"),
+        "dormir(800 literal) encontrado — a espera da graça deve usar JANELA_GRACA_ENVIO_MS (DA22)",
+      ).toBe(false);
+      expect(fonte).toMatch(/dormir\(\s*JANELA_GRACA_ENVIO_MS\s*\)/);
     });
   });
 });

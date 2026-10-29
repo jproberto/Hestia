@@ -1094,5 +1094,33 @@ describe("Mílon #06 — useRestTimer (contrato RED, TASK-005)", () => {
       );
       expect(fonte.match(/visibilitychange/g) ?? []).toHaveLength(0);
     });
+
+    it("O hook não contém janela de graça nem setTimeout (a graça de 800 ms é exclusiva do servidor — DA21/DA22)", () => {
+      // A supressão do cliente decide NO TICK com o que a contagem já tem:
+      // nenhum adiamento programado no cliente. O único `setTimeout`/sono do
+      // mecanismo 2 vive em app/api/milon/rest-push/route.ts (JANELA_GRACA_
+      // ENVIO_MS), nunca no hook — a decisão é síncrona e fire-and-forget.
+      const fonte = fs.readFileSync(
+        path.resolve(__dirname, "../../../../lib/milon/hooks/useRestTimer.ts"),
+        "utf8",
+      );
+      expect(
+        fonte.includes("setTimeout"),
+        "setTimeout encontrado no hook — a janela de graça é só do servidor (DA22)",
+      ).toBe(false);
+      expect(
+        fonte.includes("JANELA_GRACA"),
+        "constante da janela de graça encontrada no hook — graça é exclusiva do servidor",
+      ).toBe(false);
+      expect(
+        fonte.includes("dormir"),
+        "dormir (sono do servidor) encontrado no hook — o cliente não espera antes de decidir",
+      ).toBe(false);
+      // O branch do zero não pode esconder um adiamento: a decisão (visibilidade
+      // → cancel fire-and-forget) acontece dentro do próprio callback do tick.
+      expect(
+        fonte.match(/setTimeout\(/g) ?? [],
+      ).toHaveLength(0);
+    });
   });
 });

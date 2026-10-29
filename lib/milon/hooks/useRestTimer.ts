@@ -1,16 +1,20 @@
 "use client";
 
 // Timer de descanso do Treino do Dia (Mílon #06, TASK-006 + Emenda
-// 2026-10-23, Alavanca 1/DA16): contagem regressiva em memória da página +
-// orquestração fire-and-forget do push de fim de descanso
-// (agendamento/cancelamento via rota /api/milon/rest-push). O push é
+// 2026-10-23, Alavanca 1/DA16 + Emenda 2, DA21/DA23): contagem regressiva em
+// memória da página + orquestração fire-and-forget do push de fim de
+// descanso (agendamento/cancelamento via rota /api/milon/rest-push). O push é
 // ancorado ao clique: `t0` capturado no início do caminho válido do `start`
 // e `elapsed = Date.now() − t0` enviado no corpo de `schedule` (o servidor
-// usa só a diferença — imune a clock-skew). A duração é SEMPRE a capturada
-// no argumento de `start` (edição posterior do restSeconds não reescreve);
-// falha de push nunca propaga nem impede a contagem (spec critério 10 — a
-// camada visual é a garantia). A troca de treino não desmonta a página: o
-// estado sobrevive em memória da sessão.
+// usa só a diferença — imune a clock-skew). No tick em que a contagem zera,
+// `document.visibilityState` é lido NO INSTANTE do zero (sem listener): com
+// a aba visível, o agendamento é cancelado fire-and-forget mantendo o alerta
+// visual ("Descanso terminado") e `scheduleIdRef` é limpo; oculto (ou outro
+// valor), nada muda no cliente — o servidor é quem envia (Emenda 2, DA21).
+// A duração é SEMPRE a capturada no argumento de `start` (edição posterior do
+// restSeconds não reescreve); falha de push nunca propaga nem impede a
+// contagem (spec critério 10 — a camada visual é a garantia). A troca de
+// treino não desmonta a página: o estado sobrevive em memória da sessão.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -97,11 +101,23 @@ export function useRestTimer(): UseRestTimerReturn {
         remainingRef.current = proximo > 0 ? proximo : 0;
         setRemainingSeconds(remainingRef.current);
         if (proximo <= 0) {
-          // Fim atingido: para a contagem e mantém origem/exercício para o
-          // alerta visual.
-          limparIntervalo();
+          // Fim atingido: estado visual consolidado PRIMEIRO (mantém
+          // origem/exercício para o alerta — a UI nunca depende da rede) e o
+          // intervalo para; SÓ ENTÃO a visibilidade decide no instante do
+          // tick (Emenda 2, DA21): aba visível cancela o agendamento
+          // fire-and-forget mantendo o alerta e limpa o ref no mesmo tick
+          // (um start subsequente não cancela o id antigo — DA23); outro
+          // valor é no-op total (servidor segue responsável pelo envio).
           setActive(false);
           setFinished(true);
+          limparIntervalo();
+          if (document.visibilityState === "visible") {
+            const scheduleId = scheduleIdRef.current;
+            if (scheduleId !== null) {
+              cancelRestPush(scheduleId).catch(() => {});
+              scheduleIdRef.current = null;
+            }
+          }
         }
       }, 1000);
 
@@ -110,7 +126,17 @@ export function useRestTimer(): UseRestTimerReturn {
       // imediatamente antes do fetch (a latência da assinatura conta).
       ensureDeviceSubscription()
         .then((subscription) => {
-          if (!subscription) return;
+          if (!subscription) {
+            // Sem sessão de agendamento (push indisponível — nenhum POST de
+            // schedule saiu): o ref não pode apontar para um id que nunca
+            // existiu no servidor, senão o cancel do zero visível agiria por
+            // engano (DA23). A guarda de igualdade preserva um start
+            // posterior que já substituiu este id.
+            if (scheduleIdRef.current === scheduleId) {
+              scheduleIdRef.current = null;
+            }
+            return;
+          }
           return scheduleRestPush({
             scheduleId,
             subscription,

@@ -28,6 +28,25 @@
  * onde se espera o número medido (o cancel e o no-op permanecem sem
  * `elapsed`/sem POST — invariantes já verdes, preservadas aqui).
  *
+ * EMENDA 2 — 2026-10-23 (supressão da notificação com aba ativa, DA21/DA23 —
+ * TASK-023 RED): no tick onde `remainingSeconds` chega a 0, o estado visual
+ * é consolidado PRIMEIRO (`finished` verdadeiro, `active` falso,
+ * `remainingSeconds` 0, `originWorkoutId`/`exerciseName` mantidos) e DEPOIS
+ * `document.visibilityState` é lido no instante do tick: com `visible`, o
+ * cancel do agendamento é disparado fire-and-forget (reusando
+ * `cancelRestPush`) e `scheduleIdRef` é limpo no mesmo tick (semântica nova
+ * "cancela mantendo o alerta visual", diferente do `cancel()` completo);
+ * com `hidden`/outro valor, nenhum cancel. Casos da seção 11 escritos ANTES
+ * da TASK-024: Expected: FAIL — hoje o zero não emite `action: "cancel"` e a
+ * visibilidade não é lida. Invariantes preservados e verdes:
+ * `visibilitychange` (grep 0 — sem listener), push indisponível sem POST,
+ * `dismiss`, `cancel()` completo, no-op de `start` e substituição. Padrão
+ * DA24: `document.visibilityState` stubado com `Object.defineProperty`
+ * configurable + getter contabilizador, restaurado no `afterEach` (mesmo
+ * estilo do `navigator.serviceWorker`); o arquivo roda por padrão com
+ * `"hidden"` (mundo pré-Emenda 2) para as regressões não dependerem do novo
+ * cancel no zero — os casos da Emenda 2 stubam o valor explicitamente.
+ *
  * Padrão espelhado de `__tests__/lib/milon/hooks/useWorkoutExecution.test.ts`
  * (renderHook + act, fake timers para o setInterval de 1 s) + verificação de
  * ambiente do precedente jsdom: `crypto.randomUUID` é espiado com
@@ -78,6 +97,8 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
+import fs from "node:fs";
+import path from "node:path";
 import { useRestTimer } from "@/lib/milon/hooks/useRestTimer";
 
 // ---------------------------------------------------------------------------
@@ -271,6 +292,39 @@ function entrada(overrides: Partial<StartRestTimerInput> = {}): StartRestTimerIn
   };
 }
 
+/** Corpo de todos os POSTs feitos até aqui (o `fetch` é o transporte observado). */
+function acoesDosPosts(): Record<string, unknown>[] {
+  return fetchMock.mock.calls.map((_, indice) => corpoDaChamada(indice));
+}
+
+// ---------------------------------------------------------------------------
+// Visibilidade da aba (Emenda 2 — DA21/DA24)
+// ---------------------------------------------------------------------------
+
+// Valor corrente devolvido pelo getter e contador de leituras: o contrato
+// exige que a visibilidade seja lida NO INSTANTE do tick de zero (não no
+// `start`, não cacheada) — o contador torna essa leitura observável.
+let visibilidadeAtual = "visible";
+let leiturasVisibilidade = 0;
+
+/**
+ * Stub de `document.visibilityState` via `Object.defineProperty` configurable
+ * (padrão do `navigator.serviceWorker` do arquivo): o getter devolve o valor
+ * corrente e conta as leituras. Restaurado no `afterEach` com
+ * `Reflect.deleteProperty` (o getter do prototype do jsdom volta a valer).
+ */
+function definirVisibilidade(valor: string): void {
+  visibilidadeAtual = valor;
+  leiturasVisibilidade = 0;
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    get: () => {
+      leiturasVisibilidade += 1;
+      return visibilidadeAtual;
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Ciclo de vida do arquivo
 // ---------------------------------------------------------------------------
@@ -283,6 +337,10 @@ beforeEach(() => {
   fetchMock.mockReset();
   fetchMock.mockResolvedValue(resposta());
   vi.stubGlobal("fetch", fetchMock);
+  // Padrão do arquivo: aba OCULTA (mundo pré-Emenda 2 — o zero não cancela),
+  // para as regressões das seções 1–10 não dependerem do novo comportamento.
+  // Os casos da Emenda 2 stubam o valor explicitamente no teste.
+  definirVisibilidade("hidden");
   randomUUIDSpy = vi
     .spyOn(globalThis.crypto, "randomUUID")
     .mockImplementationOnce(() => UUID_1)
@@ -297,6 +355,8 @@ afterEach(() => {
   vi.useRealTimers();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   delete (navigator as any).serviceWorker;
+  // Restaura o visibilityState original do jsdom (getter do prototype).
+  Reflect.deleteProperty(document, "visibilityState");
   delete process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY;
 });
 
@@ -740,6 +800,299 @@ describe("Mílon #06 — useRestTimer (contrato RED, TASK-005)", () => {
       expect(result.current.active).toBe(false);
       expect(result.current.remainingSeconds).toBeNull();
       expect(result.current.finished).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 11. Emenda 2 — visibilidade no tick de zero (DA21/DA23 — TASK-023 RED)
+  // -------------------------------------------------------------------------
+  describe("11. Emenda 2 — supressão por visibilidade no tick de zero (TASK-023 RED)", () => {
+    it("Dado o descanso com a aba visível no zero, Quando a contagem zera, Então um POST action cancel sai com o scheduleId da sessão e o estado visual é preservado (não é o cancel() completo)", async () => {
+      instalarNavegadorComPush();
+      definirVisibilidade("visible");
+      const { result } = renderHook(() => useRestTimer());
+
+      await iniciar(result, entrada({ restSeconds: 2 }));
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      await avancar(1000);
+      await avancar(1000); // tick de zero
+      await drenarMicrotarefas();
+
+      // RED (TASK-023): o cancel por visibilidade no zero ainda não existe —
+      // hoje só o POST de schedule da sessão foi emitido.
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const cancelamento = corpoDaChamada(1);
+      expect(cancelamento).toMatchObject({ action: "cancel" });
+      // Mesmo id do schedule da sessão (critério 4) — o id gerado no start.
+      expect(cancelamento.scheduleId).toBe(corpoDaChamada(0).scheduleId);
+      expect(cancelamento.scheduleId).toBe(UUID_1);
+
+      // Estado visual consolidado e preservado (critério 5): o alerta
+      // "Descanso terminado" permanece e origem/exercício NÃO são limpos —
+      // diferente do cancel() completo, que zera tudo.
+      expect(result.current.finished).toBe(true);
+      expect(result.current.active).toBe(false);
+      expect(result.current.remainingSeconds).toBe(0);
+      expect(result.current.originWorkoutId).toBe(WORKOUT_ID);
+      expect(result.current.exerciseName).toBe(EXERCICIO);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it("Dado o descanso com a aba oculta (hidden) no zero, Quando a contagem zera, Então a visibilidade é lida no instante do tick, NENHUM POST cancel sai e o estado visual é idêntico", async () => {
+      instalarNavegadorComPush();
+      definirVisibilidade("hidden");
+      const { result } = renderHook(() => useRestTimer());
+
+      await iniciar(result, entrada({ restSeconds: 2 }));
+      await avancar(1000);
+
+      leiturasVisibilidade = 0; // só a leitura do tick de zero interessa
+      await avancar(1000); // tick de zero
+      await drenarMicrotarefas();
+
+      // RED (DA21): a decisão lê `document.visibilityState` NO TICK —
+      // hoje nada lê (o contador fica em zero).
+      expect(leiturasVisibilidade).toBeGreaterThan(0);
+
+      // Nenhum cancel em toda a sessão (nenhum POST action cancel).
+      expect(acoesDosPosts().map((corpo) => corpo.action)).not.toContain("cancel");
+
+      // Estado visual idêntico ao caso visible (critério 7).
+      expect(result.current.finished).toBe(true);
+      expect(result.current.active).toBe(false);
+      expect(result.current.remainingSeconds).toBe(0);
+      expect(result.current.originWorkoutId).toBe(WORKOUT_ID);
+      expect(result.current.exerciseName).toBe(EXERCICIO);
+    });
+
+    it("Dado o descanso com outro valor de visibilidade (prerender) no zero, Quando a contagem zera, Então a visibilidade é lida no instante, NENHUM POST cancel sai e o estado visual é idêntico", async () => {
+      instalarNavegadorComPush();
+      definirVisibilidade("prerender");
+      const { result } = renderHook(() => useRestTimer());
+
+      await iniciar(result, entrada({ restSeconds: 2 }));
+      await avancar(1000);
+
+      leiturasVisibilidade = 0; // só a leitura do tick de zero interessa
+      await avancar(1000); // tick de zero
+      await drenarMicrotarefas();
+
+      // RED (DA21): qualquer valor diferente de "visible" é decidido no tick —
+      // para isso a visibilidade precisa ser LIDA nele.
+      expect(leiturasVisibilidade).toBeGreaterThan(0);
+
+      expect(acoesDosPosts().map((corpo) => corpo.action)).not.toContain("cancel");
+
+      expect(result.current.finished).toBe(true);
+      expect(result.current.active).toBe(false);
+      expect(result.current.remainingSeconds).toBe(0);
+      expect(result.current.originWorkoutId).toBe(WORKOUT_ID);
+      expect(result.current.exerciseName).toBe(EXERCICIO);
+    });
+
+    it("Dado a aba oculta no start e visível antes do zero, Quando a contagem zera, Então o cancel é disparado (a visibilidade é lida no instante do tick, não cacheada no início do hook)", async () => {
+      instalarNavegadorComPush();
+      definirVisibilidade("hidden");
+      const { result } = renderHook(() => useRestTimer());
+
+      await iniciar(result, entrada({ restSeconds: 2 }));
+      // Só vira visível entre o start e o zero: um valor cacheado no início
+      // (hidden) não poderia decidir aqui.
+      visibilidadeAtual = "visible";
+      await avancar(1000);
+      await avancar(1000);
+      await drenarMicrotarefas();
+
+      // RED (TASK-023): hoje ninguém cancela no zero.
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(corpoDaChamada(1)).toMatchObject({
+        action: "cancel",
+        scheduleId: UUID_1,
+      });
+      expect(result.current.finished).toBe(true);
+      expect(result.current.originWorkoutId).toBe(WORKOUT_ID);
+    });
+
+    it("Dado a aba visível no start e oculta antes do zero, Quando a contagem zera, Então NENHUM cancel sai (a decisão é do instante do zero)", async () => {
+      instalarNavegadorComPush();
+      definirVisibilidade("visible");
+      const { result } = renderHook(() => useRestTimer());
+
+      await iniciar(result, entrada({ restSeconds: 2 }));
+      // Oculta só entre o start e o zero: um valor cacheado no início
+      // (visible) cancelaria por engano aqui.
+      visibilidadeAtual = "hidden";
+      await avancar(1000);
+      await avancar(1000);
+      await drenarMicrotarefas();
+
+      expect(acoesDosPosts().map((corpo) => corpo.action)).not.toContain("cancel");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(result.current.finished).toBe(true);
+    });
+
+    it("Preservado — push indisponível desde o start: NENHUM POST (schedule) e a contagem visual segue até o fim", async () => {
+      definirVisibilidade("hidden");
+      // Sem Notification/service worker/PushManager: assegura dispositivo
+      // devolve null e nada de rede acontece (contrato já homologado).
+      const { result } = renderHook(() => useRestTimer());
+
+      await iniciar(result, entrada({ restSeconds: 2 }));
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(result.current.active).toBe(true);
+      expect(result.current.remainingSeconds).toBe(2);
+
+      await avancar(2000);
+      expect(result.current.finished).toBe(true);
+      expect(result.current.remainingSeconds).toBe(0);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("Dado start sem nenhuma sessão de agendamento (push indisponível), Quando o tick zera com a aba visível, Então o branch é no-op: NENHUM POST e nada lança (scheduleIdRef nulo — DA23)", async () => {
+      definirVisibilidade("visible");
+      const { result } = renderHook(() => useRestTimer());
+
+      await iniciar(result, entrada({ restSeconds: 1 }));
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      // No-op sem exceção (critério 8): avançar até o zero não pode lançar
+      // nem emitir POST — não há agendamento a cancelar.
+      await avancar(1000);
+      await drenarMicrotarefas();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(result.current.finished).toBe(true);
+      expect(result.current.active).toBe(false);
+      expect(result.current.remainingSeconds).toBe(0);
+      expect(result.current.originWorkoutId).toBe(WORKOUT_ID);
+      expect(result.current.exerciseName).toBe(EXERCICIO);
+    });
+
+    it("Dado o POST de cancel do zero rejeitando (rede), Quando a contagem zera, Então a rejeição é engolida pelo .catch e o estado visual segue intacto", async () => {
+      instalarNavegadorComPush();
+      definirVisibilidade("visible");
+      const { result } = renderHook(() => useRestTimer());
+      await iniciar(result, entrada({ restSeconds: 2 }));
+
+      fetchMock.mockRejectedValueOnce(new Error("rede indisponível no zero"));
+
+      await avancar(1000);
+      await avancar(1000); // tick de zero
+      await drenarMicrotarefas();
+
+      // RED (TASK-023): o cancel do zero não é emitido hoje.
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(corpoDaChamada(1)).toMatchObject({
+        action: "cancel",
+        scheduleId: UUID_1,
+      });
+      // A rejeição não quebra a contagem: sem unhandled rejection (`.catch`
+      // vazio do fire-and-forget) e o alerta visual permanece.
+      expect(result.current.finished).toBe(true);
+      expect(result.current.active).toBe(false);
+      expect(result.current.remainingSeconds).toBe(0);
+      expect(result.current.originWorkoutId).toBe(WORKOUT_ID);
+      expect(result.current.exerciseName).toBe(EXERCICIO);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it("Dado o cancel do zero visível, Quando um novo descanso inicia, Então o start não cancela o id antigo e o cancel do segundo zero usa o id novo (scheduleIdRef limpo — DA23)", async () => {
+      instalarNavegadorComPush();
+      definirVisibilidade("visible");
+      const { result } = renderHook(() => useRestTimer());
+
+      // 1º descanso (UUID_1) até o zero visível.
+      await iniciar(result, entrada({ restSeconds: 2 }));
+      await avancar(1000);
+      await avancar(1000);
+      await drenarMicrotarefas();
+
+      // RED (TASK-023): o cancel do zero ainda não existe.
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(corpoDaChamada(1)).toMatchObject({
+        action: "cancel",
+        scheduleId: UUID_1,
+      });
+
+      // 2º descanso (UUID_2): com o ref limpo, o start NÃO cancela o id
+      // antigo (sem o cancel-anterior de substituição).
+      await iniciar(
+        result,
+        entrada({
+          entryId: OUTRA_ENTRY_ID,
+          exerciseName: OUTRO_EXERCICIO,
+          restSeconds: 1,
+        }),
+      );
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(corpoDaChamada(2)).toMatchObject({
+        action: "schedule",
+        scheduleId: UUID_2,
+      });
+      const idsCancelados = acoesDosPosts()
+        .map((corpo) => ({ acao: corpo.action, id: corpo.scheduleId }))
+        .filter((post) => post.acao === "cancel")
+        .map((post) => post.id);
+      expect(idsCancelados).toEqual([UUID_1]); // só o do zero; nada no start2
+
+      // Zero do 2º descanso: o cancel usa o id NOVO, nunca o antigo.
+      await avancar(1000);
+      await drenarMicrotarefas();
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+      expect(corpoDaChamada(3)).toMatchObject({
+        action: "cancel",
+        scheduleId: UUID_2,
+      });
+      expect(corpoDaChamada(3).scheduleId).not.toBe(UUID_1);
+    });
+
+    it("Dado o tick de zero visível, Quando o POST de cancel é disparado, Então o intervalo já está parado e a visibilidade já foi lida (estado consolidado antes da rede — DA21)", async () => {
+      instalarNavegadorComPush();
+      definirVisibilidade("visible");
+      const { result } = renderHook(() => useRestTimer());
+      await iniciar(result, entrada({ restSeconds: 2 }));
+
+      // Captura o mundo NO INSTANTE do POST (o fetch é invocado dentro do
+      // callback do tick): a consolidação visual tem de ter acontecido antes.
+      const captura: {
+        momento: { intervalosVivos: number; visibilidadeLida: boolean } | null;
+      } = { momento: null };
+      fetchMock.mockImplementation(async () => {
+        captura.momento = {
+          intervalosVivos: vi.getTimerCount(),
+          visibilidadeLida: leiturasVisibilidade > 0,
+        };
+        return resposta();
+      });
+
+      await avancar(1000);
+      leiturasVisibilidade = 0; // só a leitura do tick de zero interessa
+      await avancar(1000); // tick de zero
+      await drenarMicrotarefas();
+
+      // RED (TASK-023): sem cancel no zero não há o que capturar.
+      expect(captura.momento).not.toBeNull();
+      // Intervalo já parado no momento da rede (consolidação ANTES da rede —
+      // em React o `finished` só materializa no render seguinte ao tick, então
+      // a ordem é observada pelos efeitos síncronos do callback).
+      expect(captura.momento?.intervalosVivos).toBe(0);
+      // A visibilidade foi lida antes de disparar o POST (estado → visibilidade → rede).
+      expect(captura.momento?.visibilidadeLida).toBe(true);
+      // Estado visual completo consolidado ao fim do tick.
+      expect(result.current.finished).toBe(true);
+      expect(result.current.active).toBe(false);
+      expect(result.current.remainingSeconds).toBe(0);
+      expect(result.current.originWorkoutId).toBe(WORKOUT_ID);
+      expect(result.current.exerciseName).toBe(EXERCICIO);
+    });
+
+    it("Busca por visibilitychange em lib/milon/hooks/useRestTimer.ts retorna 0 (decisão exclusiva do tick, sem listener — DA21)", () => {
+      const fonte = fs.readFileSync(
+        path.resolve(__dirname, "../../../../lib/milon/hooks/useRestTimer.ts"),
+        "utf8",
+      );
+      expect(fonte.match(/visibilitychange/g) ?? []).toHaveLength(0);
     });
   });
 });

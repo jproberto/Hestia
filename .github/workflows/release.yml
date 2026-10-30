@@ -1,0 +1,107 @@
+# Release automation separada da validação — least privilege e triggers distintos:
+# o CI de validação (ci.yml) roda em feature/**, release/**, develop e main sem
+# permissão de escrita de conteúdo; este workflow concentra a escrita (PRs de
+# promoção, tags e releases) só em develop e main.
+name: Release Automation
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Sem permissões globais: cada job declara o mínimo (least privilege).
+
+jobs:
+  promote:
+    if: github.event_name == 'push' && github.ref_name == 'develop'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Garante histórico completo para o git tag e ls-remote
+
+      # Detecta bump de versão para só promover release de verdade
+      - name: Check Version Bump
+        id: version
+        if: github.event_name == 'push' && github.ref_name == 'develop'
+        run: |
+          OLD=$(git show ${{ github.event.before }}:package.json 2>/dev/null | jq -r .version || echo "")
+          NEW=$(jq -r .version package.json)
+          echo "Versão antes: $OLD / agora: $NEW"
+          if [ -n "$NEW" ] && [ "$OLD" != "$NEW" ]; then
+            echo "bumped=true" >> $GITHUB_OUTPUT
+          else
+            echo "bumped=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Abre o PR de develop para main só quando há bump de versão (intenção de release)
+      - name: Auto Create Promotion Pull Request
+        if: github.event_name == 'push' && github.ref_name == 'develop' && steps.version.outputs.bumped == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Verificando se já existe PR aberto de develop para main..."
+          PR_EXISTS=$(gh pr list --head develop --base main --state open --json number --jq '.[0].number')
+
+          if [ -z "$PR_EXISTS" ]; then
+            echo "Criando Pull Request de promoção (develop -> main)..."
+            gh pr create \
+              --base main \
+              --head develop \
+              --title "Release: develop -> main" \
+              --body "Este Pull Request foi criado automaticamente pelo pipeline de CI para promover as alterações de develop para a main (Produção)."
+          else
+            echo "PR #$PR_EXISTS de develop para main já está aberto."
+          fi
+
+  tag:
+    if: github.event_name == 'push' && github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Garante histórico completo para o git tag e ls-remote
+
+      # Cria a Tag Git e a GitHub Release no push da main (merge de release)
+      - name: Create Tag and GitHub Release
+        if: github.event_name == 'push' && github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          TAG="v$VERSION"
+          echo "Versão identificada no package.json: $VERSION"
+
+          echo "Verificando se a tag $TAG já existe no repositório..."
+          TAG_EXISTS=$(git ls-remote --tags origin refs/tags/$TAG)
+
+          if [ -z "$TAG_EXISTS" ]; then
+            echo "A tag $TAG não existe. Configurando Git..."
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+
+            echo "Criando tag local $TAG..."
+            git tag "$TAG"
+
+            echo "Empurrando tag $TAG para a origin..."
+            git push origin "$TAG"
+
+            echo "Criando Release no GitHub..."
+            gh release create "$TAG" --generate-notes
+          else
+            echo "A tag $TAG já existe no repositório. Nenhuma nova release será gerada."
+          fi

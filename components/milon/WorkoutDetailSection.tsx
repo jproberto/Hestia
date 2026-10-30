@@ -57,6 +57,19 @@ export type WorkoutDetailBackTarget =
  */
 export type ExecutionSettledOutcome = "sealed" | "cancelled";
 
+/**
+ * Carga do gatilho do timer de descanso (Mílon 06, plan §3): emitida pela
+ * seção após `toggleSeries` bem-sucedido com direção `marked` e
+ * `entry.restSeconds > 0`. O nome do exercício vem do `findTarget` (fonte da
+ * tela, sem leitura extra) e a duração é a capturada da entry.
+ */
+export interface RestMarkedInfo {
+  workoutId: string;
+  entryId: string;
+  exerciseName: string;
+  restSeconds: number;
+}
+
 export interface WorkoutDetailSectionProps {
   workoutId: string;
   backTarget: WorkoutDetailBackTarget;
@@ -99,6 +112,23 @@ export interface WorkoutDetailSectionProps {
    * argumento é retrocompatível (comportamento 7c: não-selamento).
    */
   onExecutionSettled?: (outcome: ExecutionSettledOutcome) => void | Promise<void>;
+  /**
+   * Gatilho do timer de descanso (Mílon 06, plan §3): emitida exatamente
+   * uma vez após `toggleSeries` bem-sucedido com direção `marked` e
+   * `entry.restSeconds > 0`; nunca em erro, nunca em desmarcação e nunca
+   * com descanso nulo ou zero. Não substitui nem estende
+   * `onExecutionSettled` (canal próprio do descanso).
+   */
+  onSeriesMarked?: (info: RestMarkedInfo) => void;
+  /**
+   * Encerramento do timer na limpeza confirmada (Mílon 06, plan §3):
+   * emitida exatamente uma vez após `confirmClearExecution` bem-sucedido
+   * (confirmar a pergunta de cancelamento da última série desmarcada da
+   * #5); nunca no fechar da pergunta e nunca em falha. O
+   * `onExecutionSettled` segue intocado (7b-1 — DA7 daquela plan
+   * preservada).
+   */
+  onExecutionCleared?: () => void;
   /**
    * Sinal de foco do cabeçalho (Mílon 07b-1, plan §3 / DA5): com valor
    * não-nulo a seção foca o próprio cabeçalho rotulado `Cabeçalho do
@@ -164,6 +194,8 @@ interface EditingTarget {
   serie: WorkoutSeries;
   loadUnit: LoadUnit | null;
   exerciseMode: ExerciseMode | null;
+  /** Nome da tela (fonte única do RestMarkedInfo — sem leitura extra). */
+  exerciseName: string;
 }
 
 interface ExecutionListContext {
@@ -205,12 +237,16 @@ function ExecutionHost({
   entries,
   onTemplateChanged,
   onExecutionSettled,
+  onSeriesMarked,
+  onExecutionCleared,
   children,
 }: {
   workoutId: string;
   entries: WorkoutEntryView[];
   onTemplateChanged: () => void;
   onExecutionSettled?: (outcome: ExecutionSettledOutcome) => void | Promise<void>;
+  onSeriesMarked?: (info: RestMarkedInfo) => void;
+  onExecutionCleared?: () => void;
   children: (ctx: ExecutionListContext) => ReactNode;
 }) {
   const exec = useWorkoutExecution(workoutId, entries);
@@ -238,6 +274,7 @@ function ExecutionHost({
           serie,
           loadUnit: view.entry.loadUnit ?? view.exercise.loadUnit ?? null,
           exerciseMode: (view.entry.mode ?? view.exercise.mode ?? null) as ExerciseMode | null,
+          exerciseName: view.exercise.name,
         };
       }
     }
@@ -248,7 +285,19 @@ function ExecutionHost({
     const target = findTarget(seriesId);
     if (!target) return;
     try {
-      await exec.toggleSeries(target.entry, target.serie);
+      const outcome = await exec.toggleSeries(target.entry, target.serie);
+      // Gatilho do timer (Mílon 06, plan §3): só a marcação bem-sucedida com
+      // descanso maior que zero emite — duração capturada da entry e nome do
+      // findTarget. Desmarcação, falha e descanso nulo/zero não emitem nada.
+      const restSeconds = target.entry.restSeconds ?? 0;
+      if (outcome === "marked" && restSeconds > 0) {
+        onSeriesMarked?.({
+          workoutId,
+          entryId: target.entry.id,
+          exerciseName: target.exerciseName,
+          restSeconds,
+        });
+      }
     } catch {
       // O banner já foi alimentado pelo hook (origem operacao) e o estado
       // anterior é mantido; aqui só se evita rejeição não tratada.
@@ -300,7 +349,12 @@ function ExecutionHost({
   function confirmClear(): void {
     setClearProcessing(true);
     void exec.confirmClearExecution().then(
-      () => setClearProcessing(false),
+      () => {
+        setClearProcessing(false);
+        // Somente no sucesso (Mílon 06, plan §3): fechar a pergunta e falha
+        // não emitem — o canal é exclusivo do cancelamento confirmado.
+        onExecutionCleared?.();
+      },
       () => setClearProcessing(false),
     );
   }
@@ -428,6 +482,8 @@ export function WorkoutDetailSection({
   writeBlocked = false,
   blockedTooltip = null,
   onExecutionSettled,
+  onSeriesMarked,
+  onExecutionCleared,
   focusHeaderSignal = null,
 }: WorkoutDetailSectionProps) {
   const router = useRouter();
@@ -757,6 +813,8 @@ export function WorkoutDetailSection({
                 entries={entries}
                 onTemplateChanged={() => void retry()}
                 onExecutionSettled={onExecutionSettled}
+                onSeriesMarked={onSeriesMarked}
+                onExecutionCleared={onExecutionCleared}
               >
                 {(ctx) => (
                   <>

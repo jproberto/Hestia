@@ -345,6 +345,79 @@
 
 ---
 
+## Feature #06 — Timer de descanso auto + PWA push (2026-10-18 — suite 1826/1826 pós-fix B1/B2, cov 85.16% lines / 84.08% branch)
+
+> Integração por composição: a feature adiciona painel/hint/push sobre a marcação da #5, o desfecho da 7b-1 e a guarda da 7c, sem alterar as máquinas existentes. `toggleSeries` devolve `marked`/`unmarked` (adição em runtime); a seção ganha `onSeriesMarked`/`onExecutionCleared`; a página liga os eventos ao `useRestTimer`. Os testes de regressão das features 05, 07, 7b, 7b-1 e 7c estão verdes nesta entrega (suite completa; spot checks no `test-report.json`).
+
+### REG-68: Smoke — Marcar série inicia o descanso; Finalizar/Cancelar encerram sem aviso residual
+**Dado** o Treino do Dia com exercício de descanso preenchido e série desmarcada
+**Quando** a pessoa marca a série e, com a contagem rodando, finaliza (ou cancela) o treino com sucesso
+**Então** o painel de descanso inicia automaticamente com o `restSeconds` da entry e, após o Finalizar/Cancelar, o painel some e nenhum aviso de fim de descanso chega depois (push cancelado no servidor)
+
+### Cenários que a homologação deve re-checar (integração composição — verdes na suite, re-cheque manual recomendado)
+
+- **#5 — toggle/marcação/pergunta da última série (agora com retorno `marked`/`unmarked`):** REG-49 (marcar série), REG-51 (badge/bloqueio/aviso e cancelamento ao desmarcar tudo com a pergunta exata), REG-55 (texto de cancelamento) — a pergunta da última desmarcada continua sem desfecho 7b-1 e ganhou o canal próprio `onExecutionCleared` (encerra timer e push); ao fechar a pergunta sem confirmar, timer e push seguem.
+- **#7 — quatro confirmações:** REG-57 (completo direto + parcial) e REG-60 (quatro textos exatos) — inalterados; finalizar qualquer caso emite o desfecho 7b-1 que a página usa para cancelar o timer como primeiro efeito; REG-61 (vazio conduzido ao cancelamento) emite `cancelled` e também cancela timer/push.
+- **7b/7b-1 — rotação, desfecho `sealed`/`cancelled` e foco:** REG-58/REG-63/REG-64 (rotação) e REG-67 (smoke avanço/permanência com foco) — `onExecutionSettled` intacto; a página só acrescenta `restTimer.cancel()` antes das recargas já existentes; a troca de treino para consulta (REG-65) NÃO cancela timer nem push (emenda da spec).
+- **7c — guarda por dono e liberação de escrita:** REG-59 (escrita bloqueada com tooltip e liberação após settle) e REG-66 (uma aberta por dono) — pré-cheque 7c intacto; o parceiro espectador que consulta o treino do outro nunca dispara o gatilho e nunca recebe o push do descanso (homologação em iPhone real nos cenários de dispositivo do `test-scenarios.md`).
+
+---
+
+## Feature #06 — Emenda 2026-10-23 (fix-01-server — timing do push; suite 1854/1854, cov 85.33% lines / 84.14% branch)
+
+> A emenda (Alavancas 1–3: `elapsed` ancorado ao clique, resposta 202 + envio em background, cancel-all por dono no INSERT) é aditiva à #06: só toca o cliente de push, o hook do timer, o repositório de push e a rota. Integração com as demais features permanece por composição, sem mudança de camadas. Os testes de regressão das features 01–07b-1 estão verdes nesta entrega (suite completa; spot checks no `test-report.json`).
+
+### REG-69: Agendamento único por dono no servidor (cancel-all no INSERT)
+**Dado** o dono com qualquer agendamento de push ainda ativo no servidor (inclusive os órfãos de reload, de aba dupla ou de cancelamento perdido)
+**Quando** uma nova marcação de série com descanso agenda o push
+**Então** no máximo um agendamento permanece ativo por dono: o novo agendamento é o único `agendado`, os anteriores do mesmo dono são cancelados no servidor e nenhum push deles chega ao fim do descanso antigo — o parceiro e os agendamentos de outro dono não são afetados
+
+### REG-70: `elapsed` no corpo do agendamento e compatibilidade do cliente antigo
+**Dado** uma marcação de série com descanso (clique que inicia o timer)
+**Quando** o agendamento é enviado ao servidor
+**Então** o tempo decorrido desde o clique viaja no corpo (`elapsed`, inteiro ≥ 0) e o push mira o zero do contador visual (viés ±1–2s); um cliente antigo que envie o corpo **sem** o campo continua funcionando (fallback para o comportamento antigo: duração contada a partir do servidor, sem erro), e o cancelamento explícito nunca carrega o campo
+
+### REG-71: Resposta de agendamento imediata e cancelamento sem fila
+**Dado** o agendamento de um push em andamento (o servidor já respondeu e o envio espera em background)
+**Quando** a pessoa finaliza, cancela a execução ou substitui o descanso com nova marcação
+**Então** o cancelamento é processado de imediato no servidor (sem esperar agendamento algum pendurado) e nenhum push órfão é entregue — a troca de treino para consulta continua não cancelando (REG-68 e cenário 16 intactos)
+
+### Cenários que a homologação deve re-checar (emenda — verdes na suite, re-cheque manual em iPhone real obrigatório para o timing)
+
+- **Janela ±1–2s do zero do contador:** cenário E1 do `test-scenarios.md` (push com aba em primeiro plano alinhado ao zero visual).
+- **Cancel-all e órfãos:** cenários E2 (reload no meio) e E3 (duas abas) — nenhum push do agendamento antigo.
+- **Latência de rede:** cenário E4 — `elapsed` compensa o atraso do POST; push no lugar certo.
+- **Decisão 7 (janela do servidor):** cenário E5 — descanso >280s segue o comportamento acordado, sem duplicata.
+- **Entrega iPhone:** cenário E6 (re-execução dos cenários 3–6 com o novo agendamento) e E6b (cancelamento efetivo sem órfão, contraste com troca para consulta).
+
+---
+
+## Feature #06 — Emenda 2 (2026-10-29 — supressão da notificação com aba ativa + graça 800 ms; suite 1871/1871, cov 85.35% lines / 84.20% branch)
+
+> A Emenda 2 (DA21–DA24: cancel no zero por visibilidade no cliente, janela de graça `JANELA_GRACA_ENVIO_MS = 800` no servidor, decisão exclusiva do tick de zero) é aditiva à #06: só toca `useRestTimer.ts` (branch do tick de zero) e `route.ts` (constante + um `dormir` entre espera e re-leitura). Todas as demais camadas permanecem intocadas — os testes de regressão das features 01–07b-1 e da Emenda 1 estão verdes nesta entrega (suite completa; spot checks no `test-report.json`).
+
+### REG-72: Sem notificação criada com aba visível no zero (supressão mantendo o alerta)
+**Dado** o Treino do Dia com descanso rodando e a aba do treino **visível** no instante do zero
+**Quando** a contagem chega a zero
+**Então** nenhum push do fim de descanso é entregue (nem no instante, nem represado ao trocar de aba depois): o agendamento é cancelado no servidor no tick de zero e **nenhuma notificação do sistema é criada**; o alerta visual `Descanso de <exercício> terminou.` permanece em tela até `Fechar` — a semântica é "cancela mantendo o alerta", diferente do `cancel()` de finalizar/cancelar que zera a UI
+
+### REG-73: Re-leitura do servidor só após `fire_at` + graça de 800 ms
+**Dado** um agendamento `agendado` cujo instante de disparo (`fire_at`) chegou, com a aba oculta no zero (nenhum cancel)
+**Quando** o background do servidor completa a espera
+**Então** o servidor espera **mais** a janela de graça de 800 ms antes de reler o status e enviar — com a aba oculta a notificação chega em zero + graça + FCM (tipicamente +1–2s, pior ~+2,5s); se o status relído pós-graça não for mais `agendado` (cancel chegado), termina sem enviar e sem graça adicional; descansos maiores que 280s seguem cap + graça (decisão 7 intacta)
+
+### Cenários que a homologação deve re-checar (Emenda 2 — verdes na suite, re-cheque manual em iPhone real obrigatório para a visibilidade no zero)
+
+- **Aba visível no zero:** cenário A1 do `test-scenarios.md` — nenhuma notificação, alerta visual permanece; trocar de aba depois não revela notificação represada.
+- **Aba oculta no zero:** cenário A2 — entrega em zero + graça + FCM (reexecução dos cenários 2/3/4/5 originais com este build).
+- **iPhone com tela apagada:** cenário A3 — requisito original preservado (sem tick → sem cancel → servidor envia; reexecução das seções 3–6 originais).
+- **Tela ligada e app visível:** cenário A4 — só camada visual, aparelho silencioso.
+- **Cancel falhado/corrida perdida:** cenário A5 — notificação extra rara **aceita**; sem falha visível.
+- **Reload/fechar antes do zero:** cenário A6 — decisão 6 preservada: o push dispara no horário (zero + graça + FCM).
+- **Re-homologação da Emenda 1:** cenário A7 — E1–E6b re-executados com a regra nova (E1 visível no zero → sem notificação; E1 oculto → janela ±1–2s).
+
+---
+
 ## Execução de regressão
 
 ```bash
@@ -382,4 +455,4 @@ npm run build-storybook
 **Dado** exercício com séries
 **Então** grid responsivo (1/2/4 col), campo único com rótulo pelo modo da entry, toggle kg/lb abaixo da carga persistindo na entry
 
-**Critério de passagem:** 1636 testes passados, 0 falhas, coverage ≥ 80% (atual: 84.74% lines, 83.63% branch — 7b-1 em 2026-10-16; referência 07c em 2026-10-15: 1618 testes, 84.59% lines, 83.49% branch).
+**Critério de passagem:** testes passados, 0 falhas, coverage ≥ 80% (atual: 1871 testes, 85.35% lines, 84.20% branch — 06-timer-descanso-pwa com a Emenda 2 re-executada em 2026-10-29; referência Emenda 1 em 2026-10-23: 1854 testes, 85.33% lines, 84.14% branch; referência 06-base em 2026-10-18 pós-fix B1/B2: 1831 testes, 85.31% lines, 84.10% branch; referência 7b-1 em 2026-10-16: 1636 testes, 84.74% lines, 83.63% branch).

@@ -36,13 +36,26 @@ import type {
 
 export type FinishConfirmCase = "parcial" | "completa" | "vazio";
 
+/**
+ * Direção decidida internamente por `toggleSeries` (Mílon #06, plan §3 +
+ * DA6): `marked` no caminho de marca (inclusive quando abre a pergunta de
+ * completa) e `unmarked` no de desmarca (inclusive quando abre a de limpar).
+ * O erro continua RELANÇANDO sem retorno. A informação já é decidida aqui —
+ * a seção não a infere depois do `await` por causa do estado assíncrono de
+ * `dones`.
+ */
+export type ToggleSeriesOutcome = "marked" | "unmarked";
+
 export interface UseWorkoutExecutionReturn {
   execution: WorkoutExecution | null;
   doneSeriesIds: string[];
   markedCount: number;
   totalSeriesCount: number;
   finishCase: CasoFinalizacao | null;
-  toggleSeries: (entry: WorkoutEntry, serie: WorkoutSeries) => Promise<void>;
+  toggleSeries: (
+    entry: WorkoutEntry,
+    serie: WorkoutSeries,
+  ) => Promise<ToggleSeriesOutcome>;
   saveSeriesExecution: (
     entry: WorkoutEntry,
     serie: WorkoutSeries,
@@ -205,7 +218,10 @@ export function useWorkoutExecution(
   }, [workoutId]);
 
   const toggleSeries = useCallback(
-    async (entry: WorkoutEntry, serie: WorkoutSeries): Promise<void> => {
+    async (
+      entry: WorkoutEntry,
+      serie: WorkoutSeries,
+    ): Promise<ToggleSeriesOutcome> => {
       setErrorMsg(null);
       setErrorOrigin(null);
       // Pré-cheque por dono (Mílon 07c, R2, plan §3): aberta em treino
@@ -260,7 +276,7 @@ export function useWorkoutExecution(
             setFinishConfirmCase("completa");
             setFinishConfirmOpen(true);
           }
-          return;
+          return "marked";
         }
         const alvo =
           execution ?? (await findOpenExecutionByWorkoutStandalone(workoutId));
@@ -271,8 +287,8 @@ export function useWorkoutExecution(
           // A série clicada já aparece desmarcada; a pergunta decide só sobre
           // a linha de execução (confirmar exclui, cancelar mantém).
           setClearConfirmOpen(true);
-          return;
         }
+        return "unmarked";
       } catch (err: unknown) {
         const message = toErrorMessage(err, "Erro ao alternar série");
         setErrorMsg(message);

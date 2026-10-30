@@ -238,6 +238,69 @@ export interface MarkExecutionSeriesInput {
 }
 
 // ----------------------------------------------------------------------------
+// Push do fim de descanso (Mílon #06, migração 0017): assinatura de push por
+// dispositivo (push_subscriptions) e agendamento de descanso por sessão de
+// cliente (rest_push_schedules). Fonte única — nunca duplicar fora daqui.
+// ----------------------------------------------------------------------------
+
+export interface PushSubscriptionRow {
+  id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  created_at: string;
+  created_by: string;
+}
+
+// Nome deliberadamente distinto do PushSubscription global do navegador.
+export interface DevicePushSubscription {
+  id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  createdAt: string;
+  created_by: string;
+}
+
+// Status do agendamento (CHECK da migração 0017).
+export type RestPushScheduleStatus = 'agendado' | 'enviado' | 'cancelado' | 'erro';
+
+export interface RestPushScheduleRow {
+  id: string;
+  subscription_id: string;
+  duration_seconds: number;
+  fire_at: string;
+  status: string;
+  sent_at: string | null;
+  created_at: string;
+  created_by: string;
+}
+
+export interface RestPushSchedule {
+  id: string;
+  subscriptionId: string;
+  durationSeconds: number;
+  fireAt: string;
+  status: RestPushScheduleStatus;
+  sentAt: string | null;
+  createdAt: string;
+  created_by: string;
+}
+
+export interface UpsertPushSubscriptionInput {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
+export interface CreateRestPushScheduleInput {
+  id: string;
+  subscriptionId: string;
+  durationSeconds: number;
+  fireAt: string;
+}
+
+// ----------------------------------------------------------------------------
 // Legado do scaffold (removido na TASK-003/004/005 junto aos arquivos example).
 // Mantido nesta task para não quebrar `tsc` enquanto o scaffold ainda consome.
 // ----------------------------------------------------------------------------

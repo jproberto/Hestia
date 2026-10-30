@@ -272,8 +272,10 @@ describe("TASK-001 (2ª volta) — execução aberta e executionBlocked (RED)", 
 
     render(<WorkoutPage />);
 
-    await waitFor(() => expect(mockFindOpen).toHaveBeenCalled());
-    expect(renderedProps().executionBlocked).toBe(true);
+    // Espera o ESTADO esperado (não só a chamada do mock): o setExecution +
+    // re-render do React podem fluir depois da chamada — em CI a leitura
+    // imediata de renderedProps() lia o estado inicial (flake).
+    await waitFor(() => expect(renderedProps().executionBlocked).toBe(true));
   });
 
   it("sem execução aberta, passa executionBlocked=false à WorkoutDetailSection", async () => {
@@ -281,8 +283,9 @@ describe("TASK-001 (2ª volta) — execução aberta e executionBlocked (RED)", 
 
     render(<WorkoutPage />);
 
-    await waitFor(() => expect(mockFindOpen).toHaveBeenCalled());
-    expect(renderedProps().executionBlocked).toBe(false);
+    // Espera o ESTADO esperado (simétrico ao caso true): mata o flake
+    // latente e torna o teste semântico (estado final, não inicial).
+    await waitFor(() => expect(renderedProps().executionBlocked).toBe(false));
   });
 });
 

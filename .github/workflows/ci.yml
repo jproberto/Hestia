@@ -142,7 +142,7 @@ jobs:
 
       # Abre o Pull Request se as validações passarem e for um push em branch feature/*
       - name: Auto Create Feature Pull Request
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feature/')
+        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/feature/') || startsWith(github.ref, 'refs/heads/release/'))
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

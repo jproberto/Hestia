@@ -1,0 +1,16 @@
+{
+  "name": "Héstia",
+  "short_name": "Héstia",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/",
+  "theme_color": "#111827",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/mascots/hestia.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ]
+}

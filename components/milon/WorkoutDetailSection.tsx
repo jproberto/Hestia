@@ -1,0 +1,1083 @@
+"use client";
+
+import {
+  Fragment,
+  cloneElement,
+  isValidElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useRouter } from "next/navigation";
+import { AsyncState } from "@/components/ui/AsyncState";
+import { Button } from "@/components/ui/button";
+import WorkoutEntriesList from "@/components/milon/WorkoutEntriesList";
+import ExercisePickerModal from "@/components/milon/ExercisePickerModal";
+import ExerciseModal, {
+  type ExerciseModalAction,
+  type ExerciseModalFields,
+} from "@/components/milon/ExerciseModal";
+import WorkoutConfirmModal, {
+  type WorkoutConfirmVariant,
+} from "@/components/milon/WorkoutConfirmModal";
+import SeriesEditModal, {
+  type SeriesEditFields,
+} from "@/components/milon/SeriesEditModal";
+import { useWorkoutDetail } from "@/lib/milon/hooks/useWorkoutDetail";
+import { useWorkoutExecution } from "@/lib/milon/hooks/useWorkoutExecution";
+import {
+  compareExercisesByMuscleThenName,
+  normalizeExerciseText,
+} from "@/lib/milon/utils";
+import type {
+  EntryMode,
+  Exercise,
+  ExerciseMode,
+  LoadUnit,
+  WorkoutEntry,
+  WorkoutEntryView,
+  WorkoutExecution,
+  WorkoutSeries,
+} from "@/lib/milon/types";
+import type { SerieField, SeriesExecutionProps } from "@/components/milon/SeriesCard";
+
+export type WorkoutDetailBackTarget =
+  | { kind: "program"; programId: string }
+  | { kind: "none" };
+
+/**
+ * Desfecho da operação de encerramento (Mílon 07b-1, plan §3): `sealed`
+ * somente após `finishExecution` bem-sucedido (parcial confirmada,
+ * completa confirmada ou completo direto); `cancelled` somente após
+ * `clearExecution` bem-sucedido (Cancelar confirmado ou Finalizar vazio
+ * conduzido). Emitido uma única vez por operação de sucesso, nunca no erro.
+ */
+export type ExecutionSettledOutcome = "sealed" | "cancelled";
+
+/**
+ * Carga do gatilho do timer de descanso (Mílon 06, plan §3): emitida pela
+ * seção após `toggleSeries` bem-sucedido com direção `marked` e
+ * `entry.restSeconds > 0`. O nome do exercício vem do `findTarget` (fonte da
+ * tela, sem leitura extra) e a duração é a capturada da entry.
+ */
+export interface RestMarkedInfo {
+  workoutId: string;
+  entryId: string;
+  exerciseName: string;
+  restSeconds: number;
+}
+
+export interface WorkoutDetailSectionProps {
+  workoutId: string;
+  backTarget: WorkoutDetailBackTarget;
+  title?: string;
+  headerActions?: ReactNode | null;
+  entryFooter?: ((view: WorkoutEntryView) => ReactNode) | ReactNode | null;
+  footer?: ReactNode | null;
+  /**
+   * Execução série a série (Mílon #5, opt-in, default desligado): quando
+   * ligada compõe `useWorkoutExecution`, monta o pacote de execução e
+   * hospeda o SeriesEditModal + a confirmação de limpeza. Desligada, o
+   * comportamento é idêntico ao atual (manutenção intacta por construção).
+   */
+  executionEnabled?: boolean;
+  /**
+   * Bloqueio do template por treino (Mílon #5, 2ª volta D21): quando true,
+   * o chrome de manutenção é desabilitado (readOnly efetivo =
+   * readOnly || executionBlocked). A página de manutenção carrega a
+   * execução aberta e passa `executionBlocked={execution !== null}`.
+   */
+  executionBlocked?: boolean;
+  /**
+   * Troca de execução ativa (Mílon 07c, plan §3): treino com a execução
+   * aberta do dono (default nulo), escrita bloqueada neste treino
+   * (default falso) e tooltip nomeado (default nulo). Com `writeBlocked`
+   * verdadeiro, o pacote de execução é suspenso, o editor nunca abre,
+   * a lista renderiza em leitura com o tooltip e a barra de aviso exibe
+   * o texto. Badge/slots de finalizar e cancelar seguem só na aberta
+   * própria (via `useWorkoutExecution` do próprio treino).
+   */
+  activeExecutionWorkoutId?: string | null;
+  writeBlocked?: boolean;
+  blockedTooltip?: string | null;
+  /**
+   * Troca de execução ativa (Mílon 07c, AC6) + desfecho (Mílon 07b-1,
+   * plan §3): invalidação da fonte única após Finalizar/Cancelar com
+   * sucesso. A seção invoca exatamente uma vez por operação bem-sucedida
+   * carregando o desfecho (`sealed` nos três caminhos de selamento,
+   * `cancelled` nos dois de exclusão); a falha nunca emite. A chamada sem
+   * argumento é retrocompatível (comportamento 7c: não-selamento).
+   */
+  onExecutionSettled?: (outcome: ExecutionSettledOutcome) => void | Promise<void>;
+  /**
+   * Gatilho do timer de descanso (Mílon 06, plan §3): emitida exatamente
+   * uma vez após `toggleSeries` bem-sucedido com direção `marked` e
+   * `entry.restSeconds > 0`; nunca em erro, nunca em desmarcação e nunca
+   * com descanso nulo ou zero. Não substitui nem estende
+   * `onExecutionSettled` (canal próprio do descanso).
+   */
+  onSeriesMarked?: (info: RestMarkedInfo) => void;
+  /**
+   * Encerramento do timer na limpeza confirmada (Mílon 06, plan §3):
+   * emitida exatamente uma vez após `confirmClearExecution` bem-sucedido
+   * (confirmar a pergunta de cancelamento da última série desmarcada da
+   * #5); nunca no fechar da pergunta e nunca em falha. O
+   * `onExecutionSettled` segue intocado (7b-1 — DA7 daquela plan
+   * preservada).
+   */
+  onExecutionCleared?: () => void;
+  /**
+   * Sinal de foco do cabeçalho (Mílon 07b-1, plan §3 / DA5): com valor
+   * não-nulo a seção foca o próprio cabeçalho rotulado `Cabeçalho do
+   * treino` (tabindex -1, foco só programático) ao montar e a cada nova
+   * mudança do valor, nos dois ramos (execução e manutenção). Nulo
+   * (default) nenhum foco programático.
+   */
+  focusHeaderSignal?: number | null;
+}
+
+function toMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback;
+}
+
+/**
+ * Enxerto de ação nos slots (Mílon #7, D6): a página do Treino do Dia fornece
+ * os botões como ReactNode estático (só rótulo, sem acesso ao hook interno
+ * da seção); a seção injeta o disparador da máquina de estados preservando
+ * o onClick original quando existir. Nós não-elemento passam intactos.
+ */
+function comAcao(slot: ReactNode | null, acao: () => void): ReactNode {
+  if (!isValidElement(slot)) return slot ?? null;
+  const props = slot.props as { onClick?: (e: unknown) => void };
+  const original = props.onClick;
+  return cloneElement(slot, {
+    onClick: (e: unknown) => {
+      if (original) original(e);
+      acao();
+    },
+  } as Partial<unknown>);
+}
+
+function varianteFinish(
+  caso: "parcial" | "completa" | "vazio" | null,
+): WorkoutConfirmVariant {
+  if (caso === "completa") return "finalizar-completa";
+  if (caso === "vazio") return "finalizar-vazio";
+  return "finalizar-parcial";
+}
+
+function deriveMuscleOptions(items: Exercise[]): string[] {
+  const seen = new Map<string, string>();
+  for (const item of items) {
+    const key = normalizeExerciseText(item.muscle);
+    if (!seen.has(key)) seen.set(key, item.muscle);
+  }
+  return [...seen.values()].sort((a, b) =>
+    normalizeExerciseText(a).localeCompare(normalizeExerciseText(b), "pt-BR"),
+  );
+}
+
+interface ConfirmState {
+  variant: WorkoutConfirmVariant;
+  entry: WorkoutEntry;
+  exerciseName: string;
+  seriesCount: number;
+  currentQuantity: number;
+  newQuantity: number;
+}
+
+interface EditingTarget {
+  entry: WorkoutEntry;
+  serie: WorkoutSeries;
+  loadUnit: LoadUnit | null;
+  exerciseMode: ExerciseMode | null;
+  /** Nome da tela (fonte única do RestMarkedInfo — sem leitura extra). */
+  exerciseName: string;
+}
+
+interface ExecutionListContext {
+  executionPackage: SeriesExecutionProps | undefined;
+  execErrorMsg: string | null;
+  clearConfirmOpen: boolean;
+  clearProcessing: boolean;
+  confirmClear: () => void;
+  cancelClear: () => void;
+  finishConfirmOpen: boolean;
+  finishConfirmCase: "parcial" | "completa" | "vazio" | null;
+  finishProcessing: boolean;
+  confirmFinish: () => void;
+  cancelFinish: () => void;
+  cancelConfirmOpen: boolean;
+  cancelProcessing: boolean;
+  confirmCancel: () => void;
+  cancelCancel: () => void;
+  requestFinish: () => void;
+  requestCancel: () => void;
+  editing: EditingTarget | null;
+  editorSaving: boolean;
+  editorError: string | null;
+  closeEditor: () => void;
+  saveEditor: (fields: SeriesEditFields) => Promise<void>;
+  displayEntries: WorkoutEntryView[];
+  execExecution: WorkoutExecution | null;
+}
+
+/**
+ * Dono da execução série a série (Mílon #5). Montado SOMENTE quando a flag
+ * `executionEnabled` está ligada — por isso o hook de execução nunca é
+ * chamado na manutenção (sem hooks condicionais no corpo da seção). Detém o
+ * estado do editor, monta o pacote a partir de `doneSeriesIds` e expõe tudo
+ * via render prop para o corpo da seção compor lista + modal + confirmação.
+ */
+function ExecutionHost({
+  workoutId,
+  entries,
+  onTemplateChanged,
+  onExecutionSettled,
+  onSeriesMarked,
+  onExecutionCleared,
+  children,
+}: {
+  workoutId: string;
+  entries: WorkoutEntryView[];
+  onTemplateChanged: () => void;
+  onExecutionSettled?: (outcome: ExecutionSettledOutcome) => void | Promise<void>;
+  onSeriesMarked?: (info: RestMarkedInfo) => void;
+  onExecutionCleared?: () => void;
+  children: (ctx: ExecutionListContext) => ReactNode;
+}) {
+  const exec = useWorkoutExecution(workoutId, entries);
+  const [editing, setEditing] = useState<EditingTarget | null>(null);
+  const [editorSaving, setEditorSaving] = useState(false);
+  const [editorError, setEditorError] = useState<string | null>(null);
+  const [clearProcessing, setClearProcessing] = useState(false);
+  // Releitura da execução após cada alternância (o hook real já se atualiza
+  // sozinho; o sinal garante a composição com o estado mais recente, ex.: a
+  // confirmação de limpeza da última série desmarcada).
+  const [, bumpExecution] = useState(0);
+
+  // Template ao vivo (spec alinhada §3): o que se exibe é sempre o valor atual
+  // do template, com marcadores de feito por série vindos da execução. A
+  // edição no Treino do Dia aparece na hora (sem foto; o executado alimenta
+  // o selamento).
+  const displayEntries: WorkoutEntryView[] = entries;
+
+  function findTarget(seriesId: string): EditingTarget | null {
+    for (const view of displayEntries) {
+      const serie = view.series.find((item) => item.id === seriesId);
+      if (serie) {
+        return {
+          entry: view.entry,
+          serie,
+          loadUnit: view.entry.loadUnit ?? view.exercise.loadUnit ?? null,
+          exerciseMode: (view.entry.mode ?? view.exercise.mode ?? null) as ExerciseMode | null,
+          exerciseName: view.exercise.name,
+        };
+      }
+    }
+    return null;
+  }
+
+  async function handleToggle(seriesId: string): Promise<void> {
+    const target = findTarget(seriesId);
+    if (!target) return;
+    try {
+      const outcome = await exec.toggleSeries(target.entry, target.serie);
+      // Gatilho do timer (Mílon 06, plan §3): só a marcação bem-sucedida com
+      // descanso maior que zero emite — duração capturada da entry e nome do
+      // findTarget. Desmarcação, falha e descanso nulo/zero não emitem nada.
+      const restSeconds = target.entry.restSeconds ?? 0;
+      if (outcome === "marked" && restSeconds > 0) {
+        onSeriesMarked?.({
+          workoutId,
+          entryId: target.entry.id,
+          exerciseName: target.exerciseName,
+          restSeconds,
+        });
+      }
+    } catch {
+      // O banner já foi alimentado pelo hook (origem operacao) e o estado
+      // anterior é mantido; aqui só se evita rejeição não tratada.
+    } finally {
+      // Releitura do estado da execução após a alternância: o hook real já
+      // se atualiza sozinho, e o sinal garante a composição atualizada (ex.:
+      // a confirmação de limpeza da última desmarcada).
+      bumpExecution((tick) => tick + 1);
+    }
+  }
+
+  function handleOpenEditor(seriesId: string): void {
+    const target = findTarget(seriesId);
+    if (!target) return;
+    setEditorError(null);
+    setEditing(target);
+  }
+
+  function closeEditor(): void {
+    if (!editorSaving) {
+      setEditing(null);
+      setEditorError(null);
+    }
+  }
+
+  async function saveEditor(fields: SeriesEditFields): Promise<void> {
+    const target = editing;
+    if (!target) return;
+    setEditorSaving(true);
+    setEditorError(null);
+    try {
+      // Comportamento único (D4): origem + seguintes, feito preservado —
+      // decisão do hook, sem indicador de cópia.
+      await exec.saveSeriesExecution(target.entry, target.serie, fields);
+      setEditing(null);
+      setEditorError(null);
+      onTemplateChanged();
+    } catch (err: unknown) {
+      // Modal nunca fecha no erro: registra local, exibe via prop e relança
+      // para o modal preservar o digitado.
+      const message = toMessage(err, "Erro ao salvar série");
+      setEditorError(message);
+      throw err instanceof Error ? err : new Error(message);
+    } finally {
+      setEditorSaving(false);
+    }
+  }
+
+  function confirmClear(): void {
+    setClearProcessing(true);
+    void exec.confirmClearExecution().then(
+      () => {
+        setClearProcessing(false);
+        // Somente no sucesso (Mílon 06, plan §3): fechar a pergunta e falha
+        // não emitem — o canal é exclusivo do cancelamento confirmado.
+        onExecutionCleared?.();
+      },
+      () => setClearProcessing(false),
+    );
+  }
+
+  function cancelClear(): void {
+    if (!clearProcessing) exec.cancelClearExecution();
+  }
+
+  // Encerramento (Mílon #7, plan §3 + D3-D6): hospeda as confirmações novas
+  // com a mesma disciplina do clearConfirmOpen — erro nunca fecha (o hook
+  // relança e mantém aberto), processing nunca fecha (dismiss guardado aqui
+  // + botões desabilitados no modal). Após o selamento com sucesso, invalida
+  // a fonte única via `onExecutionSettled` (Mílon 07c, AC6) informando o
+  // desfecho da operação (Mílon 07b-1, plan §3).
+  function notifySettled(outcome: ExecutionSettledOutcome): void {
+    void onExecutionSettled?.(outcome);
+  }
+
+  function confirmFinish(): void {
+    // Captura síncrona do caso ANTES da chamada do hook (plan §3 / TASK-002
+    // AC3): `confirmFinish` reinicia `finishConfirmCase` ao concluir, daí o
+    // desfecho ser decidido aqui — vazio conduzido emite `cancelled`, os
+    // demais (parcial/completa) emitem `sealed`.
+    const caso = exec.finishConfirmCase;
+    void exec
+      .confirmFinish()
+      .then(() => notifySettled(caso === "vazio" ? "cancelled" : "sealed"))
+      .catch(() => {
+        // Banner já alimentado pelo hook (origem operacao); modal permanece
+        // aberto por construção (hook só fecha no sucesso). Sem desfecho.
+      });
+  }
+
+  function cancelFinish(): void {
+    if (!exec.finishProcessing) exec.cancelFinish();
+  }
+
+  function confirmCancel(): void {
+    void exec
+      .confirmCancelExecution()
+      .then(() => notifySettled("cancelled"))
+      .catch(() => {
+        // Idem: erro de operação sem fechar, sem desfecho.
+      });
+  }
+
+  function cancelCancel(): void {
+    if (!exec.cancelProcessing) exec.cancelCancelExecution();
+  }
+
+  function requestFinish(): void {
+    // Caso capturado síncrono e anterior à chamada do hook: só o completo
+    // sela direto (emite `sealed`); parcial/vazio abrem a pergunta sem
+    // selar e o desfecho sai em `confirmFinish` — nunca aqui.
+    const caso = exec.finishCase;
+    void exec
+      .requestFinish()
+      .then(() => {
+        if (caso === "completo") notifySettled("sealed");
+      })
+      .catch(() => {
+        // Completo sela direto; falha vira banner de operação (sem modal).
+      });
+  }
+
+  function requestCancel(): void {
+    exec.requestCancel();
+  }
+
+  const doneBySeriesId: Record<string, boolean> = {};
+  for (const id of exec.doneSeriesIds) doneBySeriesId[id] = true;
+
+  // Com o editor aberto o modal em tela cheia cobre a lista; o pacote é
+  // suspenso para que nenhum marcador concorra com o formulário.
+  const executionPackage: SeriesExecutionProps | undefined =
+    editing !== null
+      ? undefined
+      : {
+          doneBySeriesId,
+          onToggle: handleToggle,
+          onOpenEditor: handleOpenEditor,
+        };
+
+  return (
+    <>
+      {children({
+        executionPackage,
+        execErrorMsg: exec.errorMsg,
+        clearConfirmOpen: exec.clearConfirmOpen,
+        clearProcessing,
+        confirmClear,
+        cancelClear,
+        finishConfirmOpen: exec.finishConfirmOpen,
+        finishConfirmCase: exec.finishConfirmCase,
+        finishProcessing: exec.finishProcessing,
+        confirmFinish,
+        cancelFinish,
+        cancelConfirmOpen: exec.cancelConfirmOpen,
+        cancelProcessing: exec.cancelProcessing,
+        confirmCancel,
+        cancelCancel,
+        requestFinish,
+        requestCancel,
+        editing,
+        editorSaving,
+        editorError,
+        closeEditor,
+        saveEditor,
+        displayEntries,
+        execExecution: exec.execution,
+      })}
+    </>
+  );
+}
+
+export function WorkoutDetailSection({
+  workoutId,
+  backTarget,
+  headerActions = null,
+  entryFooter = null,
+  footer = null,
+  executionEnabled = false,
+  executionBlocked = false,
+  activeExecutionWorkoutId = null,
+  writeBlocked = false,
+  blockedTooltip = null,
+  onExecutionSettled,
+  onSeriesMarked,
+  onExecutionCleared,
+  focusHeaderSignal = null,
+}: WorkoutDetailSectionProps) {
+  const router = useRouter();
+
+  // Foco do cabeçalho pelo sinal (Mílon 07b-1, plan §3 + DA5): só há foco
+  // programático com sinal não-nulo, ao montar e a cada mudança do valor
+  // (o tabindex -1 do cabeçalho mantém o foco fora da tabulação).
+  const cabecalhoRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (focusHeaderSignal === null) return;
+    cabecalhoRef.current?.focus();
+  }, [focusHeaderSignal]);
+
+  const {
+    workout,
+    program,
+    entries,
+    exercises,
+    loading,
+    errorMsg,
+    errorOrigin,
+    successNotice,
+    retry,
+    addExercise,
+    removeEntry,
+    reorderEntries,
+    setQuantity,
+    setRest,
+    updateSeries,
+    applyToAll,
+    saveExercise,
+    createExerciseAndAdd,
+    setEntryMode,
+    setEntryLoadUnit,
+  } = useWorkoutDetail(workoutId);
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [muscleFilter, setMuscleFilter] = useState("");
+  const [pickerError, setPickerError] = useState<string | null>(null);
+  const [pickerSaving, setPickerSaving] = useState(false);
+
+  const [exerciseModalOpen, setExerciseModalOpen] = useState(false);
+  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
+  const [exerciseModalError, setExerciseModalError] = useState<string | null>(
+    null,
+  );
+  const [exerciseSaving, setExerciseSaving] = useState(false);
+
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmProcessing, setConfirmProcessing] = useState(false);
+
+  const readOnly = program?.status === "inativo";
+  // Mílon 07c: escrita bloqueada neste treino (a página já deriva como
+  // aberta em treino distinto; o id da aberta só identifica, sem decidir).
+  void activeExecutionWorkoutId;
+  const bloqueado07c = writeBlocked === true;
+  const effectiveReadOnly =
+    (readOnly ?? false) || executionBlocked || bloqueado07c;
+  const backProgramId =
+    backTarget.kind === "program" ? backTarget.programId : "";
+  const programId = program?.id ?? backProgramId;
+
+  const muscleOptions = useMemo(
+    () => deriveMuscleOptions(exercises),
+    [exercises],
+  );
+
+  const pickerExercises = useMemo(
+    () =>
+      [...exercises]
+        .filter((exercise) => exercise.deletedAt === null)
+        .sort(compareExercisesByMuscleThenName),
+    [exercises],
+  );
+
+  const findView = useCallback(
+    (entryId: string) => entries.find((view) => view.entry.id === entryId),
+    [entries],
+  );
+
+  const handleBackToProgram = useCallback(() => {
+    router.push(`/milon/programs/${programId}`);
+  }, [router, programId]);
+
+  const openPicker = useCallback(() => {
+    setPickerError(null);
+    setPickerOpen(true);
+  }, []);
+
+  const closePicker = useCallback(() => {
+    if (!pickerSaving) {
+      setPickerOpen(false);
+      setPickerError(null);
+    }
+  }, [pickerSaving]);
+
+  const handleSelect = useCallback(
+    (exercise: Exercise) => {
+      setPickerSaving(true);
+      setPickerError(null);
+      void addExercise(exercise.id).then(
+        () => {
+          setPickerSaving(false);
+          setPickerOpen(false);
+          setPickerError(null);
+        },
+        (err: unknown) => {
+          // D14: bloqueio mantém o modal aberto com mensagem visível.
+          setPickerSaving(false);
+          setPickerError(toMessage(err, "Erro ao adicionar exercício"));
+        },
+      );
+    },
+    [addExercise],
+  );
+
+  const handleCreateNew = useCallback(() => {
+    setEditingExercise(null);
+    setExerciseModalError(null);
+    setExerciseModalOpen(true);
+  }, []);
+
+  const closeExerciseModal = useCallback(() => {
+    if (!exerciseSaving) {
+      setExerciseModalOpen(false);
+      setEditingExercise(null);
+      setExerciseModalError(null);
+    }
+  }, [exerciseSaving]);
+
+  const handleExerciseModalSave = useCallback(
+    async (
+      fields: ExerciseModalFields,
+      action: ExerciseModalAction,
+    ): Promise<void> => {
+      void action;
+      setExerciseSaving(true);
+      setExerciseModalError(null);
+      try {
+        if (editingExercise) {
+          await saveExercise(editingExercise.id, {
+            name: fields.name,
+            muscle: fields.muscle,
+            videoLink: fields.videoLink,
+          });
+        } else {
+          await createExerciseAndAdd({
+            name: fields.name,
+            muscle: fields.muscle,
+            videoLink: fields.videoLink,
+          });
+          setPickerOpen(false);
+          setPickerError(null);
+        }
+        setExerciseModalOpen(false);
+        setEditingExercise(null);
+      } catch (err: unknown) {
+        // Anti-duplicata da #1: mensagem visível, modal permanece aberto.
+        const message = toMessage(err, "Erro ao salvar exercício");
+        setExerciseModalError(message);
+        throw err instanceof Error ? err : new Error(message);
+      } finally {
+        setExerciseSaving(false);
+      }
+    },
+    [editingExercise, saveExercise, createExerciseAndAdd],
+  );
+
+  const handleEditExercise = useCallback(
+    (entryId: string) => {
+      const view = findView(entryId);
+      if (!view) return;
+      setEditingExercise(view.exercise);
+      setExerciseModalError(null);
+      setExerciseModalOpen(true);
+    },
+    [findView],
+  );
+
+  const handleRemoveEntry = useCallback(
+    (entryId: string) => {
+      const view = findView(entryId);
+      if (!view) return;
+      if (view.series.length === 0) {
+        // D6: sem séries, ação direta.
+        void removeEntry(view.entry).catch(() => {
+          // O erro fica visível na página via hook (banner).
+        });
+        return;
+      }
+      setConfirm({
+        variant: "remover-exercicio",
+        entry: view.entry,
+        exerciseName: view.exercise.name,
+        seriesCount: view.series.length,
+        currentQuantity: view.series.length,
+        newQuantity: view.series.length,
+      });
+    },
+    [findView, removeEntry],
+  );
+
+  const handleQuantityCommit = useCallback(
+    (entryId: string, quantity: number) => {
+      void setQuantity(entryId, quantity).catch(() => {
+        // O erro fica visível na página via hook (banner).
+      });
+    },
+    [setQuantity],
+  );
+
+  const handleRequestReduce = useCallback(
+    (entryId: string, newQuantity: number) => {
+      const view = findView(entryId);
+      if (!view) return;
+      setConfirm({
+        variant: "reduzir-series",
+        entry: view.entry,
+        exerciseName: view.exercise.name,
+        seriesCount: view.series.length,
+        currentQuantity: view.series.length,
+        newQuantity,
+      });
+    },
+    [findView],
+  );
+
+  const handleRestCommit = useCallback(
+    (entryId: string, seconds: number | null) => {
+      void setRest(entryId, seconds).catch(() => {
+        // O erro fica visível na página via hook (banner).
+      });
+    },
+    [setRest],
+  );
+
+  const handleSeriesCommit = useCallback(
+    (entryId: string, seriesId: string, field: SerieField, value: number | null) => {
+      void entryId;
+      // Carga commita direto; unidade via toggle kg/lb (handleUnitCommit).
+      void updateSeries(seriesId, field, value).catch(() => {
+        // O erro fica visível na página via hook (banner).
+      });
+    },
+    [updateSeries],
+  );
+
+  const handleApplyAll = useCallback(
+    (entryId: string, seriesId: string) => {
+      void applyToAll(entryId, seriesId).catch(() => {
+        // O erro fica visível na página via hook (banner).
+      });
+    },
+    [applyToAll],
+  );
+
+  const handleModeCommit = useCallback(
+    (entryId: string, mode: EntryMode) => {
+      // Modo pertence à entry (Mílon #5, D31): persiste via hook; o erro
+      // fica visível na página via hook (banner).
+      void setEntryMode?.(entryId, mode)?.catch(() => {
+        // O erro fica visível na página via hook (banner).
+      });
+    },
+    [setEntryMode],
+  );
+
+  const handleUnitCommit = useCallback(
+    (entryId: string, unit: LoadUnit) => {
+      // Unidade pertence à entry (Mílon #5, D31): o alternador de unidade
+      // da manutenção persiste na entry; o erro fica visível via hook.
+      void setEntryLoadUnit?.(entryId, unit)?.catch(() => {
+        // O erro fica visível na página via hook (banner).
+      });
+    },
+    [setEntryLoadUnit],
+  );
+
+  const handleReorder = useCallback(
+    (orderedIds: string[]) => {
+      void reorderEntries(orderedIds).catch(() => {
+        // O erro fica visível na página via hook (banner).
+      });
+    },
+    [reorderEntries],
+  );
+
+  const handleConfirm = useCallback(() => {
+    const target = confirm;
+    if (!target) return;
+    setConfirmProcessing(true);
+    const done = () => {
+      setConfirmProcessing(false);
+      setConfirm(null);
+    };
+    if (target.variant === "remover-exercicio") {
+      void removeEntry(target.entry).then(done, () => done());
+    } else {
+      void setQuantity(target.entry.id, target.newQuantity).then(done, () =>
+        done(),
+      );
+    }
+  }, [confirm, removeEntry, setQuantity]);
+
+  const handleConfirmCancel = useCallback(() => {
+    if (!confirmProcessing) setConfirm(null);
+  }, [confirmProcessing]);
+
+  return (
+    <AsyncState
+        loading={loading}
+        error={errorMsg}
+        errorOrigin={errorOrigin}
+        empty={workout === null}
+        noResults={false}
+        onRetry={() => void retry()}
+        loadingText="Carregando treino…"
+        emptyTitle="Treino não encontrado."
+        emptyText="Este treino não existe ou foi removido. Volte e escolha outro treino."
+      >
+        {workout ? (
+          <div className="flex flex-col gap-4">
+            {executionEnabled ? (
+              <ExecutionHost
+                workoutId={workoutId}
+                entries={entries}
+                onTemplateChanged={() => void retry()}
+                onExecutionSettled={onExecutionSettled}
+                onSeriesMarked={onSeriesMarked}
+                onExecutionCleared={onExecutionCleared}
+              >
+                {(ctx) => (
+                  <>
+                    <section
+                      aria-label="Cabeçalho do treino"
+                      ref={cabecalhoRef}
+                      tabIndex={-1}
+                      className="rounded-lg border bg-card p-6 shadow-sm flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <h2 className="font-display text-2xl leading-snug text-[#B7602B] tracking-wider flex-1">
+                          {workout.name}
+                        </h2>
+                        {ctx.execExecution !== null ? (
+                          <span className="rounded-full border border-[#B7602B] text-[#B7602B] px-2 py-0.5 text-xs font-semibold">
+                            Em execução
+                          </span>
+                        ) : null}
+                        {ctx.execExecution !== null
+                          ? comAcao(headerActions, ctx.requestCancel)
+                          : null}
+                        {backTarget.kind === "program" ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleBackToProgram}
+                            aria-label="Voltar ao programa"
+                          >
+                            Voltar ao programa
+                          </Button>
+                        ) : null}
+                      </div>
+                    </section>
+
+                    {ctx.execErrorMsg ? (
+                      <div
+                        role="alert"
+                        className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-700 dark:text-rose-300 font-medium"
+                      >
+                        {ctx.execErrorMsg}
+                      </div>
+                    ) : null}
+
+                    {bloqueado07c && blockedTooltip ? (
+                      <div
+                        role="alert"
+                        className="rounded border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300 font-medium"
+                      >
+                        {blockedTooltip}
+                      </div>
+                    ) : null}
+
+                    <WorkoutEntriesList
+                      entries={ctx.displayEntries}
+                      programId={programId}
+                      readOnly={effectiveReadOnly || bloqueado07c}
+                      empty={ctx.displayEntries.length === 0}
+                      errorMsg={errorMsg}
+                      errorOrigin={errorOrigin}
+                      onAdd={openPicker}
+                      onRetry={() => void retry()}
+                      onReorder={handleReorder}
+                      onQuantityCommit={handleQuantityCommit}
+                      onRequestReduce={handleRequestReduce}
+                      onRestCommit={handleRestCommit}
+                      onSeriesCommit={handleSeriesCommit}
+                      onApplyAll={handleApplyAll}
+                      onEditExercise={handleEditExercise}
+                      onRemoveEntry={handleRemoveEntry}
+                      onConfirmUnit={handleUnitCommit}
+                      onModeCommit={handleModeCommit}
+                      onUnitCommit={handleUnitCommit}
+                      execution={bloqueado07c ? undefined : ctx.executionPackage}
+                      blockedTooltip={blockedTooltip}
+                    />
+
+                    <SeriesEditModal
+                      open={bloqueado07c ? false : ctx.editing !== null}
+                      series={ctx.editing?.serie ?? null}
+                      loadUnit={ctx.editing?.loadUnit ?? null}
+                      exerciseMode={ctx.editing?.exerciseMode ?? null}
+                      saving={ctx.editorSaving}
+                      error={ctx.editorError}
+                      onClose={ctx.closeEditor}
+                      onSave={ctx.saveEditor}
+                    />
+
+                    <WorkoutConfirmModal
+                      open={ctx.clearConfirmOpen}
+                      variant="limpar-execucao"
+                      exerciseName=""
+                      seriesCount={0}
+                      currentQuantity={0}
+                      newQuantity={0}
+                      processing={ctx.clearProcessing}
+                      onConfirm={ctx.confirmClear}
+                      onCancel={ctx.cancelClear}
+                    />
+
+                    <WorkoutConfirmModal
+                      open={ctx.finishConfirmOpen}
+                      variant={varianteFinish(ctx.finishConfirmCase)}
+                      exerciseName=""
+                      seriesCount={0}
+                      currentQuantity={0}
+                      newQuantity={0}
+                      processing={ctx.finishProcessing}
+                      onConfirm={ctx.confirmFinish}
+                      onCancel={ctx.cancelFinish}
+                    />
+
+                    <WorkoutConfirmModal
+                      open={ctx.cancelConfirmOpen}
+                      variant="cancelar-execucao"
+                      exerciseName=""
+                      seriesCount={0}
+                      currentQuantity={0}
+                      newQuantity={0}
+                      processing={ctx.cancelProcessing}
+                      onConfirm={ctx.confirmCancel}
+                      onCancel={ctx.cancelCancel}
+                    />
+
+                    {ctx.execExecution !== null
+                      ? comAcao(footer, ctx.requestFinish)
+                      : null}
+                  </>
+                )}
+              </ExecutionHost>
+            ) : (
+              <>
+                <section
+                  aria-label="Cabeçalho do treino"
+                  ref={cabecalhoRef}
+                  tabIndex={-1}
+                  className="rounded-lg border bg-card p-6 shadow-sm flex flex-col gap-2"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <h2 className="font-display text-2xl leading-snug text-[#B7602B] tracking-wider flex-1">
+                      {workout.name}
+                    </h2>
+                    {headerActions ?? null}
+                    {backTarget.kind === "program" ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleBackToProgram}
+                        aria-label="Voltar ao programa"
+                      >
+                        Voltar ao programa
+                      </Button>
+                    ) : null}
+                  </div>
+                </section>
+
+                {successNotice ? (
+                  <div className="rounded border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    {successNotice}
+                  </div>
+                ) : null}
+
+                {executionBlocked ? (
+                  <div
+                    role="alert"
+                    className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-700 dark:text-rose-300 font-medium"
+                  >
+                    Este treino não pode ser editado pois está em execução.
+                  </div>
+                ) : null}
+
+                {bloqueado07c && blockedTooltip ? (
+                  <div
+                    role="alert"
+                    className="rounded border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300 font-medium"
+                  >
+                    {blockedTooltip}
+                  </div>
+                ) : null}
+
+                <WorkoutEntriesList
+                  entries={entries}
+                  programId={programId}
+                  readOnly={effectiveReadOnly}
+                  empty={entries.length === 0}
+                  errorMsg={errorMsg}
+                  errorOrigin={errorOrigin}
+                  onAdd={openPicker}
+                  onRetry={() => void retry()}
+                  onReorder={handleReorder}
+                  onQuantityCommit={handleQuantityCommit}
+                  onRequestReduce={handleRequestReduce}
+                  onRestCommit={handleRestCommit}
+                  onSeriesCommit={handleSeriesCommit}
+                  onApplyAll={handleApplyAll}
+                  onEditExercise={handleEditExercise}
+                  onRemoveEntry={handleRemoveEntry}
+                  onConfirmUnit={handleUnitCommit}
+                  onModeCommit={handleModeCommit}
+                  onUnitCommit={handleUnitCommit}
+                  blockedTooltip={blockedTooltip}
+                />
+              </>
+            )}
+
+            {entryFooter
+              ? entries.map((view) => (
+                  <Fragment key={view.entry.id}>
+                    {typeof entryFooter === "function"
+                      ? entryFooter(view)
+                      : entryFooter}
+                  </Fragment>
+                ))
+              : null}
+
+            <ExercisePickerModal
+              open={pickerOpen}
+              exercises={pickerExercises}
+              loading={false}
+              error={pickerError}
+              saving={pickerSaving}
+              searchText={searchText}
+              muscleFilter={muscleFilter}
+              muscleOptions={muscleOptions}
+              onSearch={setSearchText}
+              onFilterMuscle={setMuscleFilter}
+              onSelect={handleSelect}
+              onCreateNew={handleCreateNew}
+              onClose={closePicker}
+            />
+
+            <ExerciseModal
+              open={exerciseModalOpen}
+              editingExercise={editingExercise}
+              muscleOptions={muscleOptions}
+              saving={exerciseSaving}
+              error={exerciseModalError}
+              successNotice={null}
+              onClose={closeExerciseModal}
+              onSave={handleExerciseModalSave}
+            />
+
+            <WorkoutConfirmModal
+              open={confirm !== null}
+              variant={confirm?.variant ?? "remover-exercicio"}
+              exerciseName={confirm?.exerciseName ?? ""}
+              seriesCount={confirm?.seriesCount ?? 0}
+              currentQuantity={confirm?.currentQuantity ?? 0}
+              newQuantity={confirm?.newQuantity ?? 0}
+              processing={confirmProcessing}
+              onConfirm={handleConfirm}
+              onCancel={handleConfirmCancel}
+            />
+
+            {/* Rodapé genérico da manutenção; no ramo de execução o footer
+                é renderizado dentro do ExecutionHost (condicional à aberta,
+                com enxerto de ação — Mílon #7, D6). */}
+            {executionEnabled ? null : (footer ?? null)}
+          </div>
+        ) : null}
+    </AsyncState>
+  );
+}
+
+export default WorkoutDetailSection;

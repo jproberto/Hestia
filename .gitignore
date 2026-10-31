@@ -44,3 +44,6 @@ next-env.d.ts
 
 *storybook.log
 storybook-static
+
+# supabase local (CI efêmero do item 8; nunca versionar config local)
+supabase/

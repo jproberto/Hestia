@@ -1,0 +1,147 @@
+# Backlog — Módulo Mílon (Academia)
+
+## Contexto do módulo
+
+- **Stack:** Next.js hospedado na Vercel, banco de dados Supabase (mesmo projeto Héstia).
+- **Usuários:** 2 (mesmo modelo do Pluto — login individual, mesma família: o casal). Cada Programa tem um dono, mas é visível para os dois — sem permissão restrita. Requisito prático: cada um abre fácil o próprio treino ao chegar na academia.
+- **Conceito central — Programa:** conjunto de treinos vigente (ex: A, B, C). Daqui alguns meses o usuário troca de ficha: em vez de editar por cima, arquiva o Programa atual (histórico preservado) e cria um novo grupo com novos treinos/exercícios.
+- **Treino:** ficha do dia dentro de um Programa (ex: A = Push). Tem N exercícios; cada exercício tem N séries planejadas, cada série com repetição alvo, carga alvo e tempo de descanso.
+- **Execução:** treino realizado no dia. Guarda `iniciado_em` (primeira série marcada) e `encerrado_em` (confirmação de encerramento) para métricas futuras de duração.
+- **Exercício:** nasce inline ao montar o treino — seleciona um existente ou cadastra rápido na hora. Campos: nome + músculo + link de vídeo. Ao cadastrar, entra na biblioteca para usos futuros.
+- **Fluxo do treino do dia (validado no discovery):** aba "Treino do dia" sabe qual foi o último treino feito e exibe o próximo automaticamente (rotatividade). A página lista exercícios com séries (reps, peso, descanso). Ao terminar uma série, o usuário toca no quadradinho → marca como feita → timer de descanso inicia sozinho. No final, botão "Encerrar treino" com confirmação que avisa se faltam exercícios/séries. Ao confirmar, o treino é registrado.
+- **Edição durante o uso:** carga, reps e descanso podem ser ajustados no meio do treino sem sair do fluxo.
+- **Fora do backlog por decisão explícita:** RPE (escala 1-10 de esforço) e RIR (reps até a falha) — não entram nem como V2/V3. Séries de aquecimento/extra com marcação própria e observações rápidas por exercício também ficam fora do MVP e de V2 (só reavaliar se dor real aparecer).
+
+Esta ordem reflete **dependência de construção** (o que precisa existir antes), não a ordem de uso no dia a dia.
+
+---
+
+## Backlog priorizado (MVP)
+
+### Bloco 1 — Base: biblioteca, programas e treinos
+
+| # | Feature | Descrição | Status | Specs | Planos |
+|---|---|---|---|---|---|
+| 1 | **Biblioteca de exercícios** | Cadastro rápido inline ao montar o treino: seleciona existente ou cria na hora com nome + músculo + link de vídeo. Vira biblioteca reutilizável nos próximos treinos. Sem tela pesada de cadastro separado no MVP. | Concluído | [.agents/modules/milon/01-biblioteca-exercicios/spec.md](.agents/modules/milon/01-biblioteca-exercicios/spec.md) | [.agents/modules/milon/01-biblioteca-exercicios/plan.md](.agents/modules/milon/01-biblioteca-exercicios/plan.md) |
+| 2 | **Programas (conjunto A/B/C por dono)** | Agrupa os treinos vigentes de cada usuário (ex: A, B, C). Cada Programa tem um dono mas é visível para os dois. Arquivar preserva histórico; criar novo Programa não apaga o antigo. É o que permite trocar de ficha sem perder o passado. | Concluído | [.agents/modules/milon/02-programas/spec.md](.agents/modules/milon/02-programas/spec.md) | [.agents/modules/milon/02-programas/plan.md](.agents/modules/milon/02-programas/plan.md) |
+| 3 | **Treinos + séries planejadas** | Dentro de um Programa, cada treino tem N exercícios em ordem; cada exercício tem N séries com reps alvo, carga alvo e descanso (segundos). Edição do planejado permitida antes e durante a execução. | Concluído | [.agents/modules/milon/03-treinos-series/spec.md](.agents/modules/milon/03-treinos-series/spec.md) | [.agents/modules/milon/03-treinos-series/plan.md](.agents/modules/milon/03-treinos-series/plan.md) |
+
+### Bloco 2 — Treino do dia (coração do MVP)
+
+| # | Feature | Descrição | Status | Specs | Planos |
+|---|---|---|---|---|---|
+| 4 | **Treino do dia — próximo automático** | Aba "Treino do dia" descobre o último treino executado do Programa ativo do usuário e exibe o próximo da rotação. Funciona com N treinos por Programa, sem o usuário precisar lembrar "hoje é B ou C?". | Concluído (v1 — primeira aba `/milon/today` com primeiro treino por criação; rotação por histórico adiada para pós-#7, spec §4) | [.agents/modules/milon/04-treino-do-dia/spec.md](.agents/modules/milon/04-treino-do-dia/spec.md) | [.agents/modules/milon/04-treino-do-dia/plan.md](.agents/modules/milon/04-treino-do-dia/plan.md) |
+| 5 | **Execução série a série + edição no fluxo** | Lista exercícios com séries (reps, peso, descanso). Toque curto no card alterna marcada/desmarcada na hora; toque longo abre modal com campo único (rótulo pelo modo da entry) e carga com unidade herdada (kg/lb como texto). Replicação incondicional para séries seguintes. Foto do template removida — template ao vivo. Badge "Em execução" + bloqueio do template na manutenção com aviso visível. Migrações 0011 (execuções), 0012 (modo+unidade na entry), 0013 (valor único), 0014 (lb abreviado). Ícones Editar/Excluir no padrão biblioteca. | Concluído | [.agents/modules/milon/05-execucao-series/spec.md](.agents/modules/milon/05-execucao-series/spec.md) | [.agents/modules/milon/05-execucao-series/plan.md](.agents/modules/milon/05-execucao-series/plan.md) |
+| 6 | **Timer de descanso auto + PWA push** | Ao marcar uma série como feita, o timer do descanso daquela série inicia sozinho. Notificação push via PWA avisa o fim mesmo com tela apagada/app em segundo plano. MVP inclui o PWA mínimo para isso funcionar. | Concluído (2026-10-30 — timer de cliente `useRestTimer` + agendamento de push na primeira rota do app `app/api/milon/rest-push/route.ts` (202 + `after()` em background, cancel-all por dono, `elapsed` ancorado ao clique), PWA mínimo (manifest/sw/PwaRegistration) + migração 0017 `push_subscriptions`+`rest_push_schedules` com aplicação manual pendente; Emenda 1 fix-01-server + Emenda 2 supressão com aba visível + graça 800ms; suite 1871, coverage 85.35/84.2, review approved) | [.agents/modules/milon/06-timer-descanso-pwa/spec.md](.agents/modules/milon/06-timer-descanso-pwa/spec.md) | [.agents/modules/milon/06-timer-descanso-pwa/plan.md](.agents/modules/milon/06-timer-descanso-pwa/plan.md) |
+| 7 | **Encerrar treino com confirmação** | Botão "Encerrar treino" com confirmação que lista o que falta (exercícios/séries pendentes). Ao confirmar, registra o treino com `encerrado_em`. Permite encerrar parcial (falta vira dado, não bloqueio). | Concluído (2026-10-13 — `Finalizar` no fim + `Cancelar` no topo, 4 casos + vazio-oculto, `finishExecution` sem migração, suite 1519, coverage 85.12/84.1, review approved) | [.agents/modules/milon/07-encerrar-treino/spec.md](.agents/modules/milon/07-encerrar-treino/spec.md) | [.agents/modules/milon/07-encerrar-treino/plan.md](.agents/modules/milon/07-encerrar-treino/plan.md) |
+| 7b | **Rotação do Treino do Dia por histórico** | Treino do Dia exibe o próximo treino da rotação a partir do último executado (histórico de execuções seladas), em vez do primeiro por criação (v1 da #4). Desmembrado da #4 (spec §4, adiado para pós-#7) + reafirmado na #7 (pedido humano 2026-10-12: não esquecer). Ordem própria dos treinos com reordenação por arrastar + D10 (aberta vence) entraram no escopo. | Concluído (2026-10-14 — seleção por aberta→histórico com wrap + ordem própria com reorder por arrastar, migração 0015, suite 1573, coverage 84.5, review approved) | [.agents/modules/milon/07b-rotacao-treino-dia/spec.md](.agents/modules/milon/07b-rotacao-treino-dia/spec.md) | [.agents/modules/milon/07b-rotacao-treino-dia/plan.md](.agents/modules/milon/07b-rotacao-treino-dia/plan.md) |
+| 7b-1 | **Avançar para o próximo treino ao finalizar** | Ao `Finalizar` (ou `Cancelar`?) um treino no Treino do Dia, a página avança automaticamente para o próximo treino da rotação em vez de permanecer no treino atual com marcações limpas. Comportamento atual: permanece no mesmo treino. (Pedido humano 2026-10-15, achado na homologação da 7c; escopo a descobrir: vale para Cancelar? e com execução ainda aberta em outro treino?) | Concluído (2026-10-16 — desfecho `sealed`/`cancelled` no aviso de assentamento: `Finalizar` avança para o próximo da rotação 7b (fonte única → seleção), `Cancelar` e o vazio de borda permanecem no mesmo treino; foco no cabeçalho via `focusHeaderSignal`; só `page.tsx` + `WorkoutDetailSection.tsx`, sem migração; suite 1636, coverage 84.74/83.63, review approved) | [.agents/modules/milon/07b-1-avancar-proximo-treino/spec.md](.agents/modules/milon/07b-1-avancar-proximo-treino/spec.md) | [.agents/modules/milon/07b-1-avancar-proximo-treino/plan.md](.agents/modules/milon/07b-1-avancar-proximo-treino/plan.md) |
+| 7c | **Troca com execução ativa** | Com execução aberta, a troca de treino no Treino do Dia segue permitida para consulta, mas nenhuma escrita é permitida fora do treino com execução ativa (bloqueio visual, sem modal). Invariante: no máximo uma execução aberta por dono (global). (Pedido humano 2026-10-14, desmembrado da 7b; simplificado sem modal.) | Concluído (2026-10-15 — guarda visual sem modal + índice único por dono 0016 + hook useActiveExecution; R6/R7/R8 com textos exatos; suite 1620, coverage 84.53/83.49, review approved pós-fix AC6) | [.agents/modules/milon/07c-troca-execucao-ativa/spec.md](.agents/modules/milon/07c-troca-execucao-ativa/spec.md) | [.agents/modules/milon/07c-troca-execucao-ativa/plan.md](.agents/modules/milon/07c-troca-execucao-ativa/plan.md) |
+| 8 | **Layout responsivo para telas pequenas (celular)** | Garantir que telas de montagem/execução caibam na viewport do celular, com listas roláveis internas, ações sempre visíveis e sem estouro. | | | |
+
+### Bloco 3 — Histórico mínimo
+
+| # | Feature | Descrição | Status | Specs | Planos |
+|---|---|---|---|---|---|
+| 9 | **Histórico + resumo simples** | Lista de treinos realizados (data, treino, duração calculada de `iniciado_em`→`encerrado_em`, volume total = Σ carga×reps). Sem calendário chique nem gráficos no MVP — só lista + resumo por treino. | | | |
+
+---
+
+## Backlog priorizado (V2)
+
+| # | Feature | Descrição | Status | Specs | Planos |
+|---|---|---|---|---|---|
+| 10 | **Evolução por exercício (carga, reps, volume)** | Para cada exercício, ver a progressão de carga, repetições e volume ao longo das execuções. Base para responder "estou progredindo?". | | | |
+| 11 | **Calendário de frequência** | Visão mensal/semanal de quais dias treinaram, para acompanhar consistência. | | | |
+| 12 | **Medidas corporais + histórico** | Registro de peso e medidas (com campos personalizáveis), com histórico e comparação simples ao longo do tempo. Segunda prioridade após evolução de desempenho. | | | |
+| 13 | **Substituição de exercício na hora** | Trocar um exercício durante a execução (ex: máquina ocupada) mantendo o planejado original intacto no histórico. Ficou fora do MVP por YAGNI; reavaliar na V2. | | | |
+
+---
+
+## Backlog priorizado (V3)
+
+| # | Feature | Descrição | Status | Specs | Planos |
+|---|---|---|---|---|---|
+| 14 | **Dashboard do módulo** | Estatísticas de frequência/consistência, sequência de treinos (streak), tempo total, volume acumulado e médio. Agrega dados que MVP/V2 já coletam. | | | |
+| 15 | **PRs (recordes pessoais)** | Detecção e celebração de recordes por exercício (maior carga, maior volume, mais reps). | | | |
+| 16 | **1RM estimado + gráficos de evolução** | Cálculo de 1RM estimado por série/exercício e gráficos de carga/reps/volume/1RM ao longo do tempo. | | | |
+| 17 | **Gráficos de evolução corporal** | Curvas de peso/medidas ao longo do tempo a partir dos dados da V2. | | | |
+
+---
+
+## Regra — cenários de teste bloqueados por dependência (pedido humano 2026-09-30)
+
+- **Repassar, não deixar órfão:** cenário de teste que não pode ser executado numa feature porque depende de uma feature futura deve ser **repassado para a feature que o libera** — entra no escopo de teste (`test-scenarios.md`) dessa feature futura, em vez de ser descartado ou adiado sem registro.
+- **Exemplo identificado (feature #2 Programas):** os cenários **pós-ativação** (guarda liberada com `hasWorkoutWithExercise = true`) dependem da **feature #3 — Treinos + séries planejadas** e devem ser repassados a ela. Contexto: na #2 a UI nunca passa a flag (`app/milon/programs/page.tsx` chama `usePrograms()` sem opções → default `false`), então toda ativação é bloqueada na tela; o efeito colateral (desativar o programa anterior do mesmo dono) só é exercitado no fluxo de ativação em `__tests__/lib/milon/hooks/usePrograms.test.ts`, bloco "4. Ativação/reativação com hasWorkoutWithExercise = true" — cobertura atual. A regra pura correspondente (`guardaAtivacao`/`aplicarEfeitoColateralAtivacao`) também tem teste direto em `__tests__/lib/milon/program-utils.test.ts`.
+- A regra vale para qualquer cenário bloqueado do módulo (incluindo os da home/feature #4 — Treino do dia, quando forem registrados).
+
+---
+
+## Achados de review (Argos) — feature #2 Programas
+
+Registro dos achados minor do review do Argos (decisão humana 2026-09-30: "vão para backlog"). 7 achados: 5 da review do Patch v3 (aprovada) + 2 da review do Patch v4 (aprovada). Textos originais do Argos (os 5 do v3 recuperados do log — o `review-report.json` atual contém apenas os 2 do v4).
+
+| # | Patch | Arquivo:linha | Achado | Encaminhamento |
+|---|---|---|---|---|
+| 1 | v3 | `lib/milon/program-utils.ts:154` | `transicoesPermitidas('ativo')` retorna `['inativar']`, mas a UI não expõe ação "Inativar" (inativação é efeito colateral automático de ativar outro programa). Sugestão: renomear para `acoesInterfacePorStatus` ou remover `'inativar'` do retorno de `'ativo'`. | backlog (refatoração futura) |
+| 2 | v3 | `components/milon/ProgramConfirmModal.tsx:78` | Botão de confirmar usa cores rose-500/rose-600 (destrutivas) para TODAS as ações, incluindo Ativar/Reativar, que não são destrutivas. Sugestão: cor do módulo (#B7602B) para ativar/reativar, rose apenas para excluir. | backlog (ajuste visual) |
+| 3 | v3 | `lib/milon/types.ts:70` | Tipos legados `MilonItemRow`, `MilonItem`, `CreateMilonInput` ("Legado do scaffold" da feature #1) permanecem com 0 usos em código vivo. Sugestão: remover. | backlog (limpeza) |
+| 4 | v3 | `.agents/modules/milon/02-programas/test-report.json:93` | `npm run build-storybook` não re-executado no Patch v3. | RESOLVIDO no Patch v4: gate re-executado pelo Zeus antes do approve-review (exit 0), registrado no test-report |
+| 5 | v3 | `utils/migrations/migration-0008-milon-programs.sql:49` | `executed_by` hardcoded como email fixo em vez de usuário real da execução. Sugestão: usar `CURRENT_USER`/variável de ambiente na execução real; manter placeholder documentado no script. | backlog (aplicar na migração — atenção: migração ainda NÃO aplicada no Supabase) |
+| 6 | v4 | `app/milon/programs/page.tsx:198` | Fallback `errorOrigin ?? "carga"` mascara ausência de `errorOrigin` do hook: se o hook falhar em setar a origem, o banner mostraria "Tentar novamente" indevidamente para bloqueio/operação. Sugestão: remover fallback e confiar no hook (já coberto por testes), ou documentar por quê. | backlog |
+| 7 | v4 | `__tests__` (página+hook) | Falta teste de integração onde o hook retorna `errorOrigin=null` com `errorMsg` setado, para confirmar o comportamento do fallback. Sugestão: adicionar esse teste. | backlog (candidato a Minos numa próxima feature/rodada) |
+
+**Gaps de teste apontados (testGaps)**
+
+- Ramos defensivos "nunca acontece" (cancelConfirm/confirm lançando, violação de índice único) sem exercício direto — `repositories/programs.ts` 92.98% branch e `usePrograms.ts` 85.86% branch (acima do gate, mas lacuna comportamental).
+- CA-P3-11 (histórico do navegador / botão voltar na alternância de abas) não exercitável em jsdom — requer homologação manual (entra na reexecução manual da feature #2).
+- Gap "guarda de ativação com conteúdo real": ver regra acima (já registrada na seção anterior — não duplicada).
+
+---
+
+## Achados de review (Argos) — feature #7 Encerrar treino
+
+Re-review aprovado 2026-10-13 (0 blockers). 3 minors viram backlog; decisão D2 (relógio) será revisitida na #9 (duração).
+
+| # | Arquivo:linha | Achado | Encaminhamento |
+|---|---|---|---|
+| 1 | `lib/milon/repositories/executions.ts:102` | `finishExecution` grava `finished_at` com relógio do cliente (`new Date().toISOString`) em vez do relógio do banco (`now()`, plan D2). Impacto só na duração futura da #9. | backlog (decidir na #9: normalizar para banco ou aceitar cliente) |
+| 2 | `components/milon/WorkoutConfirmModal.tsx:60` | 4 textos exatos duplicados (`MSG_*` em `workout-utils.ts` + literais no modal). Travado por testes dos dois lados. | backlog (modal importar constantes ou teste cruzado) |
+| 3 | `components/milon/WorkoutConfirmModal.tsx:139` | Cor do botão de confirmação (`default` vs `destructive`) sem asserção — regressão de cor só pega no olho. | backlog (Minos: asserção de `variant` por variante) |
+
+---
+
+## Achados de review (Argos) — feature #7c Troca com execução ativa
+
+Re-review aprovado 2026-10-15 (1 blocker AC6 corrigido no loop: `onExecutionSettled` → `retry()`, stale liberado sem reload; suite 1620, coverage 84.53/83.49). 3 minors viram backlog; homologação humana apontou ainda: Cenário 5 inexistente removido dos cenários (sem botão "arquivar programa" na UI) + item novo 7b-1 (avançar ao próximo treino ao finalizar).
+
+| # | Arquivo:linha | Achado | Encaminhamento |
+|---|---|---|---|
+| 1 | `lib/milon/repositories/programs.ts:104-138` | Ramos colaterais (create-ativo / update-ativo desativando outros) contornam a guarda R6 (só o ramo inativo explícito é guardado). UI segura hoje (cria `rascunho`, R7 no hook), mas o repositório permite arquivamento colateral fora da UI. | backlog (cobrir guarda nos colaterais ou documentar ponto de estrangulamento como decisão) |
+| 2 | `lib/milon/hooks/useActiveExecution.ts:26-30` | Falha de `getEmail` vira `null` silencioso (fail-open visual; trava real segue no `startExecution` + índice, R1 intacto). | backlog (propagar como origem `carga` ou registrar fail-open como aceito) |
+| 3 | `package.json:3` | Sem bump de versão (prática do repo: features não bumpam; rubrica SemVer diverge da prática). | backlog (definir política de bump por feature) |
+
+**Gaps de teste aceitos:** tooltip nulo (aberta fora da lista, inalcançável via R6/R7); EC3 corrida só em contrato/fake (spec AC7); R6 colateral sem contrato (UI cobre via R7); AC6 agora coberta por `page-ac6.test.tsx` 2/2.
+
+---
+
+## Achados de review (Argos) — feature #7b-1 Avançar para o próximo treino
+
+Review aprovado 2026-10-16 (0 blockers, 5 minors: 3 de estado — status das tasks, fase checkpoint/context e `diff.patch` ausente — normalizados por Zeus no estado em disco, commit pelo Caronte; os 2 de produto seguem abaixo). Nenhuma migração nova (DA6).
+
+| # | Arquivo:linha | Achado | Encaminhamento |
+|---|---|---|---|
+| 1 | `components/milon/WorkoutDetailSection.tsx:362` | `requestFinish` no caso completo emite `sealed` mesmo quando o hook já está com `finishProcessing` true (early-return que resolve sem selar — `useWorkoutExecution.ts:370-372`): recarga/foco extras com estado final correto, cosmético; mesmo grau do código anterior (sem regressão). | backlog (emitir só se o hook de fato selar + teste de regressão — pode entrar junto com o testGap da emissão ausente ao abrir o modal) |
+| 2 | `package.json:3` | Sem bump de versão (features não bumpam — decisão A 2026-10-15). | já registrado como item 3 da 7c (política de bump por feature — só em release); sem ação nova |
+
+**Gaps de teste aceitos:** nenhum teste trava que `requestFinish` NÃO emite desfecho ao abrir o modal (parcial/vazio); sem integração seção real + página real para "o próximo abre limpo, sem marcações herdadas"; foco com leitor de tela/ordem de tabulação real permanece manual (`test-scenarios.md`); functions global 75.54% (gate do plano é lines+branch, ambos ≥80).
+
+---
+
+## Fora de Escopo (YAGNI — decisão de discovery 2026-09-12)
+
+- **RPE/RIR:** fora do backlog por decisão explícita do dono — não entra nem como V2/V3.
+- **Séries de aquecimento/extra com marcação própria:** fora do MVP e de V2.
+- **Observações rápidas por exercício:** fora do MVP e de V2.
+- **Permissões restritas por usuário:** não há — Programa tem dono mas é visível para os dois.
+- **Integração com apps externos / importação de ficha:** não previsto; cadastro é manual/inline.

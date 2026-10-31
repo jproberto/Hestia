@@ -27,6 +27,6 @@ INSERT INTO public.schema_migrations (spec_id, spec_name, script_name, executed_
 VALUES (
     '03',
     'Checklist de contas a pagar',
-    'migration-feature-3-checklist.sql',
+    'migration-feature-4-checklist.sql',
     'joaopsroberto@gmail.com'
 ) ON CONFLICT (script_name) DO NOTHING;

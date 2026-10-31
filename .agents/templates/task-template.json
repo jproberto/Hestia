@@ -1,0 +1,17 @@
+{
+  "id": "TASK-XXX",
+  "title": "Descrição curta",
+  "assignee": "minos|hefesto|argos",
+  "dependencies": ["TASK-XXX"],
+  "files": [
+    "__tests__/caminho/arquivo.test.ts",
+    "__tests__/caminho/outro.test.tsx"
+  ],
+  "acceptanceCriteria": [
+    "npm test -- __tests__/caminho/arquivo.test.ts → FAIL esperado: motivo exato",
+    "npx tsc --noEmit → exit 0 (só falhas runtime esperadas)"
+  ],
+  "consumes": ["contrato X do plano"],
+  "produces": ["contrato Y para próxima task"],
+  "status": "pending"
+}

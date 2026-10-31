@@ -1,0 +1,48 @@
+{
+  "timestamp": "2026-10-10T11:18:34.000Z",
+  "feature": "Mílon #5 — Execução série a série",
+  "featureDir": ".agents/modules/milon/05-execucao-series",
+  "suite": {
+    "testFiles": 116,
+    "tests": 1476,
+    "passed": 1476,
+    "failed": 0,
+    "skipped": 0
+  },
+  "coverage": {
+    "overall": {
+      "statements": 85.16,
+      "branches": 84.05,
+      "functions": 76,
+      "lines": 85.16
+    },
+    "milon": {
+      "statements": 97.8,
+      "branches": 96.39,
+      "functions": 96.66,
+      "lines": 97.8
+    }
+  },
+  "reconciliation": {
+    "fixturesUpdated": [
+      "useWorkoutDetail.test.ts: makeSerie usa value (não reps/durationSeconds)",
+      "useWorkoutExecution.test.ts: makeSerie/makeDone usam value (não reps/durationSeconds)",
+      "WorkoutDetailSection.test.tsx: conteudoDivergente usa value + lb",
+      "types.test.ts: LoadUnit é kg|lb (nunca libra)",
+      "workout-utils.test.ts: comentários e testes usam lb",
+      "ExerciseModal.test.tsx: makeExercise usa lb"
+    ],
+    "libraRemoved": [
+      "types.test.ts",
+      "workout-utils.test.ts",
+      "ExerciseModal.test.tsx",
+      "WorkoutDetailSection.test.tsx"
+    ],
+    "valueFieldAdopted": [
+      "useWorkoutDetail.test.ts",
+      "useWorkoutExecution.test.ts",
+      "WorkoutDetailSection.test.tsx"
+    ]
+  },
+  "status": "done"
+}

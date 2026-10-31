@@ -1,4 +1,4 @@
-import { render, screen, cleanup, waitFor } from '@testing-library/react'
+import { render, screen, cleanup, waitFor, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import BudgetPage from '@/app/pluto/budget/page'
 import { getBudgetAdjustment, getBudgets, getBudgetAdjustments, createBudgetAdjustment, adjustBudgetItem, addOrUpdateBudgetItem } from '@/lib/pluto/db/budget'
@@ -127,6 +127,34 @@ beforeEach(() => {
 
       await waitFor(() => {
         expect(screen.getByLabelText('Sair')).toBeInTheDocument()
+      })
+    })
+  })
+
+  // TASK-019 (CA-P3-07 / D12 transversal): a aba da URL é marcada pelo
+  // ModuleLayout (TASK-015) — estilo ativo 'border-b-2 font-semibold' na cor
+  // do módulo #35472D (components/layout/PlutoLayout.tsx).
+  describe('Active tab (CA-P3-07 / D12 transversal)', () => {
+    it("em /pluto/budget, 'Orçamento Anual' é a única aba com aria-current='page' + estilo ativo", async () => {
+      vi.mocked(getBudgetAdjustment).mockResolvedValue(null)
+      vi.mocked(getBudgetAdjustments).mockResolvedValue([])
+      vi.mocked(getBudgets).mockResolvedValue([])
+
+      renderBudgetPage('/pluto/budget')
+
+      await waitFor(() => {
+        const nav = screen.getByRole('navigation')
+
+        expect(within(nav).getAllByRole('link', { current: 'page' })).toHaveLength(1)
+
+        const active = within(nav).getByRole('link', { name: 'Orçamento Anual' })
+        expect(active).toHaveAttribute('aria-current', 'page')
+        expect(active).toHaveClass('border-b-2')
+        expect(active).toHaveClass('font-semibold')
+        expect(active).toHaveStyle({ color: '#35472D' })
+
+        expect(within(nav).getByRole('link', { name: 'Meses e Períodos' })).not.toHaveAttribute('aria-current', 'page')
+        expect(within(nav).getByRole('link', { name: 'Lançamentos' })).not.toHaveAttribute('aria-current', 'page')
       })
     })
   })

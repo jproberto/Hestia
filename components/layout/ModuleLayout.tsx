@@ -64,16 +64,26 @@ export function ModuleLayout({
       {/* Barra de navegação do módulo (quando houver) */}
       {navItems.length > 0 && (
         <nav className="flex border-b pb-1 gap-6 mb-4" role="navigation" aria-label={`Navegação do módulo ${moduleName}`}>
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="pb-2 text-sm font-display tracking-wider hover:text-current"
-              style={{ color }}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (pathname?.startsWith(item.href + "/") ?? false);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={isActive ? "page" : undefined}
+                className={
+                  isActive
+                    ? "pb-2 text-sm font-display tracking-wider hover:text-current border-b-2 font-semibold"
+                    : "pb-2 text-sm font-display tracking-wider hover:text-current"
+                }
+                style={{ color }}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
       )}
 

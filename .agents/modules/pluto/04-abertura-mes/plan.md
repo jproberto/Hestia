@@ -21,7 +21,7 @@
 ### Tarefa 1: Migração do Banco de Dados
 
 **Arquivos:**
-* Criar: `utils/migrations/migration-feature-4.sql`
+* Criar: `utils/migrations/migration-feature-3.sql`
 
 **Interfaces:**
 * Produz: Tabela física `public.monthly_periods` com colunas de chave primária, ano, mês, status e metadados de auditoria.
@@ -30,7 +30,7 @@
 Run: `node .agents/scripts/sdd.js task-start 1`
 
 **Passo 2: Escrever a migração SQL completa**
-Criar o arquivo `utils/migrations/migration-feature-4.sql` com as definições de tabela, restrições, RLS, políticas e registro correspondente na tabela de auditoria de migrações:
+Criar o arquivo `utils/migrations/migration-feature-3.sql` com as definições de tabela, restrições, RLS, políticas e registro correspondente na tabela de auditoria de migrações:
 
 ```sql
 -- 1. Criar a tabela de controle de períodos mensais
@@ -57,7 +57,7 @@ INSERT INTO public.schema_migrations (spec_id, spec_name, script_name, executed_
 VALUES (
     '04',
     'Abertura de Mês',
-    'migration-feature-4.sql',
+    'migration-feature-3.sql',
     'joaopsroberto@gmail.com'
 ) ON CONFLICT (script_name) DO NOTHING;
 ```
@@ -71,7 +71,7 @@ Run: `node .agents/scripts/sdd.js task-complete 1`
 **Passo 5: Commit**
 Run:
 ```bash
-git add utils/migrations/migration-feature-4.sql
+git add utils/migrations/migration-feature-3.sql
 node .agents/scripts/sdd.js commit "feat: adiciona migracao sql para controle de periodos mensais"
 ```
 

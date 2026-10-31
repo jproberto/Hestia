@@ -1,0 +1,2579 @@
+import fs from "node:fs";
+import path from "node:path";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { WorkoutDetailSection } from "@/components/milon/WorkoutDetailSection";
+import { useWorkoutDetail } from "@/lib/milon/hooks/useWorkoutDetail";
+import { useWorkoutExecution } from "@/lib/milon/hooks/useWorkoutExecution";
+import { MSG_EXERCICIO_JA_NO_TREINO } from "@/lib/milon/workout-utils";
+import type {
+  Exercise,
+  Program,
+  Workout,
+  WorkoutEntry,
+  WorkoutEntryView,
+  WorkoutSeries,
+} from "@/lib/milon/types";
+
+/**
+ * Contrato RED — Mílon #4 Treino do Dia (TASK-002):
+ * `components/milon/WorkoutDetailSection.tsx`.
+ *
+ * Fonte da verdade: `.agents/modules/milon/04-treino-do-dia/spec.md` §3
+ * (paridade total com a manutenção) + `plan.md` §2 (tabela Create:
+ * WorkoutDetailSection) + §3 (contrato textual WorkoutDetailSectionProps)
+ * + `tasks.json` TASK-002 (acceptanceCriteria — fonte da cobertura).
+ *
+ * Escrito ANTES da extração (outside-in): falha porque
+ * `@/components/milon/WorkoutDetailSection` ainda não existe —
+ * Expected: FAIL com "módulo não encontrado" (nenhum arquivo de
+ * produção alterado). Hefesto fará GREEN movendo (não reescrevendo)
+ * o corpo da manutenção para a seção.
+ *
+ * Padrão espelhado de
+ * `__tests__/app/milon/programs/[id]/workouts/[workoutId]/page.test.tsx`:
+ * `useWorkoutDetail` mockado por arquivo, factories com defaults e
+ * `clickConnectedButton` para clique pós-fetch.
+ *
+ * CONTRATO CONSUMIDO (plan.md §3 — WorkoutDetailSectionProps):
+ * - props: `workoutId` (string; vazio = detalhe não resolve, AsyncState
+ *   herdado cobre o não-encontrado), `backTarget` (variante `program` com
+ *   `programId` OU variante `none`; manutenção usa `program`, Treino do
+ *   Dia usa `none`), `title` opcional (default mantém "Treino"),
+ *   `headerActions`/`entryFooter`/`footer` opcionais default nulo
+ *   (`entryFooter` recebe a view da entrada para as features 5/6/7);
+ * - a seção é a ÚNICA dona da orquestração de detalhe: chama
+ *   `useWorkoutDetail(workoutId)`, estados de picker/modal/confirmação/
+ *   overrides de unidade, `AsyncState`, cabeçalho, `WorkoutEntriesList`,
+ *   `ExercisePickerModal`, `ExerciseModal`, `WorkoutConfirmModal`;
+ * - read-only derivado DENTRO da seção por
+ *   `program.status === "inativo"` (a página nova não recalcula);
+ * - bloqueio D14 mantém o modal aberto com mensagem visível;
+ * - nenhum texto "Tentar novamente" reimplementado (só via AsyncState).
+ *
+ * Convenção fixada aqui (não dita literalmente pela spec; derivada do
+ * contrato do plano): `backTarget` é união discriminada por `kind` —
+ * `{ kind: "program"; programId: string } | { kind: "none" }`.
+ */
+
+// Hook dedicado mockado no padrão das páginas do módulo.
+vi.mock("@/lib/milon/hooks/useWorkoutDetail", () => ({
+  useWorkoutDetail: vi.fn(),
+}));
+
+// Hook de execução (Mílon #5, TASK-003/TASK-004): mockado para o modo
+// execução da seção — consumido só quando `executionEnabled` está ligada.
+vi.mock("@/lib/milon/hooks/useWorkoutExecution", () => ({
+  useWorkoutExecution: vi.fn(),
+}));
+
+// next/navigation mockado por arquivo (seção usa roteador só p/ voltar ao
+// programa; MilonLayout usa o pathname p/ marcar a aba ativa).
+const mockPush = vi.hoisted(() => vi.fn());
+const mockUsePathname = vi.hoisted(() =>
+  vi.fn(() => "/milon/programs/prog-1/workouts/wout-1"),
+);
+
+vi.mock("next/navigation", () => ({
+  useParams: vi.fn(() => ({ id: "prog-1", workoutId: "wout-1" })),
+  usePathname: mockUsePathname,
+  useRouter: vi.fn(() => ({
+    push: mockPush,
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  })),
+  useSearchParams: vi.fn(() => ({ get: vi.fn() })),
+}));
+
+const mockedUseWorkoutDetail = useWorkoutDetail as Mock;
+const mockedUseWorkoutExecution = useWorkoutExecution as Mock;
+
+const DONO = "ana@hestia.lan";
+
+function makeProgram(overrides: Partial<Program> = {}): Program {
+  return {
+    id: "prog-1",
+    title: "Ficha Verão 2026",
+    owner: DONO,
+    status: "rascunho",
+    createdAt: "2026-09-29T00:00:00Z",
+    created_by: DONO,
+    ...overrides,
+  };
+}
+
+function makeWorkout(overrides: Partial<Workout> = {}): Workout {
+  return {
+    id: "wout-1",
+    programId: "prog-1",
+    name: "Treino A",
+    createdAt: "2026-10-01T00:00:00Z",
+    created_by: DONO,
+    ...overrides,
+  };
+}
+
+function makeExercise(overrides: Partial<Exercise> = {}): Exercise {
+  return {
+    id: "ex-1",
+    name: "Supino reto",
+    muscle: "Peito",
+    videoLink: null,
+    loadUnit: null,
+    deletedAt: null,
+    createdAt: "2026-09-12T00:00:00Z",
+    created_by: DONO,
+    ...overrides,
+  };
+}
+
+function makeEntry(overrides: Partial<WorkoutEntry> = {}): WorkoutEntry {
+  return {
+    id: "ent-1",
+    workoutId: "wout-1",
+    programId: "prog-1",
+    exerciseId: "ex-1",
+    position: 1,
+    restSeconds: 60,
+    createdAt: "2026-10-01T00:10:00Z",
+    created_by: DONO,
+    ...overrides,
+  };
+}
+
+function makeSeries(overrides: Partial<WorkoutSeries> = {}): WorkoutSeries {
+  return {
+    id: "ser-1",
+    entryId: "ent-1",
+    position: 1,
+    value: 10,
+    load: null,
+    createdAt: "2026-10-01T00:11:00Z",
+    created_by: DONO,
+    ...overrides,
+  };
+}
+
+function makeView(
+  entry: WorkoutEntry,
+  exercise: Exercise,
+  series: WorkoutSeries[],
+): WorkoutEntryView {
+  return { entry, exercise, series };
+}
+
+/** Retorno exato do useWorkoutDetail (plan.md §3) com defaults. */
+function defaultHookState(overrides: Record<string, unknown> = {}) {
+  return {
+    workout: null as Workout | null,
+    program: null as Program | null,
+    entries: [] as WorkoutEntryView[],
+    exercises: [] as Exercise[],
+    workoutUsedExerciseIds: [] as string[],
+    loading: false,
+    errorMsg: null as string | null,
+    errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+    successNotice: null as string | null,
+    retry: vi.fn(async () => {}),
+    addExercise: vi.fn(async () => {}),
+    removeEntry: vi.fn(async () => {}),
+    reorderEntries: vi.fn(async () => {}),
+    setQuantity: vi.fn(async () => {}),
+    setRest: vi.fn(async () => {}),
+    updateSeries: vi.fn(async () => {}),
+    applyToAll: vi.fn(async () => {}),
+    saveExercise: vi.fn(async () => makeExercise()),
+    createExerciseAndAdd: vi.fn(async () => makeExercise()),
+    confirmLoadUnit: vi.fn(async () => {}),
+    ...overrides,
+  };
+}
+
+function setupHook(overrides: Record<string, unknown> = {}) {
+  const state = defaultHookState(overrides);
+  mockedUseWorkoutDetail.mockReturnValue(state);
+  return state;
+}
+
+/**
+ * Clica num botão que só existe depois da composição pós-fetch (padrão
+ * `clickConnectedButton` das páginas do módulo). `ordinal` resolve botões
+ * homônimos (ex.: "Adicionar exercício" da seção e da lista).
+ */
+async function clickConnectedButton(name: RegExp, ordinal = 0): Promise<void> {
+  await waitFor(() => {
+    const alvos = screen.getAllByRole("button", { name });
+    expect(alvos[ordinal]?.isConnected).toBe(true);
+  });
+  fireEvent.click(screen.getAllByRole("button", { name })[ordinal]);
+}
+
+/** Estado "conteúdo" padrão: treino existente, 1 entrada com 2 séries. */
+function conteudoComUmaEntrada(overrides: Record<string, unknown> = {}) {
+  const view = makeView(
+    makeEntry({ id: "ent-1", position: 1, restSeconds: 60 }),
+    makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" }),
+    [
+      makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, value: 10 }),
+      makeSeries({ id: "ser-2", entryId: "ent-1", position: 2, value: null }),
+    ],
+  );
+  return setupHook({
+    workout: makeWorkout({ name: "Treino A" }),
+    program: makeProgram(),
+    entries: [view],
+    exercises: [makeExercise({ id: "ex-1", name: "Supino reto" })],
+    workoutUsedExerciseIds: ["ex-1"],
+    ...overrides,
+  });
+}
+
+const backProgram = { kind: "program", programId: "prog-1" } as const;
+const backNone = { kind: "none" } as const;
+
+describe("WorkoutDetailSection (TASK-002 — RED)", () => {
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+  });
+
+  it("chama useWorkoutDetail com o workoutId recebido por prop", () => {
+    setupHook({ workout: makeWorkout(), program: makeProgram() });
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    expect(mockedUseWorkoutDetail).toHaveBeenCalledWith("wout-1");
+  });
+
+  it("paridade de render: cabeçalho do treino + entradas na ordem de position com séries e descanso", () => {
+    const supino = makeExercise({ id: "ex-1", name: "Supino reto" });
+    const rosca = makeExercise({
+      id: "ex-2",
+      name: "Rosca direta",
+      muscle: "Bíceps",
+    });
+    conteudoComUmaEntrada({
+      workout: makeWorkout({ name: "Treino A" }),
+      entries: [
+        makeView(
+          makeEntry({
+            id: "ent-2",
+            exerciseId: "ex-2",
+            position: 2,
+            restSeconds: 90,
+          }),
+          rosca,
+          [makeSeries({ id: "ser-3", entryId: "ent-2", position: 1, value: 8 })],
+        ),
+        makeView(
+          makeEntry({
+            id: "ent-1",
+            exerciseId: "ex-1",
+            position: 1,
+            restSeconds: 60,
+          }),
+          supino,
+          [
+            makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, value: 10 }),
+            makeSeries({ id: "ser-2", entryId: "ent-1", position: 2, value: null }),
+          ],
+        ),
+      ],
+      exercises: [supino, rosca],
+    });
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    const cabecalho = screen.getByRole("heading", { name: "Treino A" });
+    expect(cabecalho.className).toMatch(/font-display/);
+
+    const secao = screen.getByRole("region", {
+      name: "Exercícios do treino",
+    });
+    expect(
+      within(secao).getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
+    ).toEqual(["Supino reto", "Rosca direta"]);
+
+    expect(screen.getAllByText(/^Série 1$/)).toHaveLength(2);
+    expect(screen.getAllByText(/^Série 2$/)).toHaveLength(1);
+    expect(screen.getAllByLabelText("Descanso (s)")[0]).toHaveValue("60");
+  });
+
+  it("readOnly: programa inativo esconde adicionar/editar/remover sem esconder o conteúdo", () => {
+    conteudoComUmaEntrada({ program: makeProgram({ status: "inativo" }) });
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /adicionar exercício/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /editar/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /excluir/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Séries")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Descanso (s)")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /arrastar para reordenar/i }),
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Supino reto" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Série 1")).toBeInTheDocument();
+  });
+
+  it("D14: seleção bloqueada mantém o ExercisePickerModal aberto com mensagem visível e sem retry", async () => {
+    const state = conteudoComUmaEntrada({
+      exercises: [
+        makeExercise({ id: "ex-1", name: "Supino reto" }),
+        makeExercise({ id: "ex-2", name: "Rosca direta", muscle: "Bíceps" }),
+      ],
+      addExercise: vi.fn(async () => {
+        throw new Error(MSG_EXERCICIO_JA_NO_TREINO);
+      }),
+    });
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+    await clickConnectedButton(/adicionar exercício/i, 0);
+    // A query é escopada ao diálogo do picker: "Supino reto" também existe
+    // como h3 do card da entry e nos rótulos acessíveis Editar/Excluir
+    // ("Editar Supino reto"), então o índice global 0 clicaria no card.
+    await waitFor(() => {
+      const dialogo = screen
+        .getByRole("heading", { name: "Escolher exercício" })
+        .closest(".fixed") as HTMLElement;
+      expect(
+        within(dialogo).getByRole("button", { name: /supino reto/i })
+          .isConnected,
+      ).toBe(true);
+    });
+    fireEvent.click(
+      within(
+        screen
+          .getByRole("heading", { name: "Escolher exercício" })
+          .closest(".fixed") as HTMLElement,
+      ).getByRole("button", { name: /supino reto/i }),
+    );
+
+    await waitFor(() =>
+      expect(state.addExercise).toHaveBeenCalledWith("ex-1"),
+    );
+    expect(
+      screen.getAllByText(MSG_EXERCICIO_JA_NO_TREINO).length,
+    ).toBeGreaterThan(0);
+    const seletor = screen
+      .getByRole("heading", { name: "Escolher exercício" })
+      .closest(".fixed") as HTMLElement;
+    expect(seletor).not.toBeNull();
+    expect(within(seletor).getByText("Rosca direta")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /tentar novamente/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("backTarget program exibe voltar ao programa; backTarget none omite o botão", () => {
+    conteudoComUmaEntrada();
+
+    const { unmount } = render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+    expect(
+      screen.getByRole("button", { name: /voltar ao programa/i }),
+    ).toBeInTheDocument();
+    unmount();
+    cleanup();
+
+    conteudoComUmaEntrada();
+    render(<WorkoutDetailSection workoutId="wout-1" backTarget={backNone} />);
+
+    expect(
+      screen.queryByRole("button", { name: /voltar ao programa/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Treino A" }),
+    ).toBeInTheDocument();
+  });
+
+  it("slots nulos na v1: sem headerActions/footer nada extra é renderizado; slots explícitos aparecem", () => {
+    conteudoComUmaEntrada();
+
+    const { unmount } = render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backNone} />,
+    );
+    expect(screen.queryByTestId("slot-header")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("slot-footer")).not.toBeInTheDocument();
+    unmount();
+    cleanup();
+
+    conteudoComUmaEntrada();
+    render(
+      <WorkoutDetailSection
+        workoutId="wout-1"
+        backTarget={backNone}
+        headerActions={<div data-testid="slot-header">acao</div>}
+        footer={<div data-testid="slot-footer">rodape</div>}
+        entryFooter={() => <div data-testid="slot-entry">por-exercicio</div>}
+      />,
+    );
+
+    expect(screen.getByTestId("slot-header")).toBeInTheDocument();
+    expect(screen.getByTestId("slot-footer")).toBeInTheDocument();
+    expect(screen.getAllByTestId("slot-entry").length).toBeGreaterThan(0);
+  });
+});
+
+/** Fonte da seção (raiz = 4 níveis acima de __tests__/components/milon). */
+function sectionSource(): string {
+  return fs.readFileSync(
+    path.resolve(__dirname, "../../../components/milon/WorkoutDetailSection.tsx"),
+    "utf8",
+  );
+}
+
+describe("TASK-002 — seção como dona única do detalhe (fonte)", () => {
+  it("a seção compõe o AsyncState centralizado (proibido reimplementar estados)", () => {
+    expect(sectionSource()).toMatch(
+      /from\s+["']@\/components\/ui\/AsyncState["']/,
+    );
+  });
+
+  it("'Tentar novamente' em components/milon/WorkoutDetailSection.tsx => 0 ocorrências", () => {
+    expect(sectionSource().split("Tentar novamente").length - 1).toBe(0);
+  });
+
+  it("a seção declara os slots de extensão com default nulo (casca p/ #5/#6/#7)", () => {
+    const src = sectionSource();
+    expect(src).toMatch(/headerActions/);
+    expect(src).toMatch(/entryFooter/);
+    expect(src).toMatch(/footer/);
+    expect(src).toMatch(/=\s*null/);
+  });
+});
+
+/**
+ * Contrato layout-único (pós-04-treino-do-dia, causa raiz: layout duplo):
+ * `WorkoutDetailSection.tsx:417` renderizava
+ * `<MilonLayout pageTitle={title}>` enquanto `app/milon/today/page.tsx:29`
+ * também envolvia com `<MilonLayout pageTitle="Treino do Dia">` →
+ * banner + abas duplicados e título "Treino" após "Treino do Dia".
+ *
+ * Contrato novo: 1 MilonLayout por rota, seção SEM layout. A seção é pura
+ * (só AsyncState + conteúdo); o layout mora nas páginas (today + wrapper
+ * da manutenção). `title` vira apenas fallback interno se necessário —
+ * nunca `pageTitle` de layout.
+ *
+ * Expected: FAIL até Hefesto implementar (produção ainda com layout duplo).
+ */
+describe("WorkoutDetailSection pura sem layout (contrato layout-único — RED)", () => {
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("não renderiza navegação do módulo (layout mora nas páginas)", () => {
+    conteudoComUmaEntrada();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    expect(
+      screen.queryByRole("navigation", {
+        name: "Navegação do módulo Mílon",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("não renderiza mascote/título do módulo nem header de página (só conteúdo do treino)", () => {
+    conteudoComUmaEntrada();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backNone} />,
+    );
+
+    expect(screen.queryByText("Mílon")).not.toBeInTheDocument();
+    // Conteúdo próprio permanece: cabeçalho do treino + entradas.
+    expect(
+      screen.getByRole("heading", { name: "Treino A" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Exercícios do treino" }),
+    ).toBeInTheDocument();
+  });
+
+  it("com backTarget none não há duplicata de título de página (regressão today: Treino após Treino do Dia)", () => {
+    conteudoComUmaEntrada();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backNone} />,
+    );
+
+    // A seção pura não cria header de página; o único h1 da rota deve vir
+    // da página (MilonLayout pageTitle). Aqui: nenhum header de layout.
+    expect(
+      screen.queryByRole("navigation", {
+        name: "Navegação do módulo Mílon",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Treino do Dia" }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("TASK-004 — seção sem MilonLayout (fonte, contrato layout-único — RED)", () => {
+  it("'MilonLayout' em components/milon/WorkoutDetailSection.tsx => 0 ocorrências (layout mora nas páginas)", () => {
+    expect(sectionSource().split("MilonLayout").length - 1).toBe(0);
+  });
+
+  it("a seção não importa o layout do módulo", () => {
+    expect(sectionSource()).not.toMatch(
+      /from\s+["']@\/components\/milon\/MilonLayout["']/,
+    );
+  });
+
+  it("'ModuleLayout' em components/milon/WorkoutDetailSection.tsx => 0 ocorrências (nem direto nem via MilonLayout)", () => {
+    expect(sectionSource().split("ModuleLayout").length - 1).toBe(0);
+  });
+});
+
+/**
+ * Contrato RED — Mílon #5 Execução série a série (TASK-005):
+ * flag `executionEnabled` da seção.
+ *
+ * Fonte: spec §3 (toque curto marca/desmarca; longo abre o modal; salvar
+ * replica para a série e as seguintes; última desmarcada abre a pergunta
+ * "nenhuma série marcada, deseja limpar essa execução"; confirmar limpa o
+ * início; cancelar mantém desmarcada com início preservado) + plan.md §2
+ * (flag opcional executionEnabled com padrão desligado; quando ligada
+ * compõe o hook novo, monta o pacote de execução, hospeda o
+ * SeriesEditModal e a confirmação de limpeza; quando desligada
+ * comportamento idêntico ao atual) + §3 (flag executionEnabled default
+ * desligado; pacote SeriesExecutionProps; modal e confirmação) + §4 (data
+ * flow) + tasks.json TASK-005.
+ *
+ * CONTRATO FIXADO AQUI: `WorkoutDetailSectionProps` ganha
+ * `executionEnabled?: boolean` (default desligado). Quando ligada, a seção
+ * chama `useWorkoutExecution(workoutId)` e repassa o pacote montado a
+ * partir de `doneSeriesIds`; hospeda o SeriesEditModal (estado do editor)
+ * e a confirmação de limpeza (clearConfirmOpen/confirm/cancel).
+ *
+ * Expected: FAIL nos blocos com flag (prop ainda não existe — hook nunca
+ * chamado, sem marcadores/modal/pergunta); o bloco sem flag passa como
+ * trava de regressão. Hefesto fará GREEN na TASK-006.
+ */
+describe("modo execução da seção (Mílon #5 — RED)", () => {
+  /** Estado default do hook de execução (contrato da TASK-003/TASK-004). */
+  function setupExecHook(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  function comFlag(props: Record<string, unknown> = {}) {
+    return {
+      workoutId: "wout-1",
+      backTarget: backNone,
+      ...( { executionEnabled: true } as Record<string, unknown> ),
+      ...props,
+    };
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExecHook();
+  });
+
+  it("sem flag: comportamento idêntico ao atual (slots nulos, sem marcadores, hook de execução nunca chamado)", () => {
+    conteudoComUmaEntrada();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backNone} />,
+    );
+
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.getByText("Série 1")).toBeInTheDocument();
+    expect(mockedUseWorkoutExecution).not.toHaveBeenCalled();
+  });
+
+  it("com flag: compõe o hook novo com o workoutId", () => {
+    conteudoComUmaEntrada();
+
+    render(
+      <WorkoutDetailSection
+        {...(comFlag() as unknown as Parameters<typeof WorkoutDetailSection>[0])}
+      />,
+    );
+
+    expect(mockedUseWorkoutExecution).toHaveBeenCalledWith(
+      "wout-1",
+      expect.any(Array),
+    );
+  });
+
+  it("com flag: monta marcadores a partir de doneSeriesIds", () => {
+    conteudoComUmaEntrada();
+    setupExecHook({ doneSeriesIds: ["ser-1"], markedCount: 1 });
+
+    render(
+      <WorkoutDetailSection
+        {...(comFlag() as unknown as Parameters<typeof WorkoutDetailSection>[0])}
+      />,
+    );
+
+    const marcadores = screen.getAllByRole("button", { name: /^série/i });
+    expect(marcadores).toHaveLength(2);
+    expect(marcadores[0]).toHaveAttribute("aria-pressed", "true");
+    expect(marcadores[0].className).toMatch(/B7602B/);
+    expect(marcadores[1]).toHaveAttribute("aria-pressed", "false");
+    expect(marcadores[1].className).not.toMatch(/B7602B/);
+  });
+
+  it("com flag: hospeda o modal de edição (título com font-display, sem opção de cópia)", async () => {
+    conteudoComUmaEntrada();
+    const state = setupExecHook({ doneSeriesIds: ["ser-1"], markedCount: 1 });
+
+    render(
+      <WorkoutDetailSection
+        {...(comFlag() as unknown as Parameters<typeof WorkoutDetailSection>[0])}
+      />,
+    );
+
+    // Toque longo na primeira série abre o editor (500ms, sem alternar).
+    vi.useFakeTimers();
+    try {
+      fireEvent.pointerDown(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+      vi.advanceTimersByTime(500);
+      fireEvent.pointerUp(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: /série/i }),
+      ).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByRole("heading", { name: /série/i }).className,
+    ).toMatch(/font-display/);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(state.toggleSeries).not.toHaveBeenCalled();
+  });
+
+  it("com flag: última desmarcada abre a pergunta com a série já desmarcada (sem excluir)", async () => {
+    conteudoComUmaEntrada();
+    const state = setupExecHook({
+      doneSeriesIds: ["ser-1"],
+      markedCount: 1,
+      toggleSeries: vi.fn(async () => {
+        // Hook remove a realizada e abre a confirmação sem excluir.
+        mockedUseWorkoutExecution.mockReturnValue({
+          ...setupExecHook(),
+          doneSeriesIds: [],
+          markedCount: 0,
+          clearConfirmOpen: true,
+        });
+      }),
+    });
+
+    render(
+      <WorkoutDetailSection
+        {...(comFlag() as unknown as Parameters<typeof WorkoutDetailSection>[0])}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(state.toggleSeries).toHaveBeenCalled());
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          /Todas as séries foram desmarcada\. Deseja cancelar a execução desse treino\?/i,
+        ),
+      ).toBeInTheDocument(),
+    );
+    // A série clicada já aparece desmarcada antes de qualquer pergunta.
+    expect(screen.getAllByRole("button", { name: /^série/i })[0]).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("com flag: confirmar limpa a execução e cancelar mantém início com zero marcadas", async () => {
+    conteudoComUmaEntrada();
+    const state = setupExecHook({
+      doneSeriesIds: [],
+      markedCount: 0,
+      clearConfirmOpen: true,
+    });
+
+    render(
+      <WorkoutDetailSection
+        {...(comFlag() as unknown as Parameters<typeof WorkoutDetailSection>[0])}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        /Todas as séries foram desmarcada\. Deseja cancelar a execução desse treino\?/i,
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /limpar/i }));
+    await waitFor(() =>
+      expect(state.confirmClearExecution).toHaveBeenCalledTimes(1),
+    );
+  });
+
+  it("com flag: salvar replica origem mais seguintes com feito preservado (via hook)", async () => {
+    conteudoComUmaEntrada();
+    const state = setupExecHook({ doneSeriesIds: ["ser-2"], markedCount: 1 });
+
+    render(
+      <WorkoutDetailSection
+        {...(comFlag() as unknown as Parameters<typeof WorkoutDetailSection>[0])}
+      />,
+    );
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.pointerDown(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+      vi.advanceTimersByTime(500);
+      fireEvent.pointerUp(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /salvar/i }),
+      ).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /salvar/i }));
+
+    await waitFor(() =>
+      expect(state.saveSeriesExecution).toHaveBeenCalledTimes(1),
+    );
+    const chamada = state.saveSeriesExecution.mock.calls[0];
+    // Entrada + série de origem identificadas; sem indicador de cópia.
+    expect(JSON.stringify(chamada)).toMatch(/ent-1/);
+    expect(JSON.stringify(chamada)).toMatch(/ser-1/);
+    expect(JSON.stringify(chamada)).not.toMatch(/copiar|copy|applyToAll/);
+  });
+});
+
+/**
+ * Paridade UI do replano composta na seção (Mílon #5, TASK-001 RED).
+ *
+ * Fonte: plan.md §2 (seção liga o callback de escolha de unidade do modal
+ * ao caminho de persistência de unidade já existente; salvamento do editor
+ * sobre a operação do hook que replica sempre) + §3 (escolha de unidade
+ * com a mesma semântica do toggle da manutenção; salvamento origem +
+ * seguintes incluindo marcadas) + D17 (sem botão aplicar em execução) +
+ * D18 (unidade só no salvar).
+ *
+ * Expected: FAIL nos casos de chrome e de unidade — o chrome segue oculto
+ * em execução e o modal segue sem kg/lb. O caso de replicação passa como
+ * trava verde (regra vigente mantida). Hefesto fará GREEN na TASK-004 sem
+ * mudar estes testes.
+ */
+describe("WorkoutDetailSection — paridade do replano (TASK-001 — RED)", () => {
+  function setupExecReplano(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  function comExecucao(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backNone,
+      executionEnabled: true,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  async function abrirEditorDaPrimeiraSerie(): Promise<void> {
+    vi.useFakeTimers();
+    try {
+      fireEvent.pointerDown(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+      vi.advanceTimersByTime(500);
+      fireEvent.pointerUp(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /salvar/i }),
+      ).toBeInTheDocument(),
+    );
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExecReplano();
+  });
+
+  it("com flag: chrome de manutenção visível em execução (quantidade, descanso, editar, excluir, handle)", () => {
+    conteudoComUmaEntrada();
+    setupExecReplano();
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(screen.getByLabelText(/séries/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/descanso/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /editar/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /excluir/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /arrastar para reordenar/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("com flag: modal não oferece escolha de unidade (2ª volta: unidade herdada, sem botões kg/lb)", async () => {
+    conteudoComUmaEntrada();
+    setupExecReplano();
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+    await abrirEditorDaPrimeiraSerie();
+
+    const dialog = screen.getByRole("heading", {
+      name: /editar série/i,
+    }).parentElement as HTMLElement;
+    const modal = within(dialog);
+    expect(
+      modal.queryByRole("button", { name: /^kg$/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      modal.queryByRole("button", { name: /^lb$/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("com flag: salvar mantém replicação sempre para origem + seguintes (sem indicador de cópia)", async () => {
+    conteudoComUmaEntrada();
+    const state = setupExecReplano({
+      doneSeriesIds: ["ser-2"],
+      markedCount: 1,
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+    await abrirEditorDaPrimeiraSerie();
+    fireEvent.click(screen.getByRole("button", { name: /salvar/i }));
+
+    await waitFor(() =>
+      expect(state.saveSeriesExecution).toHaveBeenCalledTimes(1),
+    );
+    const chamada = state.saveSeriesExecution.mock.calls[0];
+    expect(JSON.stringify(chamada)).toMatch(/ent-1/);
+    expect(JSON.stringify(chamada)).toMatch(/ser-1/);
+    expect(JSON.stringify(chamada)).not.toMatch(/copiar|copy|applyToAll/);
+  });
+});
+
+/**
+ * Sem banner de sucesso na execução (correção humana 2026-10-08 — RED).
+ *
+ * Verdade humana: NESTA tela (Treino do Dia em execução) NÃO há
+ * banner/aviso de confirmação a cada alteração ou marcar/desmarcar —
+ * o card já é o feedback; banner de ERRO mantido. O polish visual do
+ * card será proposto e julgado em homologação (sem trava de pixel aqui).
+ *
+ * Trava desta tarefa:
+ * - toggle/save/confirm em execução NÃO exibem successNotice nem chamam
+ *   o banner de sucesso (hook sempre nulo + seção sem banner verde);
+ * - erro segue no banner com origem operacao (role=alert, sem retry);
+ * - manutenção inalterada (comportamento atual preservado).
+ *
+ * Expected: FAIL no caso do banner verde em execução — a produção ainda
+ * renderiza `ctx.execSuccessNotice`. Hefesto fará GREEN removendo o
+ * banner de sucesso da execução sem tocar no erro nem na manutenção.
+ */
+describe("WorkoutDetailSection — sem banner de sucesso na execução (correção humana — RED)", () => {
+  function setupExecSemSucesso(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  function comExecucao(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backNone,
+      executionEnabled: true,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExecSemSucesso();
+  });
+
+  it("em execução: mesmo com successNotice do hook, NENHUM banner verde aparece (o card já é o feedback)", () => {
+    conteudoComUmaEntrada();
+    setupExecSemSucesso({ successNotice: "Alteração salva com sucesso." });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(
+      screen.queryByText("Alteração salva com sucesso."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("em execução: após marcar/desmarcar com successNotice nulo, nenhum banner verde aparece", async () => {
+    conteudoComUmaEntrada();
+    const state = setupExecSemSucesso({
+      doneSeriesIds: [],
+      markedCount: 0,
+      successNotice: null,
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(state.toggleSeries).toHaveBeenCalledTimes(1));
+
+    expect(
+      screen.queryByText("Alteração salva com sucesso."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("trava: em execução o banner de ERRO segue visível (role=alert, sem retry)", () => {
+    conteudoComUmaEntrada();
+    setupExecSemSucesso({
+      errorMsg: "Erro ao alternar série",
+      errorOrigin: "operacao",
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Erro ao alternar série");
+    expect(
+      screen.queryByRole("button", { name: /tentar novamente/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("trava: manutenção inalterada — sem flag, o successNotice atual segue exibido", () => {
+    conteudoComUmaEntrada({ successNotice: "Treino salvo com sucesso." });
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    expect(
+      screen.getByText("Treino salvo com sucesso."),
+    ).toBeInTheDocument();
+    expect(mockedUseWorkoutExecution).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * REMOÇÃO da foto — badge "Em execução", executionBlocked e template ao vivo.
+ *
+ * Fonte: spec alinhada §3 (indicacao visual de "em execução" ao lado do nome
+ * enquanto houver execução aberta; template do treino bloqueado na manutenção
+ * enquanto houver execução aberta; Treino do Dia exibe o template ao vivo com
+ * marcadores de feito — sem foto; valores reais ficam p/ #7).
+ *
+ * Badge + executionBlocked preservados (travas verdes). Display é ao vivo:
+ * a seção IGNORA frozenEntries/snapshot e exibe sempre o template.
+ * Expected: FAIL no caso ao vivo enquanto a seção ainda prefere frozenEntries
+ * (RED da remoção). Hefesto fará GREEN removendo a foto sem mudar estes testes.
+ */
+describe("WorkoutDetailSection — 2ª volta: badge, executionBlocked e frozenEntries (RED)", () => {
+  function setupExec2aVolta(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      frozenEntries: [] as WorkoutEntryView[],
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  function comExecucao(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backNone,
+      executionEnabled: true,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  function makeExecution(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "exec-1",
+      workoutId: "wout-1",
+      programId: "prog-1",
+      startedAt: "2026-10-08T10:00:00.000Z",
+      finishedAt: null,
+      createdAt: "2026-10-08T10:00:00.000Z",
+      created_by: DONO,
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExec2aVolta();
+  });
+
+  it("exibe badge 'Em execução' ao lado do nome do treino quando exec.execution !== null", () => {
+    conteudoComUmaEntrada();
+    setupExec2aVolta({ execution: makeExecution() });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(screen.getByText("Em execução")).toBeInTheDocument();
+  });
+
+  it("sem execução aberta, não exibe o badge 'Em execução'", () => {
+    conteudoComUmaEntrada();
+    setupExec2aVolta({ execution: null });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(screen.queryByText("Em execução")).not.toBeInTheDocument();
+  });
+
+  it("executionBlocked=true desabilita o chrome de manutenção (quantidade, descanso, editar, excluir, reordenar)", () => {
+    conteudoComUmaEntrada();
+    setupExec2aVolta({ execution: makeExecution() });
+
+    render(
+      <WorkoutDetailSection
+        {...(comExecucao({ executionBlocked: true }) as SectionProps)}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /adicionar exercício/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /editar/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /excluir/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /arrastar para reordenar/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Séries")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Descanso (s)")).not.toBeInTheDocument();
+  });
+
+  it("trava: sem execução aberta (executionBlocked=false), o chrome de manutenção segue visível", () => {
+    conteudoComUmaEntrada();
+    setupExec2aVolta({ execution: null });
+
+    render(
+      <WorkoutDetailSection
+        {...(comExecucao({ executionBlocked: false }) as SectionProps)}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /adicionar exercício/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /editar/i })).toBeInTheDocument();
+  });
+
+  it("REMOVIDO foto: com execução aberta exibe o template ao vivo (edição aparece na hora, sem frozen)", () => {
+    // Template ao vivo tem valor 15; a foto antiga congelaria valor 10.
+    // A seção deve IGNORAR frozenEntries/snapshot e exibir sempre o template.
+    // Expected: FAIL enquanto a seção ainda prefere frozenEntries (RED).
+    const viewTemplate = makeView(
+      makeEntry({ id: "ent-1", position: 1, restSeconds: 60 }),
+      makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" }),
+      [makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, value: 15 })],
+    );
+    const viewCongelada = makeView(
+      makeEntry({ id: "ent-1", position: 1, restSeconds: 60 }),
+      makeExercise({
+        id: "ex-1",
+        name: "Supino congelado",
+        muscle: "Peito",
+        loadUnit: "kg",
+      }),
+      [
+        makeSeries({
+          id: "ser-1",
+          entryId: "ent-1",
+          position: 1,
+          value: 10,
+          load: 40,
+        }),
+      ],
+    );
+    conteudoComUmaEntrada({ entries: [viewTemplate] });
+    setupExec2aVolta({
+      execution: makeExecution({ snapshot: { entries: [] } }),
+      frozenEntries: [viewCongelada],
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    // Display ao vivo: o que se vê é sempre o valor atual do template.
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Supino reto" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { level: 3, name: "Supino congelado" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("trava: sem execução aberta exibe o template (entries) sem foto", () => {
+    conteudoComUmaEntrada();
+    setupExec2aVolta({
+      execution: null,
+      frozenEntries: [],
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Supino reto" }),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+ * Contrato RED da TASK-006 (Mílon #5, aditamento 2026-10-09 dos 3 achados).
+ *
+ * Fonte: tasks.json TASK-006 (WorkoutDetailSection: aviso visível com a
+ * frase exata quando executionBlocked é verdadeiro no ramo de manutenção;
+ * ausência do aviso quando falso) + plan.md Aditamento §1 Mudança C + §3
+ * (Aviso de bloqueio: no ramo de manutenção, com executionBlocked
+ * verdadeiro, alerta visível contendo a frase exata "não pode ser editado
+ * pois está em execução", acima da lista, além dos controles já
+ * desabilitados) + spec §3 (aviso visível de que não pode ser editado
+ * pois está em execução) + D28.
+ *
+ * Contrato fixado aqui (nomes que a TASK-009 deve implementar):
+ * - ramo de manutenção (executionEnabled desligado) com
+ *   `executionBlocked === true` exibe alerta visível (role="alert")
+ *   contendo EXATAMENTE "não pode ser editado pois está em execução";
+ * - com `executionBlocked === false`/ausente, nenhum aviso aparece;
+ * - controles seguem desabilitados via readOnly efetivo (trava verde).
+ *
+ * Expected: FAIL no caso do aviso — a seção atual desabilita o chrome
+ * mas não exibe nenhum aviso textual. Hefesto fará GREEN na TASK-009
+ * sem mudar estes testes.
+ */
+describe("WorkoutDetailSection — aviso visível de bloqueio (TASK-006 — RED)", () => {
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  function manutencao(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backProgram,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    mockedUseWorkoutExecution.mockReturnValue({
+      execution: null,
+      doneSeriesIds: [],
+      markedCount: 0,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null,
+      errorOrigin: null,
+      successNotice: null,
+      retry: vi.fn(async () => {}),
+    });
+  });
+
+  it("manutenção bloqueada exibe aviso com a frase exata", () => {
+    conteudoComUmaEntrada();
+
+    render(<WorkoutDetailSection {...manutencao({ executionBlocked: true })} />);
+
+    expect(
+      screen.getByText(/não pode ser editado pois está em execução/),
+    ).toBeInTheDocument();
+  });
+
+  it("aviso de bloqueio usa role alert (alerta visível, sem retry)", () => {
+    conteudoComUmaEntrada();
+
+    render(<WorkoutDetailSection {...manutencao({ executionBlocked: true })} />);
+
+    const aviso = screen.getByText(
+      /não pode ser editado pois está em execução/,
+    );
+    const alerta = aviso.closest('[role="alert"]');
+    expect(alerta).not.toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /tentar novamente/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("manutenção bloqueada mantém os controles desabilitados além do aviso", () => {
+    conteudoComUmaEntrada();
+
+    render(<WorkoutDetailSection {...manutencao({ executionBlocked: true })} />);
+
+    expect(
+      screen.getByText(/não pode ser editado pois está em execução/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /adicionar exercício/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /editar/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("manutenção desbloqueada não exibe o aviso", () => {
+    conteudoComUmaEntrada();
+
+    render(
+      <WorkoutDetailSection {...manutencao({ executionBlocked: false })} />,
+    );
+
+    expect(
+      screen.queryByText(/não pode ser editado pois está em execução/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /adicionar exercício/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("sem executionBlocked não exibe o aviso (default desbloqueado)", () => {
+    conteudoComUmaEntrada();
+
+    render(<WorkoutDetailSection {...manutencao()} />);
+
+    expect(
+      screen.queryByText(/não pode ser editado pois está em execução/),
+    ).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Contrato RED da TASK-010 (Mílon #5, Aditamento 2026-10-09 "0012 CORRETA").
+ *
+ * Fonte: tasks.json TASK-010 (WorkoutDetailSection: ajustes de modo/unidade
+ * da entry + ausência do ajuste de unidade da biblioteca no caminho do
+ * treino) + plan.md Aditamento 0012 CORRETA §1 Mudança C + §3 (Hook de
+ * detalhe + Card da entry) + D31/D32/D33 + spec §3.
+ *
+ * CONTRATO FIXADO AQUI (o que a TASK-012 deve implementar):
+ * - o card da entry exibe seletores de Modo/Unidade vinculados à entry
+ *   (radiogroup rotulado OU select rotulado OU grupo rotulado; rótulos
+ *   "Modo"/"Unidade"; valores literais repeticao|tempo e kg|lb);
+ * - trocar o Modo chama `setEntryMode(entryId, mode)` do hook de detalhe;
+ *   trocar a Unidade chama `setEntryLoadUnit(entryId, unit)` do hook;
+ * - os cards/séries da entry exibem modo e unidade DA ENTRY (divergência da
+ *   biblioteca prova a fonte);
+ * - o caminho do treino NÃO usa mais o ajuste de unidade da biblioteca
+ *   (`setExerciseLoadUnitStandalone` fora da seção).
+ *
+ * Expected: FAIL — a seção atual não tem os seletores da entry, alimenta os
+ * cards com a biblioteca e persiste unidade via setExerciseLoadUnitStandalone.
+ * Hefesto fará GREEN na TASK-012 sem mudar estes testes (o hook é mockado
+ * por arquivo; as chaves novas vão por overrides do estado mockado).
+ */
+describe("WorkoutDetailSection — ajustes de modo/unidade da entry (TASK-010 — RED)", () => {
+  /** Entry COM modo/unidade (forma pós-0012; cast compila antes e depois). */
+  function makeEntryComModo(
+    mode: "repeticao" | "tempo",
+    loadUnit: "kg" | "lb",
+    overrides: Partial<WorkoutEntry> = {},
+  ): WorkoutEntry {
+    return makeEntry({
+      ...overrides,
+      ...({ mode, loadUnit } as unknown as Partial<WorkoutEntry>),
+    });
+  }
+
+  /** Conteúdo com biblioteca DIVERGENTE de propósito (fonte = entry). */
+  function conteudoDivergente() {
+    const view = makeView(
+      makeEntryComModo("tempo", "lb", { id: "ent-1", restSeconds: 60 }),
+      makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" }),
+      [
+        makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, value: 10 }),
+        makeSeries({ id: "ser-2", entryId: "ent-1", position: 2, value: null }),
+      ],
+    );
+    return setupHook({
+      workout: makeWorkout({ name: "Treino A" }),
+      program: makeProgram(),
+      entries: [view],
+      exercises: [makeExercise({ id: "ex-1", name: "Supino reto" })],
+      workoutUsedExerciseIds: ["ex-1"],
+      setEntryMode: vi.fn(async () => {}),
+      setEntryLoadUnit: vi.fn(async () => {}),
+    }) as unknown as {
+      setEntryMode: Mock;
+      setEntryLoadUnit: Mock;
+    };
+  }
+
+  function elementoDaEntry(): HTMLElement {
+    const el = document.querySelector('[data-entry-id="ent-1"]');
+    if (!el) throw new Error("Card da entry não renderizado");
+    return el as HTMLElement;
+  }
+
+  /** Localiza o seletor da entry aceitando radiogroup, select ou grupo. */
+  function controleDaEntry(rotulo: RegExp): HTMLElement | null {
+    const escopo = within(elementoDaEntry());
+    return (
+      escopo.queryByRole("radiogroup", { name: rotulo }) ??
+      escopo.queryByRole("combobox", { name: rotulo }) ??
+      escopo.queryByRole("group", { name: rotulo })
+    );
+  }
+
+  function escolherOpcao(controle: HTMLElement, opcao: RegExp): void {
+    const radio = within(controle).queryByRole("radio", { name: opcao });
+    if (radio) {
+      fireEvent.click(radio);
+      return;
+    }
+    const combo =
+      controle instanceof HTMLSelectElement
+        ? controle
+        : controle.querySelector("select");
+    if (combo instanceof HTMLSelectElement) {
+      const item = Array.from(combo.querySelectorAll("option")).find((o) =>
+        opcao.test(o.textContent ?? ""),
+      );
+      fireEvent.change(combo, {
+        target: { value: item?.value ?? item?.textContent ?? "" },
+      });
+      return;
+    }
+    throw new Error("Controle da entry sem opção selecionável");
+  }
+
+  it("exibe seletor de Modo da entry refletindo tempo (biblioteca sem modo)", () => {
+    conteudoDivergente();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    expect(controleDaEntry(/modo/i)).not.toBeNull();
+  });
+
+  it("exibe seletor de Unidade da entry refletindo lb (biblioteca em kg)", () => {
+    conteudoDivergente();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    expect(controleDaEntry(/unidade/i)).not.toBeNull();
+  });
+
+  it("trocar o Modo da entry chama setEntryMode do hook com (entryId, modo)", () => {
+    const state = conteudoDivergente();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    escolherOpcao(controleDaEntry(/modo/i) as HTMLElement, /repeti/i);
+    expect(state.setEntryMode).toHaveBeenCalledWith("ent-1", "repeticao");
+  });
+
+  it("trocar a Unidade da entry chama setEntryLoadUnit do hook com (entryId, unidade)", () => {
+    const state = conteudoDivergente();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    escolherOpcao(controleDaEntry(/unidade/i) as HTMLElement, /^(kg)$/i);
+    expect(state.setEntryLoadUnit).toHaveBeenCalledWith("ent-1", "kg");
+  });
+
+  it("card da entry exibe o rótulo DO MODO DA ENTRY (Tempo (s) com biblioteca sem modo)", () => {
+    conteudoDivergente();
+
+    render(
+      <WorkoutDetailSection workoutId="wout-1" backTarget={backProgram} />,
+    );
+
+    // Rótulo deriva do modo da entry: fixture com 2 séries => 2 ocorrências.
+    expect(
+      within(elementoDaEntry()).getAllByText("Tempo (s)"),
+    ).toHaveLength(2);
+  });
+
+  it("código vivo sem o ajuste de unidade da biblioteca no caminho do treino (substituição, D33)", () => {
+    const src = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        "../../../components/milon/WorkoutDetailSection.tsx",
+      ),
+      "utf8",
+    );
+    expect(src).not.toMatch(/setExerciseLoadUnitStandalone/);
+  });
+});
+
+/**
+ * Contrato RED — Mílon #7 Encerrar treino (TASK-003): hospedagem das
+ * confirmações novas + slots topo/rodapé no ramo de execução.
+ * Fonte: spec §2 (Cancelar no topo, Finalizar no final abaixo do último
+ * Adicionar; permanece no Treino do Dia) + §3 (quatro casos, vazio, efeitos,
+ * estados de tela) + §5 critérios 1/2/4/7/8/9/11 + plan §3 (seção sem props
+ * novas; topo renderiza headerActions ao lado do badge; rodapé renderiza
+ * footer após a lista; ExecutionHost hospeda os quatro modais com a mesma
+ * disciplina do clearConfirmOpen: erro não fecha, processing não fecha).
+ * Expected: FAIL — a seção ainda não hospeda as confirmações novas (textos
+ * ausentes) nem o gatilho do Caso 4. Hefesto fará GREEN na TASK-005.
+ * Convenção tsc: estado estendido do hook via overrides (cast); seção sem
+ * props novas (só slots existentes).
+ */
+describe("WorkoutDetailSection — encerrar treino (Milon 07 TASK-003 — RED)", () => {
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  function setupExec07(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      totalSeriesCount: 0,
+      finishCase: null,
+      finishConfirmOpen: false,
+      finishConfirmCase: null,
+      cancelConfirmOpen: false,
+      finishProcessing: false,
+      cancelProcessing: false,
+      requestFinish: vi.fn(),
+      confirmFinish: vi.fn(async () => {}),
+      cancelFinish: vi.fn(),
+      requestCancel: vi.fn(),
+      confirmCancelExecution: vi.fn(async () => {}),
+      cancelCancelExecution: vi.fn(),
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  function comExecucao(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backNone,
+      executionEnabled: true,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  function execAberta(): Record<string, unknown> {
+    return {
+      id: "exec-1",
+      workoutId: "wout-1",
+      programId: "prog-1",
+      startedAt: "2026-10-12T10:00:00.000Z",
+      finishedAt: null,
+      createdAt: "2026-10-12T10:00:00.000Z",
+      created_by: DONO,
+    };
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExec07();
+  });
+
+  it("parcial: finishConfirmOpen com caso parcial exibe o texto exato (critério 4)", () => {
+    conteudoComUmaEntrada();
+    setupExec07({
+      execution: execAberta(),
+      finishConfirmOpen: true,
+      finishConfirmCase: "parcial",
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(
+      screen.getByText(
+        "Ainda existem séries não executadas. Tem certeza que deseja finalizar o treino?",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("cancelar: cancelConfirmOpen exibe o texto exato de exclusão (critério 2)", () => {
+    conteudoComUmaEntrada();
+    setupExec07({ execution: execAberta(), cancelConfirmOpen: true });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(
+      screen.getByText(
+        "Tem certeza que deseja cancelar essa execução? Todas as informações serão excluídas.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("Caso 4: finishConfirmOpen com caso completa exibe a pergunta de todas-executadas (critério 7)", () => {
+    conteudoComUmaEntrada();
+    setupExec07({
+      execution: execAberta(),
+      doneSeriesIds: ["ser-1", "ser-2"],
+      markedCount: 2,
+      finishConfirmOpen: true,
+      finishConfirmCase: "completa",
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(
+      screen.getByText(
+        "Você executou todas as séries, deseja finalizar o treino?",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("vazio: finishConfirmOpen com caso vazio exibe a mensagem que conduz ao cancelamento (critério 8)", () => {
+    conteudoComUmaEntrada();
+    setupExec07({
+      execution: execAberta(),
+      finishConfirmOpen: true,
+      finishConfirmCase: "vazio",
+    });
+
+    render(<WorkoutDetailSection {...comExecucao()} />);
+
+    expect(
+      screen.getByText(
+        "O treino não pode ser finalizado pois nenhuma série foi feita. Em vez disso, deseja cancelar e excluir a execução desse treino?",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("topo/rodapé: headerActions ao lado do badge e footer após a lista no ramo de execução (critério 1)", () => {
+    conteudoComUmaEntrada();
+    setupExec07({ execution: execAberta() });
+
+    render(
+      <WorkoutDetailSection
+        {...comExecucao({
+          headerActions: <div data-testid="slot-topo">topo</div>,
+          footer: <div data-testid="slot-rodape">rodape</div>,
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Em execução")).toBeInTheDocument();
+    expect(screen.getByTestId("slot-topo")).toBeInTheDocument();
+    expect(screen.getByTestId("slot-rodape")).toBeInTheDocument();
+  });
+});
+
+/**
+ * Contrato RED — Mílon 07c Troca execução ativa (TASK-005):
+ * escrita bloqueada na seção.
+ *
+ * Fonte: `.agents/modules/milon/07c-troca-execucao-ativa/plan.md` §3
+ * (seção recebe treino ativo opcional, escrita bloqueada default falso e
+ * texto do tooltip default nulo; com escrita bloqueada verdadeira neste
+ * treino, o pacote de execução é indefinido, o editor nunca abre, a lista
+ * renderiza em modo leitura com título acessível igual ao tooltip, e uma
+ * barra de aviso exibe o tooltip) + `tasks.json` TASK-005
+ * (props activeExecutionWorkoutId, writeBlocked e blockedTooltip
+ * inexistentes) + `spec.md` §5 AC1
+ * ("Finalize o Treino A para marcar séries aqui").
+ *
+ * CONTRATO FIXADO AQUI (nomes que a TASK-006 deve implementar):
+ * - `activeExecutionWorkoutId?: string | null` (default nulo);
+ * - `writeBlocked?: boolean` (default falso);
+ * - `blockedTooltip?: string | null` (default nulo).
+ *
+ * Expected: FAIL nos 3 blocos novos — produção ainda ignora as props
+ * (sem barra, com marcadores, editor abre). Hefesto fará GREEN na TASK-006
+ * sem mudar estes testes (props novas via cast para o tsc seguir verde).
+ */
+describe("WorkoutDetailSection — escrita bloqueada 07c (TASK-005 — RED)", () => {
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  const TOOLTIP_ATIVO_A = "Finalize o Treino A para marcar séries aqui";
+
+  function setupExecBloqueada(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  function comBloqueio(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-2",
+      backTarget: backNone,
+      executionEnabled: true,
+      ...({
+        activeExecutionWorkoutId: "wout-1",
+        writeBlocked: true,
+        blockedTooltip: TOOLTIP_ATIVO_A,
+      } as Record<string, unknown>),
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExecBloqueada();
+  });
+
+  it("bloqueada exibe barra de aviso com o tooltip nomeado (AC1)", () => {
+    conteudoComUmaEntrada({
+      workout: makeWorkout({ id: "wout-2", name: "Treino B" }),
+    });
+
+    render(<WorkoutDetailSection {...comBloqueio()} />);
+
+    expect(screen.getByText(TOOLTIP_ATIVO_A)).toBeInTheDocument();
+  });
+
+  it("bloqueada suspende o pacote de execução (sem marcadores clicáveis, leitura preservada)", () => {
+    conteudoComUmaEntrada({
+      workout: makeWorkout({ id: "wout-2", name: "Treino B" }),
+    });
+    setupExecBloqueada({ doneSeriesIds: ["ser-1"], markedCount: 1 });
+
+    render(<WorkoutDetailSection {...comBloqueio()} />);
+
+    expect(
+      screen.queryByRole("button", { name: /^série/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Supino reto" }),
+    ).toBeInTheDocument();
+  });
+
+  it("bloqueada nunca abre o editor no toque longo (sem alternância)", () => {
+    conteudoComUmaEntrada({
+      workout: makeWorkout({ id: "wout-2", name: "Treino B" }),
+    });
+    setupExecBloqueada({ doneSeriesIds: [], markedCount: 0 });
+
+    render(<WorkoutDetailSection {...comBloqueio()} />);
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.pointerDown(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+      vi.advanceTimersByTime(500);
+      fireEvent.pointerUp(screen.getByText("Série 1"), {
+        pointerType: "touch",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(
+      screen.queryByRole("button", { name: /salvar/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(TOOLTIP_ATIVO_A)).toBeInTheDocument();
+  });
+});
+
+/**
+ * Contrato RED — Mílon 07b-1 "Avançar para o próximo treino" (TASK-001):
+ * desfecho do aviso de assentamento + foco do cabeçalho na seção.
+ *
+ * Fonte da verdade: `.agents/modules/milon/07b-1-avancar-proximo-treino/`
+ * - `spec.md` §5 (critérios 1, 4, 5 e 8) + §2 ("foco ao concluir": após
+ *   Finalizar o foco vai para o cabeçalho do próximo treino; após Cancelar
+ *   permanece no cabeçalho do mesmo treino);
+ * - `plan.md` §3 Contratos Completos — `onExecutionSettled` passa de
+ *   assinatura sem argumento para parâmetro de desfecho da união textual
+ *   `sealed` | `cancelled` (`sealed` só após `finishExecution` bem-sucedido:
+ *   parcial confirmada, completa confirmada ou completo direto; `cancelled`
+ *   só após `clearExecution` bem-sucedido: Cancelar confirmado ou Finalizar
+ *   vazio conduzido), invocado exatamente uma vez por operação de sucesso e
+ *   nunca no erro; nova prop opcional `focusHeaderSignal` (número ou nulo,
+ *   padrão nulo) que foca o cabeçalho rotulado `Cabeçalho do treino` (com
+ *   tabindex menos um) ao montar com sinal não-nulo e a cada mudança;
+ * - `plan.md` §5 decisões DA3 (desfecho como parâmetro do callback
+ *   existente, ponto único de notificação da 7c preservado) e DA5 (foco por
+ *   sinal numérico, verificável como `document.activeElement`);
+ * - `tasks.json` TASK-001 `acceptanceCriteria` (fonte da cobertura).
+ *
+ * ESTADO VIGENTE DA PRODUÇÃO (lido do disco — é o que faz estes testes
+ * caírem):
+ * - `components/milon/WorkoutDetailSection.tsx` declara
+ *   `onExecutionSettled?: () => void | Promise<void>` (sem parâmetro) e os
+ *   TRÊS pontos de emissão do `ExecutionHost` chamam
+ *   `void onExecutionSettled?.()` sem argumento (`notifySettled()` após
+ *   `confirmFinish`, após `confirmCancelExecution` e após `requestFinish`);
+ * - NÃO existe a prop `focusHeaderSignal` e nenhum dos dois cabeçalhos
+ *   (ramo de execução e ramo de manutenção) tem `tabindex` — em jsdom
+ *   apenas elemento com `tabindex` aceita foco programático (verificado:
+ *   `tabindex="-1"` foca, ausência não foca).
+ *
+ * Expected: FAIL pelo motivo certo em 6 casos — os 4 de desfecho falham na
+ * asserção de argumento (a chamada atual não leva desfecho: diff
+ * `chamada com [] esperado ['sealed'|'cancelled']`) e os 2 de foco falham
+ * na ausência de `tabindex`/foco programático (prop nova ignorada). Os
+ * casos de falha de operação e o de sinal nulo são TRAVAS VERDES do
+ * comportamento inalterado da 07/7c (a produção já não emite no erro e já
+ * não foca sem sinal): passam agora e DEVEM continuar verdes após o GREEN
+ * da TASK-002. Semântica 07/7c preservada: nenhum teste existente deste
+ * arquivo acopla a assinatura sem desfecho (verificado por busca por
+ * `onExecutionSettled` — zero ocorrências antes deste bloco).
+ *
+ * Padrão do repositório: Testing Library + Vitest + jsdom, factories com
+ * defaults, `clickConnectedButton` para clique pós-render da composição,
+ * props inexistentes via cast (`as unknown as SectionProps`) para o
+ * `tsc --noEmit` seguir exit 0 no RED.
+ */
+describe("WorkoutDetailSection — desfecho do aviso e foco do cabeçalho (07b-1 TASK-001 — RED)", () => {
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  /** Estado do hook de execução com a máquina da 07 (base da spec 07). */
+  function setupExec07b1(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null as Record<string, unknown> | null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      totalSeriesCount: 0,
+      finishCase: null as "vazio" | "parcial" | "completo" | null,
+      toggleSeries: vi.fn(async () => {}),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      finishConfirmOpen: false,
+      finishConfirmCase: null as "parcial" | "completa" | "vazio" | null,
+      cancelConfirmOpen: false,
+      finishProcessing: false,
+      cancelProcessing: false,
+      requestFinish: vi.fn(async () => {}),
+      confirmFinish: vi.fn(async () => {}),
+      cancelFinish: vi.fn(),
+      requestCancel: vi.fn(),
+      confirmCancelExecution: vi.fn(async () => {}),
+      cancelCancelExecution: vi.fn(),
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  /** Execução aberta do próprio treino (fixture da 07). */
+  function execAberta(): Record<string, unknown> {
+    return {
+      id: "exec-1",
+      workoutId: "wout-1",
+      programId: "prog-1",
+      startedAt: "2026-10-16T10:00:00.000Z",
+      finishedAt: null,
+      createdAt: "2026-10-16T10:00:00.000Z",
+      created_by: DONO,
+    };
+  }
+
+  function comExecucao(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backNone,
+      executionEnabled: true,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  function manutencao(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backProgram,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  /** Cabeçalho da seção: elemento rotulado acessivelmente (aria-label). */
+  function cabecalhoDoTreino(): HTMLElement {
+    return screen.getByRole("region", { name: "Cabeçalho do treino" });
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExec07b1();
+  });
+
+  // --- Desfecho por caminho de sucesso (spec §5 critérios 1, 4 e 5) -------
+
+  it("confirmar o Finalizar parcial emite onExecutionSettled com desfecho 'sealed'", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExec07b1({
+      execution: execAberta(),
+      doneSeriesIds: ["ser-1"],
+      markedCount: 1,
+      finishConfirmOpen: true,
+      finishConfirmCase: "parcial",
+    });
+    const settled = vi.fn();
+
+    render(
+      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
+    );
+
+    // Confirmação do modal de parcial (botão "Finalizar" da 07).
+    await clickConnectedButton(/^finalizar$/i);
+
+    await waitFor(() => expect(execState.confirmFinish).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(settled).toHaveBeenCalled());
+    // RED: a produção chama `void onExecutionSettled?.()` SEM argumento.
+    expect(settled).toHaveBeenCalledWith("sealed");
+    expect(settled).toHaveBeenCalledTimes(1);
+  });
+
+  it("Finalizar completo direto (requestFinish no caso completo) emite onExecutionSettled com desfecho 'sealed'", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExec07b1({
+      execution: execAberta(),
+      // Caso completo: todas as séries marcadas (07 decide sem confirmação).
+      finishCase: "completo",
+      doneSeriesIds: ["ser-1", "ser-2"],
+      markedCount: 2,
+      totalSeriesCount: 2,
+    });
+    const settled = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comExecucao({
+          onExecutionSettled: settled,
+          footer: <button type="button">Finalizar</button>,
+        })}
+      />,
+    );
+
+    // Rodapé com enxerto de ação (Mílon #7, D6): dispara requestFinish.
+    await clickConnectedButton(/^finalizar$/i);
+
+    await waitFor(() => expect(execState.requestFinish).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(settled).toHaveBeenCalled());
+    // RED: chamada sem argumento não satisfaz o desfecho esperado.
+    expect(settled).toHaveBeenCalledWith("sealed");
+    expect(settled).toHaveBeenCalledTimes(1);
+  });
+
+  it("confirmar o Cancelar emite onExecutionSettled com desfecho 'cancelled'", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExec07b1({
+      execution: execAberta(),
+      cancelConfirmOpen: true,
+    });
+    const settled = vi.fn();
+
+    render(
+      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
+    );
+
+    // Confirmação de exclusão da 07 (botão "Excluir" do modal de cancelar).
+    await clickConnectedButton(/^excluir$/i);
+
+    await waitFor(() =>
+      expect(execState.confirmCancelExecution).toHaveBeenCalledTimes(1),
+    );
+    await waitFor(() => expect(settled).toHaveBeenCalled());
+    // RED: chamada sem argumento não satisfaz o desfecho esperado.
+    expect(settled).toHaveBeenCalledWith("cancelled");
+    expect(settled).toHaveBeenCalledTimes(1);
+  });
+
+  it("confirmar o Finalizar vazio conduzido ao cancelamento emite 'cancelled' e NÃO 'sealed' (spec §5 critério 5)", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExec07b1({
+      execution: execAberta(),
+      finishConfirmOpen: true,
+      finishConfirmCase: "vazio",
+    });
+    // Modela o hook real (07): ao concluir, `confirmFinish` reinicia o caso
+    // (`finishConfirmCase` volta a nulo) — daí a captura do caso ter de ser
+    // síncrona e anterior à chamada do hook (plan §3 / TASK-002 AC3).
+    execState.confirmFinish = vi.fn(async () => {
+      mockedUseWorkoutExecution.mockReturnValue({
+        ...execState,
+        finishConfirmOpen: false,
+        finishConfirmCase: null,
+      });
+    });
+    const settled = vi.fn();
+
+    render(
+      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
+    );
+
+    // Botão de confirmar do modal de vazio é "Cancelar execução" (07 D4).
+    await clickConnectedButton(/^cancelar execução$/i);
+
+    await waitFor(() => expect(execState.confirmFinish).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(settled).toHaveBeenCalled());
+    // RED: chamada sem argumento não satisfaz o desfecho esperado.
+    expect(settled).toHaveBeenCalledWith("cancelled");
+    expect(settled).toHaveBeenCalledTimes(1);
+    // O vazio conduzido NÃO é selamento: nada pode ser reportado como sealed.
+    expect(settled).not.toHaveBeenCalledWith("sealed");
+  });
+
+  // --- Ausência de desfecho no erro (spec §5 critério 8) — travas verdes --
+
+  it("falha ao confirmar o Finalizar NÃO emite onExecutionSettled (nenhum desfecho; modal preservado)", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExec07b1({
+      execution: execAberta(),
+      finishConfirmOpen: true,
+      finishConfirmCase: "parcial",
+      confirmFinish: vi.fn(async () => {
+        throw new Error("Erro ao finalizar treino");
+      }),
+    });
+    const settled = vi.fn();
+
+    render(
+      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
+    );
+
+    await clickConnectedButton(/^finalizar$/i);
+
+    await waitFor(() => expect(execState.confirmFinish).toHaveBeenCalledTimes(1));
+    // Trava 07: erro de operação não fecha o modal (mensagem segue visível).
+    expect(
+      screen.getByText(
+        /Ainda existem séries não executadas\. Tem certeza que deseja finalizar o treino\?/i,
+      ),
+    ).toBeInTheDocument();
+    // Trava verde do contrato: nada é emitido no caminho de erro (a produção
+    // já comporta assim e o GREEN da TASK-002 não pode quebrar isto).
+    expect(settled).not.toHaveBeenCalled();
+  });
+
+  it("falha ao confirmar o Cancelar NÃO emite onExecutionSettled (nenhum desfecho; modal preservado)", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExec07b1({
+      execution: execAberta(),
+      cancelConfirmOpen: true,
+      confirmCancelExecution: vi.fn(async () => {
+        throw new Error("Erro ao cancelar execução");
+      }),
+    });
+    const settled = vi.fn();
+
+    render(
+      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
+    );
+
+    await clickConnectedButton(/^excluir$/i);
+
+    await waitFor(() =>
+      expect(execState.confirmCancelExecution).toHaveBeenCalledTimes(1),
+    );
+    expect(
+      screen.getByText(
+        /Tem certeza que deseja cancelar essa execução\? Todas as informações serão excluídas\./i,
+      ),
+    ).toBeInTheDocument();
+    // Trava verde do contrato: nenhum desfecho no caminho de erro.
+    expect(settled).not.toHaveBeenCalled();
+  });
+
+  // --- Foco do cabeçalho pelo sinal (spec §2 "foco ao concluir" + DA5) ----
+
+  it("focusHeaderSignal não-nulo foca o cabeçalho ao montar e a cada novo valor do sinal (ramo de execução)", () => {
+    conteudoComUmaEntrada();
+    setupExec07b1({ execution: execAberta() });
+    const settled = vi.fn();
+
+    const { rerender } = render(
+      <WorkoutDetailSection
+        {...comExecucao({ onExecutionSettled: settled, focusHeaderSignal: 1 })}
+      />,
+    );
+
+    const cabecalho = cabecalhoDoTreino();
+    // RED: sem a prop nova o cabeçalho não tem tabindex e não foca.
+    expect(cabecalho).toHaveAttribute("tabindex", "-1");
+    expect(cabecalho).toHaveFocus();
+
+    // Perde o foco e a página incrementa o sinal (novo desfecho) → refoca.
+    cabecalho.blur();
+    expect(cabecalho).not.toHaveFocus();
+    rerender(
+      <WorkoutDetailSection
+        {...comExecucao({ onExecutionSettled: settled, focusHeaderSignal: 2 })}
+      />,
+    );
+    expect(cabecalho).toHaveFocus();
+  });
+
+  it("focusHeaderSignal não-nulo foca o cabeçalho no ramo de manutenção também (duas ramificações)", () => {
+    conteudoComUmaEntrada();
+
+    render(<WorkoutDetailSection {...manutencao({ focusHeaderSignal: 1 })} />);
+
+    const cabecalho = cabecalhoDoTreino();
+    // RED: cabeçalho da manutenção também está sem tabindex e sem foco.
+    expect(cabecalho).toHaveAttribute("tabindex", "-1");
+    expect(cabecalho).toHaveFocus();
+  });
+
+  it("trava: focusHeaderSignal nulo (default) não move o foco programático do cabeçalho", () => {
+    conteudoComUmaEntrada();
+
+    render(<WorkoutDetailSection {...manutencao()} />);
+
+    expect(cabecalhoDoTreino()).not.toHaveFocus();
+  });
+});
+
+/**
+ * Contrato RED — Mílon 06 Timer de descanso (TASK-011): eventos novos da
+ * seção que disparam/encerram o timer no nível da página, preservando o
+ * desfecho da 7b-1.
+ *
+ * Fonte da verdade: `.agents/modules/milon/06-timer-descanso-pwa/`
+ * - `plan.md` §3 "Props novas em WorkoutDetailSection" (+ tipo exportado
+ *   `RestMarkedInfo` = `{workoutId, entryId, exerciseName, restSeconds}`):
+ *   `onSeriesMarked?: (info: RestMarkedInfo) => void` invocada exatamente
+ *   uma vez após `toggleSeries` bem-sucedido com direção `marked` e
+ *   `entry.restSeconds > 0` (nome do exercício vindo do `findTarget`);
+ *   nunca em erro, nunca em desmarcação, nunca com descanso nulo/zero;
+ *   `onExecutionCleared?: () => void` invocada exatamente uma vez após
+ *   `confirmClearExecution` bem-sucedido (confirmar a pergunta de
+ *   limpeza da #5); nunca no fechar da pergunta, nunca no erro. As duas
+ *   NÃO substituem nem estendem `onExecutionSettled` (7b-1 intacta);
+ * - `plan.md` §3 (hook) — `toggleSeries` devolve `ToggleSeriesOutcome`
+ *   (`"marked"` no caminho de marca, `inclusive` quando abre a pergunta
+ *   de completa; `"unmarked"` no de desmarca);
+ * - `tasks.json` TASK-011 `acceptanceCriteria` (casos da seção).
+ *
+ * ESTADO VIGENTE DA PRODUÇÃO (lido do disco — é o que faz os casos RED
+ * caírem):
+ * - `WorkoutDetailSectionProps` NÃO declara `onSeriesMarked` nem
+ *   `onExecutionCleared`; o destructuring só lê as props conhecidas,
+ *   então as funções recebidas são silenciosamente ignoradas;
+ * - `ExecutionHost.handleToggle` faz `await exec.toggleSeries(...)`
+ *   descartando o retorno (assinatura atual `Promise<void>`) e
+ *   `confirmClear` só alterna `clearProcessing` — nenhum canal novo de
+ *   notificação existe.
+ *
+ * Expected: FAIL nos 3 casos de emissão (a seção nunca invoca os
+ * callbacks novos). Os demais são TRAVAS VERDES do comportamento
+ * inalterado: não-emitir nos caminhos inválidos (#5) e as três emissões
+ * de `onExecutionSettled` da 7b-1 seguem intactas ao lado do canal novo.
+ * Padrão do repositório: props inexistentes via cast
+ * (`as unknown as SectionProps`) — precedente da 7b-1, `tsc --noEmit`
+ * segue exit 0 no RED.
+ */
+describe("WorkoutDetailSection — eventos do descanso 06 (TASK-011 — RED)", () => {
+  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
+
+  /** Máquina da #5/#7 completa com o retorno novo já no mock (contrato). */
+  function setupExecDescanso(overrides: Record<string, unknown> = {}) {
+    const state = {
+      execution: null as Record<string, unknown> | null,
+      doneSeriesIds: [] as string[],
+      markedCount: 0,
+      totalSeriesCount: 0,
+      finishCase: null as "vazio" | "parcial" | "completo" | null,
+      toggleSeries: vi.fn(async () => "marked"),
+      saveSeriesExecution: vi.fn(async () => {}),
+      clearConfirmOpen: false,
+      confirmClearExecution: vi.fn(async () => {}),
+      cancelClearExecution: vi.fn(),
+      loading: false,
+      errorMsg: null as string | null,
+      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
+      successNotice: null as string | null,
+      retry: vi.fn(async () => {}),
+      finishConfirmOpen: false,
+      finishConfirmCase: null as "parcial" | "completa" | "vazio" | null,
+      cancelConfirmOpen: false,
+      finishProcessing: false,
+      cancelProcessing: false,
+      requestFinish: vi.fn(async () => {}),
+      confirmFinish: vi.fn(async () => {}),
+      cancelFinish: vi.fn(),
+      requestCancel: vi.fn(),
+      confirmCancelExecution: vi.fn(async () => {}),
+      cancelCancelExecution: vi.fn(),
+      ...overrides,
+    };
+    mockedUseWorkoutExecution.mockReturnValue(state);
+    return state;
+  }
+
+  /** Conteúdo com UMA entrada de descanso configurável (nulo/zero). */
+  function conteudoComDescanso(restSeconds: number | null) {
+    const view = makeView(
+      makeEntry({ id: "ent-1", position: 1, restSeconds }),
+      makeExercise({ id: "ex-1", name: "Supino reto", muscle: "Peito" }),
+      [makeSeries({ id: "ser-1", entryId: "ent-1", position: 1, value: 10 })],
+    );
+    return setupHook({
+      workout: makeWorkout({ name: "Treino A" }),
+      program: makeProgram(),
+      entries: [view],
+      exercises: [makeExercise({ id: "ex-1", name: "Supino reto" })],
+      workoutUsedExerciseIds: ["ex-1"],
+    });
+  }
+
+  /** Composição de execução com o canal novo recebido (cast do RED). */
+  function comDescanso(props: Record<string, unknown> = {}): SectionProps {
+    return {
+      workoutId: "wout-1",
+      backTarget: backNone,
+      executionEnabled: true,
+      ...props,
+    } as unknown as SectionProps;
+  }
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    setupHook();
+    setupExecDescanso();
+  });
+
+  // --- onSeriesMarked (plan §3 — gatilho do timer) — casos RED ------------
+
+  it("marcação com descanso emite onSeriesMarked uma única vez com o RestMarkedInfo do plano", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExecDescanso({
+      // Contrato da TASK-011: o caminho de marca devolve "marked".
+      toggleSeries: vi.fn(async () => "marked"),
+    });
+    const marcado = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onSeriesMarked: marcado })}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(execState.toggleSeries).toHaveBeenCalledTimes(1));
+
+    // RED: a seção ainda não tem o canal — nunca invoca a prop nova.
+    await waitFor(() => expect(marcado).toHaveBeenCalledTimes(1));
+    expect(marcado).toHaveBeenCalledWith({
+      workoutId: "wout-1",
+      entryId: "ent-1",
+      exerciseName: "Supino reto",
+      restSeconds: 60,
+    });
+  });
+
+  it("marcação que abre a pergunta de completa também emite onSeriesMarked (outcome 'marked' + pergunta intacta)", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExecDescanso();
+    // Modela o hook real: a marca da última pendente devolve "marked" e
+    // abre a pergunta de completa no mesmo caminho (plan §3, hook).
+    execState.toggleSeries = vi.fn(async () => {
+      mockedUseWorkoutExecution.mockReturnValue({
+        ...execState,
+        doneSeriesIds: ["ser-1", "ser-2"],
+        markedCount: 2,
+        totalSeriesCount: 2,
+        finishConfirmOpen: true,
+        finishConfirmCase: "completa",
+      });
+      return "marked";
+    });
+    const marcado = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onSeriesMarked: marcado })}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(execState.toggleSeries).toHaveBeenCalledTimes(1));
+    // A pergunta de completa continua abrindo no mesmo caminho (#5 intacta).
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          /Você executou todas as séries, deseja finalizar o treino\?/i,
+        ),
+      ).toBeInTheDocument(),
+    );
+    // RED: sem o canal novo nada é emitido, mesmo com outcome "marked".
+    await waitFor(() => expect(marcado).toHaveBeenCalledTimes(1));
+    expect(marcado).toHaveBeenCalledWith({
+      workoutId: "wout-1",
+      entryId: "ent-1",
+      exerciseName: "Supino reto",
+      restSeconds: 60,
+    });
+  });
+
+  // --- onSeriesMarked: caminhos que NÃO emitem — travas verdes -----------
+
+  it("trava: marcação em entry com restSeconds nulo NÃO emite onSeriesMarked", async () => {
+    conteudoComDescanso(null);
+    const execState = setupExecDescanso({
+      toggleSeries: vi.fn(async () => "marked"),
+    });
+    const marcado = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onSeriesMarked: marcado })}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(execState.toggleSeries).toHaveBeenCalledTimes(1));
+
+    expect(marcado).not.toHaveBeenCalled();
+  });
+
+  it("trava: marcação em entry com restSeconds zero NÃO emite onSeriesMarked", async () => {
+    conteudoComDescanso(0);
+    const execState = setupExecDescanso({
+      toggleSeries: vi.fn(async () => "marked"),
+    });
+    const marcado = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onSeriesMarked: marcado })}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(execState.toggleSeries).toHaveBeenCalledTimes(1));
+
+    expect(marcado).not.toHaveBeenCalled();
+  });
+
+  it("trava: desmarcação (outcome 'unmarked') NÃO emite onSeriesMarked", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExecDescanso({
+      doneSeriesIds: ["ser-1"],
+      markedCount: 1,
+      toggleSeries: vi.fn(async () => "unmarked"),
+    });
+    const marcado = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onSeriesMarked: marcado })}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(execState.toggleSeries).toHaveBeenCalledTimes(1));
+
+    expect(marcado).not.toHaveBeenCalled();
+  });
+
+  it("trava: falha do toggleSeries NÃO emite onSeriesMarked (erro engolido, sem rejeição não tratada)", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExecDescanso({
+      toggleSeries: vi.fn(async () => {
+        throw new Error("Erro ao alternar série");
+      }),
+    });
+    const marcado = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onSeriesMarked: marcado })}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^série/i })[0]);
+    await waitFor(() => expect(execState.toggleSeries).toHaveBeenCalledTimes(1));
+
+    expect(marcado).not.toHaveBeenCalled();
+  });
+
+  // --- onExecutionCleared (plan §3 — confirmar a limpeza da #5) ----------
+
+  it("confirmar a limpeza da última série emite onExecutionCleared uma única vez", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExecDescanso({
+      execution: {
+        id: "exec-1",
+        workoutId: "wout-1",
+        programId: "prog-1",
+        startedAt: "2026-10-18T10:00:00.000Z",
+        finishedAt: null,
+        createdAt: "2026-10-18T10:00:00.000Z",
+        created_by: DONO,
+      },
+      doneSeriesIds: [],
+      markedCount: 0,
+      clearConfirmOpen: true,
+    });
+    const limpo = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onExecutionCleared: limpo })}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        /Todas as séries foram desmarcada\. Deseja cancelar a execução desse treino\?/i,
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /limpar/i }));
+    await waitFor(() =>
+      expect(execState.confirmClearExecution).toHaveBeenCalledTimes(1),
+    );
+
+    // RED: a seção ainda não tem o canal — nunca invoca a prop nova.
+    await waitFor(() => expect(limpo).toHaveBeenCalledTimes(1));
+  });
+
+  it("trava: fechar a pergunta de limpeza (Cancelar) NÃO emite onExecutionCleared", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExecDescanso({
+      doneSeriesIds: [],
+      markedCount: 0,
+      clearConfirmOpen: true,
+    });
+    const limpo = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onExecutionCleared: limpo })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^cancelar$/i }));
+    await waitFor(() =>
+      expect(execState.cancelClearExecution).toHaveBeenCalledTimes(1),
+    );
+
+    expect(limpo).not.toHaveBeenCalled();
+  });
+
+  it("trava: falha do confirmClearExecution NÃO emite onExecutionCleared (modal preservado)", async () => {
+    conteudoComUmaEntrada();
+    const execState = setupExecDescanso({
+      doneSeriesIds: [],
+      markedCount: 0,
+      clearConfirmOpen: true,
+      confirmClearExecution: vi.fn(async () => {
+        throw new Error("Erro ao limpar execução");
+      }),
+    });
+    const limpo = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({ onExecutionCleared: limpo })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /limpar/i }));
+    await waitFor(() =>
+      expect(execState.confirmClearExecution).toHaveBeenCalledTimes(1),
+    );
+
+    // Trava #5: erro não fecha a pergunta (mensagem segue visível).
+    expect(
+      screen.getByText(
+        /Todas as séries foram desmarcada\. Deseja cancelar a execução desse treino\?/i,
+      ),
+    ).toBeInTheDocument();
+    expect(limpo).not.toHaveBeenCalled();
+  });
+
+  // --- Regressão 7b-1: desfecho intacto ao lado do canal novo ------------
+
+  it("regressão 7b-1: confirmar o Finalizar parcial emite onExecutionSettled('sealed') e NUNCA onExecutionCleared", async () => {
+    conteudoComUmaEntrada();
+    setupExecDescanso({
+      execution: {
+        id: "exec-1",
+        workoutId: "wout-1",
+        programId: "prog-1",
+        startedAt: "2026-10-18T10:00:00.000Z",
+        finishedAt: null,
+        createdAt: "2026-10-18T10:00:00.000Z",
+        created_by: DONO,
+      },
+      doneSeriesIds: ["ser-1"],
+      markedCount: 1,
+      finishConfirmOpen: true,
+      finishConfirmCase: "parcial",
+    });
+    const assentado = vi.fn();
+    const limpo = vi.fn();
+
+    render(
+      <WorkoutDetailSection
+        {...comDescanso({
+          onExecutionSettled: assentado,
+          onExecutionCleared: limpo,
+        })}
+      />,
+    );
+
+    await clickConnectedButton(/^finalizar$/i);
+
+    await waitFor(() => expect(assentado).toHaveBeenCalledWith("sealed"));
+    expect(assentado).toHaveBeenCalledTimes(1);
+    // O canal novo da 06 não pode sequestrar o desfecho da 7b-1.
+    expect(limpo).not.toHaveBeenCalled();
+  });
+});

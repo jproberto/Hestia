@@ -82,3 +82,11 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 | 23 | **Importação de extratos (CSV/OFX)** | Reduz a entrada manual permitindo importar extratos de banco ou cartão diretamente. | |  |  |
 | 24 | **Integração bancária (open finance)** | Automatiza a sincronização de transações, eliminando boa parte do lançamento manual. | |  |  |
 | 25 | **Planejamento plurianual** | Permite comparar orçamento e realizado entre anos diferentes, dando uma visão de longo prazo da evolução financeira da família. | |  |  |
+
+---
+
+## Itens de retrofit (handoff da fase 7 — Mílon #2, Patch v5, D24/R30)
+
+| # | Item | Descrição | Status |
+|---|---|---|---|
+| T1 | **Retrofit dos banners de erro para `components/ui/AsyncState`** | Migrar `app/pluto/transactions/page.tsx` e `app/pluto/months/page.tsx` para o componente centralizado de estados de tela (carregando/erro/vazio/no-results; norma em `AGENTS.md` → "Onde ponho X?"). **Antes:** classificar a origem de cada mensagem — os `errorMsg`/`errorMessage` atuais são **mistos, sem origem rotulada** (vários fluxos alimentam o mesmo banner indistintamente); migrar exigiria inventar decisões de classificação (carga × operação × bloqueio) em código homologado, então a classificação de origem **precede** a migração. Origem: decisão D24 (spec do Patch v5 da Mílon #2, `.agents/modules/milon/02-programas/spec.md`). | Pendente |

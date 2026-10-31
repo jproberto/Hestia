@@ -1,0 +1,96 @@
+{
+  "tasks": [
+    {
+      "acceptanceCriteria": [
+        "Hook expõe program/workouts/selectedWorkoutId/selectWorkout/loading/errorMsg/errorOrigin/retry com os nomes exatos do contrato do plano §3",
+        "Sem programa ativo do dono → program nulo, workouts vazio, selectedWorkoutId nulo e página capaz de exibir vazio orientador (sem erro de carga)",
+        "Programa ativo com treinos → selectedWorkoutId igual ao id do primeiro da lista devolvida pelo standalone (ordem de criação)",
+        "selectWorkout com id da lista troca o selecionado; com id fora da lista mantém o atual sem erro",
+        "Falha em qualquer etapa da cadeia resulta em errorMsg não-nulo com errorOrigin carga e retry recarrega com sucesso",
+        "Nenhum import de @supabase/* fora de lib/shared; operações só via barrels lib/milon/db/programs e lib/milon/db/workouts"
+      ],
+      "assignee": "hefesto",
+      "dependencies": [],
+      "description": "Objetivo técnico: criar lib/milon/hooks/useTodayWorkout.ts que resolve o treino do dia (e-mail da sessão → programa ativo do dono via findActiveProgramByOwnerStandalone → treinos via listWorkoutsByProgramStandalone → selectedWorkoutId default primeiro) no padrão do módulo (promise-chain + flag cancelled, erro de carga com origem carga). Re-exportar no barrel lib/milon/hooks/index.ts. Contrato em plan.md §3 UseTodayWorkoutReturn. Interfaces: Consome createBrowserDatabaseClient().getUserEmail() de lib/shared/supabaseClient, findActiveProgramByOwnerStandalone de lib/milon/db/programs, listWorkoutsByProgramStandalone de lib/milon/db/workouts, tipos de lib/milon/types. Interfaces: Produz useTodayWorkout + tipo UseTodayWorkoutReturn para a TASK-003 (app/milon/today/page.tsx). Sem repository/fake/contract/migration novos. Verificação: Minos escreve __tests__/lib/milon/hooks/useTodayWorkout.test.ts primeiro com vi.mock dos barrels (Expected: FAIL, hook não existe); Hefesto implementa o mínimo (Expected: PASS) com npx vitest run __tests__/lib/milon/hooks/useTodayWorkout.test.ts; tsc --noEmit passa.",
+      "files": [
+        "lib/milon/hooks/useTodayWorkout.ts",
+        "lib/milon/hooks/index.ts",
+        "__tests__/lib/milon/hooks/useTodayWorkout.test.ts"
+      ],
+      "id": "TASK-001",
+      "status": "completed",
+      "title": "Hook useTodayWorkout resolve programa ativo e seleciona primeiro treino"
+    },
+    {
+      "acceptanceCriteria": [
+        "components/milon/WorkoutDetailSection.tsx existe e é o único dono da orquestração de detalhe (chama useWorkoutDetail(workoutId), estados de picker/modal/confirmação/overrides de unidade, AsyncState, cabeçalho, WorkoutEntriesList, ExercisePickerModal, ExerciseModal, WorkoutConfirmModal)",
+        "Props com nomes exatos do plano §3: workoutId, backTarget (variantes program/none), title opcional, headerActions/entryFooter/footer opcionais default nulo",
+        "Programa inativo resulta em readOnly derivado de program.status === inativo sem adicionar/editar/reordenar/excluir; bloqueio D14 mantém modal aberto com mensagem visível",
+        "app/milon/programs/[id]/workouts/[workoutId]/page.tsx é wrapper fino (resolve params e repassa workoutId + backTarget programa) e busca por handleConfirmUnit nesse arquivo retorna 0 em código vivo",
+        "Suite existente do detalhe continua verde sem mudança de expectativa comportamental; nenhum texto Tentar novamente reimplementado (só via AsyncState)"
+      ],
+      "assignee": "hefesto",
+      "dependencies": [],
+      "description": "Objetivo técnico: extrair (mover, não reescrever) o corpo de app/milon/programs/[id]/workouts/[workoutId]/page.tsx para components/milon/WorkoutDetailSection.tsx com os slots headerActions/entryFooter/footer nulos na v1 e backTarget program/none; a página de manutenção vira wrapper fino com comportamento idêntico. Contratos em plan.md §3 WorkoutDetailSectionProps. Interfaces: Consome useWorkoutDetail de lib/milon/hooks/useWorkoutDetail, setExerciseLoadUnitStandalone de lib/milon/db/exercises, componentes WorkoutEntriesList/ExercisePickerModal/ExerciseModal/WorkoutConfirmModal, AsyncState, tipos de lib/milon/types. Interfaces: Produz WorkoutDetailSection + WorkoutDetailSectionProps para a TASK-003 (página today) e para o wrapper da manutenção. Verificação: Minos escreve __tests__/components/milon/WorkoutDetailSection.test.tsx com useWorkoutDetail mockado (Expected: FAIL, componente não existe); Hefesto extrai e ajusta o wrapper (Expected: PASS) com npx vitest run __tests__/components/milon/WorkoutDetailSection.test.tsx e npx vitest run \"__tests__/app/milon/programs/[id]/workouts/[workoutId]/page.test.tsx\"; tsc --noEmit passa.",
+      "files": [
+        "components/milon/WorkoutDetailSection.tsx",
+        "app/milon/programs/[id]/workouts/[workoutId]/page.tsx",
+        "__tests__/components/milon/WorkoutDetailSection.test.tsx",
+        "__tests__/app/milon/programs/[id]/workouts/[workoutId]/page.test.tsx"
+      ],
+      "id": "TASK-002",
+      "status": "completed",
+      "title": "Extrair WorkoutDetailSection e converter manutenção em wrapper fino"
+    },
+    {
+      "acceptanceCriteria": [
+        "Rota app/milon/today/page.tsx renderiza MilonLayout pageTitle Treino do Dia com a aba Treino do Dia marcada ativa (href /milon/today primeiro da barra)",
+        "MilonLayout exibe exatamente 3 links na ordem Treino do Dia → Programas → Exercícios com hrefs /milon/today, /milon/programs, /milon/exercises",
+        "app/milon/page.tsx redireciona para /milon/today e busca por /milon/programs nesse arquivo retorna 0 em código vivo",
+        "Com programa ativo e treinos, a página exibe o primeiro treino por criação com exercícios e séries iguais à manutenção; switcher alterna somente entre treinos do programa ativo e só aparece com 2+ treinos",
+        "Sem programa ativo, ativo sem treinos e treino sem exercícios exibem os vazios orientadores da spec sem erro; programa inativo não oferece adicionar/editar/reordenar/excluir",
+        "Falha de carga exibe mensagem com nova tentativa que recarrega; falha de operação/bloqueio aparece sem nova tentativa",
+        "Nenhum slot de extensão preenchido na v1 (headerActions/entryFooter/footer nulos); subtítulo derivado, vazio ≠ zero, unidade por exercício e unicidade D14 idênticos à manutenção"
+      ],
+      "assignee": "hefesto",
+      "dependencies": [
+        "TASK-001",
+        "TASK-002"
+      ],
+      "description": "Objetivo técnico: criar a página today (app/milon/today/page.tsx) compondo useTodayWorkout (TASK-001) + TodayWorkoutSwitcher + WorkoutDetailSection sem voltar (TASK-002); criar components/milon/TodayWorkoutSwitcher.tsx presentacional controlado; modificar components/milon/MilonLayout.tsx para 3 abas e app/milon/page.tsx para redirect /milon/today. Cobrir os 14 critérios de aceite da spec §5 aplicáveis. Interfaces: Consome useTodayWorkout + UseTodayWorkoutReturn da TASK-001, WorkoutDetailSection + WorkoutDetailSectionProps da TASK-002, MilonLayout, AsyncState, tipos Workout/WorkoutEntryView de lib/milon/types. Interfaces: Produz rota /milon/today e barra de 3 abas para a TASK-004 (regressão). Verificação: Minos escreve __tests__/components/milon/TodayWorkoutSwitcher.test.tsx e __tests__/app/milon/today/page.test.tsx com hooks mockados por arquivo e factories com defaults (Expected: FAIL, rota/componentes não existem); Hefesto implementa (Expected: PASS) com npx vitest run __tests__/components/milon/TodayWorkoutSwitcher.test.tsx e npx vitest run __tests__/app/milon/today/page.test.tsx; tsc --noEmit passa.",
+      "files": [
+        "app/milon/today/page.tsx",
+        "components/milon/TodayWorkoutSwitcher.tsx",
+        "components/milon/MilonLayout.tsx",
+        "app/milon/page.tsx",
+        "__tests__/app/milon/today/page.test.tsx",
+        "__tests__/components/milon/TodayWorkoutSwitcher.test.tsx",
+        "__tests__/components/milon/MilonLayout.test.tsx",
+        "__tests__/app/milon/page.test.tsx"
+      ],
+      "id": "TASK-003",
+      "status": "completed",
+      "title": "Página Treino do Dia com switcher, navegação de 3 abas e redirect"
+    },
+    {
+      "acceptanceCriteria": [
+        "Suite completa verde sem quebra de testes existentes fora das atualizações aprovadas (MilonLayout 3 abas, redirect /milon/today)",
+        "Cobertura mantida em pelo menos 80% com relatório regenerado antes da revisão",
+        "Nenhum placeholder TBD/TODO/similar/apropriado em plan.md, tasks.json ou código novo; busca por handleConfirmUnit na página de manutenção e por /milon/programs em app/milon/page.tsx retornam 0 em código vivo",
+        "Nenhum arquivo novo fora dos listados nas TASK-001..003; nenhuma migration criada; nenhum import @supabase/* fora de lib/shared"
+      ],
+      "assignee": "hefesto",
+      "dependencies": [
+        "TASK-003"
+      ],
+      "description": "Objetivo técnico: validação de regressão da feature — executar suite completa, conferir cobertura mínima de 80%, atualizar somente os testes de contrato de navegação já listados na TASK-003 e consolidar o relatório de testes para o review do Argos. Não cria nem altera produção. Interfaces: Consome todos os artefatos das TASK-001..003. Interfaces: Produz suite verde + evidências de cobertura para homologação. Verificação: npx vitest run (Expected: PASS, 0 failed) seguido de npx vitest run --coverage com statements/lines/functions/branches >= 80% (Expected: PASS); em falha, BLOCKED com erro exato + arquivo em vez de correção silenciosa.",
+      "files": [
+        "__tests__/components/milon/MilonLayout.test.tsx",
+        "__tests__/app/milon/page.test.tsx"
+      ],
+      "id": "TASK-004",
+      "status": "completed",
+      "title": "Regressão completa e cobertura mínima de 80%"
+    }
+  ]
+}

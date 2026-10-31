@@ -1,0 +1,164 @@
+{
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "RED do contrato de desfecho e foco na seção de detalhe",
+      "description": "Estabelecer em teste RED o contrato novo da WorkoutDetailSection: onExecutionSettled passa a receber o desfecho da operação (sealed nos três caminhos de selamento — parcial confirmada, completa confirmada e completo direto — e cancelled nos dois caminhos de exclusão — Cancelar confirmado e Finalizar vazio conduzido), nunca é emitido no erro, e a nova prop opcional focusHeaderSignal foca o cabeçalho rotulado Cabeçalho do treino (tabIndex menos um) ao montar com sinal não-nulo e a cada mudança do sinal. Minos escreve apenas os testes; produção intocada.",
+      "assignee": "minos",
+      "dependsOn": [],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/components/milon/WorkoutDetailSection.test.tsx → FAIL esperado (assinatura atual de onExecutionSettled sem argumento e ausência de focusHeaderSignal)",
+        "npx tsc --noEmit → exit 0 (RED sem erro de sintaxe ou tipo)",
+        "Caso RED: confirmar Finalizar parcial emite onExecutionSettled com o desfecho sealed",
+        "Caso RED: Finalizar completo direto (requestFinish) emite onExecutionSettled com o desfecho sealed",
+        "Caso RED: confirmar Cancelar emite onExecutionSettled com o desfecho cancelled",
+        "Caso RED: confirmar o Finalizar vazio conduzido ao cancelamento emite onExecutionSettled com o desfecho cancelled (não sealed)",
+        "Caso RED: falha ao confirmar Finalizar ou Cancelar não emite onExecutionSettled (nenhum desfecho)",
+        "Caso RED: focusHeaderSignal não-nulo foca o elemento rotulado Cabeçalho do treino ao montar a seção e a cada novo valor do sinal",
+        "Critérios rastreados da spec: 1, 4, 5 e 8 da spec §5 mais o foco da spec §2"
+      ],
+      "files": [
+        "__tests__/components/milon/WorkoutDetailSection.test.tsx"
+      ],
+      "consumes": [
+        "plan.md §3 Contratos Completos (assinatura do desfecho sealed|cancelled em onExecutionSettled; prop opcional focusHeaderSignal number|null; cabeçalho com aria-label Cabeçalho do treino e tabindex -1)",
+        "spec.md §3 (efeito do selamento e do cancelamento) e §5 (critérios 1, 4, 5, 8)"
+      ],
+      "produces": [
+        "RED do desfecho por caminho de sucesso na seção",
+        "RED da ausência de desfecho no erro",
+        "RED do foco do cabeçalho pelo sinal"
+      ],
+      "status": "completed"
+    },
+    {
+      "id": "TASK-002",
+      "title": "Desfecho e foco do cabeçalho na seção em GREEN",
+      "description": "Implementar mínimo para o GREEN da TASK-001 em components/milon/WorkoutDetailSection.tsx: estender a prop onExecutionSettled com o parâmetro de desfecho; nos três pontos de emissão do ExecutionHost passar o desfecho correto, capturando o caso de finalização de forma síncrona anterior à chamada do hook (pois o hook reinicia o caso ao concluir) para distinguir selamento de vazio-conduzido; adicionar a prop opcional focusHeaderSignal com foco do cabeçalho ao montar e a cada mudança; aplicar tabindex menos um aos cabeçalhos das duas ramificações. Nada além do contrato da TASK-001.",
+      "assignee": "hefesto",
+      "dependsOn": [
+        "TASK-001"
+      ],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/components/milon/WorkoutDetailSection.test.tsx → PASS (todos os casos da TASK-001 verdes)",
+        "onExecutionSettled é invocado exatamente uma vez por operação bem-sucedida, com sealed nos três caminhos de selamento e cancelled nos dois de exclusão, e nenhuma vez no erro",
+        "A captura do caso de finalização para decidir o desfecho é síncrona e anterior à chamada do hook (vazio conduzido emite cancelled mesmo com o hook reiniciando o caso ao concluir)",
+        "focusHeaderSignal não-nulo foca o cabeçalho (aria-label Cabeçalho do treino, tabindex -1) ao montar e a cada mudança do sinal; com sinal nulo nenhum foco programático acontece",
+        "Busca por `void onExecutionSettled?.()` retorna 0 em código vivo (substituição da invocação sem desfecho)",
+        "npx tsc --noEmit → exit 0",
+        "Nenhum texto de confirmação, nenhuma prop existente e nenhum outro comportamento da seção (modais, processing, relançamento, slots) é alterado"
+      ],
+      "files": [
+        "components/milon/WorkoutDetailSection.tsx"
+      ],
+      "consumes": [
+        "RED da TASK-001 (__tests__/components/milon/WorkoutDetailSection.test.tsx)",
+        "useWorkoutExecution.requestFinish, confirmFinish, requestCancel, confirmCancelExecution (assinaturas inalteradas)"
+      ],
+      "produces": [
+        "onExecutionSettled com desfecho sealed|cancelled na seção",
+        "focusHeaderSignal e cabeçalho com tabindex -1 na seção"
+      ],
+      "status": "completed"
+    },
+    {
+      "id": "TASK-003",
+      "title": "RED da composição da página do Treino do Dia",
+      "description": "Estabelecer em teste RED a composição nova da página: no desfecho sealed, aguardar a invalidação da fonte única (retry de useActiveExecution) antes da recarga da seleção (retry de useTodayWorkout) e incrementar o sinal de foco enviado à seção; no desfecho cancelled, somente a invalidação da fonte única e o sinal de foco, preservando o workoutId selecionado; sem desfecho, nenhum retry; falha de carga da recarga de seleção exibida com origem carga e nova tentativa; vazio sem programa inalterado. Arquivo novo page-7b1-advance no isolamento de mocks do precedente page-ac6, mais atualização pontual das regressões 07 e 7c se acoplarem a assinatura antiga.",
+      "assignee": "minos",
+      "dependsOn": [
+        "TASK-002"
+      ],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/app/milon/today/page-7b1-advance.test.tsx → FAIL esperado (a página ainda só invalida a fonte única, sem ramificar por desfecho nem recarregar seleção)",
+        "npx tsc --noEmit → exit 0",
+        "Caso RED: desfecho sealed chama o retry de useActiveExecution e depois o retry de useTodayWorkout (ordem asserida), e incrementa o focusHeaderSignal passado à seção",
+        "Caso RED: desfecho cancelled chama somente o retry de useActiveExecution, incrementa o sinal de foco e preserva o workoutId selecionado (a seção segue recebendo o mesmo workoutId)",
+        "Caso RED: ausência de desfecho (caminho de falha da operação) não chama nenhum retry de seleção nem de fonte única",
+        "Caso RED: falha da recarga de seleção (retry rejeitando com origem carga) exibe mensagem com nova tentativa pelo AsyncState e nenhum treino parcial é exibido",
+        "Caso RED: sem programa ativo ou programa sem treinos, o vazio da 04/7b segue sem erro e sem avanço (regressão)",
+        "Regressões existentes atualizadas se e somente se as asserções acoplarem a assinatura sem desfecho; a semântica da 7c AC6 (liberação de escrita após settle) permanece coberta",
+        "Critérios rastreados da spec: 1 a 8 da spec §5"
+      ],
+      "files": [
+        "__tests__/app/milon/today/page-7b1-advance.test.tsx",
+        "__tests__/app/milon/today/page.test.tsx",
+        "__tests__/app/milon/today/page-ac6.test.tsx"
+      ],
+      "consumes": [
+        "Seção da TASK-002 (assinatura onExecutionSettled(desfecho) e prop focusHeaderSignal)",
+        "plan.md §3 (comportamento da página: sealed ⇒ fonte única e então seleção; cancelled ⇒ só fonte única; sinal de foco nos dois)",
+        "spec.md §5 (critérios 1 a 8) e §2 (estados de tela e foco)"
+      ],
+      "produces": [
+        "RED da composição de recargas por desfecho na página",
+        "RED da permanência no cancelar e do sinal de foco",
+        "RED da falha de carga com retry e do vazio preservado"
+      ],
+      "status": "completed"
+    },
+    {
+      "id": "TASK-004",
+      "title": "Composição das recargas e foco na página em GREEN",
+      "description": "Implementar mínimo para o GREEN da TASK-003 em app/milon/today/page.tsx: handleExecutionSettled receber o desfecho; com sealed, aguardar o retry de useActiveExecution e então aguardar o retry de useTodayWorkout (reaproveitado, já desestruturado); com cancelled, aguardar somente o retry de useActiveExecution; nos dois casos incrementar o estado do sinal de foco enviado à seção como focusHeaderSignal. Sem chamada a selectWorkout no avanço, sem mudança de assinatura de hook, sem lógica de dados na página.",
+      "assignee": "hefesto",
+      "dependsOn": [
+        "TASK-003"
+      ],
+      "acceptanceCriteria": [
+        "npm test -- __tests__/app/milon/today/page-7b1-advance.test.tsx __tests__/app/milon/today/page.test.tsx __tests__/app/milon/today/page-ac6.test.tsx → PASS",
+        "Com desfecho sealed: retry de useActiveExecution aguardado antes de retry de useTodayWorkout, e focusHeaderSignal incrementado",
+        "Com desfecho cancelled: somente retry de useActiveExecution aguardado, focusHeaderSignal incrementado, selectedWorkoutId preservado",
+        "Sem desfecho: nenhum retry chamado",
+        "A página não chama selectWorkout no avanço (a seleção nova vem exclusivamente do recálculo do hook)",
+        "Busca por `void retryActiveExecution?.()` retorna 0 em código vivo (substituição do handler sem desfecho)",
+        "npx tsc --noEmit → exit 0"
+      ],
+      "files": [
+        "app/milon/today/page.tsx"
+      ],
+      "consumes": [
+        "RED da TASK-003 (__tests__/app/milon/today/page-7b1-advance.test.tsx e regressões)",
+        "useTodayWorkout.retry e useActiveExecution.retry (assinaturas inalteradas)"
+      ],
+      "produces": [
+        "Página que avança no sealed e permanece no cancelled, com sinal de foco nos dois desfechos"
+      ],
+      "status": "completed"
+    },
+    {
+      "id": "TASK-005",
+      "title": "Suíte completa verde, cobertura, storybook e artefatos de teste",
+      "description": "Reexecutar a suíte completa do projeto com coverage, validar o build do Storybook, regenerar o test-report.json da feature, escrever o test-scenarios.md com os cenários Dado/Quando/Então (incluindo os deixa-para-a-homologação manual) e promover no regression.md do módulo os cenários das features 07, 7b e 7c que esta feature toca por composição. Minos não corrige produção: qualquer quebra identificada volta para Hefesto via Zeus.",
+      "assignee": "minos",
+      "dependsOn": [
+        "TASK-004"
+      ],
+      "acceptanceCriteria": [
+        "npm test → 0 falhas (suite completa sem quebra das features 01 a 07c)",
+        "npm test -- --coverage → lines e branch ≥ 80 por cento",
+        "npm run build-storybook → exit 0",
+        "Critérios 1 a 9 da spec §5 cobertos entre automatizado e manual em .agents/modules/milon/07b-1-avancar-proximo-treino/test-scenarios.md",
+        "Cenários de regressão 07 (quatro casos de confirmação, vazio de borda, imutabilidade pós-selo), 7b (prioridade de aberta, giro com volta ao primeiro, troca manual) e 7c (liberação de escrita após settle, guarda por dono) promovidos em .agents/modules/milon/regression.md",
+        ".agents/modules/milon/07b-1-avancar-proximo-treino/test-report.json regenerado com failed igual a zero e coverage ≥ 80 antes da revisão"
+      ],
+      "files": [
+        "__tests__/app/milon/today/page-7b1-advance.test.tsx",
+        "__tests__/components/milon/WorkoutDetailSection.test.tsx",
+        ".agents/modules/milon/07b-1-avancar-proximo-treino/test-report.json",
+        ".agents/modules/milon/07b-1-avancar-proximo-treino/test-scenarios.md",
+        ".agents/modules/milon/regression.md"
+      ],
+      "consumes": [
+        "Seção verde da TASK-002 e página verde da TASK-004",
+        "spec.md §5 (critérios 1 a 9) e §2 (estados de tela, foco, vazio)"
+      ],
+      "produces": [
+        "Suíte verde sem quebra",
+        "Coverage mantida ≥ 80",
+        "test-report.json, test-scenarios.md e regression.md prontos para o review do Argos"
+      ],
+      "status": "completed"
+    }
+  ]
+}

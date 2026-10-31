@@ -34,7 +34,7 @@ interface SupabaseAuth {
   getUser(): Promise<{ data: { user: { email?: string } | null } }>;
 }
 
-interface SupabaseLikeClient {
+export interface SupabaseLikeClient {
   from(table: string): SupabaseChain;
   auth: SupabaseAuth;
 }
@@ -129,7 +129,7 @@ class SupabaseQueryBuilder<T = unknown> implements IQueryBuilder<T> {
   }
 }
 
-class SupabaseDatabaseClient implements IDatabaseClient {
+export class SupabaseDatabaseClient implements IDatabaseClient {
   private readonly client: SupabaseLikeClient;
 
   constructor(client: SupabaseLikeClient) {

@@ -1,0 +1,719 @@
+// Acesso a dados do aggregate de treinos via IDatabaseClient (nunca @supabase/*).
+// Regras de persistência vivem aqui (unicidade de nome D11, unicidade de
+// exercício por Programa D14, guarda D6 de treino com exercícios). UI consome
+// via lib/milon/db/workouts.
+import type { IDatabaseClient } from "@/lib/shared/database";
+import { createBrowserDatabaseClient } from "@/lib/shared/supabaseClient";
+import type { UpdateSeriesFieldsInput } from "./interfaces";
+import {
+  MSG_EXERCICIO_JA_NO_TREINO,
+  MSG_TREINO_COM_EXECUCOES,
+  MSG_TREINO_COM_EXERCICIOS,
+  normalizarNomeTreino,
+  validarNomeTreino,
+  validarNomeUnicoNoPrograma,
+} from "../workout-utils";
+import type {
+  CreateWorkoutInput,
+  EntryMode,
+  LoadUnit,
+  UpdateWorkoutInput,
+  Workout,
+  WorkoutEntry,
+  WorkoutEntryRow,
+  WorkoutExecutionRow,
+  WorkoutRow,
+  WorkoutSeries,
+  WorkoutSeriesRow,
+} from "../types";
+
+function toWorkoutDomain(row: WorkoutRow): Workout {
+  const workout: Workout = {
+    id: row.id,
+    programId: row.program_id,
+    name: row.name,
+    createdAt: row.created_at,
+    created_by: row.created_by,
+  };
+  // Transporta sem inventar número (Mílon 07b, plan §3): chave presente só
+  // quando o banco a devolve; ausente equivale a nulo (pré-0015, por último).
+  // Condicional também preserva o contrato de cadeia congelado em
+  // __tests__/lib/milon/db/workouts.test.ts (toEqual sem position).
+  if (row.position != null) {
+    workout.position = row.position;
+  }
+  return workout;
+}
+
+function toEntryDomain(row: WorkoutEntryRow): WorkoutEntry {
+  return {
+    id: row.id,
+    workoutId: row.workout_id,
+    programId: row.program_id,
+    exerciseId: row.exercise_id,
+    position: row.position,
+    restSeconds: row.rest_seconds,
+    // Linhas anteriores à migração 0012 nova: nulo tratado como repetição/kg.
+    mode: (row.mode as EntryMode | null) ?? "repeticao",
+    loadUnit: (row.load_unit as LoadUnit | null) ?? "kg",
+    createdAt: row.created_at,
+    created_by: row.created_by,
+  };
+}
+
+function toSeriesDomain(row: WorkoutSeriesRow): WorkoutSeries {
+  return {
+    id: row.id,
+    entryId: row.entry_id,
+    position: row.position,
+    value: row.value,
+    load: row.load,
+    createdAt: row.created_at,
+    created_by: row.created_by,
+  };
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const err = error as { code?: unknown; message?: unknown; details?: unknown };
+  if (err.code === "23505") return true;
+  const haystack = `${err.message ?? ""} ${err.details ?? ""}`.toLowerCase();
+  return haystack.includes("duplicate") || haystack.includes("unique");
+}
+
+export async function listWorkoutsByProgram(
+  db: IDatabaseClient,
+  programId: string,
+): Promise<Workout[]> {
+  const { data, error } = await db
+    .from<WorkoutRow>("workouts")
+    .select("*")
+    .eq("program_id", programId)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  if (error) throw error;
+  // Ordem própria (Mílon 07b, D2, plan §3): position asc com nulos por último,
+  // depois created_at asc, depois id asc. Ordenação em memória sobre a cadeia
+  // congelada (eq + created_at + id) para não quebrar
+  // __tests__/lib/milon/db/workouts.test.ts; o Postgres já devolveria nulos
+  // por último em ASC, o sort só garante o contrato em qualquer retorno.
+  return (data || []).map(toWorkoutDomain).sort(compararTreinosPorPosicao);
+}
+
+// Comparador da ordem vigente (Mílon 07b, D2/DORD1): ausente/nulo por último.
+function compararTreinosPorPosicao(a: Workout, b: Workout): number {
+  const posA = a.position ?? Number.POSITIVE_INFINITY;
+  const posB = b.position ?? Number.POSITIVE_INFINITY;
+  if (posA !== posB) return posA - posB;
+  if (a.createdAt !== b.createdAt)
+    return a.createdAt < b.createdAt ? -1 : 1;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+export async function findWorkoutById(
+  db: IDatabaseClient,
+  workoutId: string,
+): Promise<Workout | null> {
+  const { data, error } = await db
+    .from<WorkoutRow>("workouts")
+    .select("*")
+    .eq("id", workoutId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? toWorkoutDomain(data) : null;
+}
+
+export async function createWorkout(
+  db: IDatabaseClient,
+  programId: string,
+  input: CreateWorkoutInput,
+  email: string,
+): Promise<Workout> {
+  const nome = normalizarNomeTreino(input.name);
+  const obrigatorio = validarNomeTreino(nome);
+  if (obrigatorio) throw new Error(obrigatorio);
+
+  const existentes = await listWorkoutsByProgram(db, programId);
+  const colisao = validarNomeUnicoNoPrograma(
+    nome,
+    existentes.map((w) => w.name),
+  );
+  if (colisao) throw new Error(colisao);
+
+  // Criação numerada (Mílon 07b, D2, plan §3): próxima posição ao fim da ordem
+  // vigente (maior vigente + 1; 1 quando não há treinos; nulos contam como 0).
+  const proximaPosition =
+    existentes.reduce((max, w) => Math.max(max, w.position ?? 0), 0) + 1;
+
+  const { data, error } = await db
+    .from<WorkoutRow>("workouts")
+    .insert({
+      program_id: programId,
+      name: nome,
+      position: proximaPosition,
+      created_by: email,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error("Falha ao criar treino: sem retorno do banco.");
+  return toWorkoutDomain(data);
+}
+
+export async function updateWorkoutName(
+  db: IDatabaseClient,
+  workoutId: string,
+  input: UpdateWorkoutInput,
+): Promise<Workout> {
+  const nome = normalizarNomeTreino(input.name);
+  const obrigatorio = validarNomeTreino(nome);
+  if (obrigatorio) throw new Error(obrigatorio);
+
+  const atual = await findWorkoutById(db, workoutId);
+  if (!atual) throw new Error("Treino não encontrado.");
+
+  const existentes = await listWorkoutsByProgram(db, atual.programId);
+  const colisao = validarNomeUnicoNoPrograma(
+    nome,
+    existentes.filter((w) => w.id !== workoutId).map((w) => w.name),
+  );
+  if (colisao) throw new Error(colisao);
+
+  const { data, error } = await db
+    .from<WorkoutRow>("workouts")
+    .update({ name: nome })
+    .eq("id", workoutId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error("Falha ao renomear treino: sem retorno do banco.");
+  return toWorkoutDomain(data);
+}
+
+export async function deleteWorkout(
+  db: IDatabaseClient,
+  workoutId: string,
+): Promise<void> {
+  const entradas = await listEntriesByWorkout(db, workoutId);
+  if (entradas.length > 0) throw new Error(MSG_TREINO_COM_EXERCICIOS);
+
+  // Guarda amigável com histórico (Mílon 07b, D6/DDEL1, plan §3): antes da
+  // remoção, verifica execuções associadas (abertas ou seladas); o RESTRICT do
+  // banco permanece como backstop para corridas.
+  const { data: execucoes, error: execucoesError } = await db
+    .from<WorkoutExecutionRow>("workout_executions")
+    .select("*")
+    .eq("workout_id", workoutId);
+  if (execucoesError) throw execucoesError;
+  if ((execucoes || []).length > 0) throw new Error(MSG_TREINO_COM_EXECUCOES);
+
+  const { error } = await db
+    .from<WorkoutRow>("workouts")
+    .delete()
+    .eq("id", workoutId);
+  if (error) throw error;
+}
+
+// Reordenação manual (Mílon 07b, D2, plan §3): mesmo protocolo de
+// reorderEntries — valida conjunto idêntico e regrava positions 1..n na ordem
+// recebida. Mensagem inline como em reorderEntries.
+export async function reorderWorkouts(
+  db: IDatabaseClient,
+  programId: string,
+  orderedWorkoutIds: string[],
+): Promise<void> {
+  const atuais = await listWorkoutsByProgram(db, programId);
+  const atuaisIds = new Set(atuais.map((w) => w.id));
+  const recebidosIds = new Set(orderedWorkoutIds);
+  const conjuntoIgual =
+    atuais.length === orderedWorkoutIds.length &&
+    orderedWorkoutIds.every((id) => atuaisIds.has(id)) &&
+    atuais.every((w) => recebidosIds.has(w.id));
+  if (!conjuntoIgual) {
+    throw new Error(
+      "A ordem informada não corresponde aos treinos do programa.",
+    );
+  }
+
+  for (let i = 0; i < orderedWorkoutIds.length; i += 1) {
+    const { error } = await db
+      .from<WorkoutRow>("workouts")
+      .update({ position: i + 1 })
+      .eq("id", orderedWorkoutIds[i]);
+    if (error) throw error;
+  }
+}
+
+export async function hasWorkouts(
+  db: IDatabaseClient,
+  programId: string,
+): Promise<boolean> {
+  const { data, error } = await db
+    .from<WorkoutRow>("workouts")
+    .select("id")
+    .eq("program_id", programId);
+
+  if (error) throw error;
+  return (data || []).length > 0;
+}
+
+export async function hasWorkoutWithExercise(
+  db: IDatabaseClient,
+  programId: string,
+): Promise<boolean> {
+  const entradas = await listEntriesByProgram(db, programId);
+  return entradas.length > 0;
+}
+
+export async function listEntriesByWorkout(
+  db: IDatabaseClient,
+  workoutId: string,
+): Promise<WorkoutEntry[]> {
+  const { data, error } = await db
+    .from<WorkoutEntryRow>("workout_entries")
+    .select("*")
+    .eq("workout_id", workoutId)
+    .order("position", { ascending: true });
+
+  if (error) throw error;
+  return (data || []).map(toEntryDomain);
+}
+
+export async function listEntriesByProgram(
+  db: IDatabaseClient,
+  programId: string,
+): Promise<WorkoutEntry[]> {
+  const { data, error } = await db
+    .from<WorkoutEntryRow>("workout_entries")
+    .select("*")
+    .eq("program_id", programId);
+
+  if (error) throw error;
+  return (data || []).map(toEntryDomain);
+}
+
+export async function addEntry(
+  db: IDatabaseClient,
+  workoutId: string,
+  programId: string,
+  exerciseId: string,
+  email: string,
+): Promise<WorkoutEntry> {
+  const doTreino = await listEntriesByWorkout(db, workoutId);
+  if (doTreino.some((e) => e.exerciseId === exerciseId)) {
+    throw new Error(MSG_EXERCICIO_JA_NO_TREINO);
+  }
+
+  const position =
+    doTreino.reduce((max, e) => Math.max(max, e.position), 0) + 1;
+
+  try {
+    const { data, error } = await db
+      .from<WorkoutEntryRow>("workout_entries")
+      .insert({
+        workout_id: workoutId,
+        program_id: programId,
+        exercise_id: exerciseId,
+        position,
+        rest_seconds: null,
+        // Novas entries nascem com os padrões repetição+kg (D29).
+        mode: "repeticao",
+        load_unit: "kg",
+        created_by: email,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data)
+      throw new Error("Falha ao adicionar exercício: sem retorno do banco.");
+    return toEntryDomain(data);
+  } catch (error) {
+    if (isUniqueViolation(error))
+      throw new Error(MSG_EXERCICIO_JA_NO_TREINO);
+    throw error;
+  }
+}
+
+export async function removeEntry(
+  db: IDatabaseClient,
+  entryId: string,
+): Promise<void> {
+  const { error: seriesError } = await db
+    .from<WorkoutSeriesRow>("workout_series")
+    .delete()
+    .eq("entry_id", entryId);
+  if (seriesError) throw seriesError;
+
+  const { error: entryError } = await db
+    .from<WorkoutEntryRow>("workout_entries")
+    .delete()
+    .eq("id", entryId);
+  if (entryError) throw entryError;
+}
+
+export async function reorderEntries(
+  db: IDatabaseClient,
+  workoutId: string,
+  orderedEntryIds: string[],
+): Promise<void> {
+  const atuais = await listEntriesByWorkout(db, workoutId);
+  const atuaisIds = new Set(atuais.map((e) => e.id));
+  const recebidosIds = new Set(orderedEntryIds);
+  const conjuntoIgual =
+    atuais.length === orderedEntryIds.length &&
+    orderedEntryIds.every((id) => atuaisIds.has(id)) &&
+    atuais.every((e) => recebidosIds.has(e.id));
+  if (!conjuntoIgual) {
+    throw new Error(
+      "A ordem informada não corresponde aos exercícios do treino.",
+    );
+  }
+
+  for (let i = 0; i < orderedEntryIds.length; i += 1) {
+    const { error } = await db
+      .from<WorkoutEntryRow>("workout_entries")
+      .update({ position: i + 1 })
+      .eq("id", orderedEntryIds[i]);
+    if (error) throw error;
+  }
+}
+
+export async function setEntryRestSeconds(
+  db: IDatabaseClient,
+  entryId: string,
+  seconds: number | null,
+): Promise<void> {
+  const { error } = await db
+    .from<WorkoutEntryRow>("workout_entries")
+    .update({ rest_seconds: seconds })
+    .eq("id", entryId);
+  if (error) throw error;
+}
+
+// Ajuste de modo da entry (Mílon #5, aditamento 2026-10-09 "0012 CORRETA",
+// D29): persiste o modo do exercício NO TREINO sem mexer nos demais campos.
+export async function setEntryMode(
+  db: IDatabaseClient,
+  entryId: string,
+  mode: EntryMode,
+): Promise<void> {
+  const { error } = await db
+    .from<WorkoutEntryRow>("workout_entries")
+    .update({ mode })
+    .eq("id", entryId);
+  if (error) throw error;
+}
+
+// Ajuste de unidade da entry (Mílon #5, aditamento 2026-10-09 "0012 CORRETA",
+// D29): persiste a unidade da carga do exercício NO TREINO.
+export async function setEntryLoadUnit(
+  db: IDatabaseClient,
+  entryId: string,
+  unit: LoadUnit,
+): Promise<void> {
+  const { error } = await db
+    .from<WorkoutEntryRow>("workout_entries")
+    .update({ load_unit: unit })
+    .eq("id", entryId);
+  if (error) throw error;
+}
+
+export async function listSeriesByEntry(
+  db: IDatabaseClient,
+  entryId: string,
+): Promise<WorkoutSeries[]> {
+  const { data, error } = await db
+    .from<WorkoutSeriesRow>("workout_series")
+    .select("*")
+    .eq("entry_id", entryId)
+    .order("position", { ascending: true });
+
+  if (error) throw error;
+  return (data || []).map(toSeriesDomain);
+}
+
+export async function setSeriesQuantity(
+  db: IDatabaseClient,
+  entryId: string,
+  quantity: number,
+  email: string,
+): Promise<WorkoutSeries[]> {
+  const atuais = await listSeriesByEntry(db, entryId);
+
+  if (quantity === atuais.length) return atuais;
+
+  if (quantity < atuais.length) {
+    const manter = new Set(
+      [...atuais]
+        .sort((a, b) => a.position - b.position)
+        .slice(0, quantity)
+        .map((s) => s.id),
+    );
+    const remover = atuais.filter((s) => !manter.has(s.id));
+    for (const serie of remover) {
+      const { error } = await db
+        .from<WorkoutSeriesRow>("workout_series")
+        .delete()
+        .eq("id", serie.id);
+      if (error) throw error;
+    }
+    return await listSeriesByEntry(db, entryId);
+  }
+
+  for (let position = atuais.length + 1; position <= quantity; position += 1) {
+    const { error } = await db
+      .from<WorkoutSeriesRow>("workout_series")
+      .insert({
+        entry_id: entryId,
+        position,
+        value: null,
+        load: null,
+        created_by: email,
+      });
+    if (error) throw error;
+  }
+  return await listSeriesByEntry(db, entryId);
+}
+
+export async function updateSeriesFields(
+  db: IDatabaseClient,
+  seriesId: string,
+  fields: UpdateSeriesFieldsInput,
+): Promise<WorkoutSeries> {
+  const payload: Record<string, unknown> = {};
+  if ("value" in fields) payload.value = fields.value;
+  if ("load" in fields) payload.load = fields.load;
+
+  const { data, error } = await db
+    .from<WorkoutSeriesRow>("workout_series")
+    .update(payload)
+    .eq("id", seriesId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  if (!data)
+    throw new Error("Falha ao atualizar série: sem retorno do banco.");
+  return toSeriesDomain(data);
+}
+
+export async function applySeriesToAll(
+  db: IDatabaseClient,
+  entryId: string,
+  originSeriesId: string,
+): Promise<WorkoutSeries[]> {
+  const series = await listSeriesByEntry(db, entryId);
+  const origem = series.find((s) => s.id === originSeriesId);
+  if (!origem) throw new Error("Série de origem não encontrada.");
+
+  for (const serie of series) {
+    if (serie.id === originSeriesId) continue;
+    if (serie.value === origem.value && serie.load === origem.load) {
+      continue;
+    }
+    const { error } = await db
+      .from<WorkoutSeriesRow>("workout_series")
+      .update({
+        value: origem.value,
+        load: origem.load,
+      })
+      .eq("id", serie.id);
+    if (error) throw error;
+  }
+  return await listSeriesByEntry(db, entryId);
+}
+
+// Replicação incondicional (Mílon #5, D4): comportamento único de todo
+// salvamento do modal — origem mais as seguintes (posição maior) da mesma
+// entrada, incluindo as já marcadas; anteriores nunca mudam; execução e
+// realizadas nunca são tocadas.
+export async function applySeriesToFollowing(
+  db: IDatabaseClient,
+  entryId: string,
+  originSeriesId: string,
+): Promise<WorkoutSeries[]> {
+  const series = await listSeriesByEntry(db, entryId);
+  const origem = series.find((s) => s.id === originSeriesId);
+  if (!origem) throw new Error("Série de origem não encontrada.");
+
+  for (const serie of series) {
+    if (serie.position <= origem.position) continue;
+    const { error } = await db
+      .from<WorkoutSeriesRow>("workout_series")
+      .update({
+        value: origem.value,
+        load: origem.load,
+      })
+      .eq("id", serie.id);
+    if (error) throw error;
+  }
+  return series
+    .map((serie) =>
+      serie.position > origem.position
+        ? {
+            ...serie,
+            value: origem.value,
+            load: origem.load,
+          }
+        : serie,
+    )
+    .sort((a, b) => a.position - b.position);
+}
+
+// Standalones p/ hooks (criam o próprio client, singleton por aba).
+export async function listWorkoutsByProgramStandalone(
+  programId: string,
+): Promise<Workout[]> {
+  return listWorkoutsByProgram(createBrowserDatabaseClient(), programId);
+}
+
+export async function findWorkoutByIdStandalone(
+  workoutId: string,
+): Promise<Workout | null> {
+  return findWorkoutById(createBrowserDatabaseClient(), workoutId);
+}
+
+export async function createWorkoutStandalone(
+  programId: string,
+  input: CreateWorkoutInput,
+  email: string,
+): Promise<Workout> {
+  return createWorkout(createBrowserDatabaseClient(), programId, input, email);
+}
+
+export async function updateWorkoutNameStandalone(
+  workoutId: string,
+  input: UpdateWorkoutInput,
+): Promise<Workout> {
+  return updateWorkoutName(createBrowserDatabaseClient(), workoutId, input);
+}
+
+export async function deleteWorkoutStandalone(
+  workoutId: string,
+): Promise<void> {
+  return deleteWorkout(createBrowserDatabaseClient(), workoutId);
+}
+
+export async function reorderWorkoutsStandalone(
+  programId: string,
+  orderedWorkoutIds: string[],
+): Promise<void> {
+  return reorderWorkouts(
+    createBrowserDatabaseClient(),
+    programId,
+    orderedWorkoutIds,
+  );
+}
+
+export async function hasWorkoutsStandalone(
+  programId: string,
+): Promise<boolean> {
+  return hasWorkouts(createBrowserDatabaseClient(), programId);
+}
+
+export async function hasWorkoutWithExerciseStandalone(
+  programId: string,
+): Promise<boolean> {
+  return hasWorkoutWithExercise(createBrowserDatabaseClient(), programId);
+}
+
+export async function listEntriesByWorkoutStandalone(
+  workoutId: string,
+): Promise<WorkoutEntry[]> {
+  return listEntriesByWorkout(createBrowserDatabaseClient(), workoutId);
+}
+
+export async function listEntriesByProgramStandalone(
+  programId: string,
+): Promise<WorkoutEntry[]> {
+  return listEntriesByProgram(createBrowserDatabaseClient(), programId);
+}
+
+export async function addEntryStandalone(
+  workoutId: string,
+  programId: string,
+  exerciseId: string,
+  email: string,
+): Promise<WorkoutEntry> {
+  return addEntry(
+    createBrowserDatabaseClient(),
+    workoutId,
+    programId,
+    exerciseId,
+    email,
+  );
+}
+
+export async function removeEntryStandalone(
+  entryId: string,
+): Promise<void> {
+  return removeEntry(createBrowserDatabaseClient(), entryId);
+}
+
+export async function reorderEntriesStandalone(
+  workoutId: string,
+  orderedEntryIds: string[],
+): Promise<void> {
+  return reorderEntries(createBrowserDatabaseClient(), workoutId, orderedEntryIds);
+}
+
+export async function setEntryRestSecondsStandalone(
+  entryId: string,
+  seconds: number | null,
+): Promise<void> {
+  return setEntryRestSeconds(createBrowserDatabaseClient(), entryId, seconds);
+}
+
+export async function setEntryModeStandalone(
+  entryId: string,
+  mode: EntryMode,
+): Promise<void> {
+  return setEntryMode(createBrowserDatabaseClient(), entryId, mode);
+}
+
+export async function setEntryLoadUnitStandalone(
+  entryId: string,
+  unit: LoadUnit,
+): Promise<void> {
+  return setEntryLoadUnit(createBrowserDatabaseClient(), entryId, unit);
+}
+
+export async function listSeriesByEntryStandalone(
+  entryId: string,
+): Promise<WorkoutSeries[]> {
+  return listSeriesByEntry(createBrowserDatabaseClient(), entryId);
+}
+
+export async function setSeriesQuantityStandalone(
+  entryId: string,
+  quantity: number,
+  email: string,
+): Promise<WorkoutSeries[]> {
+  return setSeriesQuantity(createBrowserDatabaseClient(), entryId, quantity, email);
+}
+
+export async function updateSeriesFieldsStandalone(
+  seriesId: string,
+  fields: UpdateSeriesFieldsInput,
+): Promise<WorkoutSeries> {
+  return updateSeriesFields(createBrowserDatabaseClient(), seriesId, fields);
+}
+
+export async function applySeriesToAllStandalone(
+  entryId: string,
+  originSeriesId: string,
+): Promise<WorkoutSeries[]> {
+  return applySeriesToAll(createBrowserDatabaseClient(), entryId, originSeriesId);
+}
+
+export async function applySeriesToFollowingStandalone(
+  entryId: string,
+  originSeriesId: string,
+): Promise<WorkoutSeries[]> {
+  return applySeriesToFollowing(createBrowserDatabaseClient(), entryId, originSeriesId);
+}

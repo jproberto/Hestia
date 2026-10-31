@@ -1,0 +1,2065 @@
+﻿diff --git a/.agents/current b/.agents/current
+index 14a3a88..05de95f 100644
+--- a/.agents/current
++++ b/.agents/current
+@@ -1 +1 @@
+-.agents/modules/milon/07c-troca-execucao-ativa
+\ No newline at end of file
++.agents/modules/milon/07b-1-avancar-proximo-treino
+\ No newline at end of file
+diff --git a/.agents/modules/milon/07b-1-avancar-proximo-treino/checkpoint.json b/.agents/modules/milon/07b-1-avancar-proximo-treino/checkpoint.json
+new file mode 100644
+index 0000000..e7ebfb7
+--- /dev/null
++++ b/.agents/modules/milon/07b-1-avancar-proximo-treino/checkpoint.json
+@@ -0,0 +1 @@
++{"currentPhase":"PLAN_APPROVED","lastUpdated":"2026-10-16T00:00:00.000Z","phaseHistory":[{"phase":"SPEC_DRAFT","timestamp":"2026-10-16T00:00:00.000Z"},{"phase":"SPEC_APPROVED","timestamp":"2026-10-16T00:00:00.000Z"},{"phase":"PLAN_READY","timestamp":"2026-10-16T00:00:00.000Z"},{"phase":"PLAN_APPROVED","timestamp":"2026-10-16T00:00:00.000Z"}],"validTransitions":["TASKS_READY","PLAN_READY","SPEC_DRAFT"]}
+\ No newline at end of file
+diff --git a/.agents/modules/milon/07b-1-avancar-proximo-treino/context.json b/.agents/modules/milon/07b-1-avancar-proximo-treino/context.json
+new file mode 100644
+index 0000000..b4f969c
+--- /dev/null
++++ b/.agents/modules/milon/07b-1-avancar-proximo-treino/context.json
+@@ -0,0 +1 @@
++{"approvals":{"plan":"approved","review":"pending","spec":"approved"},"currentPhase":"TASKS_READY","decisions":["FEATURE_DIR=.agents/modules/milon/07b-1-avancar-proximo-treino criado a partir do backlog Bloco 2 item 7b-1 (pedido humano 2026-10-15, achado homologacao 7c)","Escopo inicial humano 2026-10-16: ao Finalizar, recarregar para exibir proximo da rotacao 7b; Cancelar permanece no mesmo treino; execucao aberta em outro treino nao acontece em prod por R1/7c (ignorar)","Acentuacao da spec corrigida por Hera em 2026-10-16 a pedido humano (apenas pontuacao/acentos; estrutura, formato, secoes, tabelas, criterios 1-9 e identificadores tecnicos intactos; 150 linhas, 0 fences de codigo)","approve-spec dado pelo humano em 2026-10-16 na conversa (checkpoint 1/3)","Hera ajustou literal guardian na tabela de premissas (Validada com Humano? Sim) ÔÇö 1 linha, guardian SPEC_APPROVED OK","DA1 Atena: alternativa 2 escolhida (nova selecao pelos ganchos, padrao 7c estendido); alternativa 1 queda natural; alternativa 3 rejeitada","DA2 Atena: Cancelar (e vazio conduzido) nao recarrega selecao ÔÇö permanencia ja e comportamento atual, e recarregaria violaria spec em consulta em treino distinto do proximo","DA3 Atena: desfecho como parametro do onExecutionSettled existente, em vez de segundo callback novo (compativel com chamada sem argumento, ac6 7c preservada)","DA4 Atena: ordem das recargas no avanco ÔÇö fonte unica (useActiveExecution.retry) antes de selecao (useTodayWorkout.retry), evitando janela de bloqueio indevido 7c no treino novo","DA5 Atena: foco por sinal numerico focusHeaderSignal (numero|null), cabecalho com tabindex -1, foca ao montar e a cada mudanca do sinal","DA6 Atena: nenhuma migra├º├úo nova ÔÇö s├│ leitura do que 0011/0015/0016 ja entregam; nenhum inteiro consumido","DA7 Atena: confirmClearExecution legado (05) permanece sem desfecho ÔÇö escopo novo sem pedido","DA8 Atena: programa com um unico treino ÔÇö giro devolve o proprio treino, comportamento da regra pura vigente","DA9 Atena: nenhuma mudanca em hooks/repos/utils/tipos ÔÇö feature e' inteira de composicao na fronteira secao->pagina","Zeus validou plan.md (5 secoes guardian + tabela literal presente) e tasks.json (5 tasks, DAG aciclico T1->T2->T3->T4->T5, ACs nao vazios, files sob __tests__/)"],"history":[{"action":"init","phase":"SPEC_DRAFT","timestamp":"2026-10-16T00:00:00.000Z"},{"action":"hera-spec-written","phase":"SPEC_DRAFT","timestamp":"2026-10-16T00:00:00.000Z"},{"action":"hera-accents-fixed","phase":"SPEC_DRAFT","timestamp":"2026-10-16T00:00:00.000Z"},{"action":"approve-spec","phase":"SPEC_DRAFT","timestamp":"2026-10-16T00:00:00.000Z"},{"action":"hera-header-premissas-guardian","phase":"SPEC_DRAFT","timestamp":"2026-10-16T00:00:00.000Z"},{"action":"promote-spec-approved","phase":"SPEC_APPROVED","timestamp":"2026-10-16T00:00:00.000Z"},{"action":"atena-plan-delivered","phase":"SPEC_APPROVED","timestamp":"2026-10-16T00:00:00.000Z"},{"action":"promote-plan-ready","phase":"PLAN_READY","timestamp":"2026-10-16T00:00:00.000Z"},{"action":"approve-plan","phase":"PLAN_READY","timestamp":"2026-10-16T00:00:00.000Z"},{"action":"promote-tasks-ready","phase":"TASKS_READY","timestamp":"2026-10-16T00:00:00.000Z"}],"migrations":{},"objective":"Ao finalizar treino no Treino do Dia, avancar automaticamente para o proximo da rotacao (reload + proxima selecao); Cancelar permanece no mesmo treino"}
+\ No newline at end of file
+diff --git a/.agents/modules/milon/07b-1-avancar-proximo-treino/plan.md b/.agents/modules/milon/07b-1-avancar-proximo-treino/plan.md
+new file mode 100644
+index 0000000..02e4810
+--- /dev/null
++++ b/.agents/modules/milon/07b-1-avancar-proximo-treino/plan.md
+@@ -0,0 +1,167 @@
++# Avan├ºar para o pr├│ximo treino ao finalizar ÔÇö Implementation Plan
++> Para Zeus: delegar via hefesto/minos task por task
++
++**Objetivo:** Ap├│s o Finalizar com sucesso no Treino do Dia, a p├ígina exibir automaticamente o pr├│ximo treino da rota├º├úo 7b (vizinho seguinte ao rec├®m-selado, com volta ao primeiro); ap├│s o Cancelar com sucesso (inclusive o vazio conduzido ao cancelamento), permanecer no mesmo treino sem execu├º├úo aberta e sem s├®ries marcadas ÔÇö sem migra├º├úo nova e sem mudan├ºa no selamento em dados.
++
++**Arquitetura:** Estende o aviso de assentamento j├í existente da 7c (`onExecutionSettled` na se├º├úo de detalhe) com o desfecho da opera├º├úo: `sealed` (selamento conclu├¡do) ou `cancelled` (exclus├úo conclu├¡da). A p├ígina do Treino do Dia comp├Áe, no desfecho `sealed`, duas recargas j├í existentes em ordem ÔÇö primeiro o `retry` da fonte ├║nica de execu├º├úo ativa (`useActiveExecution`, j├í ligado hoje), depois o `retry` da sele├º├úo (`useTodayWorkout.retry`, que j├í recalcula aberta ÔåÆ ├║ltima selada ÔåÆ pr├│ximo com wrap pela regra pura 7b). No desfecho `cancelled`, somente a fonte ├║nica ├® invalidada e a sele├º├úo permanece intacta. O foco p├│s-a├º├úo vai ao cabe├ºalho do treino exibido via sinal num├®rico enviado ├á se├º├úo.
++
++**Tech Stack:** Next.js (App Router) + React 18, Supabase via `IDatabaseClient` (`lib/shared`), componentes presentacionais por props, `AsyncState` centralizado, Vitest com Testing Library e jsdom. Nenhuma depend├¬ncia nova.
++
++## Restri├º├Áes Globais
++
++- Spec aprovada em `.agents/modules/milon/07b-1-avancar-proximo-treino/spec.md` (checkpoint 1/3, 2026-10-16); nada fora dela. Alternativa escolhida: 2 (nova sele├º├úo pelos ganchos, padr├úo 7c estendido), com a 1 (recarga cheia) documentada como queda natural e a 3 (troca direta de identificador) rejeitada por duplicar a regra de pr├│ximo.
++- O selamento em si n├úo muda: `finishExecution` (UPDATE de `finished_at` filtrado por aberta) e `clearExecution` (exclus├úo com cascata) seguem exatamente como da 07; a execu├º├úo selada continua arquivada e imut├ível. Somente a exibi├º├úo ap├│s o sucesso muda.
++- Nenhum texto novo ├® criado; os textos exatos da 07 (quatro confirma├º├Áes) e da 7c (tooltip, arquivar, ativar, remover, corrida) permanecem congelados, sem par├ífrase.
++- Cancelar e o caminho de borda zero-marcadasÔåÆcancelamento permanecem no mesmo treino; nenhum avan├ºo de rota├º├úo acontece no Cancelar.
++- Execu├º├úo aberta em outro treino ├® fora de escopo por impossibilidade em produ├º├úo (R1 da 7c: ├¡ndice ├║nico parcial por `created_by` com `finished_at` nulo + guarda visual sem modal); nenhum selamento cruzado novo.
++- UI importa persist├¬ncia somente via barrels `lib/milon/db/*` e hooks `lib/milon/hooks/*`; tipos somente em `lib/milon/types.ts` (fonte ├║nica); dom├¡nio em `repositories/*`; proibido criar `use-cases/`, `schemas/`, `mappers.ts`, `services/` ou factories `createXService`; proibido importar `@supabase/*` fora de `lib/shared/`.
++- Hooks no padr├úo do m├│dulo: promise-chain com flag `cancelled` no mount (os hooks tocados por este plano n├úo mudam de estrutura ÔÇö o `retry` existente ├® reutilizado).
++- Estados ass├¡ncronos de tela somente via `components/ui/AsyncState` centralizado (proibido reimplementar, inclusive o texto `Tentar novamente`); retry deriva de `errorOrigin` (`carga` com retry; `operacao`/`bloqueio` sem).
++- T├¡tulos de conte├║do seguem o token `font-display` e a cor do M├¡lon (`#B7602B`); nenhum t├¡tulo novo ├® criado (o cabe├ºalho do treino j├í usa o token).
++- `createBrowserDatabaseClient()` permanece singleton por aba (nenhum client novo).
++- Cobertura m├¡nima de 80 por cento (lines e branch) e su├¡te completa verde sem quebra das features 01 a 07c.
++- Nenhuma migra├º├úo nova (justificada na se├º├úo Migra├º├Áes); nenhum inteiro da sequ├¬ncia global ├® consumido ou reservado; nenhuma migra├º├úo j├í aplicada ├® editada ou renomeada.
++- Sem c├│digo de implementa├º├úo neste plano: todos os contratos abaixo s├úo textuais (nomes, assinaturas e comportamentos exatos).
++
++## 1. Arquitetura
++
++O canal de aviso de assentamento j├í existe e ├® o ponto ├║nico: a `WorkoutDetailSection`, dona da m├íquina de Finalizar/Cancelar (`useWorkoutExecution`), invoca `onExecutionSettled` ap├│s cada opera├º├úo bem-sucedida, e a p├ígina do Treino do Dia a liga ao `retry` de `useActiveExecution` (invalida├º├úo da fonte ├║nica, entrega da 7c AC6). Esta feature estende esse canal em dois eixos, sem criar canais paralelos.
++
++Primeiro eixo, desfecho do aviso: a invoca├º├úo passa a carregar o desfecho da opera├º├úo ÔÇö `sealed` quando o caminho conclu├¡do foi o selamento (`finishExecution`: parcial confirmada, completa confirmada ou completo direto pelo bot├úo) e `cancelled` quando o caminho conclu├¡do foi a exclus├úo (`clearExecution`: Cancelar confirmado ou Finalizar vazio conduzido ao cancelamento). O aviso continua sendo emitido somente no caminho de sucesso; a falha mant├®m o comportamento da 07 (erro de opera├º├úo no banner com origem `operacao`, modal nunca fecha, digitado e marca├º├Áes preservados) e n├úo emite desfecho nenhum.
++
++Segundo eixo, composi├º├úo na p├ígina: no desfecho `sealed` a p├ígina executa duas recargas j├í existentes, em ordem ÔÇö primeiro o `retry` de `useActiveExecution` (limpa o `activeWorkoutId` obsoleto da execu├º├úo rec├®m-selada, preservando a libera├º├úo de escrita da 7c) e s├│ ent├úo o `retry` de `useTodayWorkout` (recalcula a sele├º├úo: sem aberta no programa ÔåÆ ├║ltima selada = a rec├®m-selada ÔåÆ `pickNextWorkoutAfterLastSealed` devolve o vizinho na ordem vigente com volta ao primeiro). No desfecho `cancelled` a p├ígina executa somente a invalida├º├úo da fonte ├║nica, preservando o `selectedWorkoutId` corrente ÔÇö a perman├¬ncia no mesmo treino j├í ├® o comportamento atual do cancelar e nenhuma recarga de sele├º├úo ├® desejada ali.
++
++A recarga de sele├º├úo passa pelo `fetchSelection`/`retry` j├í exposto por `useTodayWorkout`, que ├® o caminho de abertura testado desde a 7b: define `loading` verdadeiro (o `AsyncState` da p├ígina exibe o carregamento), refaz a cadeia e-mail ÔåÆ programa ativo do dono ÔåÆ treinos ordenados ÔåÆ aberta do programa ÔåÆ ├║ltima selada ÔåÆ regra pura de pr├│ximo, e em qualquer falha grava `errorMsg` com origem `carga` (a p├ígina exibe `AsyncState` com nova tentativa, atendendo o crit├®rio 7). A se├º├úo do treino anterior ├® desmontada durante o carregamento e uma se├º├úo nova monta para o treino selecionado, que abre limpo por constru├º├úo (o `useWorkoutExecution` da nova montagem busca a aberta do novo treino e n├úo encontra ÔÇö marca├º├Áes e bot├Áes da 07 nascem ausentes).
++
++O foco p├│s-a├º├úo usa um sinal num├®rico: a p├ígina incrementa um contador a cada desfecho emitido (sealed ou cancelled) e o envia ├á se├º├úo como prop opcional; a se├º├úo foca o pr├│prio cabe├ºalho (elemento com r├│tulo acess├¡vel `Cabe├ºalho do treino`, agora com tabindex menos um para ser foc├ível programaticamente) ao montar com sinal n├úo-nulo e a cada mudan├ºa do sinal. No avan├ºo, a se├º├úo remonta com o sinal j├í n├úo-nulo e foca o cabe├ºalho do pr├│ximo treino; no cancelar, a se├º├úo permanece montada e a mudan├ºa do sinal foca o cabe├ºalho do mesmo treino. Nenhuma depend├¬ncia nova, nenhum consulta direta ao DOM pela p├ígina.
++
++## 2. Componentes (Create/Modify/Test/Docs)
++
++Modify (existentes, com motivo e camada):
++
++- `components/milon/WorkoutDetailSection.tsx` ÔÇö camada components (composi├º├úo + presentacional por props), motivo: (a) estender a prop `onExecutionSettled` para carregar o desfecho `sealed` ou `cancelled` e propagar o desfecho correto nos tr├¬s pontos de emiss├úo do `ExecutionHost` (confirma├º├úo de Finalizar, que captura o caso antes de o hook reinici├í-lo para distinguir selamento de vazio-conduzido; confirma├º├úo de Cancelar; e o selamento direto do completo via `requestFinish`); (b) nova prop opcional de sinal de foco e `tabIndex` menos um nos cabe├ºalhos das duas ramifica├º├Áes (execu├º├úo e manuten├º├úo) para que o cabe├ºalho aceite foco program├ítico. Testada com `__tests__/components/milon/WorkoutDetailSection.test.tsx` (estendido).
++- `app/milon/today/page.tsx` ÔÇö camada app (composi├º├úo + modais, sem l├│gica de dados), motivo: `handleExecutionSettled` passa a receber o desfecho e compor as recargas: `sealed` ÔåÆ invalidar a fonte ├║nica e ent├úo recarregar a sele├º├úo (ambas sequenciais, com espera da primeira antes da segunda); `cancelled` ÔåÆ somente invalidar a fonte ├║nica; nos dois casos incrementar o sinal de foco enviado ├á se├º├úo. Reaproveita o `retry` de `useTodayWorkout` j├í desestruturado na p├ígina (novo campo algum nos hooks). Testada com `__tests__/app/milon/today/page-7b1-advance.test.tsx` (novo, no isolamento de mocks do precedente `page-ac6`) e regress├Áes em `__tests__/app/milon/today/page.test.tsx` e `__tests__/app/milon/today/page-ac6.test.tsx`.
++
++Test (escritos/atualizados por Minos, espelhando o caminho da camada):
++
++- `__tests__/components/milon/WorkoutDetailSection.test.tsx` ÔÇö desfechos por caminho de sucesso, aus├¬ncia de desfecho na falha e foco do cabe├ºalho pelo sinal.
++- `__tests__/app/milon/today/page-7b1-advance.test.tsx` ÔÇö composi├º├úo das recargas por desfecho, perman├¬ncia no cancelar, sinal de foco, falha de carga da nova sele├º├úo com retry e tela preservada sem desfecho.
++- `__tests__/app/milon/today/page.test.tsx` e `__tests__/app/milon/today/page-ac6.test.tsx` ÔÇö atualiza├º├úo pontual se as asser├º├Áes existentes acoplarem a assinatura sem desfecho; a sem├óntica da 7c AC6 (libera├º├úo de escrita ap├│s settle) deve permanecer verde.
++
++Docs: nenhum documento novo nesta feature (artefatos Olympus `plan.md`/`tasks.json` s├úo o registro; `test-scenarios.md` e `regression.md` s├úo produzidos por Minos na TASK-005; `AGENTS.md`, `CHANGELOG.md` e `README.md` s├úo de Mnem├│sine ap├│s homologa├º├úo).
++
++Explicitamente N├âO tocados: `lib/milon/hooks/useTodayWorkout.ts` (o `retry`/`fetchSelection` j├í recalcula a rota├º├úo 7b e j├í ├® exposto ÔÇö nenhuma mudan├ºa de contrato); `lib/milon/hooks/useActiveExecution.ts` (retry j├í exposto); `lib/milon/hooks/useWorkoutExecution.ts` (m├íquina de Finalizar/Cancelar completa desde a 07; o desfecho ├® capturado na se├º├úo, n├úo no hook); `lib/milon/repositories/executions.ts` (`finishExecution`, `clearExecution`, `findOpenExecutionByProgram`, `findLastSealedExecutionByProgram`, `findOpenExecutionByOwner` intactos); `lib/milon/workout-utils.ts` (`pickNextWorkoutAfterLastSealed` e as mensagens da 07 intactas); `lib/milon/types.ts` (nenhum tipo novo); `components/milon/WorkoutConfirmModal.tsx` e `components/milon/TodayWorkoutSwitcher.tsx`; `app/milon/programs/[id]/workouts/[workoutId]/page.tsx` (manuten├º├úo segue sem slots e sem mudan├ºa); `confirmClearExecution` (a confirma├º├úo legada de limpar da 05 permanece sem aviso de desfecho, fora do escopo ÔÇö ver decis├úo DA7); `utils/migrations/*` (nenhum inteiro consumido).
++
++## 3. Contratos (descri├º├úo textual, sem c├│digo de implementa├º├úo)
++
++### Tipos (fonte ├║nica `lib/milon/types.ts` ÔÇö sem altera├º├úo)
++
++- Nenhum tipo novo. `WorkoutExecution.finishedAt` continua expressando aberta (nulo) e selada (preenchido); a exclus├úo continua sendo a remo├º├úo da linha. O desfecho da opera├º├úo ├® um valor textual local do contrato da prop, n├úo um tipo de dom├¡nio.
++
++### Prop de componente estendida (`WorkoutDetailSection`)
++
++- `onExecutionSettled` muda de assinatura sem argumento para assinatura com um par├ómetro de desfecho, cujo dom├¡nio ├® a uni├úo textual `sealed` ou `cancelled`. Sem├óntica: `sealed` somente ap├│s `finishExecution` bem-sucedido (parcial confirmada no modal, completa confirmada no modal, ou completo selado direto pelo bot├úo Finalizar); `cancelled` somente ap├│s `clearExecution` bem-sucedido (Cancela├º├úo confirmada no modal, ou Finalizar vazio confirmado, que conduz ├á exclus├úo). A invoca├º├úo acontece exatamente uma vez por opera├º├úo bem-sucedida e nunca no caminho de erro. A captura do caso de finaliza├º├úo para decidir o desfecho ├® s├¡ncrona, anterior ├á chamada do hook (pois o hook reinicia o caso ao concluir).
++
++### Prop de componente nova (`WorkoutDetailSection`)
++
++- `focusHeaderSignal`, opcional, com padr├úo nulo, aceitando n├║mero ou nulo. Com valor n├úo-nulo, a se├º├úo foca o pr├│prio cabe├ºalho (o elemento da se├º├úo rotulado acessivelmente como `Cabe├ºalho do treino`, agora com tabindex menos um) ao montar e a cada mudan├ºa do valor. Todas as demais props inalteradas; o comportamento de modais, `processing`, relan├ºamento de erro e renderiza├º├úo condicional dos slots segue id├¬ntico.
++
++### Comportamento da p├ígina (`app/milon/today/page.tsx`)
++
++- `handleExecutionSettled` recebe o desfecho e executa: com `sealed`, a invalida├º├úo da fonte ├║nica de execu├º├úo ativa (o `retry` de `useActiveExecution`) aguardada antes da recarga da sele├º├úo (o `retry` de `useTodayWorkout`), e ent├úo incrementa o sinal de foco; com `cancelled`, somente a invalida├º├úo da fonte ├║nica aguardada e ent├úo incrementa o sinal de foco. A p├ígina nunca chama `selectWorkout` manualmente no avan├ºo (a sele├º├úo nova vem exclusivamente do rec├ílculo do hook). Os campos consumidos dos hooks permanecem os mesmos (`program`, `workouts`, `selectedWorkoutId`, `selectWorkout`, `loading`, `errorMsg`, `errorOrigin`, `retry` de `useTodayWorkout`; `activeWorkoutId`, `retry` de `useActiveExecution`); nenhuma assinatura de hook muda.
++
++### Hooks e reposit├│rios consumidos (sem mudan├ºa ÔÇö contrato vigente reutilizado)
++
++- `useTodayWorkout().retry`: refaz a cadeia completa de sele├º├úo (e-mail ÔåÆ programa ativo do dono ÔåÆ treinos ÔåÆ aberta do programa ÔåÆ ├║ltima selada ÔåÆ regra pura de pr├│ximo), define `loading` durante a refazida, preserva `program`/`workouts` quando o programa continua resolv├¡vel, zera a sele├º├úo e registra origem `carga` em qualquer falha da cadeia.
++- `useActiveExecution().retry`: rel├¬ a aberta por dono e republica `activeWorkoutId` (nulo quando n├úo h├í aberta).
++- `useWorkoutExecution`: `requestFinish`, `confirmFinish`, `requestCancel`, `confirmCancelExecution` inalterados em assinatura e comportamento (selamento, exclus├úo, recarga interna, origem `operacao`, relan├ºamento, `processing`).
++- Regra pura `pickNextWorkoutAfterLastSealed(identificadoresOrdenados, identificadorDoUltimoSelado)`: devolve o primeiro quando o ├║ltimo ├® nulo ou fora da lista, o vizinho seguinte quando pertence, o primeiro quando o ├║ltimo ├® o derradeiro (volta ao primeiro), nulo para lista vazia ÔÇö reutilizada pelo hook, sem mudan├ºa.
++
++## 4. Data Flow
++
++1. Abertura do Treino do Dia (sem mudan├ºa): a p├ígina monta `useTodayWorkout` (programa ativo do dono ÔåÆ treinos ÔåÆ aberta do programa vence ÔåÆ sem aberta, pr├│ximo pelo ├║ltimo selado com volta ao primeiro ÔåÆ sem hist├│rico, primeiro) e `useActiveExecution` (fonte ├║nica por dono); com aberta em treino distinto do selecionado, a 7c mant├®m a guarda visual. Vazio sem programa ou sem treinos segue o `AsyncState` da 04/7b, sem erro e sem avan├ºo.
++2. Finalizar completo direto: a pessoa aciona Finalizar; `requestFinish` detecta o caso completo, chama `finishExecution` (grava o t├®rmino s├│ na linha aberta), recarrega o estado interno da se├º├úo (busca de aberta volta vazia; bot├Áes e badge somem) e a se├º├úo emite o desfecho `sealed`.
++3. Finalizar parcial ou completa com confirma├º├úo: a pessoa confirma o modal correspondente; `confirmFinish` grava o t├®rmino, recarrega o estado interno e fecha o modal; a se├º├úo emite `sealed` (o caso capturado n├úo era vazio).
++4. Finalizar vazio conduzido ao cancelamento: a pessoa confirma a exclus├úo no modal de vazio; `confirmFinish` chama `clearExecution` (exclus├úo com cascata, sem selo vazio), recarrega o estado interno e fecha; a se├º├úo emite `cancelled`.
++5. Cancelar: a pessoa confirma; `confirmCancelExecution` chama `clearExecution`, recarrega o estado interno e fecha; a se├º├úo emite `cancelled`.
++6. Com o desfecho `sealed`, a p├ígina invalida a fonte ├║nica (a aberta rec├®m-selada deixa de ser aberta; `activeWorkoutId` tende a nulo, evitando que a guarda 7c bloqueie o treino novo) e ent├úo recarrega a sele├º├úo: `fetchSelection` define `loading` (o `AsyncState` exibe o carregamento), rel├¬ programa e treinos, n├úo encontra aberta no programa, busca a ├║ltima selada (a rec├®m-selada, pela ordena├º├úo de t├®rmino com desempates de cria├º├úo e identificador) e aplica a regra pura de pr├│ximo; o `selectedWorkoutId` troca para o vizinho, com volta ao primeiro ap├│s o derradeiro. A se├º├úo anterior desmonta no carregamento e uma se├º├úo nova monta para o treino novo, que abre limpo (sem execu├º├úo aberta, sem marca├º├Áes, sem bot├Áes da 07 at├® a primeira marca├º├úo). O sinal de foco incrementado faz a nova se├º├úo focar o cabe├ºalho do pr├│ximo treino.
++7. Com o desfecho `cancelled`, a p├ígina invalida somente a fonte ├║nica e incrementa o sinal de foco; a sele├º├úo n├úo ├® recarregada, o treino exibido ├® o mesmo, a se├º├úo permanece montada com o estado interno j├í recarregado pelo hook (sem aberta, sem marca├º├Áes, sem bot├Áes) e o foco vai ao cabe├ºalho do mesmo treino.
++8. Troca manual ap├│s o avan├ºo: permanece livre entre treinos do programa ativo (7b D8/R3), sem reescrever hist├│rico e sem travar a pr├│xima sele├º├úo autom├ítica; o sinal de foco n├úo reage a trocas manuais (s├│ a desfechos).
++9. Falha de carga na recarga da sele├º├úo (passo 6): `fetchSelection` grava `errorMsg` com origem `carga`; o `AsyncState` da p├ígina exibe a mensagem com nova tentativa e o acionamento repete a cadeia; nenhum treino parcial ├® exibido at├® carregar.
++10. Falha de opera├º├úo ou bloqueio no selar/cancelar (passos 2 a 5): o hook relan├ºa, o modal permanece aberto com o digitado e as marca├º├Áes preservados, o banner de erro da se├º├úo exibe a mensagem sem nova tentativa, e nenhum desfecho ├® emitido ÔÇö portanto nenhuma recarga de sele├º├úo nem de fonte ├║nica acontece e nada avan├ºa.
++11. Caso limite de programa com um ├║nico treino: a regra pura devolve o pr├│prio treino (volta ao primeiro ├® ele mesmo); a recarga de sele├º├úo remonta a se├º├úo limpa do mesmo treino, sem erro.
++12. Dois donos: cada dono avan├ºa na pr├│pria rota├º├úo, pois a cadeia ├® sempre do programa ativo do pr├│prio dono; sem desvio cruzado.
++
++## 5. Decis├Áes T├®cnicas (para registro em `context.json.decisions` via Zeus)
++
++- DA1 ÔÇö Alternativa 2 da spec escolhida: nova sele├º├úo pelos ganchos invalidando a fonte ├║nica e recarregando a sele├º├úo, no padr├úo j├í entregue pela 7c, estendido ao avan├ºo. Mant├®m a fonte ├║nica da 7b e da 7c (nenhuma regra de pr├│ximo ├® duplicada) e evita o pisca da recarga cheia. A alternativa 1 (recarga cheia da p├ígina) fica documentada como queda natural: se a composi├º├úo das duas recargas se mostrar inst├ível em homologa├º├úo, o remendo provis├│rio ├® acionar o recarregamento do navegador ap├│s o selamento (caminho de abertura j├í testado), sem tocar em dados; a alternativa 3 permanece rejeitada por calcular o vizinho fora da fonte vigente e divergir em reordena├º├úo concorrente ou lista desatualizada.
++- DA2 ÔÇö Cancelar (e o vazio conduzido) n├úo recarrega a sele├º├úo. A perman├¬ncia no mesmo treino j├í ├® o comportamento atual e ├® preservado sem novo trabalho; al├®m disso, recarregar a sele├º├úo no cancelar violaria a spec no cen├írio alcan├º├ível de consulta em treino diferente do "pr├│ximo" (marcar s├®rie em outro treino, depois Cancelar nele): a recarga recalculada miraria o vizinho do ├║ltimo selado anterior e tiraria a pessoa do treino onde cancelou. A guarda 7c j├í ├® resolvida pela invalida├º├úo da fonte ├║nica, que continua acontecendo no cancelar.
++- DA3 ÔÇö Desfecho como par├ómetro do `onExecutionSettled` existente, em vez de um segundo callback novo. O ponto ├║nico de notifica├º├úo da 7c ├® preservado, a mudan├ºa ├® aditiva e compat├¡vel com chamadas sem argumento (tratadas como n├úo-selamento, isto ├®, o comportamento da 7c segue verde), e a captura s├¡ncrona do caso de finaliza├º├úo na se├º├úo resolve a distin├º├úo selar-excluir sem tocar no hook.
++- DA4 ÔÇö Ordem das recargas no avan├ºo: fonte ├║nica primeiro, sele├º├úo depois. Evita a janela transit├│ria em que o treino novo j├í est├í selecionado e o `activeWorkoutId` obsoleto apontaria o treino antigo, o que derivaria `writeBlocked` verdadeiro no treino novo (a 7c bloquearia indevidamente a primeira marca├º├úo).
++- DA5 ÔÇö Foco por sinal num├®rico enviado ├á se├º├úo, com foco no cabe├ºalho ao montar e a cada mudan├ºa do sinal, e tabindex menos um nos cabe├ºalhos. Funciona nos dois caminhos com um ├║nico mecanismo (remontagem no avan├ºo, mudan├ºa de sinal no cancelar), n├úo reage a trocas manuais, n├úo requer consulta de DOM pela p├ígina nem depend├¬ncia nova, e ├® verific├ível em teste (elemento rotulado `Cabe├ºalho do treino` como `document.activeElement`).
++- DA6 ÔÇö Nenhuma migra├º├úo nova: o plano s├│ rel├¬ e reescreve o que j├í existe (t├®rmino gravado pelo selamento da 07, exclus├úo com cascata do cancelamento, ordena├º├úo de seladas e busca de abertas j├í implantadas pelas migra├º├Áes 0011, 0015 e 0016, todas aplicadas e congeladas). Nenhum inteiro da sequ├¬ncia global ├® consumido ou reservado.
++- DA7 ÔÇö A confirma├º├úo legada de limpar execu├º├úo da 05 (`confirmClearExecution`, gatilho de desmarcar a ├║ltima s├®rie) permanece sem emiss├úo de desfecho: ela exclui a execu├º├úo, mas o Cancelar regido pela spec desta feature ├® o da 07; o caminho de borda zero-marcadasÔåÆcancelamento coberto aqui ├® o do modal de vazio da 07, j├í notificado. Ampliar o aviso ├á 05 seria escopo novo sem pedido.
++- DA8 ÔÇö Programa com um ├║nico treino: o giro devolve o pr├│prio treino (volta ao primeiro ├® ele mesmo), comportamento derivado da regra pura vigente e sem distin├º├úo nova.
++- DA9 ÔÇö Nenhuma mudan├ºa em hooks, reposit├│rios, utils ou tipos: a recarga de sele├º├úo, a fonte ├║nica, a m├íquina de finalizar/cancelar e a regra pura de pr├│ximo j├í existem e j├í s├úo expostas; a feature ├® inteira de composi├º├úo na fronteira se├º├úoÔåÆp├ígina.
++
++## 6. Riscos e Mitiga├º├Áes
++
++- Janela de bloqueio transit├│rio se as duas recargas n├úo comporrem na ordem ÔåÆ mitigado pela decis├úo DA4 (espera da invalida├º├úo da fonte ├║nica antes da recarga de sele├º├úo) e por teste de p├ígina que assere a ordem das chamadas.
++- Falha na recarga de sele├º├úo ap├│s o selamento deixar a tela em branco sem caminho de volta ÔåÆ mitigado pelo `fetchSelection` existente que grava origem `carga` e pelo `AsyncState` da p├ígina com nova tentativa; o selamento em si j├í est├í gravado (imut├ível, sem reabrir) e a nova tentativa apenas reflete o banco.
++- Regress├úo da libera├º├úo de escrita da 7c (AC6) pela mudan├ºa de assinatura do aviso ÔåÆ mitigado por compatibilidade de tipo (fun├º├úo sem argumento ├® asign├ível ├á assinatura nova e o ramo n├úo-selamento preserva a invalida├º├úo da fonte ├║nica), pela atualiza├º├úo do arquivo de teste dedicado da AC6 na TASK-003 e pela su├¡te completa na TASK-005.
++- Regress├úo dos quatro casos de confirma├º├úo da 07 ÔåÆ mitigado por n├úo tocar no hook `useWorkoutExecution` nem nos textos; a se├º├úo s├│ passa a informar o desfecho depois do sucesso j├í existente.
++- Confundir o vazio conduzido com um selamento ÔåÆ mitigado pela captura s├¡ncrona do caso antes da chamada do hook e por teste de se├º├úo que emite `cancelled` exatamente nesse caminho.
++- Foco roubando a navega├º├úo por teclado ÔåÆ mitigado por tabindex menos um (foco apenas program├ítico, fora da ordem de tabula├º├úo) e por o foco acontecer somente ap├│s desfecho ou remontagem com sinal, nunca em troca manual.
++- Diverg├¬ncia entre Treino do Dia e manuten├º├úo ap├│s selar ou cancelar ÔåÆ sem novo risco: ambos os lados continuam releendo a aberta pelos mesmos reposit├│rios; a manuten├º├úo n├úo recebe slots nem desfecho.
++- Empate de momento de t├®rmino entre selamentos quase simult├óneos ÔåÆ comportamento j├í aceito desde a 7b, com desempates por cria├º├úo e identificador no reposit├│rio; o rel├│gio do cliente no t├®rmino segue a decis├úo congelada de revisitar na 09.
++
++## Mapeamento Schema ÔåÆ C├│digo
++
++| Tabela | Coluna | Migra├º├úo | Reposit├│rio | Hook | Componente |
++|---|---|---|---|---|---|
++| `workout_executions` | `finished_at` (lido como aberta/selada; gravado pelo selamento da 07, sem mudan├ºa) | nenhuma nova (inteiro 0011 aplicado e congelado) | `lib/milon/repositories/executions.ts` (`findOpenExecutionByProgram`, `findLastSealedExecutionByProgram`, `findOpenExecutionByOwner`, `finishExecution` ÔÇö sem mudan├ºa) | `lib/milon/hooks/useTodayWorkout.ts` (`retry`/`fetchSelection` reusado sem mudan├ºa) + `lib/milon/hooks/useActiveExecution.ts` (`retry` reusado sem mudan├ºa) | `app/milon/today/page.tsx` (comp├Áe as duas recargas no desfecho `sealed`) + `components/milon/WorkoutDetailSection.tsx` (emite o desfecho) |
++| `workout_executions` | linha inteira (DELETE do cancelar e do vazio conduzido; `started_at` limpo por exclus├úo) | nenhuma nova (inteiro 0011 aplicado) | `lib/milon/repositories/executions.ts` (`clearExecution` existente, cascata no banco, sem mudan├ºa) | `lib/milon/hooks/useWorkoutExecution.ts` (`confirmCancelExecution`, `confirmFinish` no caso vazio ÔÇö sem mudan├ºa) | `components/milon/WorkoutDetailSection.tsx` (emite `cancelled`) + `app/milon/today/page.tsx` (permanece no mesmo treino) |
++| `workouts` | `position` (ordem vigente que a regra pura de pr├│ximo percorre) | nenhuma nova (inteiro 0015 aplicado) | `lib/milon/repositories/workouts.ts` (`listWorkoutsByProgram` ordenada, sem mudan├ºa) | `lib/milon/hooks/useTodayWorkout.ts` (entrega a ordem vigente ├á regra pura, sem mudan├ºa) | `app/milon/today/page.tsx` (exibe o vizinho recalculado) + `components/milon/TodayWorkoutSwitcher.tsx` (marca a nova sele├º├úo, sem mudan├ºa) |
++| `workout_execution_series` | linhas da execu├º├úo (contam como marcadas; somem por cascata no cancelar) | nenhuma nova (inteiro 0011 aplicado) | `lib/milon/repositories/executions.ts` (`listDoneByExecution`, sem mudan├ºa) | `lib/milon/hooks/useWorkoutExecution.ts` (`markedCount`/`doneSeriesIds` alimentam o caso de finaliza├º├úo, sem mudan├ºa) | `components/milon/WorkoutDetailSection.tsx` (marcadores existentes; o treino novo monta limpo) |
++| `programs` | `status` (ativo habilita o Treino do Dia; inativo ├® somente leitura) | nenhuma nova (inteiro 0008 aplicado) | `lib/milon/repositories/programs.ts` (`findActiveProgramByOwner`, sem mudan├ºa) | `lib/milon/hooks/useTodayWorkout.ts` (programa ativo do dono origem da sele├º├úo, sem mudan├ºa) | `app/milon/today/page.tsx` (s├│ Leitura oculta os bot├Áes, sem mudan├ºa) |
++
++## Contratos Completos
++
++- Tipos: sem altera├º├úo em `lib/milon/types.ts`. `WorkoutExecutionRow.finished_at` e `WorkoutExecution.finishedAt` seguem como fonte de aberta/selada; nenhum tipo de desfecho ├® adicionado ao dom├¡nio (o desfecho vive na assinatura da prop da se├º├úo).
++- Props de `WorkoutDetailSection`: `onExecutionSettled` com par├ómetro de desfecho da uni├úo textual `sealed` ou `cancelled` (invocado somente no sucesso, uma vez por opera├º├úo; `sealed` nos tr├¬s caminhos de selamento, `cancelled` nos dois caminhos de exclus├úo); nova prop opcional `focusHeaderSignal` aceitando n├║mero ou nulo com padr├úo nulo (foca o cabe├ºalho rotulado `Cabe├ºalho do treino`, com tabindex menos um, ao montar com sinal n├úo-nulo e a cada mudan├ºa). Demais props inalteradas (`workoutId`, `backTarget`, `title`, `headerActions`, `entryFooter`, `footer`, `executionEnabled`, `executionBlocked`, `activeExecutionWorkoutId`, `writeBlocked`, `blockedTooltip`).
++- Comportamento da p├ígina: `handleExecutionSettled(desfecho)` ÔÇö `sealed` aguarda a invalida├º├úo da fonte ├║nica e ent├úo aguarda a recarga da sele├º├úo; `cancelled` aguarda somente a invalida├º├úo da fonte ├║nica; ambos incrementam o sinal de foco. Nenhuma chamada a `selectWorkout` no avan├ºo. A p├ígina segue consumindo de `useTodayWorkout`: `program`, `workouts`, `selectedWorkoutId`, `selectWorkout`, `loading`, `errorMsg`, `errorOrigin`, `retry`; de `useActiveExecution`: `activeWorkoutId`, `retry`. Nenhum hook muda de assinatura.
++- Regras puras: `pickNextWorkoutAfterLastSealed` reusada sem mudan├ºa; nenhuma constante de mensagem nova.
++- Reposit├│rios: nenhuma opera├º├úo nova; `finishExecution(executionId)`, `clearExecution(executionId)`, `findOpenExecutionByProgram(programId)`, `findLastSealedExecutionByProgram(programId)`, `findOpenExecutionByOwner(email)` e os standalones correspondentes permanecem com as assinaturas atuais.
++
++## Migra├º├Áes
++
++Nenhuma migra├º├úo nova. Esta feature n├úo cria tabela, coluna, ├¡ndice, backfill nem auditoria: ela s├│ rel├¬ o que a sele├º├úo da 7b j├í l├¬ (aberta e ├║ltima selada por programa, sobre a coluna de t├®rmino gravada pelo selamento da 07) e reaproveita a exclus├úo com cascata do cancelamento. Os objetos de schema que tornam o comportamento poss├¡vel j├í existem e est├úo aplicados e congelados: a tabela de execu├º├Áes com in├¡cio obrigat├│rio e t├®rmino anul├ível e a cascata das realizadas (inteiro 0011), a coluna de posi├º├úo dos treinos com a ordena├º├úo usada pela rota├º├úo (inteiro 0015) e o ├¡ndice ├║nico parcial por autoria que garante uma aberta por dono (inteiro 0016). Nenhum inteiro da sequ├¬ncia global ├® consumido ou reservado; o pr├│ximo livre continua sendo assunto de quem vier a precisar de DDL. Backfill: n├úo aplic├ível (nenhuma coluna nova). Rollback: n├úo aplic├ível (nenhum script novo). Auditoria: nenhum registro novo em `public.schema_migrations`; nenhuma migra├º├úo j├í aplicada ├® editada ou renomeada, conforme a regra auditada do m├│dulo.
++
++## C├│digo Legado/Remov├¡vel
++
++| Item | Crit├®rio de Busca Zerada | Arquivos Afetados |
++|---|---|---|
++| Corpo atual do aviso de assentamento na p├ígina, que s├│ invalida a fonte ├║nica sem desfecho (chamada `void retryActiveExecution?.()`) | busca por `void retryActiveExecution?.()` retorna 0 em c├│digo vivo (`app/`, `components/`, `lib/`) | `app/milon/today/page.tsx` |
++| Invoca├º├úo atual do aviso na se├º├úo, sem argumento de desfecho (chamada `void onExecutionSettled?.()`) | busca por `void onExecutionSettled?.()` retorna 0 em c├│digo vivo | `components/milon/WorkoutDetailSection.tsx` |
++
++Nenhum outro c├│digo legado ├® identificado: a feature ├® aditiva sobre contratos existentes, n├úo remove fun├º├Áes, tipos nem caminhos inteiros, e nenhum placeholder de vers├úo antiga permanece no caminho afetado.
++
++## Tasks
++
++Cinco tasks em DAG ac├¡clico (depend├¬ncias: TASK-001 ÔåÆ TASK-002 ÔåÆ TASK-003 ÔåÆ TASK-004 ÔåÆ TASK-005), detalhadas no `tasks.json` ao lado deste plano. Altern├óncia estrita RED (Minos) / GREEN (Hefesto): contrato da se├º├úo em RED, se├º├úo em GREEN, composi├º├úo da p├ígina em RED, p├ígina em GREEN, su├¡te completa e gates em Minos. Hefesto nunca escreve testes; Minos nunca corrige produ├º├úo. Toda substitui├º├úo de c├│digo carrega o crit├®rio de busca zerada correspondente (itens da se├º├úo C├│digo Legado/Remov├¡vel).
++
++| id | title | assignee | files | acceptanceCriteria | consumes | produces | dependsOn |
++|---|---|---|---|---|---|---|---|
++| TASK-001 | RED do contrato de desfecho e foco na se├º├úo de detalhe | minos | `__tests__/components/milon/WorkoutDetailSection.test.tsx` | `npm test -- __tests__/components/milon/WorkoutDetailSection.test.tsx` ÔåÆ FAIL esperado (assinatura sem desfecho e sem sinal de foco); `npx tsc --noEmit` ÔåÆ exit 0; casos RED: parcial confirmado emite `sealed`, completo direto emite `sealed`, Cancelar confirmado emite `cancelled`, vazio conduzido emite `cancelled`, falha em confirmar Finalizar ou Cancelar n├úo emite desfecho algum, `focusHeaderSignal` n├úo-nulo foca o cabe├ºalho rotulado `Cabe├ºalho do treino` ao montar e a cada novo sinal | plan ┬º3 (contratos da prop de desfecho e do sinal de foco) + spec ┬º3 (efeitos do selamento e do cancelamento) e ┬º5 (crit├®rios 1, 4, 5, 8) | RED do desfecho por caminho de sucesso, da aus├¬ncia de desfecho na falha e do foco do cabe├ºalho | ÔÇö |
++| TASK-002 | Desfecho e foco do cabe├ºalho na se├º├úo em GREEN | hefesto | `components/milon/WorkoutDetailSection.tsx` | `npm test -- __tests__/components/milon/WorkoutDetailSection.test.tsx` ÔåÆ PASS; desfecho emitido exatamente uma vez por opera├º├úo bem-sucedida, `sealed` nos tr├¬s caminhos de selamento e `cancelled` nos dois de exclus├úo, nunca no erro; busca por `void onExecutionSettled?.()` retorna 0 em c├│digo vivo; `npx tsc --noEmit` ÔåÆ exit 0 | RED da TASK-001 | se├º├úo notifica o desfecho correto e aceita o sinal de foco (cabe├ºalho com tabindex menos um) | TASK-001 |
++| TASK-003 | RED da composi├º├úo da p├ígina do Treino do Dia | minos | `__tests__/app/milon/today/page-7b1-advance.test.tsx`, `__tests__/app/milon/today/page.test.tsx`, `__tests__/app/milon/today/page-ac6.test.tsx` | `npm test -- __tests__/app/milon/today/page-7b1-advance.test.tsx` ÔåÆ FAIL esperado (p├ígina ainda s├│ invalida a fonte ├║nica); `npx tsc --noEmit` ÔåÆ exit 0; casos RED: desfecho `sealed` chama o `retry` da fonte ├║nica antes do `retry` da sele├º├úo e incrementa o sinal de foco; desfecho `cancelled` chama somente o `retry` da fonte ├║nica e incrementa o sinal de foco, preservando o `workoutId` selecionado; sem desfecho nenhum retry ├® chamado; falha de carga da recarga de sele├º├úo exibe mensagem com origem `carga` e nova tentativa; vazio sem programa inalterado; regress├Áes 07 e 7c atualizadas se acoplarem a assinatura antiga | se├º├úo da TASK-002 (assinatura do desfecho) + plan ┬º3 (comportamento da p├ígina) + spec ┬º5 (crit├®rios 1 a 8) | RED da composi├º├úo de recargas por desfecho, da perman├¬ncia no cancelar e do sinal de foco | TASK-002 |
++| TASK-004 | Composi├º├úo das recargas e foco na p├ígina em GREEN | hefesto | `app/milon/today/page.tsx` | `npm test -- __tests__/app/milon/today/page-7b1-advance.test.tsx __tests__/app/milon/today/page.test.tsx __tests__/app/milon/today/page-ac6.test.tsx` ÔåÆ PASS; busca por `void retryActiveExecution?.()` retorna 0 em c├│digo vivo; `npx tsc --noEmit` ÔåÆ exit 0 | RED da TASK-003 | p├ígina avan├ºa no `sealed` (fonte ├║nica e ent├úo sele├º├úo) e permanece no `cancelled` (s├│ fonte ├║nica), com sinal de foco nos dois | TASK-003 |
++| TASK-005 | Su├¡te completa verde, cobertura, storybook e artefatos de teste | minos | `__tests__/app/milon/today/page-7b1-advance.test.tsx`, `__tests__/components/milon/WorkoutDetailSection.test.tsx`, `.agents/modules/milon/07b-1-avancar-proximo-treino/test-report.json`, `.agents/modules/milon/07b-1-avancar-proximo-treino/test-scenarios.md`, `.agents/modules/milon/regression.md` | `npm test` ÔåÆ 0 falhas (suite completa sem quebra das 01 a 07c); `npm test -- --coverage` ÔåÆ lines e branch ÔëÑ 80%; `npm run build-storybook` ÔåÆ exit 0; crit├®rios 1 a 9 da spec ┬º5 cobertos entre automatizado e manual em `test-scenarios.md`; cen├írios de regress├úo 07/7b/7c promovidos em `regression.md`; `test-report.json` regenerado | p├íginas e se├º├úo verdes das TASK-002 e TASK-004 | su├¡te verde, cobertura mantida, relat├│rio e cen├írios prontos para o review | TASK-004 |
++
++Cobertura dos crit├®rios de aceite da spec ┬º5 pelas tasks: crit├®rio 1 (avan├ºo) e 2 (giro) ÔÇö casos de `sealed` na TASK-003/TASK-004 sobre a regra pura e a recarga existentes; crit├®rio 3 (parcial iguala completa) ÔÇö mesmo desfecho `sealed` nos caminhos de confirma├º├úo parcial e completo, coberto na se├º├úo (TASK-001/TASK-002) e na p├ígina (TASK-003/TASK-004); crit├®rio 4 (cancelar permanece) e 5 (borda zero-marcadasÔåÆcancelar) ÔÇö desfecho `cancelled` sem recarga de sele├º├úo, cobertos na se├º├úo e na p├ígina; crit├®rio 6 (vazio 04/7b) ÔÇö regress├úo na TASK-003 e su├¡te na TASK-005; crit├®rio 7 (falha de carga com retry; opera├º├úo/bloqueio sem retry) ÔÇö p├ígina na TASK-003/TASK-004 mais o comportamento inalterado do hook na TASK-005; crit├®rio 8 (falha no selar/cancelar preserva tudo) ÔÇö aus├¬ncia de desfecho na falha, coberta na TASK-001/TASK-002, mais a disciplina inalterada do hook na TASK-005; crit├®rio 9 (su├¡te verde e cobertura) ÔÇö TASK-005.
++
++## Self-Review
++
++Cobertura da spec: crit├®rios 1 a 9 da ┬º5 mapeados nas tasks acima; efeitos da ┬º3 (avan├ºo, perman├¬ncia, borda zero-marcadas, aberta em outro treino fora de escopo) refletidos nos contratos; estados de tela e foco da ┬º2 cobertos (carregamento da recarga pelo `AsyncState` existente, falha de carga com nova tentativa, falha de opera├º├úo sem desfecho, foco no cabe├ºalho exibido); fora de escopo da ┬º4 intocado (selamento em dados, reabrir/editar, hist├│rico, timer, rota├º├úo nova, guarda 7c). Placeholders de preenchimento e blocos de c├│digo de implementa├º├úo: proibidos e ausentes (contratos apenas textuais). Consist├¬ncia: nomes de desfecho, props e comandos repetidos identicamente entre plano, contratos e tasks. Ordem: RED antes de GREEN em cada camada, se├º├úo antes da p├ígina (a p├ígina consome a assinatura nova), tudo antes da su├¡te final. Verifica├º├úo: cada task termina com comando exato e resultado esperado (FAIL/PASS/especta├º├úo de busca zerada).
++
++Entrega Atena conclu├¡da. PARA AQUI: aguardar `approve-plan` humano expl├¡cito com `PLAN_APPROVED` antes de qualquer CODING. Zeus n├úo deve promover para `TASKS_READY` nem delegar implementa├º├úo sem essa aprova├º├úo.
+diff --git a/.agents/modules/milon/07b-1-avancar-proximo-treino/spec.md b/.agents/modules/milon/07b-1-avancar-proximo-treino/spec.md
+new file mode 100644
+index 0000000..35b9c9b
+--- /dev/null
++++ b/.agents/modules/milon/07b-1-avancar-proximo-treino/spec.md
+@@ -0,0 +1,150 @@
++# Spec: Avan├ºar para o pr├│ximo treino ao finalizar
++
++## 1. Problema Real
++
++No Treino do Dia, ao finalizar um treino e confirmar, a p├ígina permanece no mesmo treino com as marca├º├Áes desfeitas, em vez de exibir o pr├│ximo treino da rota├º├úo definida na feature 7b. A pessoa precisa recarregar manualmente ou sair e voltar para ver o treino seguinte, o que quebra o fluxo de quem est├í na academia com o celular na m├úo e espera que o pr├│ximo da sequ├¬ncia apare├ºa sozinho ap├│s o selamento.
++
++O valor desta feature ├® fechar o gesto do Finalizar com a sele├º├úo autom├ítica j├í existente. O selamento continua igual ao da feature 07, sem mudan├ºa de dados. O que muda ├® a exibi├º├úo ap├│s o sucesso. O Cancelar segue com o comportamento atual de permanecer no mesmo treino, sem avan├ºo.
++
++Fontes: pedido humano de 2026-10-16 como verdade de escopo, linha 7b-1 do backlog do m├│dulo Milon, specs das features 07 Encerrar treino, 07b Rota├º├úo do Treino do Dia e 07c Troca com execu├º├úo ativa, mais leitura real da p├ígina do Treino do Dia, da se├º├úo de detalhe compartilhada e dos dois hooks de sele├º├úo e de execu├º├úo ativa.
++
++## 2. Usu├írios e Cen├írios
++
++Usu├írios: o casal, com login individual cada um, mesmo modelo das features 01 a 07c. Cada um abre o pr├│prio treino ao chegar na academia. N├úo h├í permiss├úo restrita. O dono do programa define a origem do Treino do Dia, mesma regra da 04. Uso no celular, mesma exig├¬ncia de tela pequena das features 03 a 07c.
++
++Cen├írio 1: finalizar o treino completo ou parcial e ver o pr├│ximo. A pessoa marca s├®ries, aciona Finalizar no rodap├®, confirma quando houver confirma├º├úo, e a p├ígina passa a exibir o treino seguinte da rota├º├úo 7b, sem marca├º├Áes penduradas do treino anterior.
++
++Cen├írio 2: cancelar a execu├º├úo e continuar no mesmo treino. A pessoa aciona Cancelar no topo, confirma, e a p├ígina permanece no mesmo treino, agora sem execu├º├úo aberta e sem marca├º├Áes, pronta para recome├ºar do zero.
++
++Cen├írio 3: abrir o m├│dulo sem programa ativo ou sem treinos. Vale o vazio herdado da 04 e da 7b, sem erro e sem avan├ºo, com a mesma mensagem de sem treino ativo e orienta├º├úo.
++
++Jornada passo a passo: a pessoa executa s├®ries no Treino do Dia, com indica├º├úo visual de em execu├º├úo enquanto houver aberta. Ao acionar Finalizar, segue o fluxo de confirma├º├úo j├í existente da 07, parcial pergunta, completo sela direto, vazio de borda conduz ao cancelamento. Confirmado o selamento com sucesso, a p├ígina recarrega a sele├º├úo e exibe o pr├│ximo treino segundo a regra vigente da 7b, aberta vence quando houver, sem aberta vale o vizinho seguinte ao ├║ltimo selado com volta ao primeiro. Ao acionar Cancelar, segue o fluxo de confirma├º├úo da 07, e ap├│s a exclus├úo com sucesso a p├ígina permanece no mesmo treino, com sele├º├úo preservada. A pessoa permanece no Treino do Dia em ambos os casos, sem navega├º├úo para fora do m├│dulo.
++
++Estados de tela: seguem o padr├úo centralizado do m├│dulo com o componente central de estado ass├¡ncrono. Carregando exibe texto de carregamento. Erro de carga exibe nova tentativa. Erro de opera├º├úo e bloqueio de dom├¡nio exibem mensagem sem nova tentativa. Modais de confirma├º├úo nunca fecham no erro e preservam o digitado. T├¡tulos de conte├║do seguem o token tipogr├ífico do m├│dulo e a cor do Milon. Foco ao concluir: ap├│s Finalizar, o foco vai para o cabe├ºalho do pr├│ximo treino exibido. Ap├│s Cancelar, o foco permanece no cabe├ºalho do mesmo treino. Sem programa ativo, programa ativo sem treinos ou treino sem exerc├¡cios, vale a mensagem de sem treino ativo com orienta├º├úo da 04, sem erro.
++
++## 3. Regras de Neg├│cio
++
++### Efeito do Finalizar com avan├ºo
++
++- Ap├│s o selamento com sucesso por qualquer caminho da 07, parcial confirmado, completo direto ou ├║ltima marcada confirmada, a p├ígina do Treino do Dia recarrega a sele├º├úo e exibe o pr├│ximo treino da rota├º├úo 7b.
++- O pr├│ximo ├® calculado pela mesma regra vigente da 7b, sem regra nova de ordem. Sem aberta, vale o vizinho seguinte ao ├║ltimo selado na ordem atual dos treinos do programa ativo do dono, com volta ao primeiro ap├│s o ├║ltimo. Com aberta v├ílida na origem, a aberta vence, mas este caso n├úo ├® esperado ap├│s Finalizar porque o selamento encerra a aberta corrente.
++- O selamento em si n├úo muda. Momento de t├®rmino registrado, execu├º├úo selada arquivada e imut├ível, sem reabrir nem editar, mesma regra da 07. Somente a exibi├º├úo ap├│s o sucesso avan├ºa.
++- As marca├º├Áes do treino anterior n├úo permanecem. O treino seguinte abre limpo, com o pr├│prio estado de execu├º├úo dele, que no caso normal ├® sem aberta at├® a primeira marca├º├úo.
++- A troca manual ap├│s o avan├ºo continua permitida para consulta entre treinos do programa ativo, mesma regra da 7b, sem reescrever hist├│rico nem travar a pr├│xima sele├º├úo autom├ítica.
++
++### Efeito do Cancelar sem avan├ºo
++
++- Ap├│s o cancelamento com sucesso, a p├ígina permanece no mesmo treino onde o Cancelar foi acionado.
++- A execu├º├úo aberta ├® exclu├¡da com cascata das realizadas, template desbloqueado, momento de in├¡cio limpo, nenhuma s├®rie segue marcada, mesma regra da 07.
++- Nenhum avan├ºo de rota├º├úo acontece no Cancelar. A sele├º├úo preserva o treino corrente. A pr├│xima sele├º├úo autom├ítica futura segue pela 7b a partir do ├║ltimo selado anterior, sem contar a tentativa cancelada.
++- O caminho de borda da 07 com execu├º├úo aberta e zero marcadas, que conduz ao cancelamento em vez do selamento, segue a mesma regra do Cancelar, permanece no mesmo treino.
++
++### Execu├º├úo ainda aberta em outro treino
++
++- Fora de escopo por impossibilidade em produ├º├úo. Pela invariante R1 da 7c, existe no m├íximo uma execu├º├úo aberta por dono em n├¡vel global, garantida por ├¡ndice ├║nico parcial por autor e por guarda visual sem modal.
++- Se em ambiente de teste ou corrida for observada aberta em treino distinto do exibido, nenhum comportamento novo ├® definido aqui. Vale a guarda visual da 7c, treino sem aberta vira somente leitura com aviso nomeado, leitura e troca livres. Nenhum selamento cruzado ├® criado nesta feature.
++- Ativar, arquivar e remover exerc├¡cio com aberta seguem bloqueados com os textos exatos da 7c, sem mudan├ºa.
++
++### Valida├º├Áes e sem├óntica herdadas
++
++- Sem valida├º├úo nova de valores. Valem as regras herdadas de treinos, s├®ries planejadas, execu├º├úo s├®rie a s├®rie, selamento da 07, rota├º├úo da 7b e guarda da 7c.
++- Vazio e aus├¬ncia de programa ativo, de treinos ou de hist├│rico. Zero n├úo se aplica a esta sele├º├úo. Nome de treino segue obrigat├│rio e ├║nico no programa com compara├º├úo normalizada, mesma regra da 03 e 04.
++- O Treino do Dia exibe o modelo ao vivo com marcadores de feito por s├®rie vindos da execu├º├úo. Enquanto houver aberta, o modelo daquele treino fica bloqueado para edi├º├úo na manuten├º├úo com aviso vis├¡vel, mesma regra da 05 e 07.
++- Edi├º├úo simult├ónea pelos dois usu├írios segue o comportamento existente, sem trava. A ├║ltima grava├º├úo prevalece.
++
++## 4. Fora de Escopo (YAGNI)
++
++Dentro desta vers├úo, somente o avan├ºo autom├ítico da exibi├º├úo ap├│s Finalizar com sucesso e a perman├¬ncia no mesmo treino ap├│s Cancelar com sucesso, sobre a rota├º├úo vigente da 7b e a guarda vigente da 7c.
++
++Fora, item por item: mudan├ºa no selamento ou no cancelamento em dados, reabrir execu├º├úo ap├│s selar, editar execu├º├úo ap├│s selar, lista de hist├│rico de treinos realizados, resumo por treino com dura├º├úo e volume, acerto de hor├írio e c├ílculo de dura├º├úo, timer de descanso autom├ítico, notifica├º├úo de fim de descanso, nova regra de rota├º├úo ou de ordem, reordena├º├úo de treinos, duplicar treino ou exerc├¡cio, mover treino entre programas, substitui├º├úo de exerc├¡cio na hora, s├®ries de aquecimento ou extra, escala de esfor├ºo, repeti├º├Áes at├® a falha, observa├º├Áes r├ípidas por exerc├¡cio, permiss├Áes restritas, ├íreas privadas, integra├º├úo com aplicativos externos, importa├º├úo ou exporta├º├úo de fichas, nova regra de ciclo de vida de programa, mudan├ºa na guarda de ativa├º├úo, sincroniza├º├úo em tempo real entre dispositivos, expira├º├úo autom├ítica de aberta, relat├│rio de execu├º├Áes ├│rf├ús, tratamento novo para aberta em outro treino al├®m da guarda da 7c.
++
++Hist├│rico e resumo pertencem a feature 09. Timer pertence a feature 06. Ajuste responsivo pertence a feature 08.
++
++## 5. Crit├®rios de Aceite
++
++| n├║mero | Crit├®rio | Verifica├º├úo |
++|---|---|---|
++| 1 | Dado Treino do Dia com execu├º├úo aberta no treino corrente, quando confirmo o Finalizar com sucesso, ent├úo a p├ígina passa a exibir o pr├│ximo treino da rota├º├úo 7b, vizinho seguinte ao ├║ltimo selado na ordem atual, com volta ao primeiro ap├│s o ├║ltimo | Manual e automatizado |
++| 2 | Dado programa ativo com treinos na ordem e ├║ltimo selado sendo o rec├®m finalizado, quando o avan├ºo acontece, ent├úo o exibido ├® o vizinho seguinte, e quando o selado era o ├║ltimo da ordem, ent├úo o exibido ├® o primeiro da ordem | Manual e automatizado |
++| 3 | Dada execu├º├úo parcial selada pelo Finalizar, o avan├ºo segue a mesma regra da completa, sem diferen├ºa entre parcial e completa | Manual e automatizado |
++| 4 | Dado acionamento de Cancelar com execu├º├úo aberta, quando confirmo com sucesso, ent├úo a p├ígina permanece no mesmo treino, sem execu├º├úo aberta e sem s├®ries marcadas | Manual e automatizado |
++| 5 | Dado o caminho de borda com execu├º├úo aberta e zero marcadas, quando confirmo a condu├º├úo ao cancelamento, ent├úo nada ├® selado e a p├ígina permanece no mesmo treino | Manual e automatizado |
++| 6 | Dado Treino do Dia sem programa ativo ou programa ativo sem treinos, quando abro a aba, ent├úo vejo o vazio herdado da 04 e 7b com orienta├º├úo, sem erro e sem avan├ºo | Manual e automatizado |
++| 7 | Dada falha de carga na nova sele├º├úo ap├│s Finalizar, a pessoa v├¬ mensagem com nova tentativa pelo estado ass├¡ncrono central, e o acionamento recarrega. Dada falha de opera├º├úo ou bloqueio, a mensagem aparece sem nova tentativa e a tela ├® preservada | Manual e automatizado |
++| 8 | Dada falha no selamento ou no cancelamento antes do sucesso, nada avan├ºa e nada preserva sele├º├úo nova. O modal n├úo fecha no erro, o digitado e as marca├º├Áes s├úo preservados, mesma regra da 07 | Manual e automatizado |
++| 9 | Su├¡te completa verde, sem quebra de testes existentes, cobertura mantida em pelo menos oitenta por cento, relat├│rio de testes regenerado antes da revis├úo | Automatizado |
++
++## 6. Riscos e Depend├¬ncias
++
++Depende do Treino do Dia da 04 com programa ativo do dono e troca restrita, da execu├º├úo s├®rie a s├®rie da 05 com in├¡cio registrado e modelo ao vivo, do selamento e cancelamento da 07 com momento de t├®rmino e parcial assumido, da rota├º├úo da 7b com prioridade da aberta e pr├│ximo pelo ├║ltimo selado com ordem pr├│pria, e da guarda da 7c com no m├íximo uma aberta por dono global e fonte ├║nica de execu├º├úo ativa. Sem essas cinco bases, n├úo h├í o que avan├ºar nem onde permanecer.
++
++A sele├º├úo vigente j├í resolve aberta do programa e ├║ltimo selado e exp├Áe recarga para nova tentativa. Esta feature reutiliza essa recarga ap├│s o selamento, sem criar ordem nova. Qualquer diverg├¬ncia entre Treino do Dia e manuten├º├úo ap├│s selar, cancelar ou reordenar deve ser tratada como defeito desta feature.
++
++O momento de t├®rmino ├® gravado hoje com rel├│gio do cliente, com decis├úo de revisitar na 09. A rota├º├úo ordena pelo t├®rmino gravado como ele est├í. Normaliza├º├úo futura para rel├│gio do banco pode reordenar empates pr├│ximos, sem mudan├ºa nesta feature.
++
++A trava vigente p├│s 7c ├® de no m├íximo uma aberta por dono global. Dois donos podem ter abertas pr├│prias em treinos distintos sem desvio cruzado, pela separa├º├úo por dono. Concorr├¬ncia entre dispositivos segue sem sincroniza├º├úo em tempo real, com ├║ltima grava├º├úo prevalecendo, mesma limita├º├úo conhecida da 7c.
++
++Nenhuma migra├º├úo nova ├® esperada, pois s├│ se l├¬ e escreve o que j├í existe. A reserva de n├║mero sequencial e a defini├º├úo de necessidade de script novo s├úo assunto do plano da Atena. Nenhuma migra├º├úo j├í aplicada ├® editada ou renomeada.
++
++Cen├írios de teste bloqueados por depend├¬ncia futura seguem a regra do backlog do m├│dulo. O que n├úo for execut├ível nesta feature por depender de hist├│rico vis├¡vel, timer ou responsivo ├® repassado a feature que o libera.
++
++## 7. Alternativas Consideradas
++
++Alternativa 1, caminho sugerido no pedido, recarga cheia da p├ígina ap├│s Finalizar. A p├ígina recarrega por inteiro e a fun├º├úo que calcula o pr├│ximo treino ├® ativada na abertura, exibindo o seguinte da rota├º├úo. A favor, simplicidade m├íxima, reaproveita o caminho de abertura j├í testado, sem estado transit├│rio. Contra, pisca a tela, perde posi├º├úo de rolagem e refaz cargas que j├í estavam em mem├│ria. Esfor├ºo baixo, risco baixo, experi├¬ncia com interrup├º├úo vis├¡vel.
++
++Alternativa 2, nova sele├º├úo pelos ganchos sem recarga cheia. Ap├│s o selamento com sucesso, a p├ígina invalida a fonte ├║nica de execu├º├úo ativa e aciona a recarga da sele├º├úo do Treino do Dia, que recalcula o pr├│ximo e troca o identificador selecionado. Segue o padr├úo j├í usado na 7c para liberar escrita sem recarga, estendido ao avan├ºo. A favor, sem pisco cheio, preserva casca da p├ígina e reaproveita recarga existente. Contra, exige compor duas recargas na ordem certa e tratar erro de cada uma. Esfor├ºo m├®dio, risco m├®dio, experi├¬ncia mais fluida.
++
++Alternativa 3, troca direta do identificador sem recalcular. Ap├│s o selamento, a p├ígina calcula o vizinho seguinte na lista j├í carregada e troca o selecionado localmente. A favor, resposta imediata, sem ida a dados. Contra, duplica a regra de pr├│ximo fora da fonte vigente, diverge da 7b em casos de reordena├º├úo concorrente ou lista desatualizada, exige sincronizar a fonte de execu├º├úo ativa em separado. Esfor├ºo m├®dio, risco alto de diverg├¬ncia, experi├¬ncia r├ípida por├®m fr├ígil.
++
++Escolha proposta para a Atena decidir no plano: alternativa 2 como preferida, por manter fonte ├║nica da 7b e da 7c sem duplicar regra e sem pisco cheio, com a alternativa 1 como queda natural se a composi├º├úo de recargas se mostrar inst├ível. A alternativa 3 fica rejeitada por duplicar a regra de pr├│ximo.
++
++## Modelo de Dom├¡nio
++
++Entidades em linguagem natural, sem c├│digo.
++
++Programa agrupa treinos vigentes de um dono, vis├¡vel para os dois usu├írios, com estado rascunho, ativo ou inativo. Treino pertence a um programa, com nome ├║nico no programa e posi├º├úo pr├│pria na ordem do programa. Entrada de exerc├¡cio pertence a um treino e a um exerc├¡cio da biblioteca, com posi├º├úo, descanso ├║nico, modo e unidade de carga. S├®rie planejada pertence a uma entrada, com posi├º├úo, valor ├║nico e carga. Execu├º├úo ├® a inst├óncia do treino feito no dia, pertence a um treino e a um programa, com momento de in├¡cio, momento de t├®rmino opcional e autor. S├®rie realizada pertence a uma execu├º├úo, a uma entrada e a uma s├®rie planejada, com posi├º├úo, retrato de valor e carga, e autor.
++
++Diagrama textual:
++
++Programa um para muitos Treino, por dono, com estado rascunho, ativo ou inativo.
++Treino um para muitos Entrada de exerc├¡cio, em ordem por posi├º├úo pr├│pria do treino no programa e posi├º├úo da entrada no treino.
++Exerc├¡cio da biblioteca um para muitos Entrada de exerc├¡cio, com nome, grupo muscular e v├¡deo.
++Entrada de exerc├¡cio um para muitos S├®rie planejada, em ordem por posi├º├úo.
++Treino um para muitos Execu├º├úo, com no m├íximo uma aberta por dono global na trava vigente, aberta e t├®rmino vazio, selada e t├®rmino preenchido, cancelada e exclu├¡da.
++Execu├º├úo um para muitos S├®rie realizada, uma por s├®rie planejada dentro da execu├º├úo, exclu├¡da em cascata ao cancelar.
++S├®rie planejada um para muitos S├®rie realizada ao longo de execu├º├Áes distintas, cada retrato guarda valor e carga do momento.
++Ordem do programa ├® a sequ├¬ncia das posi├º├Áes dos treinos. ├Ültimo selado ├® a execu├º├úo selada mais recente do programa ativo pelo momento de t├®rmino. Pr├│ximo sem aberta ├® o vizinho seguinte ao ├║ltimo selado nessa sequ├¬ncia, com volta ao primeiro. Ap├│s Finalizar com sucesso, o exibido passa a ser esse pr├│ximo. Ap├│s Cancelar com sucesso, o exibido permanece o mesmo treino.
++
++## Premissas T├®cnicas Validadas
++
++| Premissa | Validada com Humano? Sim | Evid├¬ncia em disco |
++|---|---|---|
++| Existe p├ígina do Treino do Dia que comp├Áe seletor de treinos e se├º├úo de detalhe com execu├º├úo ligada e bot├Áes de Cancelar no topo e Finalizar no rodap├® | Sim | Leitura da p├ígina do Treino do Dia com seletor, se├º├úo de detalhe, a├º├Áes de topo e rodap├® e trava de somente leitura por programa inativo |
++| A sele├º├úo atual resolve programa ativo do dono, lista treinos, prioriza aberta do programa e sem aberta escolhe o pr├│ximo pelo ├║ltimo selado com volta ao primeiro, e exp├Áe recarga para nova tentativa | Sim | Leitura do gancho de sele├º├úo do Treino do Dia com busca de programa ativo, listagem de treinos, busca de aberta do programa, busca de ├║ltimo selado e fun├º├úo de pr├│ximo ap├│s selado |
++| Existe fonte ├║nica de execu├º├úo aberta por dono global, com recarga pr├│pria | Sim | Leitura do gancho de execu├º├úo ativa por dono com busca de email e leitura de aberta por dono |
++| Ap├│s Finalizar ou Cancelar com sucesso a se├º├úo avisa a p├ígina, que invalida a fonte ├║nica para liberar escrita sem recarga cheia | Sim | Leitura da p├ígina do Treino do Dia com aviso de assentamento ligado a recarga da fonte ├║nica e leitura da se├º├úo com aviso ap├│s selamento e cancelamento |
++| O selamento grava o t├®rmino e o cancelamento exclui a aberta com cascata, sem regra nova de dados nesta feature | Sim | Spec da 07 com efeito do selamento e do cancelamento e acesso a dados de execu├º├Áes com atualiza├º├úo de t├®rmino e exclus├úo por identificador |
++| A trava vigente ├® de no m├íximo uma aberta por dono global, ent├úo aberta em outro treino n├úo acontece em produ├º├úo | Sim | Pedido humano de 2026-10-16 com R1 por dono global e spec da 7c com ├¡ndice ├║nico parcial por autor e guarda visual sem modal |
++| Treino sem execu├º├úo e programa inativo seguem somente leitura, sem a├º├Áes de selar | Sim | Leitura da se├º├úo de detalhe com trava efetiva de leitura e specs da 02 a 04 com guarda de programa inativo |
++| Vazio sem programa ou sem treinos usa mensagem de sem treino ativo com orienta├º├úo | Sim | Leitura da p├ígina do Treino do Dia com vazio por programa nulo ou lista vazia e specs da 04 e 7b com vazio herdado |
++
++## Cen├írios de Edge Case
++
++| Cen├írio | Comportamento esperado |
++|---|---|
++| Programa ativo sem hist├│rico e Finalizar o primeiro | Pr├│ximo segue a regra da 7b para lista com um selado recente, sem erro |
++| Ficha nova com programa novo ativo | Avan├ºo acontece dentro do novo programa, sem herdar hist├│rico da ficha antiga |
++| ├Ültimo da ordem selado pelo Finalizar | Pr├│xima exibi├º├úo ├® o primeiro da ordem, com giro cont├¡nuo |
++| Parcial selada como ├║ltimo | Conta igual a completa para definir o pr├│ximo |
++| Execu├º├úo aberta n├úo selada | N├úo conta como ├║ltimo para a rota├º├úo, mas venceria a exibi├º├úo se existisse. Ap├│s Finalizar n├úo h├í aberta corrente, ent├úo vale o pr├│ximo por selado |
++| Dois donos com abertas pr├│prias | Cada dono avan├ºa na pr├│pria rota├º├úo, sem desvio cruzado, pela separa├º├úo por dono |
++| Aberta em treino reordenado antes de finalizar | A pessoa finaliza a aberta atual e o pr├│ximo vale na nova posi├º├úo |
++| Execu├º├úo cancelada por exclus├úo | N├úo deixa hist├│rico, pr├│ximo segue pelo ├║ltimo selado anterior, sem avan├ºo no Cancelar |
++| Excluir treino com exerc├¡cios ou com execu├º├úo | Bloqueado com mensagem vis├¡vel, nada removido, ordem inalterada, mesma regra da 03 e 7b |
++| Troca manual ap├│s o avan├ºo | Permitida entre treinos do programa ativo, sem reescrever hist├│rico nem travar pr├│xima sele├º├úo |
++| Dois usu├írios selando quase juntos | Vale o t├®rmino mais recente gravado, no m├íximo uma aberta por dono pela trava parcial |
++| Falha de carga na nova sele├º├úo ap├│s Finalizar | Mensagem com nova tentativa pelo estado ass├¡ncrono central, sem exibir pr├│ximo at├® carregar |
++| Falha de opera├º├úo ou bloqueio no selar ou cancelar | Mensagem sem nova tentativa, modal n├úo fecha, digitado e marca├º├Áes preservados |
++| Treino sem exerc├¡cios | Sem s├®ries para marcar e sem aberta. Sem Finalizar no caso normal, mesma regra do vazio da 07 |
++| Migra├º├úo legada sem posi├º├úo de treino | Posi├º├úo inicial equivale a cria├º├úo, reordena├º├úo futura reescreve a sequ├¬ncia, sem impacto no avan├ºo al├®m da ordem atual |
++| Falha de rede ap├│s gravar t├®rmino com erro no retorno | Sem reabrir nem editar. Erro vira mensagem de opera├º├úo. Nova carga reflete o banco e o pr├│ximo por selado |
+diff --git a/.agents/modules/milon/07b-1-avancar-proximo-treino/tasks.json b/.agents/modules/milon/07b-1-avancar-proximo-treino/tasks.json
+new file mode 100644
+index 0000000..45cec8e
+--- /dev/null
++++ b/.agents/modules/milon/07b-1-avancar-proximo-treino/tasks.json
+@@ -0,0 +1,164 @@
++{
++  "tasks": [
++    {
++      "id": "TASK-001",
++      "title": "RED do contrato de desfecho e foco na se├º├úo de detalhe",
++      "description": "Estabelecer em teste RED o contrato novo da WorkoutDetailSection: onExecutionSettled passa a receber o desfecho da opera├º├úo (sealed nos tr├¬s caminhos de selamento ÔÇö parcial confirmada, completa confirmada e completo direto ÔÇö e cancelled nos dois caminhos de exclus├úo ÔÇö Cancelar confirmado e Finalizar vazio conduzido), nunca ├® emitido no erro, e a nova prop opcional focusHeaderSignal foca o cabe├ºalho rotulado Cabe├ºalho do treino (tabIndex menos um) ao montar com sinal n├úo-nulo e a cada mudan├ºa do sinal. Minos escreve apenas os testes; produ├º├úo intocada.",
++      "assignee": "minos",
++      "dependsOn": [],
++      "acceptanceCriteria": [
++        "npm test -- __tests__/components/milon/WorkoutDetailSection.test.tsx ÔåÆ FAIL esperado (assinatura atual de onExecutionSettled sem argumento e aus├¬ncia de focusHeaderSignal)",
++        "npx tsc --noEmit ÔåÆ exit 0 (RED sem erro de sintaxe ou tipo)",
++        "Caso RED: confirmar Finalizar parcial emite onExecutionSettled com o desfecho sealed",
++        "Caso RED: Finalizar completo direto (requestFinish) emite onExecutionSettled com o desfecho sealed",
++        "Caso RED: confirmar Cancelar emite onExecutionSettled com o desfecho cancelled",
++        "Caso RED: confirmar o Finalizar vazio conduzido ao cancelamento emite onExecutionSettled com o desfecho cancelled (n├úo sealed)",
++        "Caso RED: falha ao confirmar Finalizar ou Cancelar n├úo emite onExecutionSettled (nenhum desfecho)",
++        "Caso RED: focusHeaderSignal n├úo-nulo foca o elemento rotulado Cabe├ºalho do treino ao montar a se├º├úo e a cada novo valor do sinal",
++        "Crit├®rios rastreados da spec: 1, 4, 5 e 8 da spec ┬º5 mais o foco da spec ┬º2"
++      ],
++      "files": [
++        "__tests__/components/milon/WorkoutDetailSection.test.tsx"
++      ],
++      "consumes": [
++        "plan.md ┬º3 Contratos Completos (assinatura do desfecho sealed|cancelled em onExecutionSettled; prop opcional focusHeaderSignal number|null; cabe├ºalho com aria-label Cabe├ºalho do treino e tabindex -1)",
++        "spec.md ┬º3 (efeito do selamento e do cancelamento) e ┬º5 (crit├®rios 1, 4, 5, 8)"
++      ],
++      "produces": [
++        "RED do desfecho por caminho de sucesso na se├º├úo",
++        "RED da aus├¬ncia de desfecho no erro",
++        "RED do foco do cabe├ºalho pelo sinal"
++      ],
++      "status": "pending"
++    },
++    {
++      "id": "TASK-002",
++      "title": "Desfecho e foco do cabe├ºalho na se├º├úo em GREEN",
++      "description": "Implementar m├¡nimo para o GREEN da TASK-001 em components/milon/WorkoutDetailSection.tsx: estender a prop onExecutionSettled com o par├ómetro de desfecho; nos tr├¬s pontos de emiss├úo do ExecutionHost passar o desfecho correto, capturando o caso de finaliza├º├úo de forma s├¡ncrona anterior ├á chamada do hook (pois o hook reinicia o caso ao concluir) para distinguir selamento de vazio-conduzido; adicionar a prop opcional focusHeaderSignal com foco do cabe├ºalho ao montar e a cada mudan├ºa; aplicar tabindex menos um aos cabe├ºalhos das duas ramifica├º├Áes. Nada al├®m do contrato da TASK-001.",
++      "assignee": "hefesto",
++      "dependsOn": [
++        "TASK-001"
++      ],
++      "acceptanceCriteria": [
++        "npm test -- __tests__/components/milon/WorkoutDetailSection.test.tsx ÔåÆ PASS (todos os casos da TASK-001 verdes)",
++        "onExecutionSettled ├® invocado exatamente uma vez por opera├º├úo bem-sucedida, com sealed nos tr├¬s caminhos de selamento e cancelled nos dois de exclus├úo, e nenhuma vez no erro",
++        "A captura do caso de finaliza├º├úo para decidir o desfecho ├® s├¡ncrona e anterior ├á chamada do hook (vazio conduzido emite cancelled mesmo com o hook reiniciando o caso ao concluir)",
++        "focusHeaderSignal n├úo-nulo foca o cabe├ºalho (aria-label Cabe├ºalho do treino, tabindex -1) ao montar e a cada mudan├ºa do sinal; com sinal nulo nenhum foco program├ítico acontece",
++        "Busca por `void onExecutionSettled?.()` retorna 0 em c├│digo vivo (substitui├º├úo da invoca├º├úo sem desfecho)",
++        "npx tsc --noEmit ÔåÆ exit 0",
++        "Nenhum texto de confirma├º├úo, nenhuma prop existente e nenhum outro comportamento da se├º├úo (modais, processing, relan├ºamento, slots) ├® alterado"
++      ],
++      "files": [
++        "components/milon/WorkoutDetailSection.tsx"
++      ],
++      "consumes": [
++        "RED da TASK-001 (__tests__/components/milon/WorkoutDetailSection.test.tsx)",
++        "useWorkoutExecution.requestFinish, confirmFinish, requestCancel, confirmCancelExecution (assinaturas inalteradas)"
++      ],
++      "produces": [
++        "onExecutionSettled com desfecho sealed|cancelled na se├º├úo",
++        "focusHeaderSignal e cabe├ºalho com tabindex -1 na se├º├úo"
++      ],
++      "status": "pending"
++    },
++    {
++      "id": "TASK-003",
++      "title": "RED da composi├º├úo da p├ígina do Treino do Dia",
++      "description": "Estabelecer em teste RED a composi├º├úo nova da p├ígina: no desfecho sealed, aguardar a invalida├º├úo da fonte ├║nica (retry de useActiveExecution) antes da recarga da sele├º├úo (retry de useTodayWorkout) e incrementar o sinal de foco enviado ├á se├º├úo; no desfecho cancelled, somente a invalida├º├úo da fonte ├║nica e o sinal de foco, preservando o workoutId selecionado; sem desfecho, nenhum retry; falha de carga da recarga de sele├º├úo exibida com origem carga e nova tentativa; vazio sem programa inalterado. Arquivo novo page-7b1-advance no isolamento de mocks do precedente page-ac6, mais atualiza├º├úo pontual das regress├Áes 07 e 7c se acoplarem a assinatura antiga.",
++      "assignee": "minos",
++      "dependsOn": [
++        "TASK-002"
++      ],
++      "acceptanceCriteria": [
++        "npm test -- __tests__/app/milon/today/page-7b1-advance.test.tsx ÔåÆ FAIL esperado (a p├ígina ainda s├│ invalida a fonte ├║nica, sem ramificar por desfecho nem recarregar sele├º├úo)",
++        "npx tsc --noEmit ÔåÆ exit 0",
++        "Caso RED: desfecho sealed chama o retry de useActiveExecution e depois o retry de useTodayWorkout (ordem asserida), e incrementa o focusHeaderSignal passado ├á se├º├úo",
++        "Caso RED: desfecho cancelled chama somente o retry de useActiveExecution, incrementa o sinal de foco e preserva o workoutId selecionado (a se├º├úo segue recebendo o mesmo workoutId)",
++        "Caso RED: aus├¬ncia de desfecho (caminho de falha da opera├º├úo) n├úo chama nenhum retry de sele├º├úo nem de fonte ├║nica",
++        "Caso RED: falha da recarga de sele├º├úo (retry rejeitando com origem carga) exibe mensagem com nova tentativa pelo AsyncState e nenhum treino parcial ├® exibido",
++        "Caso RED: sem programa ativo ou programa sem treinos, o vazio da 04/7b segue sem erro e sem avan├ºo (regress├úo)",
++        "Regress├Áes existentes atualizadas se e somente se as asser├º├Áes acoplarem a assinatura sem desfecho; a sem├óntica da 7c AC6 (libera├º├úo de escrita ap├│s settle) permanece coberta",
++        "Crit├®rios rastreados da spec: 1 a 8 da spec ┬º5"
++      ],
++      "files": [
++        "__tests__/app/milon/today/page-7b1-advance.test.tsx",
++        "__tests__/app/milon/today/page.test.tsx",
++        "__tests__/app/milon/today/page-ac6.test.tsx"
++      ],
++      "consumes": [
++        "Se├º├úo da TASK-002 (assinatura onExecutionSettled(desfecho) e prop focusHeaderSignal)",
++        "plan.md ┬º3 (comportamento da p├ígina: sealed ÔçÆ fonte ├║nica e ent├úo sele├º├úo; cancelled ÔçÆ s├│ fonte ├║nica; sinal de foco nos dois)",
++        "spec.md ┬º5 (crit├®rios 1 a 8) e ┬º2 (estados de tela e foco)"
++      ],
++      "produces": [
++        "RED da composi├º├úo de recargas por desfecho na p├ígina",
++        "RED da perman├¬ncia no cancelar e do sinal de foco",
++        "RED da falha de carga com retry e do vazio preservado"
++      ],
++      "status": "pending"
++    },
++    {
++      "id": "TASK-004",
++      "title": "Composi├º├úo das recargas e foco na p├ígina em GREEN",
++      "description": "Implementar m├¡nimo para o GREEN da TASK-003 em app/milon/today/page.tsx: handleExecutionSettled receber o desfecho; com sealed, aguardar o retry de useActiveExecution e ent├úo aguardar o retry de useTodayWorkout (reaproveitado, j├í desestruturado); com cancelled, aguardar somente o retry de useActiveExecution; nos dois casos incrementar o estado do sinal de foco enviado ├á se├º├úo como focusHeaderSignal. Sem chamada a selectWorkout no avan├ºo, sem mudan├ºa de assinatura de hook, sem l├│gica de dados na p├ígina.",
++      "assignee": "hefesto",
++      "dependsOn": [
++        "TASK-003"
++      ],
++      "acceptanceCriteria": [
++        "npm test -- __tests__/app/milon/today/page-7b1-advance.test.tsx __tests__/app/milon/today/page.test.tsx __tests__/app/milon/today/page-ac6.test.tsx ÔåÆ PASS",
++        "Com desfecho sealed: retry de useActiveExecution aguardado antes de retry de useTodayWorkout, e focusHeaderSignal incrementado",
++        "Com desfecho cancelled: somente retry de useActiveExecution aguardado, focusHeaderSignal incrementado, selectedWorkoutId preservado",
++        "Sem desfecho: nenhum retry chamado",
++        "A p├ígina n├úo chama selectWorkout no avan├ºo (a sele├º├úo nova vem exclusivamente do rec├ílculo do hook)",
++        "Busca por `void retryActiveExecution?.()` retorna 0 em c├│digo vivo (substitui├º├úo do handler sem desfecho)",
++        "npx tsc --noEmit ÔåÆ exit 0"
++      ],
++      "files": [
++        "app/milon/today/page.tsx"
++      ],
++      "consumes": [
++        "RED da TASK-003 (__tests__/app/milon/today/page-7b1-advance.test.tsx e regress├Áes)",
++        "useTodayWorkout.retry e useActiveExecution.retry (assinaturas inalteradas)"
++      ],
++      "produces": [
++        "P├ígina que avan├ºa no sealed e permanece no cancelled, com sinal de foco nos dois desfechos"
++      ],
++      "status": "pending"
++    },
++    {
++      "id": "TASK-005",
++      "title": "Su├¡te completa verde, cobertura, storybook e artefatos de teste",
++      "description": "Reexecutar a su├¡te completa do projeto com coverage, validar o build do Storybook, regenerar o test-report.json da feature, escrever o test-scenarios.md com os cen├írios Dado/Quando/Ent├úo (incluindo os deixa-para-a-homologa├º├úo manual) e promover no regression.md do m├│dulo os cen├írios das features 07, 7b e 7c que esta feature toca por composi├º├úo. Minos n├úo corrige produ├º├úo: qualquer quebra identificada volta para Hefesto via Zeus.",
++      "assignee": "minos",
++      "dependsOn": [
++        "TASK-004"
++      ],
++      "acceptanceCriteria": [
++        "npm test ÔåÆ 0 falhas (suite completa sem quebra das features 01 a 07c)",
++        "npm test -- --coverage ÔåÆ lines e branch ÔëÑ 80 por cento",
++        "npm run build-storybook ÔåÆ exit 0",
++        "Crit├®rios 1 a 9 da spec ┬º5 cobertos entre automatizado e manual em .agents/modules/milon/07b-1-avancar-proximo-treino/test-scenarios.md",
++        "Cen├írios de regress├úo 07 (quatro casos de confirma├º├úo, vazio de borda, imutabilidade p├│s-selo), 7b (prioridade de aberta, giro com volta ao primeiro, troca manual) e 7c (libera├º├úo de escrita ap├│s settle, guarda por dono) promovidos em .agents/modules/milon/regression.md",
++        ".agents/modules/milon/07b-1-avancar-proximo-treino/test-report.json regenerado com failed igual a zero e coverage ÔëÑ 80 antes da revis├úo"
++      ],
++      "files": [
++        "__tests__/app/milon/today/page-7b1-advance.test.tsx",
++        "__tests__/components/milon/WorkoutDetailSection.test.tsx",
++        ".agents/modules/milon/07b-1-avancar-proximo-treino/test-report.json",
++        ".agents/modules/milon/07b-1-avancar-proximo-treino/test-scenarios.md",
++        ".agents/modules/milon/regression.md"
++      ],
++      "consumes": [
++        "Se├º├úo verde da TASK-002 e p├ígina verde da TASK-004",
++        "spec.md ┬º5 (crit├®rios 1 a 9) e ┬º2 (estados de tela, foco, vazio)"
++      ],
++      "produces": [
++        "Su├¡te verde sem quebra",
++        "Coverage mantida ÔëÑ 80",
++        "test-report.json, test-scenarios.md e regression.md prontos para o review do Argos"
++      ],
++      "status": "pending"
++    }
++  ]
++}
+diff --git a/.agents/modules/milon/07b-1-avancar-proximo-treino/test-report.json b/.agents/modules/milon/07b-1-avancar-proximo-treino/test-report.json
+new file mode 100644
+index 0000000..c7266bb
+--- /dev/null
++++ b/.agents/modules/milon/07b-1-avancar-proximo-treino/test-report.json
+@@ -0,0 +1,96 @@
++{
++  "byTask": {
++    "TASK-001": "passed",
++    "TASK-002": "passed",
++    "TASK-003": "passed",
++    "TASK-004": "passed",
++    "TASK-005": "passed"
++  },
++  "commands": {
++    "coverage": "npm test -- --coverage (vitest run --coverage, reporter v8)",
++    "suite": "npm test",
++    "storybook": "npm run build-storybook",
++    "tsc": "npx tsc --noEmit",
++    "lint": "npm run lint",
++    "todoSearch": "Select-String case-sensitive \\bTODO\\b|\\bTBD\\b|\\bFIXME\\b em lib, components, app, __tests__, utils/migrations"
++  },
++  "coverage": {
++    "branches": 83.63,
++    "functions": 75.54,
++    "lines": 84.74,
++    "reporter": "v8",
++    "statements": 84.74
++  },
++  "feature": "07b-1-avancar-proximo-treino",
++  "filesTouched": [
++    "app/milon/today/page.tsx",
++    "components/milon/WorkoutDetailSection.tsx"
++  ],
++  "gaps": [
++    "Gates globais aprovam (lines 84.74 >= 80 e branch 83.63 >= 80). Arquivos legados fora do escopo seguem abaixo de 80 e nao bloqueiam (pre-existentes, idem 07c): lib/pluto/repositories 17.66% stmts, lib/pluto/db 42.85%, lib/shared 57.67%, utils/supabase 0%.",
++    "Pontos tocados pela 7b-1 medidos no coverage-final.json (statements/branch): app/milon/today/page.tsx 100% (95/95) / 96.97% (32/33); components/milon/WorkoutDetailSection.tsx 79.75% (563/706) / 82.3% (93/113); lib/milon/hooks/useTodayWorkout.ts 77.25% / 65.38%; useActiveExecution.ts 93.15% / 76.19%; useWorkoutExecution.ts 89.55% / 67.82% ÔÇö ramos restantes sao majoritariamente caminhos de erro/legados ja exercitados indiretamente; gate do modulo e global (lines+branch).",
++    "Functions global 75.54% segue abaixo de 80 (idem 07c com 74.76%) ÔÇö o crit├®rio de aceite e do plano pede lines e branch >= 80, ambos atendidos.",
++    "Branch variou entre 83.57 e 83.63 em duas execucoes do mesmo comando (ambas >= 80); reportado o valor da execucao final salva.",
++    "Cenarios manuais nao exercitaveis em jsdom ficam declarados no test-scenarios.md (giro real em dispositivo, teclado/leitor de tela no foco, queda real de rede) ÔÇö sem tentativa de automatizacao falsa.",
++    "Minos tocou somente artefatos de teste (test-report.json, test-scenarios.md, regression.md); nenhum arquivo de producao foi alterado nesta task."
++  ],
++  "gates": {
++    "coverageBranchesGte80": {
++      "actual": 83.63,
++      "expected": "branches >= 80",
++      "status": "passed"
++    },
++    "coverageLinesGte80": {
++      "actual": 84.74,
++      "expected": "lines >= 80",
++      "status": "passed"
++    },
++    "suiteZeroFailures": {
++      "actual": "127 files passed, 1636 tests passed, 0 failed",
++      "expected": "0 falhas",
++      "status": "passed"
++    },
++    "todoZero": {
++      "actual": 0,
++      "expected": 0,
++      "note": "Busca case-sensitive \\bTODO\\b|\\bTBD\\b|\\bFIXME\\b retorna 0 em lib, components, app, __tests__, utils/migrations (a busca case-insensitive da 8 ocorrencias de 'todo'/'Todo' ÔÇö comentarios e texto 'Todo Vapor' ÔÇö falsos positivos, nao placeholders).",
++      "status": "passed"
++    },
++    "tscExit0": {
++      "actual": "TSC_EXIT:0",
++      "expected": "exit 0",
++      "status": "passed"
++    },
++    "lintExit0": {
++      "actual": "0 errors, 73 warnings",
++      "expected": "exit 0 (0 errors)",
++      "status": "passed",
++      "note": "Warnings pre-existentes (ex.: useMonthsData.ts silent, fakeBudgetRepository.ts _email) ÔÇö nenhum erro, nenhum deles criado pela 7b-1."
++    },
++    "storybookExit0": {
++      "actual": "SB_EXIT:0 (Storybook build completed successfully, output storybook-static)",
++      "expected": "exit 0",
++      "status": "passed"
++    }
++  },
++  "outputs": {
++    "coverageTail": "Test Files 127 passed (127) | Tests 1636 passed (1636) | Coverage report from v8 | All files 84.74 stmts, 83.63 branch, 75.54 funcs, 84.74 lines",
++    "suiteTail": "Test Files 127 passed (127) | Tests 1636 passed (1636)",
++    "storybookTail": "Vite built in 16.86s | Output directory: P:/workspace/IA/hestia/storybook-static | Storybook build completed successfully"
++  },
++  "spotChecks": {
++    "__tests__/app/milon/today/page-7b1-advance.test.tsx": "7 tests passed (novo da 7b-1: sealed, cancelled, sem desfecho, retrocompat DA3, falha de carga, 2 vazios)",
++    "__tests__/components/milon/WorkoutDetailSection.test.tsx": "63 tests passed no arquivo, sendo 9 do bloco 07b-1 (desfecho por caminho + ausencia no erro + foco)",
++    "__tests__/app/milon/today/page.test.tsx": "37 tests passed (regressao 07/7c preservada com a assinatura nova)",
++    "__tests__/app/milon/today/page-ac6.test.tsx": "2 tests passed (7c AC6: liberacao de escrita apos settle sem reload)",
++    "comando dirigido dos 4 arquivos": "Test Files 4 passed (4) | Tests 109 passed (109) | exit 0"
++  },
++  "status": "passed",
++  "summary": {
++    "coverage": 84.74,
++    "failed": 0,
++    "passed": 1636,
++    "skipped": 0,
++    "testFiles": 127
++  }
++}
+diff --git a/.agents/modules/milon/07b-1-avancar-proximo-treino/test-scenarios.md b/.agents/modules/milon/07b-1-avancar-proximo-treino/test-scenarios.md
+new file mode 100644
+index 0000000..feb8b03
+--- /dev/null
++++ b/.agents/modules/milon/07b-1-avancar-proximo-treino/test-scenarios.md
+@@ -0,0 +1,179 @@
++# Cen├írios de homologa├º├úo ÔÇö 07b-1 Avan├ºar para o pr├│ximo treino ao finalizar
++
++> Derivados exclusivamente de `spec.md` (┬º5 crit├®rios 1ÔÇô9, ┬º2 estados de tela e foco, ┬º3 efeitos do Finalizar/Cancelar) + contratos do `plan.md` ┬º3. Sem cen├írios de Atena (n├úo gerada por ela, sem vi├®s).
++> Cobrem os crit├®rios 1 a 9 da spec ┬º5: crit├®rios 1 a 8 com ÔëÑ1 cen├írio automatizado, mais o cen├írio manual correspondente quando n├úo exercit├ível em jsdom; crit├®rio 9 ├® 100% automatizado.
++> Marcadores: **[Automatizado]** (arquivo + caso real em disco) ou **[Manual]** (homologa├º├úo humana ÔÇö dispositivo/navegador real, teclado ou leitor de tela).
++> Textos das features anteriores (07/7b/7c) citados entre aspas exatas quando relevantes ÔÇö sem par├ífrase nova (nenhum texto foi criado nesta feature).
++> Gerado em 2026-10-16 p├│s-suite verde: 1636 testes / 127 arquivos / 0 falhas, coverage 84.74% lines e 83.63% branch, Storybook exit 0 (ver `test-report.json`).
++
++**Pr├®-requisito comum (cen├írios manuais):** programa ativo do dono com ao menos dois treinos com s├®ries (ex.: **Treino A**, **Treino B**, **Treino C**), logado como dono, na aba Treino do Dia (`/milon/today`).
++
++---
++
++## Crit├®rio 1 ÔÇö Finalizar com sucesso exibe o pr├│ximo da rota├º├úo
++
++### Cen├írio 1: Finalizar completo direto avan├ºa a exibi├º├úo (crit├®rio 1) [Automatizado]
++**Dado** Treino do Dia com execu├º├úo aberta no treino corrente e todas as s├®ries marcadas
++**Quando** a pessoa aciona `Finalizar` (selamento direto pelo bot├úo do rodap├®)
++**Ent├úo** a se├º├úo emite o desfecho `sealed` exatamente uma vez e a p├ígina invalida a fonte ├║nica antes de recarregar a sele├º├úo, exibindo o pr├│ximo treino e incrementando o sinal de foco do cabe├ºalho
++**Automatizado:** `__tests__/components/milon/WorkoutDetailSection.test.tsx` ÔåÆ "Finalizar completo direto (requestFinish no caso completo) emite onExecutionSettled com desfecho 'sealed'"; `__tests__/app/milon/today/page-7b1-advance.test.tsx` ÔåÆ "desfecho sealed: invalida a fonte ├║nica AGUARDA e ent├úo recarrega a sele├º├úo, e incrementa o focusHeaderSignal"
++
++### Cen├írio 2: Avan├ºo real no dispositivo (crit├®rio 1) [Manual]
++**Dado** celular na academia com programa ativo de tr├¬s treinos e o Treino B exibido com execu├º├úo aberta
++**Quando** a pessoa finaliza (completo direto ou confirmado) com sucesso
++**Ent├úo** a tela passa a exibir o Treino C da ordem vigente, sem recarregar o navegador, sem marca├º├Áes herdadas do treino anterior e sem navegar para fora do Treino do Dia; o foco vai ao cabe├ºalho do treino exibido
++
++---
++
++## Crit├®rio 2 ÔÇö Vizinho seguinte e volta ao primeiro
++
++### Cen├írio 3: ├Ültimo selado no meio da ordem ÔåÆ vizinho seguinte (crit├®rio 2) [Automatizado]
++**Dado** programa com treinos A, B, C em ordem e ├║ltima selada a B, sem execu├º├úo aberta
++**Quando** a sele├º├úo ├® (re)calculada
++**Ent├úo** o exibido ├® o vizinho seguinte, C
++**Automatizado:** `__tests__/lib/milon/hooks/useTodayWorkout-rotation.test.ts` ÔåÆ "Dado ├║ltimo selado B sem aberta, o Treino do Dia exibe C (vizinho seguinte)"
++
++### Cen├írio 4: ├Ültimo selado ├® o derradeiro ÔåÆ volta ao primeiro (crit├®rio 2) [Automatizado]
++**Dado** programa com treinos A, B, C em ordem e ├║ltima selada a C, sem execu├º├úo aberta
++**Quando** a sele├º├úo ├® (re)calculada
++**Ent├úo** o exibido ├® o primeiro da ordem, A, fechando o giro
++**Automatizado:** `__tests__/lib/milon/hooks/useTodayWorkout-rotation.test.ts` ÔåÆ "Dado ├║ltimo selado C (derradeiro) sem aberta, o Treino do Dia volta ao primeiro (A)"
++
++### Cen├írio 5: Giro real ao finalizar o ├║ltimo da ordem (crit├®rio 2) [Manual]
++**Dado** programa ativo cujo exibido ├® o ├║ltimo treino da ordem, sem outras abertas
++**Quando** a pessoa finaliza esse treino com sucesso
++**Ent├úo** a tela exibe o primeiro treino da ordem (giro cont├¡nuo, sem erro e sem tela vazia)
++
++---
++
++## Crit├®rio 3 ÔÇö Parcial vale como completa
++
++### Cen├írio 6: Finalizar parcial confirma e avan├ºa igual ├á completa (crit├®rio 3) [Automatizado]
++**Dado** execu├º├úo aberta com parte das s├®ries marcadas (ex.: 1 de 3)
++**Quando** a pessoa aciona `Finalizar` e confirma a pergunta de parcial
++**Ent├úo** o selamento conclui (`finishExecution` com t├®rmino), a se├º├úo emite `sealed` e a p├ígina executa a mesma dupla recarga do caminho completo ÔÇö sem diferen├ºa de comportamento entre parcial e completa
++**Automatizado:** `__tests__/components/milon/WorkoutDetailSection.test.tsx` ÔåÆ "confirmar o Finalizar parcial emite onExecutionSettled com desfecho 'sealed'" (comparado ao caso completo direto do Cen├írio 1); `__tests__/lib/milon/hooks/useWorkoutExecution.test.ts` ÔåÆ "confirmFinish parcial sela com t├®rmino, recarrega e fecha (crit├®rio 5); desistir mant├®m aberta"; `__tests__/app/milon/today/page-7b1-advance.test.tsx` ÔåÆ "desfecho sealed: ÔÇª AGUARDA e ent├úo recarrega a sele├º├úo"
++
++### Cen├írio 7: Parcial no dispositivo avan├ºa como completa (crit├®rio 3) [Manual]
++**Dado** treino com 3 s├®ries das quais apenas 1 foi marcada
++**Quando** a pessoa aciona `Finalizar`, confirma a pergunta de parcial e conclui com sucesso
++**Ent├úo** a exibi├º├úo passa ao pr├│ximo treino da rota├º├úo, id├¬ntico ao resultado do caminho completo
++
++---
++
++## Crit├®rio 4 ÔÇö Cancelar permanece no mesmo treino
++
++### Cen├írio 8: Cancelar confirmado n├úo avan├ºa (crit├®rio 4) [Automatizado]
++**Dado** Treino do Dia com execu├º├úo aberta no treino corrente
++**Quando** a pessoa aciona `Cancelar` no topo e confirma a exclus├úo
++**Ent├úo** a se├º├úo emite o desfecho `cancelled`, a p├ígina invalida somente a fonte ├║nica, preserva o `workoutId` selecionado (nenhuma recarga de sele├º├úo) e incrementa o sinal de foco
++**Automatizado:** `__tests__/components/milon/WorkoutDetailSection.test.tsx` ÔåÆ "confirmar o Cancelar emite onExecutionSettled com desfecho 'cancelled'"; `__tests__/app/milon/today/page-7b1-advance.test.tsx` ÔåÆ "desfecho cancelled: SOMENTE a fonte ├║nica ├® invalidada, com foco incrementado e workoutId preservado"
++
++### Cen├írio 9: Cancelar no dispositivo mant├®m o treino limpo (crit├®rio 4) [Manual]
++**Dado** treino em execu├º├úo (badge `"Em execu├º├úo"` vis├¡vel) com s├®ries marcadas
++**Quando** a pessoa aciona `Cancelar` e confirma
++**Ent├úo** a p├ígina permanece no mesmo treino, agora sem execu├º├úo aberta (badge apagado, `started_at` limpo, cascata das realizadas) e sem nenhuma s├®rie marcada, pronta para recome├ºar do zero
++
++---
++
++## Crit├®rio 5 ÔÇö Vazio de borda conduz ao cancelamento, sem selo
++
++### Cen├írio 10: Execu├º├úo aberta com zero marcadas ÔåÆ cancelamento, nada selado (crit├®rio 5) [Automatizado]
++**Dado** execu├º├úo aberta com zero s├®ries marcadas
++**Quando** a pessoa aciona `Finalizar` e confirma a condu├º├úo ao cancelamento
++**Ent├úo** a se├º├úo emite `cancelled` (e nunca `sealed`), nenhum t├®rmino ├® gravado, a execu├º├úo ├® exclu├¡da e a p├ígina n├úo recarrega a sele├º├úo ÔÇö permanecendo no mesmo treino
++**Automatizado:** `__tests__/components/milon/WorkoutDetailSection.test.tsx` ÔåÆ "confirmar o Finalizar vazio conduzido ao cancelamento emite 'cancelled' e N├âO 'sealed' (spec ┬º5 crit├®rio 5)"; `__tests__/lib/milon/hooks/useWorkoutExecution.test.ts` ÔåÆ "vazio (0 de 3): requestFinish abre finalizar-vazio sem selar (crit├®rio 8)"; `__tests__/app/milon/today/page-7b1-advance.test.tsx` ÔåÆ "desfecho cancelled: ÔÇª workoutId preservado"
++
++### Cen├írio 11: Vazio de borda no dispositivo (crit├®rio 5) [Manual]
++**Dado** treino aberto por engano (execu├º├úo iniciada) com nenhuma s├®rie marcada
++**Quando** a pessoa aciona `Finalizar`, v├¬ a mensagem que conduz ao cancelamento e confirma
++**Ent├úo** nada ├® selado (sem hist├│rico novo), a tela permanece no mesmo treino e o estado volta a ser "sem execu├º├úo, zero marcadas"
++
++---
++
++## Crit├®rio 6 ÔÇö Vazio herdado da 04/7b
++
++### Cen├írio 12: Sem programa ativo e programa sem treinos (crit├®rio 6) [Automatizado]
++**Dado** dono sem programa ativo; em outro passe, programa ativo sem treinos
++**Quando** a pessoa abre a aba Treino do Dia
++**Ent├úo** aparece o vazio orientador herdado ("sem treino ativo" com a orienta├º├úo correspondente), sem erro, sem `Tentar novamente` e sem tentativa de avan├ºo
++**Automatizado:** `__tests__/app/milon/today/page-7b1-advance.test.tsx` ÔåÆ "sem programa ativo: vazio orientador sem erro, sem avan├ºo e sem retry algum" + "programa ativo sem treinos: vazio orientador adicionar primeiro, sem erro e sem avan├ºo"; `__tests__/app/milon/today/page.test.tsx` ÔåÆ "sem programa ativo: 'sem treino ativo' com orienta├º├úo ativar/criar, sem erro e sem retry" + "programa ativo sem treinos: 'sem treino ativo' orientando adicionar o primeiro treino"
++
++### Cen├írio 13: Vazio no dispositivo (crit├®rio 6) [Manual]
++**Dado** conta sem programa ativo (ou programa rec├®m-ativado sem treinos)
++**Quando** a pessoa abre o M├¡lon na aba Treino do Dia
++**Ent├úo** a tela exibe a mesma mensagem de sem treino ativo com orienta├º├úo das features 04/7b, sem erro e sem qualquer transi├º├úo de sele├º├úo
++
++---
++
++## Crit├®rio 7 ÔÇö Falha de carga com nova tentativa; opera├º├úo/bloqueio sem
++
++### Cen├írio 14: Falha na recarga da nova sele├º├úo p├│s-Finalizar (crit├®rio 7) [Automatizado]
++**Dado** desfecho `sealed` j├í emitido e a recarga da sele├º├úo rejeitando com origem `carga`
++**Quando** a p├ígina tenta buscar a nova sele├º├úo
++**Ent├úo** o `AsyncState` central exibe a mensagem com `"Tentar novamente"` e nenhum treino parcial ├® exibido; acionar a tentativa repete a cadeia e resolve a sele├º├úo
++**Automatizado:** `__tests__/app/milon/today/page-7b1-advance.test.tsx` ÔåÆ "falha da recarga de sele├º├úo ap├│s sealed: AsyncState exibe origem carga com nova tentativa e nenhum treino parcial"; `__tests__/app/milon/today/page.test.tsx` ÔåÆ "falha de carga: mensagem com Tentar novamente que recarrega (clique p├│s-fetch)"
++
++### Cen├írio 15: Falha de opera├º├úo e bloqueio de dom├¡nio (crit├®rio 7) [Automatizado]
++**Dado** erro com origem `operacao` ou `bloqueio` na sele├º├úo/a├º├úo
++**Quando** a mensagem ├® renderizada
++**Ent├úo** aparece sem `"Tentar novamente"` (retry derivado s├│ de `carga`), preservando a tela atual
++**Automatizado:** `__tests__/app/milon/today/page.test.tsx` ÔåÆ "falha de opera├º├úo: mensagem sem Tentar novamente" + "bloqueio de dom├¡nio: mensagem sem Tentar novamente"
++
++---
++
++## Crit├®rio 8 ÔÇö Falha no selar/cancelar preserva tudo e n├úo emite desfecho
++
++### Cen├írio 16: Falha ao confirmar Finalizar ou Cancelar (crit├®rio 8) [Automatizado]
++**Dado** modal de confirma├º├úo aberto (parcial, completa, vazio ou cancelar) com a opera├º├úo rejeitando
++**Quando** a pessoa confirma
++**Ent├úo** nenhum desfecho ├® emitido (nenhuma recarga de sele├º├úo nem de fonte ├║nica acontece na p├ígina), o modal permanece aberto com o digitado e as marca├º├Áes preservados e o erro aparece com origem `operacao`, sem nova tentativa
++**Automatizado:** `__tests__/components/milon/WorkoutDetailSection.test.tsx` ÔåÆ "falha ao confirmar o Finalizar N├âO emite onExecutionSettled (nenhum desfecho; modal preservado)" + "falha ao confirmar o Cancelar N├âO emite onExecutionSettled (nenhum desfecho; modal preservado)"; `__tests__/app/milon/today/page-7b1-advance.test.tsx` ÔåÆ "sem desfecho (falha da opera├º├úo): nenhum retry de sele├º├úo nem de fonte ├║nica, sem foco e sem avan├ºo"; `__tests__/lib/milon/hooks/useWorkoutExecution.test.ts` ÔåÆ "falha ao selar alimenta operacao, relan├ºa e N├âO fecha o modal (crit├®rio 11)"
++
++### Cen├írio 17: Queda de rede ao confirmar (crit├®rio 8) [Manual]
++**Dado** conex├úo interrompida no momento de confirmar o Finalizar ou o Cancelar
++**Quando** a pessoa confirma
++**Ent├úo** nada avan├ºa e nada ├® preservado como sele├º├úo nova: o modal continua aberto com as marca├º├Áes e o digitado intactos, a mensagem de erro aparece sem nova tentativa e a pessoa resolve (retry manual do aparelho ou nova tentativa quando a rede volta)
++
++---
++
++## Crit├®rio 9 ÔÇö Su├¡te verde, cobertura e relat├│rio
++
++### Cen├írio 18: Gates da su├¡te (crit├®rio 9) [Automatizado]
++**Dado** o reposit├│rio na feature 7b-1
++**Quando** os comandos de verifica├º├úo rodam
++**Ent├úo** `npm test` termina com 1636 testes / 127 arquivos / 0 falhas (sem quebra das features 01 a 07c), `npm test -- --coverage` termina com 84.74% lines e 83.63% branch (ambos ÔëÑ 80%), `npx tsc --noEmit` e `npm run lint` terminam em exit 0, `npm run build-storybook` termina em exit 0 e este `test-report.json` est├í regenerado com `failed = 0`
++**Automatizado:** comandos e n├║meros registrados em `test-report.json` (`gates.suiteZeroFailures`, `gates.coverageLinesGte80`, `gates.coverageBranchesGte80`, `gates.tscExit0`, `gates.lintExit0`, `gates.storybookExit0`, `gates.todoZero`)
++
++---
++
++## Foco p├│s-a├º├úo (spec ┬º2 ÔÇö manual por teclado/leitor de tela)
++
++### Cen├írio 18b: Foco no cabe├ºalho do pr├│ximo ap├│s Finalizar [Manual ÔÇö teclado/leitor de tela]
++**Dado** Finalizar conclu├¡do com sucesso (foco program├ítico exercitado em jsdom, mas navega├º├úo real n├úo)
++**Quando** a se├º├úo do pr├│ximo treino monta com o sinal de foco n├úo-nulo
++**Ent├úo** o foco cai no elemento rotulado `"Cabe├ºalho do treino"` (`tabindex="-1"`), anunciado pelo leitor de tela com o nome do novo treino; com `Tab`/`Shift+Tab` o cabe├ºalho **n├úo** entra na ordem de tabula├º├úo (foco s├│ program├ítico, sem roubo de navega├º├úo)
++**Automatizado (parcial):** `__tests__/components/milon/WorkoutDetailSection.test.tsx` ÔåÆ "focusHeaderSignal n├úo-nulo foca o cabe├ºalho ao montar e a cada novo valor do sinal (ramo de execu├º├úo)" + "ÔÇªno ramo de manuten├º├úo tamb├®m (duas ramifica├º├Áes)" + "trava: focusHeaderSignal nulo (default) n├úo move o foco program├ítico do cabe├ºalho" ÔÇö teclado/leitor de tela real permanece manual
++
++### Cen├írio 18c: Foco no mesmo cabe├ºalho ap├│s Cancelar [Manual ÔÇö teclado/leitor de tela]
++**Dado** Cancelar conclu├¡do com sucesso no treino corrente
++**Quando** a p├ígina incrementa o sinal de foco sem trocar o treino
++**Ent├úo** o foco vai/segue no cabe├ºalho `"Cabe├ºalho do treino"` do mesmo treino, sem troca de treino e sem movimento de foco em trocas manuais de treino pelo seletor
++**Automatizado (parcial):** mesmo bloco do Cen├írio 18b (mudan├ºa do sinal com se├º├úo montada) ÔÇö an├║ncio real em leitor de tela permanece manual
++
++---
++
++## Travas das features anteriores verificadas por composi├º├úo (07/7b/7c)
++
++- **07 ÔÇö quatro casos de confirma├º├úo:** textos exatos preservados em `__tests__/components/milon/WorkoutDetailSection.test.tsx` ("parcial: finishConfirmOpen com caso parcial exibe o texto exato", "cancelar: cancelConfirmOpen exibe o texto exato de exclus├úo", "Caso 4: finishConfirmOpen com caso completa exibe a pergunta de todas-executadas", "vazio: finishConfirmOpen com caso vazio exibe a mensagem que conduz ao cancelamento") e em `__tests__/lib/milon/hooks/useWorkoutExecution.test.ts` (parcial/vazio/completo/Caso 4).
++- **07 ÔÇö imutabilidade p├│s-selo:** `__tests__/lib/milon/repositories/contract-workout-executions.test.ts` ÔåÆ "busca de aberta volta vazia ap├│s selar (crit├®rio 10: selada n├úo conta como aberta)" + "duplo selamento n├úo cria selo duplicado e vira erro de opera├º├úo" + "selar execu├º├úo inexistente lan├ºa erro sem criar linha".
++- **7b ÔÇö prioridade da aberta, giro e troca manual:** `__tests__/lib/milon/hooks/useTodayWorkout-rotation.test.ts` (6 blocos: prioridade da aberta, rota├º├úo com volta, sem hist├│rico, ficha nova, troca manual, erro de carga) + `__tests__/lib/milon/repositories/contract-07b-rotation.test.ts`.
++- **7c ÔÇö libera├º├úo de escrita ap├│s settle e guarda por dono:** `__tests__/app/milon/today/page-ac6.test.tsx` ÔåÆ "Finalizar em A ÔåÆ trocar para B libera escrita SEM reload" + "Cancelar em A ÔåÆ trocar para B libera escrita SEM reload" (sem regress├úo com a assinatura nova de desfecho); `__tests__/lib/milon/repositories/contract-07c-active-owner.test.ts` + "treinos diferentes com mesmo dono recusam a segunda abertura (R1)" em `contract-workout-executions.test.ts`; guarda visual em `__tests__/app/milon/today/page.test.tsx` (bloqueio por execu├º├úo ativa) e `WorkoutDetailSection.test.tsx` (escrita bloqueada 07c).
++- **Retrocompatibilidade DA3:** `__tests__/app/milon/today/page-7b1-advance.test.tsx` ÔåÆ "chamada sem argumento (retrocompat 7c, DA3): n├úo-selamento invalida SOMENTE a fonte ├║nica e preserva o treino".
++
++## Limita├º├Áes declaradas (fora da suite, repassadas conforme o backlog)
++
++- **Giro em dispositivo real (crit├®rios 1/2/3 manuais):** a ordem de recargas ├® assertada em jsdom por ordem de chamadas; o resultado visual final (treino seguinte na tela, sem reload do navegador) exige dispositivo.
++- **Teclado/leitor de tela (Cen├írios 18b/18c):** o foco program├ítico ├® assertado via `document.activeElement` em jsdom; an├║ncio por leitor de tela e comportamento real de `Tab` n├úo s├úo exercit├íveis na suite.
++- **Falha de rede real (Cen├írio 17):** a preserva├º├úo no erro ├® assertada com rejei├º├úo simulada; a queda real de rede ├® manual.
++- **Concorr├¬ncia entre dois donos/dispositivos:** limita├º├úo conhecida da 7c (sem sync em tempo real) ÔÇö sem cen├írio determin├¡stico manual; coberta pelos contratos por dono.
+diff --git a/.agents/modules/milon/regression.md b/.agents/modules/milon/regression.md
+index a682e98..03113b1 100644
+--- a/.agents/modules/milon/regression.md
++++ b/.agents/modules/milon/regression.md
+@@ -280,6 +280,21 @@
+ **Quando** a pessoa finaliza com todas as s├®ries marcadas (sela direto) ou confirma a pergunta de parcial/vazio
+ **Ent├úo** a execu├º├úo some da aberta, o badge apaga e a manuten├º├úo volta a ficar livre, sem navegar para fora
+ 
++### REG-60: Quatro casos de confirma├º├úo da #7 ÔÇö textos exatos inalterados (promovido 7b-1)
++**Dado** o Treino do Dia com execu├º├úo aberta (parcial, completa e vazio de marcadas; mais o Cancelar)
++**Quando** a pessoa aciona `Finalizar` parcial e confirma, `Finalizar` completo direto, `Finalizar` completando a ├║ltima pendente e confirma, ou `Cancelar` e confirma
++**Ent├úo** cada caso exibe o texto exato congelado da #7, os tr├¬s caminhos de `Finalizar` selam com t├®rmino e o `Cancelar` exclui a aberta com cascata ÔÇö nenhum texto novo da #7b-1 participa
++
++### REG-61: Vazio de borda ÔÇö aberta com zero marcadas conduz ao cancelamento (promovido 7b-1)
++**Dado** execu├º├úo aberta com nenhuma s├®rie marcada
++**Quando** a pessoa aciona `Finalizar` e confirma a condu├º├úo ao cancelamento
++**Ent├úo** nada ├® selado (sem t├®rmino gravado, sem hist├│rico novo), a execu├º├úo ├® exclu├¡da e a tela permanece no mesmo treino
++
++### REG-62: Imutabilidade p├│s-selo ÔÇö selada n├úo volta a ser aberta (promovido 7b-1)
++**Dado** treino rec├®m-finalizado (execu├º├úo selada com t├®rmino)
++**Quando** a pessoa reabre o Treino do Dia ou tenta selar de novo
++**Ent├úo** a selada n├úo conta como aberta (busca de aberta volta vazia, badge apagado), o duplo selamento vira erro de opera├º├úo sem selo duplicado e o treino seguinte monta limpo, sem marca├º├Áes herdadas
++
+ ---
+ 
+ ## Feature #7b ÔÇö Rota├º├úo do Treino do Dia por hist├│rico
+@@ -289,16 +304,45 @@
+ **Quando** a pessoa sela o treino e volta ├á aba
+ **Ent├úo** o treino seguinte da ordem aparece (com volta ao primeiro)
+ 
++### REG-63: Prioridade da execu├º├úo aberta vence a rota├º├úo (promovido 7b-1)
++**Dado** execu├º├úo aberta em um treino do programa ativo, com hist├│rico de selados no programa
++**Quando** a pessoa abre ou recalcula o Treino do Dia
++**Ent├úo** o treino da aberta ├® exibido, vencendo o pr├│ximo pelo ├║ltimo selado
++
++### REG-64: Giro com volta ao primeiro (promovido 7b-1)
++**Dado** programa com treinos em ordem pr├│pria e o ├║ltimo selado sendo o derradeiro (sem aberta)
++**Quando** a sele├º├úo ├® recalculada (abertura, nova tentativa ou avan├ºo p├│s-selo)
++**Ent├úo** o exibido ├® o primeiro da ordem; com o ├║ltimo selado no meio da ordem, o vizinho seguinte
++
++### REG-65: Troca manual entre treinos do programa ativo (promovido 7b-1)
++**Dado** o Treino do Dia com dois ou mais treinos no programa ativo
++**Quando** a pessoa troca de treino pelo seletor para consulta
++**Ent├úo** a troca acontece livre entre treinos do programa ativo, sem reescrever hist├│rico e sem travar a pr├│xima sele├º├úo autom├ítica
++
+ ---
+ 
+ ## Feature #07c ÔÇö Troca com execu├º├úo ativa (2026-10-15 ÔÇö suite 1618/1618, cov 84.59% lines / 83.49% branch)
+ 
+-### REG-59: Escrita bloqueada no outro treino com tooltip, libera ap├│s Finalizar/Cancelar
++### REG-59: Escrita bloqueada no outro treino com tooltip, libera ap├│s Finalizar/Cancelar (libera├º├úo de escrita ap├│s settle ÔÇö repassado/verificado na 7b-1)
+ **Dado** execu├º├úo aberta no Treino A (badge "Em execu├º├úo") com Treino B no mesmo programa ativo
+ **Quando** a pessoa troca para o Treino B e tenta marcar/editar s├®rie
+ **Ent├úo** a escrita ├® bloqueada com tooltip "Finalize o Treino A para marcar s├®ries aqui"
+ **E** ap├│s Finalizar ou Cancelar no Treino A, o Treino B aceita escrita sem reload
+ 
++### REG-66: Guarda por dono ÔÇö no m├íximo uma aberta por dono global, sem desvio cruzado (promovido 7b-1)
++**Dado** um dono com execu├º├úo aberta em um treino (e o outro dono com a pr├│pria aberta em treino distinto)
++**Quando** se tenta abrir uma segunda execu├º├úo do mesmo dono em outro treino
++**Ent├úo** a segunda abertura ├® recusada (├¡ndice ├║nico parcial por autor ÔÇö R1) e cada dono enxerga apenas a pr├│pria aberta, avan├ºando na pr├│pria rota├º├úo
++
++---
++
++## Feature #7b-1 ÔÇö Avan├ºar para o pr├│ximo treino ao finalizar (2026-10-16 ÔÇö suite 1636/1636, cov 84.74% lines / 83.63% branch)
++
++### REG-67: Smoke ÔÇö Finalizar exibe o pr├│ximo; Cancelar permanece no mesmo treino
++**Dado** o Treino do Dia com execu├º├úo aberta no treino corrente (programa com dois ou mais treinos)
++**Quando** a pessoa confirma o `Finalizar` (e, em nova execu├º├úo, confirma o `Cancelar`)
++**Ent├úo** ap├│s o Finalizar a tela passa a exibir o pr├│ximo da rota├º├úo sem reload do navegador e sem marca├º├Áes herdadas; ap├│s o Cancelar a tela permanece no mesmo treino, sem execu├º├úo aberta e sem s├®ries marcadas
++
+ ---
+ 
+ ## Execu├º├úo de regress├úo
+@@ -338,4 +382,4 @@ npm run build-storybook
+ **Dado** exerc├¡cio com s├®ries
+ **Ent├úo** grid responsivo (1/2/4 col), campo ├║nico com r├│tulo pelo modo da entry, toggle kg/lb abaixo da carga persistindo na entry
+ 
+-**Crit├®rio de passagem:** 1618 testes passados, 0 falhas, coverage ÔëÑ 80% (atual: 84.59% lines, 83.49% branch ÔÇö 07c em 2026-10-15).
+\ No newline at end of file
++**Crit├®rio de passagem:** 1636 testes passados, 0 falhas, coverage ÔëÑ 80% (atual: 84.74% lines, 83.63% branch ÔÇö 7b-1 em 2026-10-16; refer├¬ncia 07c em 2026-10-15: 1618 testes, 84.59% lines, 83.49% branch).
+\ No newline at end of file
+diff --git a/__tests__/app/milon/today/page-7b1-advance.test.tsx b/__tests__/app/milon/today/page-7b1-advance.test.tsx
+new file mode 100644
+index 0000000..7d875b0
+--- /dev/null
++++ b/__tests__/app/milon/today/page-7b1-advance.test.tsx
+@@ -0,0 +1,572 @@
++import {
++  act,
++  cleanup,
++  fireEvent,
++  render,
++  screen,
++  waitFor,
++} from "@testing-library/react";
++import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
++import { useState } from "react";
++import TodayPage from "@/app/milon/today/page";
++import { useTodayWorkout } from "@/lib/milon/hooks/useTodayWorkout";
++import { useActiveExecution } from "@/lib/milon/hooks/useActiveExecution";
++import type { Program, Workout } from "@/lib/milon/types";
++
++/**
++ * Contrato RED ÔÇö M├¡lon 07b-1 Avan├ºar para o pr├│ximo treino (TASK-003):
++ * composi├º├úo da p├ígina do Treino do Dia por desfecho de assentamento.
++ *
++ * Fonte: `.agents/modules/milon/07b-1-avancar-proximo-treino/spec.md` ┬º5
++ * (crit├®rios 1 a 8) + ┬º2 (estados de tela e foco) + `plan.md` ┬º3
++ * (comportamento da p├ígina: `sealed` ÔçÆ invalidar a fonte ├║nica AGUARDADA e
++ * ent├úo recarregar a sele├º├úo ÔÇö DA4; `cancelled` ÔçÆ somente a fonte ├║nica ÔÇö
++ * DA2; sinal de foco nos dois ÔÇö DA5) + ┬º4 (data flow 6, 7, 9, 10) +
++ * `tasks.json` TASK-003 (acceptanceCriteria).
++ *
++ * PRODU├ç├âO SOB TESTE (lida em disco): `app/milon/today/page.tsx:33` ÔÇö
++ * `handleExecutionSettled = () => void retryActiveExecution?.()`: hoje a
++ * p├ígina S├ô invalida a fonte ├║nica (entrega 7c AC6), sem ramificar por
++ * desfecho, sem recarregar a sele├º├úo e sem `focusHeaderSignal`. Assinatura
++ * nova da se├º├úo (j├í GREEN, commit 6813e68): `onExecutionSettled(desfecho:
++ * 'sealed' | 'cancelled')` + `focusHeaderSignal?: number | null`.
++ *
++ * O que se trava aqui ├® a decis├úo da P├üGINA ÔÇö n├úo o interior da se├º├úo
++ * (travado em WorkoutDetailSection.test.tsx), nem o rec├ílculo da rota├º├úo
++ * (travado em useTodayWorkout-rotation.test.ts), nem a guarda/libera├º├úo de
++ * escrita da 7c (travada em page-ac6.test.tsx):
++ *
++ *  1. desfecho `sealed` ÔåÆ ordem AGUARDADA: `retry` de `useActiveExecution`
++ *     (fonte ├║nica) conclui ANTES de o `retry` de `useTodayWorkout`
++ *     (sele├º├úo) come├ºar (DA4), a sele├º├úo nova vem exclusivamente do
++ *     rec├ílculo do hook (nunca `selectWorkout`) e o `focusHeaderSignal`
++ *     passado ├á se├º├úo ├® incrementado (spec ┬º5-1/2/3);
++ *  2. desfecho `cancelled` ÔåÆ SOMENTE o `retry` da fonte ├║nica ├® chamado,
++ *     o sinal de foco ├® incrementado e o `workoutId` selecionado ├®
++ *     preservado (mesma se├º├úo, mesmo treino ÔÇö spec ┬º5-4/5, DA2);
++ *  3. aus├¬ncia de desfecho (falha da opera├º├úo: a se├º├úo n├úo emite nada,
++ *     plan ┬º4-10 / spec ┬º5-8) ÔåÆ nenhum retry de sele├º├úo nem de fonte
++ *     ├║nica, nenhum avan├ºo;
++ *  3b. chamada SEM argumento (retrocompat 7c, plan DA3 + JSDoc da se├º├úo)
++ *     ÔåÆ n├úo-selamento: SOMENTE a fonte ├║nica ├® invalidada (mant├®m a
++ *     sem├óntica da 7c AC6 ÔÇö page-ac6.test.tsx ÔÇö verde);
++ *  4. falha da recarga de sele├º├úo ap├│s `sealed` ÔåÆ `AsyncState` exibe a
++ *     mensagem com NOVA TENTATIVA (origem `carga`) e NENHUM treino parcial
++ *     ├® exibido at├® carregar (spec ┬º5-7 / plan ┬º4-9);
++ *  5. sem programa ativo ou programa sem treinos ÔåÆ o vazio herdado da 04
++ *     e da 7b segue sem erro e sem avan├ºo (spec ┬º5-6, regress├úo).
++ *
++ * Isolamento no padr├úo do precedente `page-ac6.test.tsx`: mocks por arquivo
++ * de `next/navigation`, dos dois hooks, da se├º├úo e do switcher; factories
++ * com defaults; `clickConnectedButton` para clique p├│s-fetch. O mock da
++ * se├º├úo EMITE o desfecho nos bot├Áes (paridade com a se├º├úo GREEN) e no
++ * bot├úo de falha N├âO emite (o caminho de erro da se├º├úo nunca chama
++ * `onExecutionSettled`). O mock de `useTodayWorkout.retry` reproduz o
++ * contrato real do hook: no caso feliz recalcula a sele├º├úo (vizinho
++ * seguinte com volta ao primeiro) e, na falha gravada, o hook real ENGOLE o
++ * erro dentro do pr├│prio `fetchSelection` (useTodayWorkout.ts try/catch ÔåÆ
++ * `errorMsg` + origem `carga`, promessa resolvida) ÔÇö da├¡ o mock resolver
++ * gravando o estado em vez de rejeitar.
++ *
++ * Ordem da fonte ├║nica ├® verificada com resolu├º├úo ATARDADA (20ms) para
++ * travar o "aguardada antes" do DA4: um chamador que dispare as duas sem
++ * esperar produz ordem errada e falha.
++ *
++ * Expected: FAIL hoje ÔÇö casos 1, 2 e 4 falham pelo motivo certo (p├ígina s├│
++ * invalida a fonte ├║nica, sem ramificar nem recarregar sele├º├úo, sem sinal
++ * de foco); casos 3, 3b e 5 s├úo travas de regress├úo que j├í passam. `npx
++ * tsc --noEmit` ÔåÆ exit 0. NENHUM arquivo de produ├º├úo ├® tocado.
++ */
++
++const mockUsePathname = vi.hoisted(() => vi.fn(() => "/milon/today"));
++const mockPush = vi.hoisted(() => vi.fn());
++
++vi.mock("next/navigation", () => ({
++  useParams: vi.fn(() => ({})),
++  usePathname: mockUsePathname,
++  useRouter: vi.fn(() => ({
++    push: mockPush,
++    replace: vi.fn(),
++    refresh: vi.fn(),
++    back: vi.fn(),
++    forward: vi.fn(),
++    prefetch: vi.fn(),
++  })),
++  useSearchParams: vi.fn(() => ({ get: vi.fn() })),
++}));
++
++vi.mock("@/lib/milon/hooks/useTodayWorkout", () => ({
++  useTodayWorkout: vi.fn(),
++}));
++
++vi.mock("@/lib/milon/hooks/useActiveExecution", () => ({
++  useActiveExecution: vi.fn(),
++}));
++
++type Desfecho = "sealed" | "cancelled";
++
++// Se├º├úo mockada por arquivo: registra as props da p├ígina (workoutId,
++// onExecutionSettled, focusHeaderSignal) e EMITE o desfecho como a se├º├úo
++// GREEN faz (sealed no Finalizar, cancelled no Cancelar). O bot├úo de
++// simula├º├úo de falha N├âO invoca nada ÔÇö ├® o caminho de erro da se├º├úo
++// (plan ┬º4-10: nenhum desfecho emitido).
++interface PropsDaSecao {
++  workoutId?: string;
++  onExecutionSettled?: (outcome?: Desfecho) => void | Promise<void>;
++  focusHeaderSignal?: number | null;
++}
++
++vi.mock("@/components/milon/WorkoutDetailSection", () => ({
++  WorkoutDetailSection: vi.fn((props: PropsDaSecao) => (
++    <div
++      data-testid="secao-detalhe"
++      data-workout-id={props.workoutId ?? ""}
++      data-focus-signal={
++        props.focusHeaderSignal === undefined || props.focusHeaderSignal === null
++          ? ""
++          : String(props.focusHeaderSignal)
++      }
++    >
++      <button
++        type="button"
++        onClick={() => {
++          void props.onExecutionSettled?.("sealed");
++        }}
++      >
++        Finalizar
++      </button>
++      <button
++        type="button"
++        onClick={() => {
++          void props.onExecutionSettled?.("cancelled");
++        }}
++      >
++        Cancelar
++      </button>
++      <button type="button" onClick={() => undefined}>
++        Simular falha de opera├º├úo
++      </button>
++    </div>
++  )),
++}));
++
++vi.mock("@/components/milon/TodayWorkoutSwitcher", () => ({
++  TodayWorkoutSwitcher: vi.fn(
++    (props: {
++      workouts?: { id: string; name: string }[];
++      selectedWorkoutId?: string | null;
++      onSelect?: (workoutId: string) => void;
++    }) => (
++      <label>
++        Treino
++        <select
++          aria-label="Treino"
++          value={props.selectedWorkoutId ?? ""}
++          onChange={(e) => props.onSelect?.(e.target.value)}
++        >
++          {(props.workouts ?? []).map((w) => (
++            <option key={w.id} value={w.id}>
++              {w.name}
++            </option>
++          ))}
++        </select>
++      </label>
++    ),
++  ),
++}));
++
++import { WorkoutDetailSection as MockedSection } from "@/components/milon/WorkoutDetailSection";
++
++const mockedUseTodayWorkout = useTodayWorkout as Mock;
++const mockedUseActiveExecution = useActiveExecution as Mock;
++
++const DONO = "ana@hestia.lan";
++
++/**
++ * Ordem global das chamadas de retry observada pelos testes. A fonte ├║nica
++ * empurra `fonte:inicio` s├¡ncrono e `fonte:fim` s├│ ap├│s 20ms (resolu├º├úo
++ * atardada), de modo que a sequ├¬ncia exigida do avan├ºo ├® exatamente
++ * ["fonte:inicio", "fonte:fim", "selecao"] ÔÇö o que s├│ acontece se a p├ígina
++ * AGUARDAR a invalida├º├úo antes de recarregar a sele├º├úo (plan DA4).
++ */
++type Passo = "fonte:inicio" | "fonte:fim" | "selecao";
++const ordem: Passo[] = [];
++
++function makeProgram(overrides: Partial<Program> = {}): Program {
++  return {
++    id: "prog-1",
++    title: "Ficha Ver├úo 2026",
++    owner: DONO,
++    status: "ativo",
++    createdAt: "2026-09-29T00:00:00Z",
++    created_by: DONO,
++    ...overrides,
++  };
++}
++
++function makeWorkout(overrides: Partial<Workout> & { id: string }): Workout {
++  return {
++    programId: "prog-1",
++    name: "Treino A",
++    createdAt: "2026-10-01T00:00:00Z",
++    created_by: DONO,
++    ...overrides,
++  };
++}
++
++function treinosAeB(): Workout[] {
++  return [
++    makeWorkout({ id: "w-1", name: "Treino A" }),
++    makeWorkout({
++      id: "w-2",
++      name: "Treino B",
++      createdAt: "2026-10-01T11:00:00Z",
++    }),
++  ];
++}
++
++interface ConfigHoje {
++  program?: Program | null;
++  workouts?: Workout[];
++  initialSelected?: string | null;
++  /**
++   * Comportamento do `retry` de sele├º├úo (o hook real recalcula no caso
++   * feliz e, na falha, grava `errorMsg` + origem `carga` e resolve ÔÇö ver
++   * `fetchSelection` em useTodayWorkout.ts). Default: rec├ílculo da
++   * rota├º├úo (vizinho seguinte com volta ao primeiro).
++   */
++  onRetrySelecao?: (api: {
++    setSelected: (id: string | null) => void;
++    failCarga: (mensagem: string) => void;
++  }) => void | Promise<void>;
++}
++
++/**
++ * Sele├º├úo com `useState` real (mesmo padr├úo de `page.test.tsx`/
++ * `page-ac6.test.tsx`): troca de selecionado re-renderiza a p├ígina.
++ */
++function setupToday(
++  cfg: ConfigHoje = {},
++): { selectWorkout: Mock; retrySelecao: Mock } {
++  const program = cfg.program !== undefined ? cfg.program : makeProgram();
++  const workouts = cfg.workouts !== undefined ? cfg.workouts : treinosAeB();
++  const inicial =
++    cfg.initialSelected !== undefined
++      ? cfg.initialSelected
++      : (workouts[0]?.id ?? null);
++  const selectWorkout = vi.fn();
++  const retrySelecao = vi.fn();
++
++  mockedUseTodayWorkout.mockImplementation(function useTodayWorkoutMock() {
++    const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(
++      inicial,
++    );
++    const [loading, setLoading] = useState(false);
++    const [errorMsg, setErrorMsg] = useState<string | null>(null);
++    const [errorOrigin, setErrorOrigin] = useState<"carga" | null>(null);
++    return {
++      program,
++      workouts,
++      selectedWorkoutId,
++      selectWorkout: (workoutId: string) => {
++        selectWorkout(workoutId);
++        if (workouts.some((w) => w.id === workoutId)) {
++          setSelectedWorkoutId(workoutId);
++        }
++      },
++      loading,
++      errorMsg,
++      errorOrigin,
++      successNotice: null,
++      retry: async () => {
++        retrySelecao();
++        ordem.push("selecao");
++        if (cfg.onRetrySelecao) {
++          await cfg.onRetrySelecao({
++            setSelected: setSelectedWorkoutId,
++            failCarga: (mensagem: string) => {
++              setLoading(false);
++              setErrorMsg(mensagem);
++              setErrorOrigin("carga");
++              setSelectedWorkoutId(null);
++            },
++          });
++          return;
++        }
++        // Rec├ílculo da rota├º├úo 7b: vizinho seguinte com volta ao primeiro.
++        setSelectedWorkoutId((atual) => {
++          if (atual === null || workouts.length === 0) return atual;
++          const i = workouts.findIndex((w) => w.id === atual);
++          if (i < 0) return atual;
++          return workouts[(i + 1) % workouts.length].id;
++        });
++      },
++    };
++  });
++
++  return { selectWorkout, retrySelecao };
++}
++
++/**
++ * Fonte ├║nica de execu├º├úo ativa: `retry` com resolu├º├úo atardada (20ms)
++ * para que a ordem das chamadas da p├ígina revele se ela AGUARDA a
++ * invalida├º├úo antes de recarregar a sele├º├úo (plan DA4).
++ */
++function setupActive(): Mock {
++  const retryFonte = vi.fn(async () => {
++    ordem.push("fonte:inicio");
++    await new Promise<void>((resolve) => setTimeout(resolve, 20));
++    ordem.push("fonte:fim");
++  });
++  mockedUseActiveExecution.mockReturnValue({
++    activeExecution: null,
++    activeWorkoutId: null,
++    loading: false,
++    errorMsg: null,
++    errorOrigin: null,
++    retry: retryFonte,
++  });
++  return retryFonte;
++}
++
++function lastSectionProps(): Record<string, unknown> {
++  const mock = MockedSection as unknown as ReturnType<typeof vi.fn>;
++  const last = mock.mock.calls.at(-1) as
++    | [Record<string, unknown>]
++    | undefined;
++  return last?.[0] ?? {};
++}
++
++/**
++ * Clique p├│s-fetch (padr├úo `clickConnectedButton` das p├íginas do m├│dulo):
++ * espera o bot├úo conectado antes de clicar.
++ */
++async function clickConnectedButton(name: string | RegExp): Promise<void> {
++  await waitFor(() => {
++    const alvo = screen.getByRole("button", { name });
++    expect(alvo.isConnected).toBe(true);
++  });
++  fireEvent.click(screen.getByRole("button", { name }));
++}
++
++/** Espera macrotask p/ qualquer handler ass├¡ncrono pendente drenar. */
++async function drenarAssincrono(ms = 40): Promise<void> {
++  await act(async () => {
++    await new Promise<void>((resolve) => setTimeout(resolve, ms));
++  });
++}
++
++async function secaoNoW1(): Promise<void> {
++  await waitFor(() => {
++    expect(screen.getByTestId("secao-detalhe")).toHaveAttribute(
++      "data-workout-id",
++      "w-1",
++    );
++  });
++}
++
++describe("Treino do Dia ÔÇö composi├º├úo por desfecho (M├¡lon 07b-1 ÔÇö RED)", () => {
++  beforeEach(() => {
++    cleanup();
++    vi.clearAllMocks();
++    ordem.length = 0;
++    mockUsePathname.mockReturnValue("/milon/today");
++  });
++
++  it("desfecho sealed: invalida a fonte ├║nica AGUARDA e ent├úo recarrega a sele├º├úo, e incrementa o focusHeaderSignal", async () => {
++    const { selectWorkout } = setupToday();
++    const retryFonte = setupActive();
++
++    render(<TodayPage />);
++
++    await secaoNoW1();
++    const focoAntes = lastSectionProps()["focusHeaderSignal"] ?? null;
++
++    await clickConnectedButton("Finalizar");
++
++    // DA4: fonte ├║nica conclu├¡da (fim) ANTES de a sele├º├úo come├ºar.
++    await waitFor(() => {
++      expect(ordem).toEqual(["fonte:inicio", "fonte:fim", "selecao"]);
++    });
++    expect(retryFonte).toHaveBeenCalledTimes(1);
++
++    // Avan├ºo: a sele├º├úo nova vem exclusivamente do rec├ílculo do hook
++    // (pr├│ximo da rota├º├úo 7b), nunca de uma chamada manual a selectWorkout.
++    await waitFor(() => {
++      expect(screen.getByTestId("secao-detalhe")).toHaveAttribute(
++        "data-workout-id",
++        "w-2",
++      );
++    });
++    expect(lastSectionProps()["workoutId"]).toBe("w-2");
++    expect(selectWorkout).not.toHaveBeenCalled();
++
++    // DA5: sinal de foco incrementado e enviado ├á se├º├úo.
++    await waitFor(() => {
++      expect(typeof lastSectionProps()["focusHeaderSignal"]).toBe("number");
++    });
++    expect(lastSectionProps()["focusHeaderSignal"]).not.toEqual(focoAntes);
++  });
++
++  it("desfecho cancelled: SOMENTE a fonte ├║nica ├® invalidada, com foco incrementado e workoutId preservado", async () => {
++    const { selectWorkout } = setupToday();
++    const retryFonte = setupActive();
++
++    render(<TodayPage />);
++
++    await secaoNoW1();
++    const focoAntes = lastSectionProps()["focusHeaderSignal"] ?? null;
++
++    await clickConnectedButton("Cancelar");
++
++    // DA5: o foco tamb├®m incrementa no cancelar.
++    await waitFor(() => {
++      expect(typeof lastSectionProps()["focusHeaderSignal"]).toBe("number");
++    });
++    expect(lastSectionProps()["focusHeaderSignal"]).not.toEqual(focoAntes);
++
++    // DA2: a sele├º├úo ├® preservada ÔÇö mesma se├º├úo, mesmo treino.
++    expect(lastSectionProps()["workoutId"]).toBe("w-1");
++    expect(screen.getByTestId("secao-detalhe")).toHaveAttribute(
++      "data-workout-id",
++      "w-1",
++    );
++
++    // SOMENTE a fonte ├║nica, com a invalida├º├úo conclu├¡da.
++    await waitFor(() => {
++      expect(ordem).toEqual(["fonte:inicio", "fonte:fim"]);
++    });
++    await drenarAssincrono();
++    expect(ordem).toEqual(["fonte:inicio", "fonte:fim"]);
++    expect(ordem).not.toContain("selecao");
++    expect(retryFonte).toHaveBeenCalledTimes(1);
++    expect(selectWorkout).not.toHaveBeenCalled();
++  });
++
++  it("sem desfecho (falha da opera├º├úo): nenhum retry de sele├º├úo nem de fonte ├║nica, sem foco e sem avan├ºo", async () => {
++    const { selectWorkout } = setupToday();
++    const retryFonte = setupActive();
++
++    render(<TodayPage />);
++
++    await secaoNoW1();
++    const focoAntes = lastSectionProps()["focusHeaderSignal"] ?? null;
++
++    // A se├º├úo n├úo emite desfecho no caminho de erro (plan ┬º4-10).
++    await clickConnectedButton("Simular falha de opera├º├úo");
++    await drenarAssincrono();
++
++    expect(ordem).toEqual([]);
++    expect(retryFonte).not.toHaveBeenCalled();
++    expect(selectWorkout).not.toHaveBeenCalled();
++    expect(lastSectionProps()["focusHeaderSignal"] ?? null).toEqual(focoAntes);
++    expect(lastSectionProps()["workoutId"]).toBe("w-1");
++    expect(screen.getByTestId("secao-detalhe")).toHaveAttribute(
++      "data-workout-id",
++      "w-1",
++    );
++  });
++
++  it("chamada sem argumento (retrocompat 7c, DA3): n├úo-selamento invalida SOMENTE a fonte ├║nica e preserva o treino", async () => {
++    const { selectWorkout } = setupToday();
++    const retryFonte = setupActive();
++
++    render(<TodayPage />);
++
++    await secaoNoW1();
++
++    // Forma pr├®-07b-1 do aviso: chamada sem desfecho (page-ac6.test.tsx
++    // invoca assim) ÔÇö tratada como n├úo-selamento: s├│ a fonte ├║nica.
++    const semArgumento = lastSectionProps()["onExecutionSettled"] as
++      | (() => void | Promise<void>)
++      | undefined;
++    expect(typeof semArgumento).toBe("function");
++    await act(async () => {
++      await semArgumento?.();
++    });
++    await drenarAssincrono();
++
++    expect(ordem).toEqual(["fonte:inicio", "fonte:fim"]);
++    expect(retryFonte).toHaveBeenCalledTimes(1);
++    expect(selectWorkout).not.toHaveBeenCalled();
++    expect(screen.getByTestId("secao-detalhe")).toHaveAttribute(
++      "data-workout-id",
++      "w-1",
++    );
++  });
++
++  it("falha da recarga de sele├º├úo ap├│s sealed: AsyncState exibe origem carga com nova tentativa e nenhum treino parcial", async () => {
++    const { retrySelecao } = setupToday({
++      onRetrySelecao: ({ failCarga }) => {
++        failCarga("Erro ao carregar treino do dia");
++      },
++    });
++    setupActive();
++
++    render(<TodayPage />);
++
++    await secaoNoW1();
++
++    await clickConnectedButton("Finalizar");
++
++    // Especifica├º├úo ┬º5-7 / plan ┬º4-9: falha de carga vira mensagem com
++    // nova tentativa pelo estado ass├¡ncrono central.
++    await waitFor(() => {
++      expect(
++        screen.getByText(/erro ao carregar treino do dia/i),
++      ).toBeInTheDocument();
++    });
++    // Nenhum treino parcial exibido at├® carregar.
++    expect(screen.queryByTestId("secao-detalhe")).not.toBeInTheDocument();
++    expect(
++      screen.queryByRole("combobox", { name: /treino/i }),
++    ).not.toBeInTheDocument();
++
++    // A nova tentativa repete a cadeia de sele├º├úo (clique p├│s-fetch).
++    await clickConnectedButton(/tentar novamente/i);
++    expect(retrySelecao).toHaveBeenCalledTimes(2);
++  });
++});
++
++describe("Treino do Dia ÔÇö vazio herdado 04/7b (M├¡lon 07b-1 ÔÇö regress├úo)", () => {
++  beforeEach(() => {
++    cleanup();
++    vi.clearAllMocks();
++    ordem.length = 0;
++    mockUsePathname.mockReturnValue("/milon/today");
++  });
++
++  it("sem programa ativo: vazio orientador sem erro, sem avan├ºo e sem retry algum", async () => {
++    setupToday({ program: null, workouts: [], initialSelected: null });
++    setupActive();
++
++    render(<TodayPage />);
++
++    expect(screen.getByText(/sem treino ativo/i)).toBeInTheDocument();
++    expect(screen.getByText(/ativar|criar/i)).toBeInTheDocument();
++    expect(screen.queryByTestId("secao-detalhe")).not.toBeInTheDocument();
++    expect(
++      screen.queryByRole("button", { name: /tentar novamente/i }),
++    ).not.toBeInTheDocument();
++    expect(ordem).toEqual([]);
++  });
++
++  it("programa ativo sem treinos: vazio orientador adicionar primeiro, sem erro e sem avan├ºo", async () => {
++    setupToday({
++      program: makeProgram({ status: "ativo" }),
++      workouts: [],
++      initialSelected: null,
++    });
++    setupActive();
++
++    render(<TodayPage />);
++
++    expect(screen.getByText(/sem treino ativo/i)).toBeInTheDocument();
++    expect(screen.getByText(/adicionar|primeiro/i)).toBeInTheDocument();
++    expect(screen.queryByTestId("secao-detalhe")).not.toBeInTheDocument();
++    expect(
++      screen.queryByRole("button", { name: /tentar novamente/i }),
++    ).not.toBeInTheDocument();
++    expect(ordem).toEqual([]);
++  });
++});
+diff --git a/__tests__/components/milon/WorkoutDetailSection.test.tsx b/__tests__/components/milon/WorkoutDetailSection.test.tsx
+index 07478aa..ad9347c 100644
+--- a/__tests__/components/milon/WorkoutDetailSection.test.tsx
++++ b/__tests__/components/milon/WorkoutDetailSection.test.tsx
+@@ -1819,3 +1819,360 @@ describe("WorkoutDetailSection ÔÇö escrita bloqueada 07c (TASK-005 ÔÇö RED)", ()
+     expect(screen.getByText(TOOLTIP_ATIVO_A)).toBeInTheDocument();
+   });
+ });
++
++/**
++ * Contrato RED ÔÇö M├¡lon 07b-1 "Avan├ºar para o pr├│ximo treino" (TASK-001):
++ * desfecho do aviso de assentamento + foco do cabe├ºalho na se├º├úo.
++ *
++ * Fonte da verdade: `.agents/modules/milon/07b-1-avancar-proximo-treino/`
++ * - `spec.md` ┬º5 (crit├®rios 1, 4, 5 e 8) + ┬º2 ("foco ao concluir": ap├│s
++ *   Finalizar o foco vai para o cabe├ºalho do pr├│ximo treino; ap├│s Cancelar
++ *   permanece no cabe├ºalho do mesmo treino);
++ * - `plan.md` ┬º3 Contratos Completos ÔÇö `onExecutionSettled` passa de
++ *   assinatura sem argumento para par├ómetro de desfecho da uni├úo textual
++ *   `sealed` | `cancelled` (`sealed` s├│ ap├│s `finishExecution` bem-sucedido:
++ *   parcial confirmada, completa confirmada ou completo direto; `cancelled`
++ *   s├│ ap├│s `clearExecution` bem-sucedido: Cancelar confirmado ou Finalizar
++ *   vazio conduzido), invocado exatamente uma vez por opera├º├úo de sucesso e
++ *   nunca no erro; nova prop opcional `focusHeaderSignal` (n├║mero ou nulo,
++ *   padr├úo nulo) que foca o cabe├ºalho rotulado `Cabe├ºalho do treino` (com
++ *   tabindex menos um) ao montar com sinal n├úo-nulo e a cada mudan├ºa;
++ * - `plan.md` ┬º5 decis├Áes DA3 (desfecho como par├ómetro do callback
++ *   existente, ponto ├║nico de notifica├º├úo da 7c preservado) e DA5 (foco por
++ *   sinal num├®rico, verific├ível como `document.activeElement`);
++ * - `tasks.json` TASK-001 `acceptanceCriteria` (fonte da cobertura).
++ *
++ * ESTADO VIGENTE DA PRODU├ç├âO (lido do disco ÔÇö ├® o que faz estes testes
++ * ca├¡rem):
++ * - `components/milon/WorkoutDetailSection.tsx` declara
++ *   `onExecutionSettled?: () => void | Promise<void>` (sem par├ómetro) e os
++ *   TR├èS pontos de emiss├úo do `ExecutionHost` chamam
++ *   `void onExecutionSettled?.()` sem argumento (`notifySettled()` ap├│s
++ *   `confirmFinish`, ap├│s `confirmCancelExecution` e ap├│s `requestFinish`);
++ * - N├âO existe a prop `focusHeaderSignal` e nenhum dos dois cabe├ºalhos
++ *   (ramo de execu├º├úo e ramo de manuten├º├úo) tem `tabindex` ÔÇö em jsdom
++ *   apenas elemento com `tabindex` aceita foco program├ítico (verificado:
++ *   `tabindex="-1"` foca, aus├¬ncia n├úo foca).
++ *
++ * Expected: FAIL pelo motivo certo em 6 casos ÔÇö os 4 de desfecho falham na
++ * asser├º├úo de argumento (a chamada atual n├úo leva desfecho: diff
++ * `chamada com [] esperado ['sealed'|'cancelled']`) e os 2 de foco falham
++ * na aus├¬ncia de `tabindex`/foco program├ítico (prop nova ignorada). Os
++ * casos de falha de opera├º├úo e o de sinal nulo s├úo TRAVAS VERDES do
++ * comportamento inalterado da 07/7c (a produ├º├úo j├í n├úo emite no erro e j├í
++ * n├úo foca sem sinal): passam agora e DEVEM continuar verdes ap├│s o GREEN
++ * da TASK-002. Sem├óntica 07/7c preservada: nenhum teste existente deste
++ * arquivo acopla a assinatura sem desfecho (verificado por busca por
++ * `onExecutionSettled` ÔÇö zero ocorr├¬ncias antes deste bloco).
++ *
++ * Padr├úo do reposit├│rio: Testing Library + Vitest + jsdom, factories com
++ * defaults, `clickConnectedButton` para clique p├│s-render da composi├º├úo,
++ * props inexistentes via cast (`as unknown as SectionProps`) para o
++ * `tsc --noEmit` seguir exit 0 no RED.
++ */
++describe("WorkoutDetailSection ÔÇö desfecho do aviso e foco do cabe├ºalho (07b-1 TASK-001 ÔÇö RED)", () => {
++  type SectionProps = Parameters<typeof WorkoutDetailSection>[0];
++
++  /** Estado do hook de execu├º├úo com a m├íquina da 07 (base da spec 07). */
++  function setupExec07b1(overrides: Record<string, unknown> = {}) {
++    const state = {
++      execution: null as Record<string, unknown> | null,
++      doneSeriesIds: [] as string[],
++      markedCount: 0,
++      totalSeriesCount: 0,
++      finishCase: null as "vazio" | "parcial" | "completo" | null,
++      toggleSeries: vi.fn(async () => {}),
++      saveSeriesExecution: vi.fn(async () => {}),
++      clearConfirmOpen: false,
++      confirmClearExecution: vi.fn(async () => {}),
++      cancelClearExecution: vi.fn(),
++      loading: false,
++      errorMsg: null as string | null,
++      errorOrigin: null as "carga" | "operacao" | "bloqueio" | null,
++      successNotice: null as string | null,
++      retry: vi.fn(async () => {}),
++      finishConfirmOpen: false,
++      finishConfirmCase: null as "parcial" | "completa" | "vazio" | null,
++      cancelConfirmOpen: false,
++      finishProcessing: false,
++      cancelProcessing: false,
++      requestFinish: vi.fn(async () => {}),
++      confirmFinish: vi.fn(async () => {}),
++      cancelFinish: vi.fn(),
++      requestCancel: vi.fn(),
++      confirmCancelExecution: vi.fn(async () => {}),
++      cancelCancelExecution: vi.fn(),
++      ...overrides,
++    };
++    mockedUseWorkoutExecution.mockReturnValue(state);
++    return state;
++  }
++
++  /** Execu├º├úo aberta do pr├│prio treino (fixture da 07). */
++  function execAberta(): Record<string, unknown> {
++    return {
++      id: "exec-1",
++      workoutId: "wout-1",
++      programId: "prog-1",
++      startedAt: "2026-10-16T10:00:00.000Z",
++      finishedAt: null,
++      createdAt: "2026-10-16T10:00:00.000Z",
++      created_by: DONO,
++    };
++  }
++
++  function comExecucao(props: Record<string, unknown> = {}): SectionProps {
++    return {
++      workoutId: "wout-1",
++      backTarget: backNone,
++      executionEnabled: true,
++      ...props,
++    } as unknown as SectionProps;
++  }
++
++  function manutencao(props: Record<string, unknown> = {}): SectionProps {
++    return {
++      workoutId: "wout-1",
++      backTarget: backProgram,
++      ...props,
++    } as unknown as SectionProps;
++  }
++
++  /** Cabe├ºalho da se├º├úo: elemento rotulado acessivelmente (aria-label). */
++  function cabecalhoDoTreino(): HTMLElement {
++    return screen.getByRole("region", { name: "Cabe├ºalho do treino" });
++  }
++
++  beforeEach(() => {
++    cleanup();
++    vi.clearAllMocks();
++    setupHook();
++    setupExec07b1();
++  });
++
++  // --- Desfecho por caminho de sucesso (spec ┬º5 crit├®rios 1, 4 e 5) -------
++
++  it("confirmar o Finalizar parcial emite onExecutionSettled com desfecho 'sealed'", async () => {
++    conteudoComUmaEntrada();
++    const execState = setupExec07b1({
++      execution: execAberta(),
++      doneSeriesIds: ["ser-1"],
++      markedCount: 1,
++      finishConfirmOpen: true,
++      finishConfirmCase: "parcial",
++    });
++    const settled = vi.fn();
++
++    render(
++      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
++    );
++
++    // Confirma├º├úo do modal de parcial (bot├úo "Finalizar" da 07).
++    await clickConnectedButton(/^finalizar$/i);
++
++    await waitFor(() => expect(execState.confirmFinish).toHaveBeenCalledTimes(1));
++    await waitFor(() => expect(settled).toHaveBeenCalled());
++    // RED: a produ├º├úo chama `void onExecutionSettled?.()` SEM argumento.
++    expect(settled).toHaveBeenCalledWith("sealed");
++    expect(settled).toHaveBeenCalledTimes(1);
++  });
++
++  it("Finalizar completo direto (requestFinish no caso completo) emite onExecutionSettled com desfecho 'sealed'", async () => {
++    conteudoComUmaEntrada();
++    const execState = setupExec07b1({
++      execution: execAberta(),
++      // Caso completo: todas as s├®ries marcadas (07 decide sem confirma├º├úo).
++      finishCase: "completo",
++      doneSeriesIds: ["ser-1", "ser-2"],
++      markedCount: 2,
++      totalSeriesCount: 2,
++    });
++    const settled = vi.fn();
++
++    render(
++      <WorkoutDetailSection
++        {...comExecucao({
++          onExecutionSettled: settled,
++          footer: <button type="button">Finalizar</button>,
++        })}
++      />,
++    );
++
++    // Rodap├® com enxerto de a├º├úo (M├¡lon #7, D6): dispara requestFinish.
++    await clickConnectedButton(/^finalizar$/i);
++
++    await waitFor(() => expect(execState.requestFinish).toHaveBeenCalledTimes(1));
++    await waitFor(() => expect(settled).toHaveBeenCalled());
++    // RED: chamada sem argumento n├úo satisfaz o desfecho esperado.
++    expect(settled).toHaveBeenCalledWith("sealed");
++    expect(settled).toHaveBeenCalledTimes(1);
++  });
++
++  it("confirmar o Cancelar emite onExecutionSettled com desfecho 'cancelled'", async () => {
++    conteudoComUmaEntrada();
++    const execState = setupExec07b1({
++      execution: execAberta(),
++      cancelConfirmOpen: true,
++    });
++    const settled = vi.fn();
++
++    render(
++      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
++    );
++
++    // Confirma├º├úo de exclus├úo da 07 (bot├úo "Excluir" do modal de cancelar).
++    await clickConnectedButton(/^excluir$/i);
++
++    await waitFor(() =>
++      expect(execState.confirmCancelExecution).toHaveBeenCalledTimes(1),
++    );
++    await waitFor(() => expect(settled).toHaveBeenCalled());
++    // RED: chamada sem argumento n├úo satisfaz o desfecho esperado.
++    expect(settled).toHaveBeenCalledWith("cancelled");
++    expect(settled).toHaveBeenCalledTimes(1);
++  });
++
++  it("confirmar o Finalizar vazio conduzido ao cancelamento emite 'cancelled' e N├âO 'sealed' (spec ┬º5 crit├®rio 5)", async () => {
++    conteudoComUmaEntrada();
++    const execState = setupExec07b1({
++      execution: execAberta(),
++      finishConfirmOpen: true,
++      finishConfirmCase: "vazio",
++    });
++    // Modela o hook real (07): ao concluir, `confirmFinish` reinicia o caso
++    // (`finishConfirmCase` volta a nulo) ÔÇö da├¡ a captura do caso ter de ser
++    // s├¡ncrona e anterior ├á chamada do hook (plan ┬º3 / TASK-002 AC3).
++    execState.confirmFinish = vi.fn(async () => {
++      mockedUseWorkoutExecution.mockReturnValue({
++        ...execState,
++        finishConfirmOpen: false,
++        finishConfirmCase: null,
++      });
++    });
++    const settled = vi.fn();
++
++    render(
++      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
++    );
++
++    // Bot├úo de confirmar do modal de vazio ├® "Cancelar execu├º├úo" (07 D4).
++    await clickConnectedButton(/^cancelar execu├º├úo$/i);
++
++    await waitFor(() => expect(execState.confirmFinish).toHaveBeenCalledTimes(1));
++    await waitFor(() => expect(settled).toHaveBeenCalled());
++    // RED: chamada sem argumento n├úo satisfaz o desfecho esperado.
++    expect(settled).toHaveBeenCalledWith("cancelled");
++    expect(settled).toHaveBeenCalledTimes(1);
++    // O vazio conduzido N├âO ├® selamento: nada pode ser reportado como sealed.
++    expect(settled).not.toHaveBeenCalledWith("sealed");
++  });
++
++  // --- Aus├¬ncia de desfecho no erro (spec ┬º5 crit├®rio 8) ÔÇö travas verdes --
++
++  it("falha ao confirmar o Finalizar N├âO emite onExecutionSettled (nenhum desfecho; modal preservado)", async () => {
++    conteudoComUmaEntrada();
++    const execState = setupExec07b1({
++      execution: execAberta(),
++      finishConfirmOpen: true,
++      finishConfirmCase: "parcial",
++      confirmFinish: vi.fn(async () => {
++        throw new Error("Erro ao finalizar treino");
++      }),
++    });
++    const settled = vi.fn();
++
++    render(
++      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
++    );
++
++    await clickConnectedButton(/^finalizar$/i);
++
++    await waitFor(() => expect(execState.confirmFinish).toHaveBeenCalledTimes(1));
++    // Trava 07: erro de opera├º├úo n├úo fecha o modal (mensagem segue vis├¡vel).
++    expect(
++      screen.getByText(
++        /Ainda existem s├®ries n├úo executadas\. Tem certeza que deseja finalizar o treino\?/i,
++      ),
++    ).toBeInTheDocument();
++    // Trava verde do contrato: nada ├® emitido no caminho de erro (a produ├º├úo
++    // j├í comporta assim e o GREEN da TASK-002 n├úo pode quebrar isto).
++    expect(settled).not.toHaveBeenCalled();
++  });
++
++  it("falha ao confirmar o Cancelar N├âO emite onExecutionSettled (nenhum desfecho; modal preservado)", async () => {
++    conteudoComUmaEntrada();
++    const execState = setupExec07b1({
++      execution: execAberta(),
++      cancelConfirmOpen: true,
++      confirmCancelExecution: vi.fn(async () => {
++        throw new Error("Erro ao cancelar execu├º├úo");
++      }),
++    });
++    const settled = vi.fn();
++
++    render(
++      <WorkoutDetailSection {...comExecucao({ onExecutionSettled: settled })} />,
++    );
++
++    await clickConnectedButton(/^excluir$/i);
++
++    await waitFor(() =>
++      expect(execState.confirmCancelExecution).toHaveBeenCalledTimes(1),
++    );
++    expect(
++      screen.getByText(
++        /Tem certeza que deseja cancelar essa execu├º├úo\? Todas as informa├º├Áes ser├úo exclu├¡das\./i,
++      ),
++    ).toBeInTheDocument();
++    // Trava verde do contrato: nenhum desfecho no caminho de erro.
++    expect(settled).not.toHaveBeenCalled();
++  });
++
++  // --- Foco do cabe├ºalho pelo sinal (spec ┬º2 "foco ao concluir" + DA5) ----
++
++  it("focusHeaderSignal n├úo-nulo foca o cabe├ºalho ao montar e a cada novo valor do sinal (ramo de execu├º├úo)", () => {
++    conteudoComUmaEntrada();
++    setupExec07b1({ execution: execAberta() });
++    const settled = vi.fn();
++
++    const { rerender } = render(
++      <WorkoutDetailSection
++        {...comExecucao({ onExecutionSettled: settled, focusHeaderSignal: 1 })}
++      />,
++    );
++
++    const cabecalho = cabecalhoDoTreino();
++    // RED: sem a prop nova o cabe├ºalho n├úo tem tabindex e n├úo foca.
++    expect(cabecalho).toHaveAttribute("tabindex", "-1");
++    expect(cabecalho).toHaveFocus();
++
++    // Perde o foco e a p├ígina incrementa o sinal (novo desfecho) ÔåÆ refoca.
++    cabecalho.blur();
++    expect(cabecalho).not.toHaveFocus();
++    rerender(
++      <WorkoutDetailSection
++        {...comExecucao({ onExecutionSettled: settled, focusHeaderSignal: 2 })}
++      />,
++    );
++    expect(cabecalho).toHaveFocus();
++  });
++
++  it("focusHeaderSignal n├úo-nulo foca o cabe├ºalho no ramo de manuten├º├úo tamb├®m (duas ramifica├º├Áes)", () => {
++    conteudoComUmaEntrada();
++
++    render(<WorkoutDetailSection {...manutencao({ focusHeaderSignal: 1 })} />);
++
++    const cabecalho = cabecalhoDoTreino();
++    // RED: cabe├ºalho da manuten├º├úo tamb├®m est├í sem tabindex e sem foco.
++    expect(cabecalho).toHaveAttribute("tabindex", "-1");
++    expect(cabecalho).toHaveFocus();
++  });
++
++  it("trava: focusHeaderSignal nulo (default) n├úo move o foco program├ítico do cabe├ºalho", () => {
++    conteudoComUmaEntrada();
++
++    render(<WorkoutDetailSection {...manutencao()} />);
++
++    expect(cabecalhoDoTreino()).not.toHaveFocus();
++  });
++});
+diff --git a/app/milon/today/page.tsx b/app/milon/today/page.tsx
+index efa60ab..78a5bed 100644
+--- a/app/milon/today/page.tsx
++++ b/app/milon/today/page.tsx
+@@ -1,8 +1,12 @@
+ "use client";
+ 
++import { useState } from "react";
+ import { MilonLayout } from "@/components/milon/MilonLayout";
+ import { TodayWorkoutSwitcher } from "@/components/milon/TodayWorkoutSwitcher";
+-import { WorkoutDetailSection } from "@/components/milon/WorkoutDetailSection";
++import {
++  WorkoutDetailSection,
++  type ExecutionSettledOutcome,
++} from "@/components/milon/WorkoutDetailSection";
+ import { AsyncState } from "@/components/ui/AsyncState";
+ import { Button } from "@/components/ui/button";
+ import { useActiveExecution } from "@/lib/milon/hooks/useActiveExecution";
+@@ -27,10 +31,27 @@ export default function TodayPage() {
+       | { activeWorkoutId?: string | null; retry?: () => Promise<void> }
+       | undefined) ?? {};
+   const activeWorkoutId = activeWorkoutIdBruto ?? null;
+-  // Troca de execu├º├úo ativa (M├¡lon 07c, AC6): ap├│s Finalizar/Cancelar, a
+-  // se├º├úo avisa via `onExecutionSettled` e a fonte ├║nica ├® invalidada para
+-  // que outro treino libere escrita sem reload.
+-  const handleExecutionSettled = () => void retryActiveExecution?.();
++  // Foco p├│s-a├º├úo (M├¡lon 07b-1, DA5): sinal num├®rico incrementado a cada
++  // desfecho emitido (sealed ou cancelled) e enviado ├á se├º├úo, que foca o
++  // cabe├ºalho do treino exibido ao montar/com sinal novo.
++  const [focusHeaderSignal, setFocusHeaderSignal] = useState<number | null>(
++    null,
++  );
++  // Avan├ºar para o pr├│ximo treino (M├¡lon 07b-1, DA4/DA2): ap├│s desfecho da
++  // se├º├úo, invalida a fonte ├║nica de execu├º├úo ativa; com `sealed` recarrega
++  // tamb├®m a sele├º├úo (aguardada a fonte), que recalcula o pr├│ximo da
++  // rota├º├úo 7b ÔÇö a sele├º├úo nova vem exclusivamente do rec├ílculo do hook,
++  // nunca de `selectWorkout` manual. `cancelled` e chamada sem argumento
++  // (retrocompat 7c AC6, DA3) invalidam somente a fonte ├║nica.
++  const handleExecutionSettled = async (
++    desfecho?: ExecutionSettledOutcome,
++  ): Promise<void> => {
++    await retryActiveExecution?.();
++    if (desfecho === "sealed") {
++      await retry();
++    }
++    setFocusHeaderSignal((sinal) => (sinal ?? 0) + 1);
++  };
+ 
+   const hasSelection = selectedWorkoutId !== null;
+   const empty = !loading && !errorMsg && !hasSelection;
+@@ -92,6 +113,7 @@ export default function TodayPage() {
+               writeBlocked={bloqueado}
+               blockedTooltip={tooltipBloqueio}
+               onExecutionSettled={handleExecutionSettled}
++              focusHeaderSignal={focusHeaderSignal}
+               headerActions={
+                 somenteLeitura ? null : (
+                   <Button type="button" variant="outline" size="sm">
+diff --git a/components/milon/WorkoutDetailSection.tsx b/components/milon/WorkoutDetailSection.tsx
+index d0ee4eb..80a22f3 100644
+--- a/components/milon/WorkoutDetailSection.tsx
++++ b/components/milon/WorkoutDetailSection.tsx
+@@ -1,6 +1,16 @@
+ "use client";
+ 
+-import { Fragment, cloneElement, isValidElement, useCallback, useMemo, useState, type ReactNode } from "react";
++import {
++  Fragment,
++  cloneElement,
++  isValidElement,
++  useCallback,
++  useEffect,
++  useMemo,
++  useRef,
++  useState,
++  type ReactNode,
++} from "react";
+ import { useRouter } from "next/navigation";
+ import { AsyncState } from "@/components/ui/AsyncState";
+ import { Button } from "@/components/ui/button";
+@@ -38,6 +48,15 @@ export type WorkoutDetailBackTarget =
+   | { kind: "program"; programId: string }
+   | { kind: "none" };
+ 
++/**
++ * Desfecho da opera├º├úo de encerramento (M├¡lon 07b-1, plan ┬º3): `sealed`
++ * somente ap├│s `finishExecution` bem-sucedido (parcial confirmada,
++ * completa confirmada ou completo direto); `cancelled` somente ap├│s
++ * `clearExecution` bem-sucedido (Cancelar confirmado ou Finalizar vazio
++ * conduzido). Emitido uma ├║nica vez por opera├º├úo de sucesso, nunca no erro.
++ */
++export type ExecutionSettledOutcome = "sealed" | "cancelled";
++
+ export interface WorkoutDetailSectionProps {
+   workoutId: string;
+   backTarget: WorkoutDetailBackTarget;
+@@ -72,12 +91,22 @@ export interface WorkoutDetailSectionProps {
+   writeBlocked?: boolean;
+   blockedTooltip?: string | null;
+   /**
+-   * Troca de execu├º├úo ativa (M├¡lon 07c, AC6): invalida├º├úo da fonte ├║nica
+-   * ap├│s o selamento. A se├º├úo invoca ap├│s Finalizar/Cancelar com sucesso;
+-   * a p├ígina do Treino do Dia liga ao `retry()` de `useActiveExecution`
+-   * para que outro treino libere escrita sem reload.
++   * Troca de execu├º├úo ativa (M├¡lon 07c, AC6) + desfecho (M├¡lon 07b-1,
++   * plan ┬º3): invalida├º├úo da fonte ├║nica ap├│s Finalizar/Cancelar com
++   * sucesso. A se├º├úo invoca exatamente uma vez por opera├º├úo bem-sucedida
++   * carregando o desfecho (`sealed` nos tr├¬s caminhos de selamento,
++   * `cancelled` nos dois de exclus├úo); a falha nunca emite. A chamada sem
++   * argumento ├® retrocompat├¡vel (comportamento 7c: n├úo-selamento).
+    */
+-  onExecutionSettled?: () => void | Promise<void>;
++  onExecutionSettled?: (outcome: ExecutionSettledOutcome) => void | Promise<void>;
++  /**
++   * Sinal de foco do cabe├ºalho (M├¡lon 07b-1, plan ┬º3 / DA5): com valor
++   * n├úo-nulo a se├º├úo foca o pr├│prio cabe├ºalho rotulado `Cabe├ºalho do
++   * treino` (tabindex -1, foco s├│ program├ítico) ao montar e a cada nova
++   * mudan├ºa do valor, nos dois ramos (execu├º├úo e manuten├º├úo). Nulo
++   * (default) nenhum foco program├ítico.
++   */
++  focusHeaderSignal?: number | null;
+ }
+ 
+ function toMessage(err: unknown, fallback: string): string {
+@@ -181,7 +210,7 @@ function ExecutionHost({
+   workoutId: string;
+   entries: WorkoutEntryView[];
+   onTemplateChanged: () => void;
+-  onExecutionSettled?: () => void | Promise<void>;
++  onExecutionSettled?: (outcome: ExecutionSettledOutcome) => void | Promise<void>;
+   children: (ctx: ExecutionListContext) => ReactNode;
+ }) {
+   const exec = useWorkoutExecution(workoutId, entries);
+@@ -284,18 +313,24 @@ function ExecutionHost({
+   // com a mesma disciplina do clearConfirmOpen ÔÇö erro nunca fecha (o hook
+   // relan├ºa e mant├®m aberto), processing nunca fecha (dismiss guardado aqui
+   // + bot├Áes desabilitados no modal). Ap├│s o selamento com sucesso, invalida
+-  // a fonte ├║nica via `onExecutionSettled` (M├¡lon 07c, AC6).
+-  function notifySettled(): void {
+-    void onExecutionSettled?.();
++  // a fonte ├║nica via `onExecutionSettled` (M├¡lon 07c, AC6) informando o
++  // desfecho da opera├º├úo (M├¡lon 07b-1, plan ┬º3).
++  function notifySettled(outcome: ExecutionSettledOutcome): void {
++    void onExecutionSettled?.(outcome);
+   }
+ 
+   function confirmFinish(): void {
++    // Captura s├¡ncrona do caso ANTES da chamada do hook (plan ┬º3 / TASK-002
++    // AC3): `confirmFinish` reinicia `finishConfirmCase` ao concluir, da├¡ o
++    // desfecho ser decidido aqui ÔÇö vazio conduzido emite `cancelled`, os
++    // demais (parcial/completa) emitem `sealed`.
++    const caso = exec.finishConfirmCase;
+     void exec
+       .confirmFinish()
+-      .then(() => notifySettled())
++      .then(() => notifySettled(caso === "vazio" ? "cancelled" : "sealed"))
+       .catch(() => {
+         // Banner j├í alimentado pelo hook (origem operacao); modal permanece
+-        // aberto por constru├º├úo (hook s├│ fecha no sucesso).
++        // aberto por constru├º├úo (hook s├│ fecha no sucesso). Sem desfecho.
+       });
+   }
+ 
+@@ -306,9 +341,9 @@ function ExecutionHost({
+   function confirmCancel(): void {
+     void exec
+       .confirmCancelExecution()
+-      .then(() => notifySettled())
++      .then(() => notifySettled("cancelled"))
+       .catch(() => {
+-        // Idem: erro de opera├º├úo sem fechar.
++        // Idem: erro de opera├º├úo sem fechar, sem desfecho.
+       });
+   }
+ 
+@@ -317,9 +352,15 @@ function ExecutionHost({
+   }
+ 
+   function requestFinish(): void {
++    // Caso capturado s├¡ncrono e anterior ├á chamada do hook: s├│ o completo
++    // sela direto (emite `sealed`); parcial/vazio abrem a pergunta sem
++    // selar e o desfecho sai em `confirmFinish` ÔÇö nunca aqui.
++    const caso = exec.finishCase;
+     void exec
+       .requestFinish()
+-      .then(() => notifySettled())
++      .then(() => {
++        if (caso === "completo") notifySettled("sealed");
++      })
+       .catch(() => {
+         // Completo sela direto; falha vira banner de opera├º├úo (sem modal).
+       });
+@@ -387,9 +428,19 @@ export function WorkoutDetailSection({
+   writeBlocked = false,
+   blockedTooltip = null,
+   onExecutionSettled,
++  focusHeaderSignal = null,
+ }: WorkoutDetailSectionProps) {
+   const router = useRouter();
+ 
++  // Foco do cabe├ºalho pelo sinal (M├¡lon 07b-1, plan ┬º3 + DA5): s├│ h├í foco
++  // program├ítico com sinal n├úo-nulo, ao montar e a cada mudan├ºa do valor
++  // (o tabindex -1 do cabe├ºalho mant├®m o foco fora da tabula├º├úo).
++  const cabecalhoRef = useRef<HTMLElement | null>(null);
++  useEffect(() => {
++    if (focusHeaderSignal === null) return;
++    cabecalhoRef.current?.focus();
++  }, [focusHeaderSignal]);
++
+   const {
+     workout,
+     program,
+@@ -711,6 +762,8 @@ export function WorkoutDetailSection({
+                   <>
+                     <section
+                       aria-label="Cabe├ºalho do treino"
++                      ref={cabecalhoRef}
++                      tabIndex={-1}
+                       className="rounded-lg border bg-card p-6 shadow-sm flex flex-col gap-2"
+                     >
+                       <div className="flex items-center justify-between gap-4">
+@@ -838,6 +891,8 @@ export function WorkoutDetailSection({
+               <>
+                 <section
+                   aria-label="Cabe├ºalho do treino"
++                  ref={cabecalhoRef}
++                  tabIndex={-1}
+                   className="rounded-lg border bg-card p-6 shadow-sm flex flex-col gap-2"
+                 >
+                   <div className="flex items-center justify-between gap-4">

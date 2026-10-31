@@ -1,0 +1,151 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+
+export type WorkoutConfirmVariant =
+  | "remover-exercicio"
+  | "reduzir-series"
+  | "limpar-execucao"
+  | "cancelar-execucao"
+  | "finalizar-parcial"
+  | "finalizar-completa"
+  | "finalizar-vazio";
+
+export interface WorkoutConfirmModalProps {
+  open: boolean;
+  variant: WorkoutConfirmVariant;
+  exerciseName: string;
+  seriesCount: number;
+  currentQuantity: number;
+  newQuantity: number;
+  processing: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+/**
+ * Confirmações do detalhe do treino (Mílon #3, D6).
+ * `remover-exercicio`: exercício com ≥1 série — lista o que será perdido.
+ * `reduzir-series`: redução com série preenchida — informa de/para.
+ * Cancelar não muda nada; processing desabilita os botões.
+ */
+export default function WorkoutConfirmModal({
+  open,
+  variant,
+  exerciseName,
+  seriesCount,
+  currentQuantity,
+  newQuantity,
+  processing,
+  onConfirm,
+  onCancel,
+}: WorkoutConfirmModalProps) {
+  if (!open) return null;
+
+  const isRemover = variant === "remover-exercicio";
+  const isLimpar = variant === "limpar-execucao";
+  const isCancelarExecucao = variant === "cancelar-execucao";
+  const isParcial = variant === "finalizar-parcial";
+  const isCompleta = variant === "finalizar-completa";
+  const isVazio = variant === "finalizar-vazio";
+  const titulo = isRemover
+    ? "Remover exercício?"
+    : isLimpar
+      ? "Limpar execução"
+      : isCancelarExecucao
+        ? "Cancelar execução"
+        : isParcial || isCompleta
+          ? "Finalizar treino"
+          : isVazio
+            ? "Treino sem séries feitas"
+            : "Reduzir séries?";
+  const confirmLabel = isRemover
+    ? "Remover"
+    : isLimpar
+      ? "Limpar"
+      : isCancelarExecucao
+        ? "Excluir"
+        : isParcial || isCompleta
+          ? "Finalizar"
+          : isVazio
+            ? "Cancelar execução"
+            : "Reduzir";
+  // D4 (Mílon #7): vazio conduz ao cancelamento — desistência volta, sem sair.
+  const dismissLabel = isVazio ? "Voltar" : "Cancelar";
+  // Homologação 2026-10-13 (cenário 4): selamento (parcial/completa) é ação
+  // primária — sem vermelho (sensação de exclusão). Demais confirmações
+  // seguem destrutivas (exclusão real).
+  const isFinalizar = isParcial || isCompleta;
+  const serieWord = seriesCount === 1 ? "série" : "séries";
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-lg flex flex-col gap-4">
+        <h2 className="text-lg font-display tracking-wider">{titulo}</h2>
+
+        {isRemover ? (
+          <p className="text-sm text-muted-foreground">
+            Remover &ldquo;{exerciseName}&rdquo; e{" "}
+            {seriesCount === 1
+              ? "sua 1 série"
+              : `suas ${seriesCount} séries`}{" "}
+            ({seriesCount} {serieWord}) do treino? As repetições, o tempo, a
+            carga e o descanso informados serão perdidos.
+          </p>
+        ) : isLimpar ? (
+          <p className="text-sm text-muted-foreground">
+            Todas as séries foram desmarcada. Deseja cancelar a execução desse
+            treino?
+          </p>
+        ) : isCancelarExecucao ? (
+          <p className="text-sm text-muted-foreground">
+            Tem certeza que deseja cancelar essa execução? Todas as informações
+            serão excluídas.
+          </p>
+        ) : isParcial ? (
+          <p className="text-sm text-muted-foreground">
+            Ainda existem séries não executadas. Tem certeza que deseja
+            finalizar o treino?
+          </p>
+        ) : isCompleta ? (
+          <p className="text-sm text-muted-foreground">
+            Você executou todas as séries, deseja finalizar o treino?
+          </p>
+        ) : isVazio ? (
+          <p className="text-sm text-muted-foreground">
+            O treino não pode ser finalizado pois nenhuma série foi feita. Em
+            vez disso, deseja cancelar e excluir a execução desse treino?
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Reduzir de {currentQuantity} para {newQuantity} séries? As séries
+            removidas têm dados preenchidos e serão perdidas.
+          </p>
+        )}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={processing}
+            onClick={() => {
+              if (!processing) onCancel();
+            }}
+          >
+            {dismissLabel}
+          </Button>
+          <Button
+            type="button"
+            variant={isFinalizar ? "default" : "destructive"}
+            disabled={processing}
+            onClick={() => {
+              if (!processing) onConfirm();
+            }}
+          >
+            {confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

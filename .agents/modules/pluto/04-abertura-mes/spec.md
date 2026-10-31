@@ -16,7 +16,7 @@ Esse ato demarca o início das operações de lançamentos e atua como um portã
 
 Criaremos a tabela `public.monthly_periods` para armazenar o estado operacional de cada mês.
 
-### Script de Migração: `utils/migrations/migration-feature-4.sql`
+### Script de Migração: `utils/migrations/migration-feature-3.sql`
 
 ```sql
 -- 1. Criar a tabela de controle de períodos mensais
@@ -43,7 +43,7 @@ INSERT INTO public.schema_migrations (spec_id, spec_name, script_name, executed_
 VALUES (
     '04',
     'Abertura de Mês',
-    'migration-feature-4.sql',
+    'migration-feature-3.sql',
     'joaopsroberto@gmail.com'
 ) ON CONFLICT (script_name) DO NOTHING;
 ```

@@ -71,6 +71,7 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 | 19 | **Divisão entre os dois usuários** | Mostra quanto cada um dos dois usuários lançou ou contribuiu no mês, útil para conversas sobre divisão de despesas. | |  |  |
 | 20 | **Metas de economia** | Permite definir uma meta de economia (ex: guardar R$500/mês) e acompanhar o progresso ao longo do tempo. | |  |  |
 | 21 | **Exportação de dados** | Exporta os lançamentos em CSV/Excel, para backup ou análise fora da ferramenta. | |  |  |
+| 26 | **Lançamento com data livre (calendário sem trava do mês)** | Mudança de regra sobre o cadastro de transações (item 5, patch candidato `05e`): hoje a data do lançamento é travada ao mês selecionado — `components/pluto/TransactionModal.tsx` aplica `min`/`max` no input de data, calculados em `lib/pluto/hooks/usePlutoData.ts` via `getMonthRange(selectedYear, selectedMonth)`, e o form abre com a data default em `minDateStr`. A mudança remove essa restrição: o calendário continua **abrindo por padrão no mês que está sendo editado**, mas **permite lançar em qualquer data**. Pontos a validar em discovery (Hera): em qual mês um lançamento datado em outro período é contabilizado no saldo/mês e no orçado vs. realizado; interação com meses encerrados/reabertos; default de data continua no mês selecionado? | Pendente |  |  |
 
 ---
 

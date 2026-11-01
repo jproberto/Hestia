@@ -1,5 +1,5 @@
 {
-  "currentPhase": "SPEC_DRAFT",
+  "currentPhase": "TASKS_READY",
   "validTransitions": {
     "SPEC_DRAFT": ["SPEC_APPROVED"],
     "SPEC_APPROVED": ["PLAN_READY", "SPEC_DRAFT"],
@@ -17,7 +17,27 @@
       "phase": "SPEC_DRAFT",
       "timestamp": "2026-10-31T00:00:00.000Z",
       "note": "FEATURE_DIR criado por Zeus; aguardando Step 0 (Caronte: branch) e discovery (Hera)."
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "Checkpoint 1: approve-spec humano (chat: 'aprovado'). Guardian OK apos correcao de forma pela Hera (titulos 'Modelo de Domínio', 'Premissas Técnicas Validadas', marcador 'Validada com Humano? Sim'; conteudo intocado)."
+    },
+    {
+      "phase": "PLAN_READY",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "Atena entregou plan.md (191 linhas, 6 secoes guardian) + tasks.json (8 tasks, DAG aciclico, minos/hefesto). Guardian OK (SPEC_APPROVED -> PLAN_READY). Aguardando checkpoint humano approve-plan."
+    },
+    {
+      "phase": "PLAN_APPROVED",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "Checkpoint 2: approve-plan humano (chat: 'aprovado'). Guardian OK (PLAN_READY -> PLAN_APPROVED)."
+    },
+    {
+      "phase": "TASKS_READY",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "DAG validado por Zeus (8 tasks aciclicas, criteria testaveis, files reais). Guardian OK (PLAN_APPROVED -> TASKS_READY). Commit de spec+plan delegado a Caronte."
     }
   ],
-  "lastUpdated": "2026-10-31T00:00:00.000Z"
+  "lastUpdated": "2026-11-01T00:00:00.000Z"
 }

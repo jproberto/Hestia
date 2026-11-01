@@ -1,0 +1,182 @@
+{
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Migração 0018: colunas period_year/period_month + backfill + auditoria em public.transactions",
+      "assignee": "hefesto",
+      "status": "pending",
+      "description": "Criar utils/migrations/migration-0018-pluto-lancamento-data-livre.sql conforme a seção 'Migrações' do plan.md: ADD COLUMN period_year/period_month (inteiros anuláveis), backfill copiando ano/mês da própria date com conversão explícita para integer, SET NOT NULL nas duas colunas após o backfill, self-bootstrap idempotente de public.schema_migrations e INSERT de auditoria com script_name idêntico ao nome do arquivo (ON CONFLICT DO NOTHING), rollback em comentário no rodapé e consultas de verificação documentadas. Nenhuma remoção/renomeação, nenhuma RLS nova, nenhum índice novo.",
+      "acceptanceCriteria": [
+        "O arquivo utils/migrations/migration-0018-pluto-lancamento-data-livre.sql existe e é o único consumidor do inteiro 0018",
+        "O script cria period_year e period_month em public.transactions, aplica o backfill a partir de date ANTES de impor SET NOT NULL nas duas colunas",
+        "A auditoria registra script_name 'migration-0018-pluto-lancamento-data-livre.sql' (idêntico ao nome do arquivo) com ON CONFLICT (script_name) DO NOTHING em public.schema_migrations",
+        "O script contém comentário de rollback (DROP COLUMN das duas colunas) e as consultas de verificação: contagem de meses de cálculo nulo = 0 e soma por mês antes/depois com diferença zero",
+        "O script não remove nem renomeia coluna/tabela existente e não cria política RLS nova",
+        "node .agents/scripts/guardian.js .agents/modules/pluto/05e-lancamento-data-livre TASKS_READY não acusa conflito de ordem de migração (0018 > 0017)"
+      ],
+      "files": [
+        "utils/migrations/migration-0018-pluto-lancamento-data-livre.sql"
+      ],
+      "produces": ["migracao-0018-aplicavel"]
+    },
+    {
+      "id": "T2",
+      "title": "RED do contrato de transações: mês de cálculo, data livre e edição que não move mês",
+      "assignee": "minos",
+      "status": "pending",
+      "description": "Atualizar os testes de contrato para o novo comportamento (falham contra o fake/repositório atual): getTransactionsByMonth filtra por period_year/period_month; create grava período da tela independente da data e aceita data de qualquer mês; validação de mês aberto usa o mês de cálculo (criar/editar/excluir) com as mensagens atuais; update não altera period_year/period_month mesmo mudando a data; ordenação por data crescente mantida com datas de meses diferentes.",
+      "acceptanceCriteria": [
+        "__tests__/lib/pluto/repositories/contract-transactions.test.ts inclui caso: lançamento criado com período 2026/3 e data 2026-04-10 aparece em getTransactionsByMonth(2026, 3) e NÃO aparece em getTransactionsByMonth(2026, 4)",
+        "O contrato inclui caso: create com data de período encerrado mas período de cálculo aberto é aceito (trava avalia period_year/period_month, não date)",
+        "O contrato inclui caso: update que muda a data para outro mês preserva period_year/period_month originais no registro retornado",
+        "O contrato inclui caso: rejeição de criar/editar/excluir usa a mensagem atual referenciando o mês de cálculo (regex /não está aberto/ com mês/ano do período gravado)",
+        "A ordenação por data crescente com desempate por id permanece coberta no contrato",
+        "Rodar npx vitest run __tests__/lib/pluto/repositories/contract-transactions.test.ts --reporter=verbose produz falhas (RED) sem SyntaxError/TS2 no output"
+      ],
+      "files": [
+        "__tests__/lib/pluto/repositories/contract-transactions.test.ts"
+      ],
+      "consumes": [],
+      "produces": ["contrato-transacoes-red"]
+    },
+    {
+      "id": "T3",
+      "title": "GREEN: tipos + repositório real + fake + harness de integração sobre o mês de cálculo",
+      "assignee": "hefesto",
+      "status": "pending",
+      "description": "Implementar conforme 'Contratos Completos' do plan.md: TransactionRow/TransactionInput/TransactionWithDetails ganham period_year/period_month; novo TransactionUpdateInput sem campos de período; ITransactionRepository.updateTransaction muda a assinatura; repositories/transactions.ts filtra por período de cálculo, valida monthly_periods pelo período gravado (criar/editar/excluir) e grava o período no insert; fake espelha o contrato e perde os helpers locais getMonthRange/parseYearMonth; __tests__/integration/repositories.ts adapta a assinatura; remover tipos mortos CreateTransactionFormData/UpdateTransactionFormData/CreateTransactionDTO/UpdateTransactionDTO. Persistência só nos repositories via IDatabaseClient.",
+      "acceptanceCriteria": [
+        "T2 verde: npx vitest run __tests__/lib/pluto/repositories/contract-transactions.test.ts --reporter=verbose sem falhas",
+        "npx vitest run __tests__/lib/pluto/repositories/fake-transaction.test.ts __tests__/lib/pluto/db/transactions.test.ts verde com os testes ajustados ao novo contrato",
+        "Busca por 'parseYearMonth' retorna 0 em lib/pluto/repositories/transactions.ts e 0 em lib/pluto/repositories/fakes/ (código vivo)",
+        "Busca por 'CreateTransactionDTO' retorna 0 em código vivo",
+        "updateTransaction aceita somente TransactionUpdateInput (sem period_year/period_month no tipo) e não altera os campos de período em nenhuma rota",
+        "npx tsc --noEmit sem erros após a mudança das assinaturas"
+      ],
+      "files": [
+        "lib/pluto/types.ts",
+        "lib/pluto/repositories/interfaces.ts",
+        "lib/pluto/repositories/transactions.ts",
+        "lib/pluto/repositories/fakes/fakeTransactionRepository.ts",
+        "__tests__/integration/repositories.ts",
+        "__tests__/lib/pluto/repositories/fake-transaction.test.ts",
+        "__tests__/lib/pluto/db/transactions.test.ts"
+      ],
+      "consumes": ["migracao-0018-aplicavel", "contrato-transacoes-red"],
+      "produces": ["repositorio-periodo-green"]
+    },
+    {
+      "id": "T4",
+      "title": "RED dos hooks: dependências do formulário sem minDateStr e data inicial no mês da tela",
+      "assignee": "minos",
+      "status": "pending",
+      "description": "Atualizar os testes dos hooks para o novo contrato (falham contra os hooks atuais): UseTransactionFormOptions/TransactionModalsDeps recebem selectedYear/selectedMonth em vez de minDateStr; handleOpenTxModal pré-preenche a data com o primeiro dia do mês da tela; create envia period_year/period_month do mês da tela; update envia payload sem campos de período; usePlutoData não expõe mais minDateStr/maxDateStr; fluxo 05d preserva a data no 'Salvar e Adicionar Outro'; prefill do checklist mantém a data vencimento.",
+      "acceptanceCriteria": [
+        "__tests__/lib/pluto/hooks/useTransactionForm.test.ts: o teste de abertura espera data igual ao primeiro dia do mês da tela selecionado (ex.: 2026-03-01 para selectedMonth 3) e as opções do hook não contêm minDateStr",
+        "O teste de criação assera que createTransaction recebe period_year/period_month do mês da tela quando a data digitada é de outro mês",
+        "O teste de edição assera que updateTransaction é chamado sem period_year/period_month no payload",
+        "O teste de 'salvar e adicionar outro' assera que a data digitada é preservada após salvar",
+        "__tests__/lib/pluto/hooks/usePlutoData.test.ts: teste de delimitadores minDateStr/maxDateStr removido (retorna 0 matches de 'minDateStr' nesse arquivo)",
+        "__tests__/lib/pluto/hooks/useTransactionModals.test.ts: deps usam selectedYear/selectedMonth em vez de minDateStr",
+        "Rodar npx vitest run nos três arquivos de hook --reporter=verbose produz falhas (RED) sem SyntaxError/TS2 no output"
+      ],
+      "files": [
+        "__tests__/lib/pluto/hooks/useTransactionForm.test.ts",
+        "__tests__/lib/pluto/hooks/usePlutoData.test.ts",
+        "__tests__/lib/pluto/hooks/useTransactionModals.test.ts"
+      ],
+      "consumes": ["repositorio-periodo-green"],
+      "produces": ["hooks-red"]
+    },
+    {
+      "id": "T5",
+      "title": "GREEN dos hooks: usePlutoData sem limites, useTransactionForm com mês da tela, useTransactionModals repassando",
+      "assignee": "hefesto",
+      "status": "pending",
+      "description": "Implementar conforme 'Contratos Completos' do plan.md: usePlutoData remove minDateStr/maxDateStr (interface, retorno e derivação getMonthRange); useTransactionForm troca minDateStr por selectedYear/selectedMonth, usa getMonthRange(...).startDate na abertura, envia period_year/period_month no create e TransactionUpdateInput no update, mantendo validações de campo, foco e resets do 05d; useTransactionModals troca a dependência e repassa. Sem lógica própria nova em useBudgetComparison/useAccountAggregation.",
+      "acceptanceCriteria": [
+        "T4 verde: npx vitest run nos três arquivos de hook --reporter=verbose sem falhas",
+        "Busca por 'minDateStr' retorna 0 em lib/pluto/ e app/ (código vivo)",
+        "Busca por 'maxDateStr' retorna 0 em lib/pluto/ e app/ (código vivo)",
+        "usePlutoData continua exportando selectedYear/selectedMonth/fetchData/transactions com a mesma semântica de single-flight (testes existentes de single-flight verdes)",
+        "npx tsc --noEmit sem erros"
+      ],
+      "files": [
+        "lib/pluto/hooks/usePlutoData.ts",
+        "lib/pluto/hooks/useTransactionForm.ts",
+        "lib/pluto/hooks/useTransactionModals.ts"
+      ],
+      "consumes": ["hooks-red"],
+      "produces": ["hooks-green"]
+    },
+    {
+      "id": "T6",
+      "title": "RED da UI: modal sem limites de data, rótulo 'Data' e fixtures com mês de cálculo",
+      "assignee": "minos",
+      "status": "pending",
+      "description": "Atualizar testes de componente e página para o novo contrato (falham contra o código atual): TransactionModal sem props minDateStr/maxDateStr/selectedYear/selectedMonth, input de date sem min/max, rótulo 'Data' (0 matches de 'Limitada a'); critical-flows deixa de procurar 'Data (Limitada a' e espera createTransaction com period fields do mês da tela; fixtures TransactionWithDetails dos testes de página/componentes/hooks ganham period_year/period_month.",
+      "acceptanceCriteria": [
+        "__tests__/components/pluto/TransactionModal.test.tsx: makeProps sem minDateStr/maxDateStr/selectedYear/selectedMonth e novo caso que assera ausência dos atributos min e max no input de date e rótulo exato 'Data'",
+        "__tests__/app/pluto/critical-flows.test.tsx: nenhuma ocorrência de 'Limitada a' e o createTransaction é esperado com objectContaining period_year/period_month do mês da tela selecionado nos mocks",
+        "Fixtures TransactionWithDetails em transactions-page.test.tsx, transactions/page.test.tsx, transactions-checklist.test.tsx, critical-flows.test.tsx, AccountCardGrid.test.tsx, DeleteConfirmModal.test.tsx, useDeleteTransaction.test.ts, useAccountAggregation.test.ts, useBudgetComparison.test.ts contêm period_year/period_month (npx tsc --noEmit sem erro de propriedade obrigatória ausente)",
+        "Rodar npx vitest run nos arquivos de componente/página --reporter=verbose produz falhas (RED) sem SyntaxError/TS2 no output"
+      ],
+      "files": [
+        "__tests__/components/pluto/TransactionModal.test.tsx",
+        "__tests__/app/pluto/critical-flows.test.tsx",
+        "__tests__/app/pluto/transactions-page.test.tsx",
+        "__tests__/app/pluto/transactions/page.test.tsx",
+        "__tests__/app/pluto/transactions-checklist.test.tsx",
+        "__tests__/components/pluto/AccountCardGrid.test.tsx",
+        "__tests__/components/pluto/DeleteConfirmModal.test.tsx",
+        "__tests__/lib/pluto/hooks/useDeleteTransaction.test.ts",
+        "__tests__/lib/pluto/hooks/useAccountAggregation.test.ts",
+        "__tests__/lib/pluto/hooks/useBudgetComparison.test.ts"
+      ],
+      "consumes": ["repositorio-periodo-green"],
+      "produces": ["ui-red"]
+    },
+    {
+      "id": "T7",
+      "title": "GREEN da UI: TransactionModal sem limites, stories e página sem repasse de limites",
+      "assignee": "hefesto",
+      "status": "pending",
+      "description": "Implementar conforme 'Contratos Completos' do plan.md: TransactionModal.tsx remove props minDateStr/maxDateStr/selectedYear/selectedMonth, atributos min/max, texto 'Limitada a' e import de MONTH_NAMES (rótulo 'Data'); TransactionModal.stories.tsx e storybook.fixtures.ts atualizam args/fixtures (storyTransactions com período); app/pluto/transactions/page.tsx deixa de desestruturar/repassar limites e passa selectedYear/selectedMonth ao useTransactionModals.",
+      "acceptanceCriteria": [
+        "T6 verde: npx vitest run nos arquivos de componente/página --reporter=verbose sem falhas",
+        "Busca por 'Limitada a' retorna 0 em código vivo (inclusive __tests__/)",
+        "Busca por 'MONTH_NAMES' retorna 0 em components/pluto/TransactionModal.tsx",
+        "Busca por 'minDateStr' retorna 0 em components/ e app/ (código vivo)",
+        "npx tsc --noEmit sem erros e build do Storybook verde (npx storybook build) após mudança de props"
+      ],
+      "files": [
+        "components/pluto/TransactionModal.tsx",
+        "components/pluto/TransactionModal.stories.tsx",
+        "components/pluto/storybook.fixtures.ts",
+        "app/pluto/transactions/page.tsx"
+      ],
+      "consumes": ["hooks-green", "ui-red"],
+      "produces": ["ui-green"]
+    },
+    {
+      "id": "T8",
+      "title": "Suíte completa verde, cobertura ≥ 80% e relatórios de teste",
+      "assignee": "minos",
+      "status": "pending",
+      "description": "Re-executar a suite completa com cobertura e emitir os artefatos de TESTING: ajustar qualquer teste remanescente que fixe o comportamento antigo, gerar test-report.json (failed 0, coverage ≥ 80) e test-scenarios.md apenas com cenários manuais (sem tag [Automatizado] nem path __tests__/), incluindo os cenários de fatura de mês anterior, não-vazamento para o mês da data, data futura, edição que não move de mês, ordem do extrato, salvar-e-adicionar-outro e backfill sem mudança de saldo.",
+      "acceptanceCriteria": [
+        "npm run test completo sem falhas (summary.failed == 0)",
+        "Cobertura ≥ 80% medida na execução",
+        "test-report.json presente em .agents/modules/pluto/05e-lancamento-data-livre/ com summary.failed 0 e summary.coverage ≥ 80",
+        "test-scenarios.md presente no FEATURE_DIR sem '[Automatizado]' e sem '__tests__/' (gate do guardian para REVIEW)",
+        "npx tsc --noEmit e npx eslint . sem erros na execução final"
+      ],
+      "files": [
+        ".agents/modules/pluto/05e-lancamento-data-livre/test-report.json",
+        ".agents/modules/pluto/05e-lancamento-data-livre/test-scenarios.md"
+      ],
+      "consumes": ["migracao-0018-aplicavel", "hooks-green", "ui-green"],
+      "produces": ["testing-verde"]
+    }
+  ]
+}

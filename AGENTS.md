@@ -61,6 +61,13 @@ Todo agente DEVE consultar seu prompt em `.agents/olimpo/<agente>.md` antes de a
 - **Zeus** (`zeus.md`, primary): orquestrador, state machine 10 fases (`SPEC_DRAFT`→`COMMITTED` terminal, com `PLAN_APPROVED` entre `PLAN_READY` e `TASKS_READY`; pós-push só o humano atua — merge + CI verde = ambiente livre, sem fases nem writes pós-merge), guardian, delega via Task tool para subagentes registrados em `.opencode/agents/` (sessão filha limpa por delegação), anuncia `[Zeus → <agente>] <fase>:` a cada troca, resolve `FEATURE_DIR` via `.agents/current`, valida DAG `tasks.json` + gates (`approvals.plan` humano obrigatório, `test-report.failed==0`, `coverage≥80`, anti-código em spec/plan via `node .agents/scripts/guardian.js`), anti-travamento (teto de 2 re-delegações sem progresso + `BLOCKED: infra` volta ao humano, nunca loop), gera `diff.patch`, persiste estado via `read`/`write`, vira cada task para `completed` em `tasks.json` no commit do Caronte daquela task (não em lote nos docs).
 - **Hefesto** nunca escreve testes; **Minos** nunca corrige produção; **Argos** nunca corrige; **Mnemósine** nunca altera produção; **Caronte** único que commita.
 
+## Fluxo de Release (congelamento)
+
+- Cortar `release/<versão>` a partir do develop **só com o escopo da release fechado**; durante a janela o develop aceita features novas normalmente (ficam para a PRÓXIMA versão — a promoção não sai mais dele) e fixes da release vão para a própria `release/<versão>` (push direto; CI valida cada push).
+- Bump (CHANGELOG + `package.json`/lock) acontece na branch da release, nunca no develop.
+- `release.yml` job `promote`: nos pushes de `release/**` compara a versão com `origin/main` e, se diferente, abre auto-PR `<release> → main`; o merge dispara o job `tag` → tag `v$VERSION` + GitHub Release + deploy.
+- Sync `release/<versão>` → develop (auto-PR do `ci.yml`) mesclado ANTES da promoção para main.
+
 ## Regras Fundamentais de Execução (Garantia do Processo)
 
 1. **Consulta Obrigatória Olympus:** Ler `.agents/olimpo/<agente>.md` correspondente antes de qualquer fase.
@@ -74,4 +81,4 @@ Todo agente DEVE consultar seu prompt em `.agents/olimpo/<agente>.md` antes de a
 8b. **Falha de modelo/infra nunca trava:** falta de token, timeout, erro de API, saída truncada ou loop interrompem o subagente na hora (`BLOCKED: infra <tipo> — <evidência> — último progresso seguro`) e voltam para avaliação humana via Zeus — proibido retry em loop ou "completar no escuro". Teto: 2 re-delegações sem progresso, depois humano decide.
 9. **Verde pós-merge (feature só 100% com develop verde):** após o push final, o **humano** abre/acompanha o PR, mergeia no GitHub e avalia o CI (inclusive qualquer falha — ele decide o que fazer). O Caronte **nunca** cria PR, mergeia, arma auto-merge ou monitora CI para decidir merge; em falha, apenas reporta `BLOCKED: <link>`. Só com `develop` verde o ambiente é liberado para a próxima feature (humano sincroniza `develop` local). Fases: `COMMITTED` é terminal (publicado); pós-push não há fases nem writes — merge + CI verde = ambiente livre (decisão 2026-10-14: carimbos pós-merge nunca commitados não geram rastreabilidade).
 
-<!-- Última atualização: 2026-10-30 (Mílon #6 Timer de descanso + Web Push de fim de descanso: rota /api/milon/rest-push + PWA mínimo + migração 0017 pendente de aplicação manual; Emenda 1 elapsed/202/cancel-all + Emenda 2 supressão por visibilidade + graça 800ms) -->
+<!-- Última atualização: 2026-10-31 (Héstia #9 Fluxo de Release com congelamento: seção "Fluxo de Release" no AGENTS.md; job `promote` do release.yml passa a disparar em `release/**` com auto-PR → main; bump na branch da release) -->

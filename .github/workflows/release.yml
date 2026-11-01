@@ -1,13 +1,13 @@
 # Release automation separada da validação — least privilege e triggers distintos:
 # o CI de validação (ci.yml) roda em feature/**, release/**, develop e main sem
 # permissão de escrita de conteúdo; este workflow concentra a escrita (PRs de
-# promoção, tags e releases) só em develop e main.
+# promoção, tags e releases) só em release/** e main.
 name: Release Automation
 
 on:
   push:
     branches:
-      - develop
+      - release/**
       - main
 
 concurrency:
@@ -17,8 +17,9 @@ concurrency:
 # Sem permissões globais: cada job declara o mínimo (least privilege).
 
 jobs:
+  # Promoção parte da branch de release (congelamento) — o que não entrou na release não vai para produção.
   promote:
-    if: github.event_name == 'push' && github.ref_name == 'develop'
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -30,38 +31,40 @@ jobs:
         with:
           fetch-depth: 0 # Garante histórico completo para o git tag e ls-remote
 
-      # Detecta bump de versão para só promover release de verdade
+      # Detecta bump de versão comparando a branch da release com a main
       - name: Check Version Bump
         id: version
-        if: github.event_name == 'push' && github.ref_name == 'develop'
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')
         run: |
-          OLD=$(git show ${{ github.event.before }}:package.json 2>/dev/null | jq -r .version || echo "")
+          git fetch origin main --quiet
+          OLD=$(git show origin/main:package.json | jq -r .version || echo "")
           NEW=$(jq -r .version package.json)
-          echo "Versão antes: $OLD / agora: $NEW"
+          echo "Versão em main: $OLD / na release: $NEW"
           if [ -n "$NEW" ] && [ "$OLD" != "$NEW" ]; then
             echo "bumped=true" >> $GITHUB_OUTPUT
           else
             echo "bumped=false" >> $GITHUB_OUTPUT
           fi
 
-      # Abre o PR de develop para main só quando há bump de versão (intenção de release)
+      # Abre o PR da branch de release para main só quando há bump de versão (intenção de release)
       - name: Auto Create Promotion Pull Request
-        if: github.event_name == 'push' && github.ref_name == 'develop' && steps.version.outputs.bumped == 'true'
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/') && steps.version.outputs.bumped == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Verificando se já existe PR aberto de develop para main..."
-          PR_EXISTS=$(gh pr list --head develop --base main --state open --json number --jq '.[0].number')
+          BRANCH_NAME="${{ github.ref_name }}"
+          echo "Verificando se já existe PR aberto de $BRANCH_NAME para main..."
+          PR_EXISTS=$(gh pr list --head "$BRANCH_NAME" --base main --state open --json number --jq '.[0].number')
 
           if [ -z "$PR_EXISTS" ]; then
-            echo "Criando Pull Request de promoção (develop -> main)..."
+            echo "Criando Pull Request de promoção ($BRANCH_NAME -> main)..."
             gh pr create \
               --base main \
-              --head develop \
-              --title "Release: develop -> main" \
-              --body "Este Pull Request foi criado automaticamente pelo pipeline de CI para promover as alterações de develop para a main (Produção)."
+              --head "$BRANCH_NAME" \
+              --title "Release: $BRANCH_NAME -> main" \
+              --body "Este Pull Request foi criado automaticamente pelo pipeline de CI para promover a branch de release $BRANCH_NAME para a main (Produção). A promoção parte da branch de release por congelamento: o que não entrou na release não vai para produção."
           else
-            echo "PR #$PR_EXISTS de develop para main já está aberto."
+            echo "PR #$PR_EXISTS de $BRANCH_NAME para main já está aberto."
           fi
 
   tag:

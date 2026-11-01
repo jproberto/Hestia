@@ -7,6 +7,9 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ## [Não lançado]
 
+### Alterado
+- **Fluxo de release com congelamento:** promoção a produção passa a partir da branch `release/<versão>` — `release.yml` job `promote` dispara em pushes de `release/**`, compara a versão com `origin/main` e abre auto-PR `<release> → main` (merge disso gera tag `v$VERSION` + GitHub Release + deploy); bump de versão na branch da release e regra de corte formalizada na seção "Fluxo de Release" do `AGENTS.md`.
+
 ## [1.1.0] - 2026-10-30
 
 Módulo Mílon completo (biblioteca de exercícios, programas, treinos com séries planejadas, execução série a série, treino do dia com rotação, encerrar/trocar treino, timer de descanso com Web Push e PWA mínimo) + testes de integração contra Supabase real + estados de tela centralizados (AsyncState).

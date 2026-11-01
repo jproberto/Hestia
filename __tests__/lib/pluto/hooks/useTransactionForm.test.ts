@@ -125,6 +125,7 @@ describe("useTransactionForm", () => {
       result.current.handleOpenEditModal({
         id: "t1", description: "Supermercado", amount: 200, type: "despesa",
         is_refund: false, date: "2026-03-15", category_id: "c1", account_id: "a1",
+        period_year: 2026, period_month: 3,
         category_name: "Alimentação", account_name: "Itaú",
         created_at: "2026-03-15T00:00:00Z", created_by: EMAIL,
       });

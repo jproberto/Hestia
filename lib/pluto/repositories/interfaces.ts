@@ -1,5 +1,6 @@
 import type {
   TransactionInput,
+  TransactionUpdateInput,
   TransactionWithDetails,
   Category,
   Account,
@@ -13,7 +14,7 @@ import type {
 export interface ITransactionRepository {
   getTransactionsByMonth(year: number, month: number): Promise<TransactionWithDetails[]>;
   createTransaction(input: TransactionInput, email: string): Promise<TransactionWithDetails>;
-  updateTransaction(id: string, input: TransactionInput): Promise<TransactionWithDetails>;
+  updateTransaction(id: string, input: TransactionUpdateInput): Promise<TransactionWithDetails>;
   deleteTransaction(id: string): Promise<void>;
 }
 

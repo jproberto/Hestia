@@ -28,7 +28,7 @@
       "id": "T1",
       "title": "Migração 0018: colunas period_year/period_month + backfill + auditoria em public.transactions",
       "assignee": "hefesto",
-      "status": "in_progress",
+      "status": "completed",
       "description": "Criar utils/migrations/migration-0018-pluto-lancamento-data-livre.sql conforme a seção 'Migrações' do plan.md: ADD COLUMN period_year/period_month (inteiros anuláveis), backfill copiando ano/mês da própria date com conversão explícita para integer, SET NOT NULL nas duas colunas após o backfill, self-bootstrap idempotente de public.schema_migrations e INSERT de auditoria com script_name idêntico ao nome do arquivo (ON CONFLICT DO NOTHING), rollback em comentário no rodapé e consultas de verificação documentadas. Nenhuma remoção/renomeação, nenhuma RLS nova, nenhum índice novo.",
       "acceptanceCriteria": [
         "O arquivo utils/migrations/migration-0018-pluto-lancamento-data-livre.sql existe e é o único consumidor do inteiro 0018",
@@ -48,7 +48,7 @@
       "id": "T2",
       "title": "RED do contrato de transações: mês de cálculo, data livre e edição que não move mês",
       "assignee": "minos",
-      "status": "pending",
+      "status": "completed",
       "description": "Atualizar os testes de contrato para o novo comportamento (falham contra o fake/repositório atual): getTransactionsByMonth filtra por period_year/period_month; create grava período da tela independente da data e aceita data de qualquer mês; validação de mês aberto usa o mês de cálculo (criar/editar/excluir) com as mensagens atuais; update não altera period_year/period_month mesmo mudando a data; ordenação por data crescente mantida com datas de meses diferentes.",
       "acceptanceCriteria": [
         "__tests__/lib/pluto/repositories/contract-transactions.test.ts inclui caso: lançamento criado com período 2026/3 e data 2026-04-10 aparece em getTransactionsByMonth(2026, 3) e NÃO aparece em getTransactionsByMonth(2026, 4)",
@@ -68,7 +68,7 @@
       "id": "T3",
       "title": "GREEN: tipos + repositório real + fake + harness de integração sobre o mês de cálculo",
       "assignee": "hefesto",
-      "status": "pending",
+      "status": "in_progress",
       "description": "Implementar conforme 'Contratos Completos' do plan.md: TransactionRow/TransactionInput/TransactionWithDetails ganham period_year/period_month; novo TransactionUpdateInput sem campos de período; ITransactionRepository.updateTransaction muda a assinatura; repositories/transactions.ts filtra por período de cálculo, valida monthly_periods pelo período gravado (criar/editar/excluir) e grava o período no insert; fake espelha o contrato e perde os helpers locais getMonthRange/parseYearMonth; __tests__/integration/repositories.ts adapta a assinatura; remover tipos mortos CreateTransactionFormData/UpdateTransactionFormData/CreateTransactionDTO/UpdateTransactionDTO. Persistência só nos repositories via IDatabaseClient.",
       "acceptanceCriteria": [
         "T2 verde: npx vitest run __tests__/lib/pluto/repositories/contract-transactions.test.ts --reporter=verbose sem falhas",

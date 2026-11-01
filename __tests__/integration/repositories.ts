@@ -2,12 +2,15 @@
  * Binding Supabase dos contracts (item 8): wrappers finos que implementam
  * `I*Repository` delegando às funções reais de `lib/pluto/repositories/*`.
  *
- * Duas adaptações, ambas restritas a este harness (zero mudança em produção):
+ * Adaptações, todas restritas a este harness (zero mudança em produção):
  * 1. `gate`: os contracts chamam `build()` → `reset()` → `seed()` de forma
  *    síncrona no `beforeEach`, mas reset/seed reais são async — cada método
  *    aguarda a chain antes de delegar (construção síncrona, execução ordenada).
  * 2. `AliasIds`: traduz aliases dos contracts ("cat-1") para UUIDs no input
  *    e remapeia `month_id`/`parent_id` de volta nas saídas com assert literal.
+ * 3. Transações (T3 — 05e): `seedTransactions` planta lançamentos com mês de
+ *    cálculo (seed `transactions` do contract) e `resolveId` traduz o id de
+ *    update/delete — alias vira UUID; UUID real (do create) passa direto.
  */
 import type { IDatabaseClient } from "@/lib/shared/database";
 import type {
@@ -25,6 +28,8 @@ import type {
   ChecklistItemInput,
   MonthlyPeriod,
   TransactionInput,
+  TransactionUpdateInput,
+  TransactionWithDetails,
 } from "@/lib/pluto/types";
 import * as transactions from "@/lib/pluto/repositories/transactions";
 import * as budget from "@/lib/pluto/repositories/budget";
@@ -97,6 +102,33 @@ export async function seedPeriods(ids: AliasIds, rows: MonthlyPeriod[]): Promise
 }
 
 /**
+ * Plantio direto de lançamentos do contract (seed `transactions` adicionado na
+ * T2): permite cenários de mês de cálculo encerrado, impossíveis de criar via
+ * `createTransaction` (a trava rejeita). Depende de categorias/contas já
+ * plantadas (FK) — ordem do callback de seed do contract.
+ */
+export async function seedTransactions(ids: AliasIds, rows: TransactionWithDetails[]): Promise<void> {
+  for (const t of rows) {
+    await insertRow("transactions", {
+      id: ids.to(t.id),
+      description: t.description,
+      amount: t.amount,
+      type: t.type,
+      is_refund: t.is_refund,
+      date: t.date,
+      category_id: ids.to(t.category_id),
+      account_id: ids.to(t.account_id),
+      period_year: t.period_year,
+      period_month: t.period_month,
+      created_at: t.created_at,
+      created_by: t.created_by,
+    });
+  }
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
  * Garante a linha do período antes de escritas com `month_id`: o contract
  * de checklist só semeia categorias (o fake não impõe FK), mas no banco
  * real o mês precisa existir — em produção ele sempre existe (mês aberto).
@@ -138,17 +170,26 @@ export class SupabaseTransactionRepository implements ITransactionRepository {
     return transactions.createTransaction(this.db, this.mapInput(input), email);
   }
 
-  async updateTransaction(id: string, input: TransactionInput) {
+  async updateTransaction(id: string, input: TransactionUpdateInput) {
     await this.gate();
-    return transactions.updateTransaction(this.db, id, this.mapInput(input));
+    return transactions.updateTransaction(this.db, this.resolveId(id), this.mapInput(input));
   }
 
   async deleteTransaction(id: string) {
     await this.gate();
-    return transactions.deleteTransaction(this.db, id);
+    return transactions.deleteTransaction(this.db, this.resolveId(id));
   }
 
-  private mapInput(input: TransactionInput): TransactionInput {
+  /**
+   * Contracts referenciam ids plantados por alias ("tx-periodo-encerrado");
+   * ids já reais (retornados pelo create) passam direto — `to()` em um UUID
+   * real geraria outro UUID e a linha não seria encontrada.
+   */
+  private resolveId(id: string): string {
+    return UUID_PATTERN.test(id) ? id : this.ids.to(id);
+  }
+
+  private mapInput<T extends TransactionInput | TransactionUpdateInput>(input: T): T {
     return {
       ...input,
       category_id: this.ids.to(input.category_id),

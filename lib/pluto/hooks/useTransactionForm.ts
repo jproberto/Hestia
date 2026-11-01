@@ -53,6 +53,12 @@ export function useTransactionForm({
   const [txSuccessMsg, setTxSuccessMsg] = useState<string | null>(null);
   const descInputRef = useRef<HTMLInputElement>(null);
 
+  // Shim temporário (T3 — pluto/05e): o mês de cálculo é derivado do minDateStr
+  // (1º dia do mês da tela, logo É o mês de cálculo da tela). Na T5 é substituído
+  // por selectedYear/selectedMonth conforme plan §Hooks — este shim sai junto.
+  const periodYear = Number(minDateStr.slice(0, 4));
+  const periodMonth = Number(minDateStr.slice(5, 7));
+
   // Abertura do Modal de Transação pré-fixado para a conta escolhida (Nova Transação)
   const handleOpenTxModal = (acc: Account) => {
     setEditingTransaction(null);
@@ -155,6 +161,8 @@ export function useTransactionForm({
             date,
             account_id: accountId,
             category_id: categoryId,
+            period_year: periodYear,
+            period_month: periodMonth,
           },
           userEmail
         );
@@ -207,6 +215,8 @@ export function useTransactionForm({
           date,
           account_id: accountId,
           category_id: categoryId,
+          period_year: periodYear,
+          period_month: periodMonth,
         },
         userEmail
       );

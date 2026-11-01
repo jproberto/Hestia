@@ -67,6 +67,8 @@ describe("TransactionModal", () => {
             date: "2026-03-15",
             category_id: "c1",
             account_id: "a1",
+            period_year: 2026,
+            period_month: 3,
             created_at: "x",
             created_by: "y",
             category_name: "Alimentação",

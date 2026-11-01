@@ -1,10 +1,34 @@
 {
   "tasks": [
     {
+      "id": "T0",
+      "title": "RED do conteúdo da migração 0018",
+      "assignee": "minos",
+      "status": "completed",
+      "description": "Estabelecer em teste RED o contrato de conteúdo da migração 0018 (utils/migrations/migration-0018-pluto-lancamento-data-livre.sql, ainda inexistente), no padrão de __tests__/lib/milon/migration-0016.test.ts e __tests__/lib/milon/migration-0017.test.ts: ADD COLUMN das duas colunas anuláveis em public.transactions; backfill pela própria date com conversão explícita para integer ANTES do SET NOT NULL; auditoria em public.schema_migrations com script_name idêntico ao nome do arquivo e ON CONFLICT DO NOTHING; self-bootstrap idempotente de schema_migrations antes do INSERT; rollback em texto no rodapé; consultas de verificação documentadas; e asserções negativas (não remove/renomeia, sem RLS nova, sem índice novo). Fonte: plan.md §Migrações (passos 1–4, explicitamente não faz, rollback e verificação). Minos escreve apenas o teste; nenhum arquivo de produção é tocado.",
+      "acceptanceCriteria": [
+        "npx vitest run __tests__/lib/pluto/migration-0018.test.ts --reporter=verbose → FAIL esperado (readFileSync do arquivo da migração inexistente lança ENOENT) sem SyntaxError/TS2 no output",
+        "Caso RED: ADD COLUMN IF NOT EXISTS period_year integer e period_month integer (colunas novas anuláveis) em public.transactions",
+        "Caso RED: backfill ANTES do SET NOT NULL — UPDATE que copia o ano/mês da própria coluna date (EXTRACT(YEAR/MONTH FROM date) com conversão explícita para integer) nas duas colunas novas",
+        "Caso RED: SET NOT NULL nas duas colunas (period_year e period_month) somente após o backfill",
+        "Caso RED: auditoria em public.schema_migrations com script_name 'migration-0018-pluto-lancamento-data-livre.sql' (idêntico ao nome do arquivo), spec_id 'pluto-05e', spec_name 'Lançamento com Data Livre' e ON CONFLICT (script_name) DO NOTHING",
+        "Caso RED: self-bootstrap idempotente de public.schema_migrations (CREATE TABLE IF NOT EXISTS + RLS + política padrão) aparece antes do INSERT de auditoria",
+        "Caso RED: rollback em texto no rodapé com DROP COLUMN IF EXISTS das duas colunas",
+        "Caso RED: consultas de verificação documentadas em comentário no próprio script: contagem de transactions com period_year ou period_month nulo = 0 e soma de amount agrupada por ano/mês de date antes/depois com diferença zero",
+        "Caso RED negativo: o script não remove nem renomeia coluna/tabela existente, não cria política RLS nova em transactions e não cria índice novo",
+        "Nenhum arquivo de produção é tocado por esta task (apenas o arquivo de teste é criado)"
+      ],
+      "files": [
+        "__tests__/lib/pluto/migration-0018.test.ts"
+      ],
+      "consumes": [],
+      "produces": ["migracao-0018-red"]
+    },
+    {
       "id": "T1",
       "title": "Migração 0018: colunas period_year/period_month + backfill + auditoria em public.transactions",
       "assignee": "hefesto",
-      "status": "pending",
+      "status": "in_progress",
       "description": "Criar utils/migrations/migration-0018-pluto-lancamento-data-livre.sql conforme a seção 'Migrações' do plan.md: ADD COLUMN period_year/period_month (inteiros anuláveis), backfill copiando ano/mês da própria date com conversão explícita para integer, SET NOT NULL nas duas colunas após o backfill, self-bootstrap idempotente de public.schema_migrations e INSERT de auditoria com script_name idêntico ao nome do arquivo (ON CONFLICT DO NOTHING), rollback em comentário no rodapé e consultas de verificação documentadas. Nenhuma remoção/renomeação, nenhuma RLS nova, nenhum índice novo.",
       "acceptanceCriteria": [
         "O arquivo utils/migrations/migration-0018-pluto-lancamento-data-livre.sql existe e é o único consumidor do inteiro 0018",
@@ -17,6 +41,7 @@
       "files": [
         "utils/migrations/migration-0018-pluto-lancamento-data-livre.sql"
       ],
+      "consumes": ["migracao-0018-red"],
       "produces": ["migracao-0018-aplicavel"]
     },
     {

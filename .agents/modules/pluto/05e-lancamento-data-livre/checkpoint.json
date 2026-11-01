@@ -1,5 +1,5 @@
 {
-  "currentPhase": "TASKS_READY",
+  "currentPhase": "CODING",
   "validTransitions": {
     "SPEC_DRAFT": ["SPEC_APPROVED"],
     "SPEC_APPROVED": ["PLAN_READY", "SPEC_DRAFT"],
@@ -36,7 +36,12 @@
     {
       "phase": "TASKS_READY",
       "timestamp": "2026-11-01T00:00:00.000Z",
-      "note": "DAG validado por Zeus (8 tasks aciclicas, criteria testaveis, files reais). Guardian OK (PLAN_APPROVED -> TASKS_READY). Commit de spec+plan delegado a Caronte."
+      "note": "DAG validado por Zeus (8 tasks aciclicas, criteria testaveis, files reais). Guardian OK (PLAN_APPROVED -> TASKS_READY). Commit de spec+plan delegado a Caronte (b823daa)."
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "tasks.json reestruturado pela Atena (+T0 RED da migração, 9 tasks; gate CODING falhou com T1-SQL como primeira task). Minos escreveu T0: migration-0018.test.ts, 9 casos FAIL ENOENT, tsc limpo. Guardian OK (TASKS_READY -> CODING). Loop: T0 concluída; T1 (migração) em curso."
     }
   ],
   "lastUpdated": "2026-11-01T00:00:00.000Z"

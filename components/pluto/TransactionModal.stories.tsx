@@ -24,8 +24,6 @@ const baseArgs = {
   txSuccessMsg: null,
   accounts: storyAccounts,
   categories: storyCategories,
-  selectedYear: 2026,
-  selectedMonth: 3,
   descInputRef: createRef<HTMLInputElement>(),
   onClose: fn(),
   onSave: fn(),

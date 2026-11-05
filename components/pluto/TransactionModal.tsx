@@ -24,10 +24,6 @@ export interface TransactionModalProps {
   txSuccessMsg: string | null;
   accounts: Account[];
   categories: Category[];
-  // 05e: sem uso no modal desde que o rótulo virou "Data" (sem limites).
-  // Permanecem obrigatórias até o makeProps do teste da T6 ser ajustado (T8).
-  selectedYear: number;
-  selectedMonth: number;
   descInputRef: MutableRefObject<HTMLInputElement | null>;
   onClose: () => void;
   onSave: (e: React.FormEvent) => void;

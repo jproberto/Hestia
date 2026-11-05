@@ -18,9 +18,7 @@ function makeProps(overrides: Partial<TransactionModalProps> = {}): TransactionM
     txSuccessMsg: null,
     accounts: [{ id: "a1", name: "Itaú", type: "conta", created_at: null, created_by: null }],
     categories: [{ id: "c1", name: "Alimentação", type: "despesa", created_at: "x", created_by: "y" }],
-    // 05e: o modal não recebe mais limites de data (data livre).
-    selectedYear: 2026,
-    selectedMonth: 3,
+    // 05e: o modal não recebe limites de data nem mês da tela (data livre).
     descInputRef: createRef<HTMLInputElement>(),
     onClose: vi.fn(),
     onSave: vi.fn((e: React.FormEvent) => e.preventDefault()),

@@ -165,7 +165,7 @@
       "id": "T7",
       "title": "GREEN da UI: TransactionModal sem limites, stories e página sem repasse de limites",
       "assignee": "hefesto",
-      "status": "in_progress",
+      "status": "completed",
       "description": "Implementar conforme 'Contratos Completos' do plan.md: TransactionModal.tsx remove props minDateStr/maxDateStr/selectedYear/selectedMonth, atributos min/max, texto 'Limitada a' e import de MONTH_NAMES (rótulo 'Data'); TransactionModal.stories.tsx e storybook.fixtures.ts atualizam args/fixtures (storyTransactions com período); app/pluto/transactions/page.tsx deixa de desestruturar/repassar limites e passa selectedYear/selectedMonth ao useTransactionModals.",
       "acceptanceCriteria": [
         "T6 verde: npx vitest run nos arquivos de componente/página --reporter=verbose sem falhas",
@@ -187,7 +187,7 @@
       "id": "T8",
       "title": "Suíte completa verde, cobertura ≥ 80% e relatórios de teste",
       "assignee": "minos",
-      "status": "pending",
+      "status": "completed",
       "description": "Re-executar a suite completa com cobertura e emitir os artefatos de TESTING: ajustar qualquer teste remanescente que fixe o comportamento antigo, gerar test-report.json (failed 0, coverage ≥ 80) e test-scenarios.md apenas com cenários manuais (sem tag [Automatizado] nem path __tests__/), incluindo os cenários de fatura de mês anterior, não-vazamento para o mês da data, data futura, edição que não move de mês, ordem do extrato, salvar-e-adicionar-outro e backfill sem mudança de saldo.",
       "acceptanceCriteria": [
         "npm run test completo sem falhas (summary.failed == 0)",

@@ -165,8 +165,6 @@ export default function TransactionsPage() {
         txSuccessMsg={modals.txSuccessMsg}
         accounts={accounts}
         categories={categories}
-        selectedYear={selectedYear}
-        selectedMonth={selectedMonth}
         descInputRef={modals.descInputRef}
         onClose={modals.handleCloseTxModal}
         onSave={modals.handleSaveTransaction}

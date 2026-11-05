@@ -1,5 +1,5 @@
 {
-  "currentPhase": "CODING",
+  "currentPhase": "TESTING",
   "validTransitions": {
     "SPEC_DRAFT": ["SPEC_APPROVED"],
     "SPEC_APPROVED": ["PLAN_READY", "SPEC_DRAFT"],

@@ -13,6 +13,7 @@ import type {
   Category,
   TransactionWithDetails,
 } from "@/lib/pluto/types";
+import { getMonthRange } from "@/lib/pluto/types";
 import { parseErrorMessage } from "@/lib/utils";
 import type { TransactionModalPrefill } from "./useTransactionModals";
 
@@ -20,7 +21,8 @@ export interface UseTransactionFormOptions {
   db: IDatabaseClient;
   userEmail: string;
   categories: Category[];
-  minDateStr: string;
+  selectedYear: number;
+  selectedMonth: number;
   fetchData: () => Promise<void>;
   setErrorMsg: (msg: string | null) => void;
 }
@@ -34,7 +36,8 @@ export function useTransactionForm({
   db,
   userEmail,
   categories,
-  minDateStr,
+  selectedYear,
+  selectedMonth,
   fetchData,
   setErrorMsg,
 }: UseTransactionFormOptions) {
@@ -53,16 +56,12 @@ export function useTransactionForm({
   const [txSuccessMsg, setTxSuccessMsg] = useState<string | null>(null);
   const descInputRef = useRef<HTMLInputElement>(null);
 
-  // Shim temporário (T3 — pluto/05e): o mês de cálculo é derivado do minDateStr
-  // (1º dia do mês da tela, logo É o mês de cálculo da tela). Na T5 é substituído
-  // por selectedYear/selectedMonth conforme plan §Hooks — este shim sai junto.
-  const periodYear = Number(minDateStr.slice(0, 4));
-  const periodMonth = Number(minDateStr.slice(5, 7));
-
   // Abertura do Modal de Transação pré-fixado para a conta escolhida (Nova Transação)
   const handleOpenTxModal = (acc: Account) => {
     setEditingTransaction(null);
-    setDate(minDateStr);
+    // Regra 2/3 (05e): o calendário abre no primeiro dia do mês da tela; o
+    // mês de cálculo gravado no create é o da tela, independente da data.
+    setDate(getMonthRange(selectedYear, selectedMonth).startDate);
     setDescription("");
     setAmount("");
     setType("despesa");
@@ -161,8 +160,8 @@ export function useTransactionForm({
             date,
             account_id: accountId,
             category_id: categoryId,
-            period_year: periodYear,
-            period_month: periodMonth,
+            period_year: selectedYear,
+            period_month: selectedMonth,
           },
           userEmail
         );
@@ -215,8 +214,8 @@ export function useTransactionForm({
           date,
           account_id: accountId,
           category_id: categoryId,
-          period_year: periodYear,
-          period_month: periodMonth,
+          period_year: selectedYear,
+          period_month: selectedMonth,
         },
         userEmail
       );

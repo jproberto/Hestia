@@ -20,7 +20,6 @@ import type {
   MonthlyPeriod,
   TransactionWithDetails,
 } from "@/lib/pluto/types";
-import { getMonthRange } from "@/lib/pluto/types";
 import { parseErrorMessage } from "@/lib/utils";
 
 export interface PlutoData {
@@ -43,8 +42,6 @@ export interface PlutoData {
   errorMsg: string | null;
   setErrorMsg: (msg: string | null) => void;
   fetchData: () => Promise<void>;
-  minDateStr: string;
-  maxDateStr: string;
 }
 
 /**
@@ -179,9 +176,6 @@ export function usePlutoData(): PlutoData {
     return loadForSelection(selectionRef.current.year, selectionRef.current.month);
   }, [loadForSelection]);
 
-  // Delimitadores do Date Input para travar dentro do Mês e Ano selecionados
-  const { startDate: minDateStr, endDate: maxDateStr } = getMonthRange(selectedYear, selectedMonth);
-
   return {
     db,
     selectedYear,
@@ -202,7 +196,5 @@ export function usePlutoData(): PlutoData {
     errorMsg,
     setErrorMsg,
     fetchData,
-    minDateStr,
-    maxDateStr,
   };
 }

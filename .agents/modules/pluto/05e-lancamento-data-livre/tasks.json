@@ -68,7 +68,7 @@
       "id": "T3",
       "title": "GREEN: tipos + repositório real + fake + harness de integração sobre o mês de cálculo",
       "assignee": "hefesto",
-      "status": "in_progress",
+      "status": "completed",
       "description": "Implementar conforme 'Contratos Completos' do plan.md: TransactionRow/TransactionInput/TransactionWithDetails ganham period_year/period_month; novo TransactionUpdateInput sem campos de período; ITransactionRepository.updateTransaction muda a assinatura; repositories/transactions.ts filtra por período de cálculo, valida monthly_periods pelo período gravado (criar/editar/excluir) e grava o período no insert; fake espelha o contrato e perde os helpers locais getMonthRange/parseYearMonth; __tests__/integration/repositories.ts adapta a assinatura; remover tipos mortos CreateTransactionFormData/UpdateTransactionFormData/CreateTransactionDTO/UpdateTransactionDTO. Persistência só nos repositories via IDatabaseClient.",
       "acceptanceCriteria": [
         "T2 verde: npx vitest run __tests__/lib/pluto/repositories/contract-transactions.test.ts --reporter=verbose sem falhas",
@@ -94,7 +94,7 @@
       "id": "T4",
       "title": "RED dos hooks: dependências do formulário sem minDateStr e data inicial no mês da tela",
       "assignee": "minos",
-      "status": "pending",
+      "status": "completed",
       "description": "Atualizar os testes dos hooks para o novo contrato (falham contra os hooks atuais): UseTransactionFormOptions/TransactionModalsDeps recebem selectedYear/selectedMonth em vez de minDateStr; handleOpenTxModal pré-preenche a data com o primeiro dia do mês da tela; create envia period_year/period_month do mês da tela; update envia payload sem campos de período; usePlutoData não expõe mais minDateStr/maxDateStr; fluxo 05d preserva a data no 'Salvar e Adicionar Outro'; prefill do checklist mantém a data vencimento.",
       "acceptanceCriteria": [
         "__tests__/lib/pluto/hooks/useTransactionForm.test.ts: o teste de abertura espera data igual ao primeiro dia do mês da tela selecionado (ex.: 2026-03-01 para selectedMonth 3) e as opções do hook não contêm minDateStr",
@@ -117,7 +117,7 @@
       "id": "T5",
       "title": "GREEN dos hooks: usePlutoData sem limites, useTransactionForm com mês da tela, useTransactionModals repassando",
       "assignee": "hefesto",
-      "status": "pending",
+      "status": "in_progress",
       "description": "Implementar conforme 'Contratos Completos' do plan.md: usePlutoData remove minDateStr/maxDateStr (interface, retorno e derivação getMonthRange); useTransactionForm troca minDateStr por selectedYear/selectedMonth, usa getMonthRange(...).startDate na abertura, envia period_year/period_month no create e TransactionUpdateInput no update, mantendo validações de campo, foco e resets do 05d; useTransactionModals troca a dependência e repassa. Sem lógica própria nova em useBudgetComparison/useAccountAggregation.",
       "acceptanceCriteria": [
         "T4 verde: npx vitest run nos três arquivos de hook --reporter=verbose sem falhas",

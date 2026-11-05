@@ -27,8 +27,10 @@ export interface TransactionModalProps {
   categories: Category[];
   selectedYear: number;
   selectedMonth: number;
-  minDateStr: string;
-  maxDateStr: string;
+  // Opcionais (05e): a página não repassa mais os limites do mês; a T7
+  // remove estas props e o input de data fica sem min/max.
+  minDateStr?: string;
+  maxDateStr?: string;
   descInputRef: MutableRefObject<HTMLInputElement | null>;
   onClose: () => void;
   onSave: (e: React.FormEvent) => void;

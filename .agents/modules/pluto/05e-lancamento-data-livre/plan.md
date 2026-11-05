@@ -94,7 +94,7 @@ Consequência derivada (sem decisão nova): `lib/pluto/hooks/useBudgetComparison
 **Número reservado pela Atena:** `0018` (próximo livre após 0017, conforme AGENTS.md).
 **Arquivo:** `utils/migrations/migration-0018-pluto-lancamento-data-livre.sql` — nome único, kebab-case, sem sufixo de versão; criado por Hefesto conforme conteúdo deste plano. Vínculo com a feature-mãe via `spec_id` = `pluto-05e` e `spec_name` = `Lançamento com Data Livre`.
 
-**Tipo:** DDL incremental aditiva, em transação única, com quatro passos ordenados (a ordem importa — as colunas nascem anuláveis para o backfill poder rodar):
+**Tipo:** DDL incremental aditiva, em quatro passos idempotentes e re-executáveis **sem transação explícita** (o arquivo não tem `BEGIN`/`COMMIT` — falha intermediária deixa as colunas anuláveis e a re-execução completa o restante), ordenados (a ordem importa — as colunas nascem anuláveis para o backfill poder rodar):
 
 1. Criação das colunas: `ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS period_year integer;` e `ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS period_month integer;`
 2. Backfill retroativo: `UPDATE public.transactions SET period_year = EXTRACT(YEAR FROM date), period_month = EXTRACT(MONTH FROM date) WHERE period_year IS NULL OR period_month IS NULL;` — com conversão explícita para integer nas atribuições. Copia o ano/mês da própria `date` (decisão D8): saldos numéricos permanecem idênticos, pois hoje já se soma pelo mês da data.
@@ -146,7 +146,9 @@ Cada remoção traz critério de verificação por busca (em código vivo = `app
 - `__tests__/lib/pluto/repositories/contract-transactions.test.ts`
 - `__tests__/lib/pluto/repositories/fake-transaction.test.ts`
 - `__tests__/lib/pluto/db/transactions.test.ts`
+- `__tests__/lib/pluto/migration-0018.test.ts`
 - `__tests__/integration/repositories.ts`
+- `__tests__/integration/transactions.test.ts`
 - `__tests__/lib/pluto/hooks/usePlutoData.test.ts`
 - `__tests__/lib/pluto/hooks/useTransactionForm.test.ts`
 - `__tests__/lib/pluto/hooks/useTransactionModals.test.ts`
@@ -167,7 +169,7 @@ Cada remoção traz critério de verificação por busca (em código vivo = `app
 
 ## Tasks
 
-DAG acíclico em 8 tasks (espelho exato do `tasks.json`; RED primeiro por Minos, implementação por Hefesto, conforme fluxo Olympus):
+DAG acíclico em 9 tasks (T0–T8 — a T0 é o RED do conteúdo da migração 0018; a lista abaixo cobre T1–T8 — espelho exato do `tasks.json`; RED primeiro por Minos, implementação por Hefesto, conforme fluxo Olympus):
 
 - **T1 — Migração 0018** (hefesto) — cria o arquivo da migração com DDL/backfill/auditoria/rollback conforme seção Migrações. Independentepadrão.
 - **T2 — Contrato RED de transações** (minos) — atualiza `contract-transactions.test.ts`, `fake-transaction.test.ts` e `db/transactions.test.ts` para o novo contrato (período de cálculo, data livre, edição não move mês) e os faz falhar contra o fake atual.

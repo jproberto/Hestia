@@ -8,6 +8,7 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 ## [Não lançado]
 
 ### Alterado
+- **Pluto 05e — Lançamento com data livre (`/pluto/transactions`):** o calendário do modal de transação perde a trava de data — `Input type="date"` sem `min`/`max` e rótulo "Data" no lugar de "Limitada a" (qualquer data é aceita); o mês de cálculo vira dado próprio do lançamento nas colunas novas `period_year`/`period_month`, fixadas no mês da tela onde o form foi aberto e preservadas na edição (o update nunca move o lançamento de mês); a busca da tela e a trava de mês aberto em criar/editar/excluir passam a avaliar o mês de cálculo em vez do intervalo de `date`, e saldo, entradas/saídas, orçado × realizado e agregação por conta herdam o novo filtro da lista sem lógica própria; backfill do histórico pela própria `date` em `utils/migrations/migration-0018-pluto-lancamento-data-livre.sql` (aplicação manual pendente pós-merge). Suíte em 141 arquivos / 1886 testes, 0 falhas, coverage 85.30% lines / 84.18% branch, review aprovado.
 - **Fluxo de release com congelamento:** promoção a produção passa a partir da branch `release/<versão>` — `release.yml` job `promote` dispara em pushes de `release/**`, compara a versão com `origin/main` e abre auto-PR `<release> → main` (merge disso gera tag `v$VERSION` + GitHub Release + deploy); bump de versão na branch da release e regra de corte formalizada na seção "Fluxo de Release" do `AGENTS.md`.
 
 ## [1.1.0] - 2026-10-30

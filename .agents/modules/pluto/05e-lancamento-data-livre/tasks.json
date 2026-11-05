@@ -117,7 +117,7 @@
       "id": "T5",
       "title": "GREEN dos hooks: usePlutoData sem limites, useTransactionForm com mês da tela, useTransactionModals repassando",
       "assignee": "hefesto",
-      "status": "in_progress",
+      "status": "completed",
       "description": "Implementar conforme 'Contratos Completos' do plan.md: usePlutoData remove minDateStr/maxDateStr (interface, retorno e derivação getMonthRange); useTransactionForm troca minDateStr por selectedYear/selectedMonth, usa getMonthRange(...).startDate na abertura, envia period_year/period_month no create e TransactionUpdateInput no update, mantendo validações de campo, foco e resets do 05d; useTransactionModals troca a dependência e repassa. Sem lógica própria nova em useBudgetComparison/useAccountAggregation.",
       "acceptanceCriteria": [
         "T4 verde: npx vitest run nos três arquivos de hook --reporter=verbose sem falhas",
@@ -138,7 +138,7 @@
       "id": "T6",
       "title": "RED da UI: modal sem limites de data, rótulo 'Data' e fixtures com mês de cálculo",
       "assignee": "minos",
-      "status": "pending",
+      "status": "completed",
       "description": "Atualizar testes de componente e página para o novo contrato (falham contra o código atual): TransactionModal sem props minDateStr/maxDateStr/selectedYear/selectedMonth, input de date sem min/max, rótulo 'Data' (0 matches de 'Limitada a'); critical-flows deixa de procurar 'Data (Limitada a' e espera createTransaction com period fields do mês da tela; fixtures TransactionWithDetails dos testes de página/componentes/hooks ganham period_year/period_month.",
       "acceptanceCriteria": [
         "__tests__/components/pluto/TransactionModal.test.tsx: makeProps sem minDateStr/maxDateStr/selectedYear/selectedMonth e novo caso que assera ausência dos atributos min e max no input de date e rótulo exato 'Data'",
@@ -165,7 +165,7 @@
       "id": "T7",
       "title": "GREEN da UI: TransactionModal sem limites, stories e página sem repasse de limites",
       "assignee": "hefesto",
-      "status": "pending",
+      "status": "in_progress",
       "description": "Implementar conforme 'Contratos Completos' do plan.md: TransactionModal.tsx remove props minDateStr/maxDateStr/selectedYear/selectedMonth, atributos min/max, texto 'Limitada a' e import de MONTH_NAMES (rótulo 'Data'); TransactionModal.stories.tsx e storybook.fixtures.ts atualizam args/fixtures (storyTransactions com período); app/pluto/transactions/page.tsx deixa de desestruturar/repassar limites e passa selectedYear/selectedMonth ao useTransactionModals.",
       "acceptanceCriteria": [
         "T6 verde: npx vitest run nos arquivos de componente/página --reporter=verbose sem falhas",

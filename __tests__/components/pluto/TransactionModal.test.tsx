@@ -18,10 +18,9 @@ function makeProps(overrides: Partial<TransactionModalProps> = {}): TransactionM
     txSuccessMsg: null,
     accounts: [{ id: "a1", name: "Itaú", type: "conta", created_at: null, created_by: null }],
     categories: [{ id: "c1", name: "Alimentação", type: "despesa", created_at: "x", created_by: "y" }],
+    // 05e: o modal não recebe mais limites de data (data livre).
     selectedYear: 2026,
     selectedMonth: 3,
-    minDateStr: "2026-03-01",
-    maxDateStr: "2026-03-31",
     descInputRef: createRef<HTMLInputElement>(),
     onClose: vi.fn(),
     onSave: vi.fn((e: React.FormEvent) => e.preventDefault()),
@@ -91,6 +90,16 @@ describe("TransactionModal", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(props.onClose).toHaveBeenCalled();
+  });
+
+  it("campo de data livre: rótulo exato 'Data' e input sem atributos min/max", () => {
+    render(<TransactionModal {...makeProps()} />);
+
+    // Regra 1 da spec: sem min/max no campo e rótulo simples "Data".
+    const dateInput = screen.getByLabelText("Data") as HTMLInputElement;
+    expect(dateInput).toHaveAttribute("type", "date");
+    expect(dateInput).not.toHaveAttribute("min");
+    expect(dateInput).not.toHaveAttribute("max");
   });
 
   it("mostra checkbox de reembolso só para despesa", () => {

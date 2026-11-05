@@ -26,8 +26,6 @@ const baseArgs = {
   categories: storyCategories,
   selectedYear: 2026,
   selectedMonth: 3,
-  minDateStr: "2026-03-01",
-  maxDateStr: "2026-03-31",
   descInputRef: createRef<HTMLInputElement>(),
   onClose: fn(),
   onSave: fn(),

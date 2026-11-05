@@ -11,7 +11,7 @@ vi.mock("@/lib/pluto/db/transactions", () => ({
   deleteTransaction: vi.fn(),
 }));
 
-const tx = { id: "t1", description: "Supermercado" } as never;
+const tx = { id: "t1", description: "Supermercado", period_year: 2026, period_month: 3 } as never;
 
 function renderFlow() {
   const fetchData = vi.fn(() => Promise.resolve());

@@ -8,7 +8,7 @@ import {
   defineTransactionRepositoryContract,
   type TransactionContractSeed,
 } from "../lib/pluto/repositories/contract-transactions.test";
-import { AliasIds, getIntegrationDb } from "./supabase";
+import { AliasIds, getIntegrationDb, resetDatabase } from "./supabase";
 import {
   SupabaseTransactionRepository,
   createGate,
@@ -38,6 +38,9 @@ defineTransactionRepositoryContract("Supabase (integration)", () => {
     reset,
     seed: (data: TransactionContractSeed) => {
       seed(async () => {
+        // Semântica do fake: seed substitui o estado (reset antes de plantar) —
+        // contracts podem chamar seed mais de uma vez no mesmo teste.
+        await resetDatabase();
         await seedCategories(ids, data.categories);
         await seedAccounts(ids, data.accounts);
         await seedPeriods(ids, data.monthlyPeriods);

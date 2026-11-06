@@ -42,21 +42,36 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 | 7 | **Compras parceladas** | Também uma extensão do cadastro de transações, voltada para o caso comum de compras no cartão que se repetem por vários meses. Em vez de lançar manualmente cada parcela todo mês, o usuário cadastra a compra uma única vez e o sistema replica automaticamente as parcelas futuras, já com valor e mês corretos. *Nota: A abertura de mês gerará cada parcela como um lançamento individual na tabela de transações, permitindo edição e exclusão pontual por parcela.* |
 | 8 | **Edição e exclusão de lançamentos** | Cobre a correção de erros de digitação e remoção de duplicidades, incluindo o caso específico de precisar ajustar ou remover parcelas futuras de uma compra parcelada já cadastrada. | Concluído | [.agents/modules/pluto/08-edicao-exclusao-lancamentos/spec.md](.agents/modules/pluto/08-edicao-exclusao-lancamentos/spec.md) | [.agents/modules/pluto/08-edicao-exclusao-lancamentos/plan.md](.agents/modules/pluto/08-edicao-exclusao-lancamentos/plan.md) |
 | 9 | **Transferência entre contas** | Permite mover valores entre contas (por exemplo, do saldo restante do mês para uma conta de reserva de emergência ou de investimento) sem que esse movimento seja tratado como uma despesa categorizada. É uma variação do lançamento comum, mas que não entra no cálculo de orçado x realizado por categoria. |
+| 10 | **Saldo do mês** | A lógica central de agregação: soma todas as receitas e subtrai todas as despesas lançadas no mês para chegar à sobra ou déficit. Essa lógica de cálculo é a base para o Dashboard e a Conciliação (itens 21 e 22), por isso vem antes deles. | Concluído | [.agents/modules/pluto/10-saldo-mes/spec.md](.agents/modules/pluto/10-saldo-mes/spec.md) | [.agents/modules/pluto/10-saldo-mes/plan.md](.agents/modules/pluto/10-saldo-mes/plan.md) |
 
-### Bloco 4 — Motor de cálculo
-
-| # | Feature | Descrição | Status | Specs | Planos |
-|---|---|---|---|---|---|
-| 10 | **Saldo do mês** | A lógica central de agregação: soma todas as receitas e subtrai todas as despesas lançadas no mês para chegar à sobra ou déficit. Essa lógica de cálculo é a base para os dois itens seguintes, por isso vem antes deles. | Concluído | [.agents/modules/pluto/10-saldo-mes/spec.md](.agents/modules/pluto/10-saldo-mes/spec.md) | [.agents/modules/pluto/10-saldo-mes/plan.md](.agents/modules/pluto/10-saldo-mes/plan.md) |
-| 11 | **Dashboard: orçado vs. realizado (mês)** | Reaproveita a lógica de agregação do item anterior, mas agrupada por categoria e confrontada com o valor planejado no orçamento anual daquele mês. É a visão que responde "onde estou gastando mais ou menos do que planejei". |
-| 12 | **Conciliação de saldo** | Também depende do Saldo do mês já calculado: compara esse valor com o saldo real que o usuário informa manualmente (já que não há integração bancária), apontando divergências. Ajuda a identificar lançamentos esquecidos antes de fechar o mês. |
-
-### Bloco 5 — Fechamento
+### Bloco 4 — Melhorias de uso (feedback)
 
 | # | Feature | Descrição | Status | Specs | Planos |
 |---|---|---|---|---|---|
-| 13 | **Encerramento de mês** | Uma vez que a conciliação bate e o saldo já foi destinado, o mês é travado para novas edições e passa a existir apenas para consulta. Inclui uma opção de reabertura, pensada para exceções pontuais, mas que não deve ser o caminho padrão de uso. | |  |  |
-| 14 | **Histórico de meses anteriores** | A consulta de meses já encerrados — orçamento planejado x realizado, saldo final e destinação dada a ele. Depende de todos os blocos anteriores estarem funcionando, já que reaproveita os mesmos dados e cálculos, apenas em modo somente-leitura. | |  |  |
+| 11 | **Categorias sem distinção de maiúsculas/minúsculas** | O nome de categoria passa a ser comparado sem considerar caixa. Hoje `getOrCreateCategory` (`lib/pluto/repositories/categories.ts`) só remove os espaços das pontas e compara com igualdade exata, então "Mercaria" e "mercaria" viram duas categorias — e os fakes dos testes já comparam com `toLowerCase()`, o que esconde a duplicação da suite. Pontos a validar em discovery: como consolidar duplicatas já existentes e se a regra vale também para contas. |
+| 12 | **Lançamentos como primeira aba** | A ordem da navegação do módulo muda para começar por Lançamentos. Hoje `components/layout/PlutoLayout.tsx` lista Orçamento Anual → Meses e Períodos → Lançamentos; a nova ordem põe Lançamentos em primeiro, por ser a tela de uso diário (feedback em produção). |
+| 13 | **Ordenação alfabética no Orçamento Anual** | As listas de Receitas e Despesas exibidas na tela do Orçamento Anual passam a ser ordenadas em ordem alfabética. |
+| 14 | **Checklist de contas a pagar: mostrar/esconder** | Um toggle mostra ou esconde a lista do checklist de contas a pagar; quando visível, a lista ganha barra de rolagem. |
+| 15 | **Mostrar/esconder lançamentos por conta ou cartão** | Cada conta/cartão do extrato ganha um toggle para mostrar ou esconder os próprios lançamentos; a lista visível também usa barra de rolagem. |
+| 16 | **Ordenação do extrato: data do lançamento com desempate por inclusão** | Os lançamentos de cada conta/cartão seguem ordenados pela data do lançamento (a data que aparece na tela) e o desempate passa a ser pela data/hora interna de inclusão do registro — hoje o desempate é por `id`. A data continua como critério principal: o 05e (item 32) manteve a ordenação por data e rejeitou ordenar por ordem de criação; aqui a inclusão entra apenas como desempate. |
+| 17 | **Contas antes dos cartões** | No extrato agrupado por conta/cartão, as contas passam a ser listadas primeiro e os cartões depois. |
+| 18 | **Extrato em coluna única** | O layout de contas/cartões lado a lado (grid de 2 colunas definido na spec do 05a) passa a exibir um bloco abaixo do outro — mudança sobre decisão de layout já homologada. |
+| 19 | **Manutenção de categorias (aba própria)** | Uma aba para consultar, alterar e cadastrar categorias; a exclusão só é permitida quando nenhum lançamento nem linha de orçamento aponta para a categoria. Reverte a decisão registrada no contexto do módulo ("não existe tela de cadastro de categoria separada"): a criação inline no orçamento e no cadastro de transações continua, mas a categoria ganha tela própria de manutenção. |
+| 20 | **Categorias em ordem alfabética nas caixas de Receita e Despesa** | As categorias exibidas nas caixas de Receita e Despesa da tela de Lançamentos passam a ser listadas em ordem alfabética (por nome). |
+
+### Bloco 5 — Motor de cálculo
+
+| # | Feature | Descrição | Status | Specs | Planos |
+|---|---|---|---|---|---|
+| 21 | **Dashboard: orçado vs. realizado (mês)** | Reaproveita a lógica de agregação do Saldo do mês (item 10), mas agrupada por categoria e confrontada com o valor planejado no orçamento anual daquele mês. É a visão que responde "onde estou gastando mais ou menos do que planejei". |
+| 22 | **Conciliação de saldo** | Também depende do Saldo do mês já calculado: compara esse valor com o saldo real que o usuário informa manualmente (já que não há integração bancária), apontando divergências. Ajuda a identificar lançamentos esquecidos antes de fechar o mês. |
+
+### Bloco 6 — Fechamento
+
+| # | Feature | Descrição | Status | Specs | Planos |
+|---|---|---|---|---|---|
+| 23 | **Encerramento de mês** | Uma vez que a conciliação bate e o saldo já foi destinado, o mês é travado para novas edições e passa a existir apenas para consulta. Inclui uma opção de reabertura, pensada para exceções pontuais, mas que não deve ser o caminho padrão de uso. | |  |  |
+| 24 | **Histórico de meses anteriores** | A consulta de meses já encerrados — orçamento planejado x realizado, saldo final e destinação dada a ele. Depende de todos os blocos anteriores estarem funcionando, já que reaproveita os mesmos dados e cálculos, apenas em modo somente-leitura. | |  |  |
 
 ---
 
@@ -64,14 +79,14 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 | # | Feature | Descrição | Status | Specs | Planos |
 |---|---|---|---|---|---|
-| 15 | **Transações recorrentes** | Permite marcar uma receita ou despesa como fixa (aluguel, salário) para que seja lançada automaticamente todo mês, reduzindo a repetição manual. | |  |  |
-| 16 | **Alertas de estouro de orçamento** | Notifica o usuário quando uma categoria ultrapassa um percentual definido do limite planejado, antecipando o problema antes do fim do mês. | |  |  |
-| 17 | **Alertas de conta a vencer** | Complementa o checklist de contas a pagar com lembretes automáticos para vencimentos próximos. | |  |  |
-| 18 | **Gráficos de tendência** | Mostra a evolução de gastos por categoria ou conta ao longo de vários meses, útil para identificar padrões que um único mês não revela. | |  |  |
-| 19 | **Divisão entre os dois usuários** | Mostra quanto cada um dos dois usuários lançou ou contribuiu no mês, útil para conversas sobre divisão de despesas. | |  |  |
-| 20 | **Metas de economia** | Permite definir uma meta de economia (ex: guardar R$500/mês) e acompanhar o progresso ao longo do tempo. | |  |  |
-| 21 | **Exportação de dados** | Exporta os lançamentos em CSV/Excel, para backup ou análise fora da ferramenta. | |  |  |
-| 26 | **Lançamento com data livre (calendário sem trava do mês)** | Mudança de regra sobre o cadastro de transações (item 5, patch candidato `05e`): hoje a data do lançamento é travada ao mês selecionado — `components/pluto/TransactionModal.tsx` aplica `min`/`max` no input de data, calculados em `lib/pluto/hooks/usePlutoData.ts` via `getMonthRange(selectedYear, selectedMonth)`, e o form abre com a data default em `minDateStr`. A mudança remove essa restrição: o calendário continua **abrindo por padrão no mês que está sendo editado**, mas **permite lançar em qualquer data**. Pontos a validar em discovery (Hera): em qual mês um lançamento datado em outro período é contabilizado no saldo/mês e no orçado vs. realizado; interação com meses encerrados/reabertos; default de data continua no mês selecionado? | Concluído (2026-11-05 — calendário sem `min`/`max` e sem "Limitada a"; mês de cálculo próprio em `period_year`/`period_month` fixado no mês da tela, preservado na edição; busca e trava de mês aberto (criar/editar/excluir) avaliam o mês de cálculo; backfill pela `date` na `utils/migrations/migration-0018-pluto-lancamento-data-livre.sql` com aplicação manual pendente; branch `feature/pluto/05e-lancamento-data-livre`, HEAD `39528d5`; suite 141 arquivos / 1886 testes, 0 falhas, coverage 85.30/84.18, review approved) | [.agents/modules/pluto/05e-lancamento-data-livre/spec.md](.agents/modules/pluto/05e-lancamento-data-livre/spec.md) | [.agents/modules/pluto/05e-lancamento-data-livre/plan.md](.agents/modules/pluto/05e-lancamento-data-livre/plan.md) |
+| 25 | **Transações recorrentes** | Permite marcar uma receita ou despesa como fixa (aluguel, salário) para que seja lançada automaticamente todo mês, reduzindo a repetição manual. | |  |  |
+| 26 | **Alertas de estouro de orçamento** | Notifica o usuário quando uma categoria ultrapassa um percentual definido do limite planejado, antecipando o problema antes do fim do mês. | |  |  |
+| 27 | **Alertas de conta a vencer** | Complementa o checklist de contas a pagar com lembretes automáticos para vencimentos próximos. | |  |  |
+| 28 | **Gráficos de tendência** | Mostra a evolução de gastos por categoria ou conta ao longo de vários meses, útil para identificar padrões que um único mês não revela. | |  |  |
+| 29 | **Divisão entre os dois usuários** | Mostra quanto cada um dos dois usuários lançou ou contribuiu no mês, útil para conversas sobre divisão de despesas. | |  |  |
+| 30 | **Metas de economia** | Permite definir uma meta de economia (ex: guardar R$500/mês) e acompanhar o progresso ao longo do tempo. | |  |  |
+| 31 | **Exportação de dados** | Exporta os lançamentos em CSV/Excel, para backup ou análise fora da ferramenta. | |  |  |
+| 32 | **Lançamento com data livre (calendário sem trava do mês)** | Mudança de regra sobre o cadastro de transações (item 5, patch candidato `05e`): hoje a data do lançamento é travada ao mês selecionado — `components/pluto/TransactionModal.tsx` aplica `min`/`max` no input de data, calculados em `lib/pluto/hooks/usePlutoData.ts` via `getMonthRange(selectedYear, selectedMonth)`, e o form abre com a data default em `minDateStr`. A mudança remove essa restrição: o calendário continua **abrindo por padrão no mês que está sendo editado**, mas **permite lançar em qualquer data**. Pontos a validar em discovery (Hera): em qual mês um lançamento datado em outro período é contabilizado no saldo/mês e no orçado vs. realizado; interação com meses encerrados/reabertos; default de data continua no mês selecionado? | Concluído (2026-11-05 — calendário sem `min`/`max` e sem "Limitada a"; mês de cálculo próprio em `period_year`/`period_month` fixado no mês da tela, preservado na edição; busca e trava de mês aberto (criar/editar/excluir) avaliam o mês de cálculo; backfill pela `date` na `utils/migrations/migration-0018-pluto-lancamento-data-livre.sql` com aplicação manual pendente; branch `feature/pluto/05e-lancamento-data-livre`, HEAD `39528d5`; suite 141 arquivos / 1886 testes, 0 falhas, coverage 85.30/84.18, review approved) | [.agents/modules/pluto/05e-lancamento-data-livre/spec.md](.agents/modules/pluto/05e-lancamento-data-livre/spec.md) | [.agents/modules/pluto/05e-lancamento-data-livre/plan.md](.agents/modules/pluto/05e-lancamento-data-livre/plan.md) |
 
 ---
 
@@ -79,10 +94,10 @@ Esta ordem reflete **dependência de construção** (o que precisa existir antes
 
 | # | Feature | Descrição | Status | Specs | Planos |
 |---|---|---|-|---|---|
-| 22 | **Patrimônio e investimentos** | Passa a acompanhar o rendimento e saldo de investimentos ao longo do tempo, não só o valor transferido para lá — um salto de fluxo de caixa para visão de patrimônio. | |  |  |
-| 23 | **Importação de extratos (CSV/OFX)** | Reduz a entrada manual permitindo importar extratos de banco ou cartão diretamente. | |  |  |
-| 24 | **Integração bancária (open finance)** | Automatiza a sincronização de transações, eliminando boa parte do lançamento manual. | |  |  |
-| 25 | **Planejamento plurianual** | Permite comparar orçamento e realizado entre anos diferentes, dando uma visão de longo prazo da evolução financeira da família. | |  |  |
+| 33 | **Patrimônio e investimentos** | Passa a acompanhar o rendimento e saldo de investimentos ao longo do tempo, não só o valor transferido para lá — um salto de fluxo de caixa para visão de patrimônio. | |  |  |
+| 34 | **Importação de extratos (CSV/OFX)** | Reduz a entrada manual permitindo importar extratos de banco ou cartão diretamente. | |  |  |
+| 35 | **Integração bancária (open finance)** | Automatiza a sincronização de transações, eliminando boa parte do lançamento manual. | |  |  |
+| 36 | **Planejamento plurianual** | Permite comparar orçamento e realizado entre anos diferentes, dando uma visão de longo prazo da evolução financeira da família. | |  |  |
 
 ---
 

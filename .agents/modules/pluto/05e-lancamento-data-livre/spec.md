@@ -120,11 +120,11 @@ Todas as decisões abaixo foram confirmadas explicitamente pelo humano no discov
 ## 7. Fora de Escopo (lista confirmada pelo humano)
 
 1. Checklist de contas a pagar — nenhuma mudança de regra (só deixa de sofrer o efeito da trava na data pré-preenchida).
-2. Encerramento/reabertura de mês (item 13) e histórico de meses (item 14) — ciclo de vida do mês intacto.
-3. Conciliação de saldo (item 12) — não entra.
-4. Compras parceladas (item 7) e transações recorrentes (item 15) — não entra.
+2. Encerramento/reabertura de mês (item 23) e histórico de meses (item 24) — ciclo de vida do mês intacto.
+3. Conciliação de saldo (item 22) — não entra.
+4. Compras parceladas (item 7) e transações recorrentes (item 25) — não entra.
 5. Orçamento anual e ajustes (itens 1 e 2) — continuam vigendo por mês de calendário.
-6. Dashboard orçado × realizado (item 11) — nenhuma alteração de código própria (só passa a receber a lista do mês de cálculo).
+6. Dashboard orçado × realizado (item 21) — nenhuma alteração de código própria (só passa a receber a lista do mês de cálculo).
 7. Mover lançamento de mês pela UI — descartado (correção por exclusão + relançamento).
 8. Sem telas novas, sem modelo novo de contas (corrente/cartão), sem integração bancária.
 

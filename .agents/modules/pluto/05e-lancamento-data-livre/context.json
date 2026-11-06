@@ -1,0 +1,138 @@
+{
+  "sessionId": null,
+  "feature": "pluto/05e-lancamento-data-livre",
+  "objective": "Remover a trava de data do calendário de lançamento de transações: o calendário abre por padrão no mês que está sendo editado, mas permite lançar em qualquer data (patch do cadastro de transações — item 26 do backlog do Pluto).",
+  "currentPhase": "COMMITTED",
+  "history": [
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-31T00:00:00.000Z",
+      "note": "Item #26 registrado no backlog do Pluto; FEATURE_DIR criado; evidência de código: components/pluto/TransactionModal.tsx aplica min/max (linhas 104-105) vindos de lib/pluto/hooks/usePlutoData.ts (getMonthRange, linha 183); useTransactionForm.ts abre com data default em minDateStr (linha 59)."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-31T00:00:00.000Z",
+      "note": "Step 0 (Caronte): branch feature/pluto/05e-lancamento-data-livre criada a partir de develop (c7a151a), commit inicial cf2c209 com estado + backlog + ponteiro .agents/current; baseline verde (test 1871/1871, lint 0 erros, build OK); sem push. Primeira delegação retornou sem concluir (aguardava baseline em background); re-delegação com instrução explícita concludu."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "Fase SPEC_DRAFT concluída pela Hera: discovery com 10 perguntas (1/turno), 6 dimensões do checklist confirmadas explicitamente pelo humano. Gate anti-código validado por Zeus (busca por blocos ts/tsx/js/sql/py/css/html e linhas SQL/TS = 0 matches). spec.md com 193 linhas/11 seções. Checkpoint 1: approve-spec humano em 2026-11-01 (chat: 'aprovado')."
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "Guardian OK (SPEC_DRAFT -> SPEC_APPROVED) apos correcao de forma pela Hera: titulos 'Modelo de Domínio' e 'Premissas Técnicas Validadas' + marcador 'Validada com Humano? Sim' — conteudo aprovado intocado. Proximo: PLAN_READY (Atena)."
+    },
+    {
+      "phase": "PLAN_READY",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "Atena entregou plan.md + tasks.json. Zeus validou: guardian (6 seções, anti-código, sem TBD, migração 0018 > 0017), tasks.json (8 tasks, DAG acíclico, criteria não vazios, files reais). Aguardando approve-plan humano."
+    },
+    {
+      "phase": "PLAN_APPROVED",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "Checkpoint 2: approve-plan humano (chat: 'aprovado'). Guardian OK (PLAN_READY -> PLAN_APPROVED)."
+    },
+    {
+      "phase": "TASKS_READY",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "DAG validado; guardian OK; commit spec+plan (b823daa). tasks.json reestruturado pela Atena (+T0 RED da migração, 9 tasks)."
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-11-05T00:00:00.000Z",
+      "note": "DAG T0-T8 completa com commits atomicos: T0/T1 (8dade6c), T2/T3 (2674065), T4/T5 (cc76b15), T6/T7 (cc3b5f0), T8+limpeza (39528d5). Arbitragens de Zeus: shim temporario de periodo na T3 + seed de integracao; retomada pos-falha de infra na T5; limpeza final de props selectedYear/selectedMonth na virada T8."
+    },
+    {
+      "phase": "TESTING",
+      "timestamp": "2026-11-05T00:00:00.000Z",
+      "note": "T8 (Minos): 141 files/1886 tests/0 failed; coverage 85.30 lines / 84.18 branch / 76.76 functions; test-report.json + test-scenarios.md (18 cenarios manuais, sem [Automatizado] nem __tests__/). Guardian OK (CODING -> TESTING) e (TESTING -> REVIEW)."
+    },
+    {
+      "phase": "REVIEW",
+      "timestamp": "2026-11-05T00:00:00.000Z",
+      "note": "diff.patch gerado por Zeus (develop...HEAD: 39 files, +1954/-259). Delegacao Argos em seguida."
+    },
+    {
+      "phase": "APPROVED",
+      "timestamp": "2026-11-05T00:00:00.000Z",
+      "note": "Argos: approved, 0 blockers, 4 minor. Checkpoint 3: approve-review humano (chat: 'Aprovado') + homologacao dos 18 cenarios. BOM do review-report.json removido; guardian OK (REVIEW -> APPROVED)."
+    },
+    {
+      "phase": "COMMITTED",
+      "timestamp": "2026-11-05T00:00:00.000Z",
+      "note": "Guardian OK (APPROVED -> COMMITTED). Docs Mnemosine + commit final Caronte; push somente com autorizacao humana."
+    }
+  ],
+  "approvals": {
+    "spec": "approved",
+    "spec_approved_at": "2026-11-01",
+    "spec_approved_by": "humano (chat: 'aprovado')",
+    "plan": "approved",
+    "plan_approved_at": "2026-11-01",
+    "plan_approved_by": "humano (chat: 'aprovado')",
+    "review": "approved",
+    "review_approved_at": "2026-11-05",
+    "review_approved_by": "humano (chat: 'Aprovado') — homologação dos 18 cenários",
+    "review_minor_findings": "backlog/de docs (decisão implícita do humano: approve-review sem bloquear os 4 minor; correções documentais do plan.md na fase de docs COMMITTED)"
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "decision": "Item #26 registrado como patch candidato 05e sobre o cadastro de transações (item 5), seguindo a convenção 05a-05d do módulo Pluto.",
+      "date": "2026-10-31"
+    },
+    {
+      "id": "D2",
+      "decision": "Mês de cálculo = mês da tela (nunca a data do lançamento). Rejeitada: contabilizar pelo mês da data.",
+      "date": "2026-11-01"
+    },
+    {
+      "id": "D3",
+      "decision": "Persistência do mês de cálculo em duas colunas novas (period_year + period_month). Rejeitada: coluna única de data do primeiro dia do mês.",
+      "date": "2026-11-01"
+    },
+    {
+      "id": "D4",
+      "decision": "Qualquer data aceita; validação de mês aberto migra da data para o mês de cálculo. Rejeitada: trava parcial por data de mês aberto.",
+      "date": "2026-11-01"
+    },
+    {
+      "id": "D5",
+      "decision": "Data inicial do form = primeiro dia do mês da tela. Rejeitadas: data de hoje; campo vazio.",
+      "date": "2026-11-01"
+    },
+    {
+      "id": "D6",
+      "decision": "Correção de mês errado por excluir + relançar; edição não move o mês de cálculo. Rejeitada: trocar período na edição.",
+      "date": "2026-11-01"
+    },
+    {
+      "id": "D7",
+      "decision": "Extrato ordenado por data crescente (ordenação atual mantida). Rejeitada: ordenar por ordem de criação.",
+      "date": "2026-11-01"
+    },
+    {
+      "id": "D8",
+      "decision": "Backfill dos lançamentos existentes copiando ano/mês da própria date (saldos numéricos inalterados). Rejeitada: revisão manual pendente.",
+      "date": "2026-11-01"
+    },
+    {
+      "id": "D9",
+      "decision": "Data livre total: sem min/max nem rótulo 'Limitada a'. Rejeitada: piso no passado.",
+      "date": "2026-11-01"
+    },
+    {
+      "id": "D10",
+      "decision": "'Salvar e Adicionar Outro' preserva a data digitada (05d intacto). Rejeitada: resetar para 1º dia do mês a cada item.",
+      "date": "2026-11-01"
+    },
+    {
+      "id": "D11",
+      "decision": "Lista de 8 pontos fora de escopo confirmada (seção 7 da spec): checklist, ciclo de mês, conciliação, parceladas/recorrentes, orçamento, dashboard, mover mês por UI, telas novas.",
+      "date": "2026-11-01"
+    }
+  ],
+  "migrations": {}
+}

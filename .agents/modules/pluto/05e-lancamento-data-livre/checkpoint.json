@@ -1,0 +1,73 @@
+{
+  "currentPhase": "COMMITTED",
+  "validTransitions": {
+    "SPEC_DRAFT": ["SPEC_APPROVED"],
+    "SPEC_APPROVED": ["PLAN_READY", "SPEC_DRAFT"],
+    "PLAN_READY": ["PLAN_APPROVED", "SPEC_APPROVED"],
+    "PLAN_APPROVED": ["TASKS_READY", "PLAN_READY", "SPEC_DRAFT"],
+    "TASKS_READY": ["CODING", "PLAN_APPROVED", "PLAN_READY"],
+    "CODING": ["TESTING", "TASKS_READY"],
+    "TESTING": ["REVIEW", "CODING"],
+    "REVIEW": ["APPROVED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
+    "APPROVED": ["COMMITTED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
+    "COMMITTED": ["CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"]
+  },
+  "phaseHistory": [
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-10-31T00:00:00.000Z",
+      "note": "FEATURE_DIR criado por Zeus; aguardando Step 0 (Caronte: branch) e discovery (Hera)."
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "Checkpoint 1: approve-spec humano (chat: 'aprovado'). Guardian OK apos correcao de forma pela Hera (titulos 'Modelo de Domínio', 'Premissas Técnicas Validadas', marcador 'Validada com Humano? Sim'; conteudo intocado)."
+    },
+    {
+      "phase": "PLAN_READY",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "Atena entregou plan.md (191 linhas, 6 secoes guardian) + tasks.json (8 tasks, DAG aciclico, minos/hefesto). Guardian OK (SPEC_APPROVED -> PLAN_READY). Aguardando checkpoint humano approve-plan."
+    },
+    {
+      "phase": "PLAN_APPROVED",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "Checkpoint 2: approve-plan humano (chat: 'aprovado'). Guardian OK (PLAN_READY -> PLAN_APPROVED)."
+    },
+    {
+      "phase": "TASKS_READY",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "DAG validado por Zeus (8 tasks aciclicas, criteria testaveis, files reais). Guardian OK (PLAN_APPROVED -> TASKS_READY). Commit de spec+plan delegado a Caronte (b823daa)."
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-11-01T00:00:00.000Z",
+      "note": "tasks.json reestruturado pela Atena (+T0 RED da migracao, 9 tasks). Guardian OK (TASKS_READY -> CODING)."
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-11-05T00:00:00.000Z",
+      "note": "Pares T0/T1, T2/T3, T4/T5, T6/T7, T8 concluidos com commits atomicos (8dade6c, 2674065, cc76b15, cc3b5f0, 39528d5)."
+    },
+    {
+      "phase": "TESTING",
+      "timestamp": "2026-11-05T00:00:00.000Z",
+      "note": "Guardian OK (CODING -> TESTING) e (TESTING -> REVIEW): 1886/1886, coverage 85.3, test-report/test-scenarios validados."
+    },
+    {
+      "phase": "REVIEW",
+      "timestamp": "2026-11-05T00:00:00.000Z",
+      "note": "diff.patch gerado (develop...HEAD). Argos em avaliacao."
+    },
+    {
+      "phase": "APPROVED",
+      "timestamp": "2026-11-05T00:00:00.000Z",
+      "note": "Argos: status approved, 0 blockers, 4 minor (3 docs em plan.md + 1 casts obsoletos em testes). BOM UTF-8 do review-report.json removido por Zeus (formato, conteudo intocado) para o guardian parsear. Checkpoint 3: approve-review humano (chat: 'Aprovado') + homologacao dos 18 cenarios. Guardian OK (REVIEW -> APPROVED)."
+    },
+    {
+      "phase": "COMMITTED",
+      "timestamp": "2026-11-05T00:00:00.000Z",
+      "note": "Guardian OK (APPROVED -> COMMITTED). Fase final: docs Mnemosine (AGENTS/CHANGELOG/README + correcao dos 3 desvios documentais do plan.md + backlog #26) e commit final via Caronte. Push apenas com autorizacao humana."
+    }
+  ],
+  "lastUpdated": "2026-11-05T00:00:00.000Z"
+}

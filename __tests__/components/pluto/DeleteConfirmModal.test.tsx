@@ -12,6 +12,8 @@ const tx: TransactionWithDetails = {
   date: "2026-03-15",
   category_id: "c1",
   account_id: "a1",
+  period_year: 2026,
+  period_month: 3,
   created_at: "2026-03-15T00:00:00Z",
   created_by: "t@t.com",
   category_name: "Alimentação",

@@ -1,0 +1,3321 @@
+﻿diff --git a/.agents/current b/.agents/current
+index 93972a6..2ebd6c1 100644
+--- a/.agents/current
++++ b/.agents/current
+@@ -1 +1 @@
+-.agents/modules/milon/06-timer-descanso-pwa
++.agents/modules/pluto/05e-lancamento-data-livre
+diff --git a/.agents/modules/pluto/05e-lancamento-data-livre/checkpoint.json b/.agents/modules/pluto/05e-lancamento-data-livre/checkpoint.json
+new file mode 100644
+index 0000000..b370c47
+--- /dev/null
++++ b/.agents/modules/pluto/05e-lancamento-data-livre/checkpoint.json
+@@ -0,0 +1,48 @@
++{
++  "currentPhase": "TESTING",
++  "validTransitions": {
++    "SPEC_DRAFT": ["SPEC_APPROVED"],
++    "SPEC_APPROVED": ["PLAN_READY", "SPEC_DRAFT"],
++    "PLAN_READY": ["PLAN_APPROVED", "SPEC_APPROVED"],
++    "PLAN_APPROVED": ["TASKS_READY", "PLAN_READY", "SPEC_DRAFT"],
++    "TASKS_READY": ["CODING", "PLAN_APPROVED", "PLAN_READY"],
++    "CODING": ["TESTING", "TASKS_READY"],
++    "TESTING": ["REVIEW", "CODING"],
++    "REVIEW": ["APPROVED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
++    "APPROVED": ["COMMITTED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
++    "COMMITTED": ["CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"]
++  },
++  "phaseHistory": [
++    {
++      "phase": "SPEC_DRAFT",
++      "timestamp": "2026-10-31T00:00:00.000Z",
++      "note": "FEATURE_DIR criado por Zeus; aguardando Step 0 (Caronte: branch) e discovery (Hera)."
++    },
++    {
++      "phase": "SPEC_APPROVED",
++      "timestamp": "2026-11-01T00:00:00.000Z",
++      "note": "Checkpoint 1: approve-spec humano (chat: 'aprovado'). Guardian OK apos correcao de forma pela Hera (titulos 'Modelo de Dom├¡nio', 'Premissas T├®cnicas Validadas', marcador 'Validada com Humano? Sim'; conteudo intocado)."
++    },
++    {
++      "phase": "PLAN_READY",
++      "timestamp": "2026-11-01T00:00:00.000Z",
++      "note": "Atena entregou plan.md (191 linhas, 6 secoes guardian) + tasks.json (8 tasks, DAG aciclico, minos/hefesto). Guardian OK (SPEC_APPROVED -> PLAN_READY). Aguardando checkpoint humano approve-plan."
++    },
++    {
++      "phase": "PLAN_APPROVED",
++      "timestamp": "2026-11-01T00:00:00.000Z",
++      "note": "Checkpoint 2: approve-plan humano (chat: 'aprovado'). Guardian OK (PLAN_READY -> PLAN_APPROVED)."
++    },
++    {
++      "phase": "TASKS_READY",
++      "timestamp": "2026-11-01T00:00:00.000Z",
++      "note": "DAG validado por Zeus (8 tasks aciclicas, criteria testaveis, files reais). Guardian OK (PLAN_APPROVED -> TASKS_READY). Commit de spec+plan delegado a Caronte (b823daa)."
++    },
++    {
++      "phase": "CODING",
++      "timestamp": "2026-11-01T00:00:00.000Z",
++      "note": "tasks.json reestruturado pela Atena (+T0 RED da migra├º├úo, 9 tasks; gate CODING falhou com T1-SQL como primeira task). Minos escreveu T0: migration-0018.test.ts, 9 casos FAIL ENOENT, tsc limpo. Guardian OK (TASKS_READY -> CODING). Loop: T0 conclu├¡da; T1 (migra├º├úo) em curso."
++    }
++  ],
++  "lastUpdated": "2026-11-01T00:00:00.000Z"
++}
+diff --git a/.agents/modules/pluto/05e-lancamento-data-livre/context.json b/.agents/modules/pluto/05e-lancamento-data-livre/context.json
+new file mode 100644
+index 0000000..aaa9f9e
+--- /dev/null
++++ b/.agents/modules/pluto/05e-lancamento-data-livre/context.json
+@@ -0,0 +1,100 @@
++{
++  "sessionId": null,
++  "feature": "pluto/05e-lancamento-data-livre",
++  "objective": "Remover a trava de data do calend├írio de lan├ºamento de transa├º├Áes: o calend├írio abre por padr├úo no m├¬s que est├í sendo editado, mas permite lan├ºar em qualquer data (patch do cadastro de transa├º├Áes ÔÇö item 26 do backlog do Pluto).",
++  "currentPhase": "CODING",
++  "history": [
++    {
++      "phase": "SPEC_DRAFT",
++      "timestamp": "2026-10-31T00:00:00.000Z",
++      "note": "Item #26 registrado no backlog do Pluto; FEATURE_DIR criado; evid├¬ncia de c├│digo: components/pluto/TransactionModal.tsx aplica min/max (linhas 104-105) vindos de lib/pluto/hooks/usePlutoData.ts (getMonthRange, linha 183); useTransactionForm.ts abre com data default em minDateStr (linha 59)."
++    },
++    {
++      "phase": "SPEC_DRAFT",
++      "timestamp": "2026-10-31T00:00:00.000Z",
++      "note": "Step 0 (Caronte): branch feature/pluto/05e-lancamento-data-livre criada a partir de develop (c7a151a), commit inicial cf2c209 com estado + backlog + ponteiro .agents/current; baseline verde (test 1871/1871, lint 0 erros, build OK); sem push. Primeira delega├º├úo retornou sem concluir (aguardava baseline em background); re-delega├º├úo com instru├º├úo expl├¡cita concludu."
++    },
++    {
++      "phase": "SPEC_DRAFT",
++      "timestamp": "2026-11-01T00:00:00.000Z",
++      "note": "Fase SPEC_DRAFT conclu├¡da pela Hera: discovery com 10 perguntas (1/turno), 6 dimens├Áes do checklist confirmadas explicitamente pelo humano. Gate anti-c├│digo validado por Zeus (busca por blocos ts/tsx/js/sql/py/css/html e linhas SQL/TS = 0 matches). spec.md com 193 linhas/11 se├º├Áes. Checkpoint 1: approve-spec humano em 2026-11-01 (chat: 'aprovado')."
++    },
++    {
++      "phase": "SPEC_APPROVED",
++      "timestamp": "2026-11-01T00:00:00.000Z",
++      "note": "Guardian OK (SPEC_DRAFT -> SPEC_APPROVED) apos correcao de forma pela Hera: titulos 'Modelo de Dom├¡nio' e 'Premissas T├®cnicas Validadas' + marcador 'Validada com Humano? Sim' ÔÇö conteudo aprovado intocado. Proximo: PLAN_READY (Atena)."
++    },
++    {
++      "phase": "PLAN_READY",
++      "timestamp": "2026-11-01T00:00:00.000Z",
++      "note": "Atena entregou plan.md + tasks.json. Zeus validou: guardian (6 se├º├Áes, anti-c├│digo, sem TBD, migra├º├úo 0018 > 0017), tasks.json (8 tasks, DAG ac├¡clico, criteria n├úo vazios, files reais). Aguardando approve-plan humano."
++    }
++  ],
++  "approvals": {
++    "spec": "approved",
++    "spec_approved_at": "2026-11-01",
++    "spec_approved_by": "humano (chat: 'aprovado')",
++    "plan": "approved",
++    "plan_approved_at": "2026-11-01",
++    "plan_approved_by": "humano (chat: 'aprovado')",
++    "review": "pending"
++  },
++  "decisions": [
++    {
++      "id": "D1",
++      "decision": "Item #26 registrado como patch candidato 05e sobre o cadastro de transa├º├Áes (item 5), seguindo a conven├º├úo 05a-05d do m├│dulo Pluto.",
++      "date": "2026-10-31"
++    },
++    {
++      "id": "D2",
++      "decision": "M├¬s de c├ílculo = m├¬s da tela (nunca a data do lan├ºamento). Rejeitada: contabilizar pelo m├¬s da data.",
++      "date": "2026-11-01"
++    },
++    {
++      "id": "D3",
++      "decision": "Persist├¬ncia do m├¬s de c├ílculo em duas colunas novas (period_year + period_month). Rejeitada: coluna ├║nica de data do primeiro dia do m├¬s.",
++      "date": "2026-11-01"
++    },
++    {
++      "id": "D4",
++      "decision": "Qualquer data aceita; valida├º├úo de m├¬s aberto migra da data para o m├¬s de c├ílculo. Rejeitada: trava parcial por data de m├¬s aberto.",
++      "date": "2026-11-01"
++    },
++    {
++      "id": "D5",
++      "decision": "Data inicial do form = primeiro dia do m├¬s da tela. Rejeitadas: data de hoje; campo vazio.",
++      "date": "2026-11-01"
++    },
++    {
++      "id": "D6",
++      "decision": "Corre├º├úo de m├¬s errado por excluir + relan├ºar; edi├º├úo n├úo move o m├¬s de c├ílculo. Rejeitada: trocar per├¡odo na edi├º├úo.",
++      "date": "2026-11-01"
++    },
++    {
++      "id": "D7",
++      "decision": "Extrato ordenado por data crescente (ordena├º├úo atual mantida). Rejeitada: ordenar por ordem de cria├º├úo.",
++      "date": "2026-11-01"
++    },
++    {
++      "id": "D8",
++      "decision": "Backfill dos lan├ºamentos existentes copiando ano/m├¬s da pr├│pria date (saldos num├®ricos inalterados). Rejeitada: revis├úo manual pendente.",
++      "date": "2026-11-01"
++    },
++    {
++      "id": "D9",
++      "decision": "Data livre total: sem min/max nem r├│tulo 'Limitada a'. Rejeitada: piso no passado.",
++      "date": "2026-11-01"
++    },
++    {
++      "id": "D10",
++      "decision": "'Salvar e Adicionar Outro' preserva a data digitada (05d intacto). Rejeitada: resetar para 1┬║ dia do m├¬s a cada item.",
++      "date": "2026-11-01"
++    },
++    {
++      "id": "D11",
++      "decision": "Lista de 8 pontos fora de escopo confirmada (se├º├úo 7 da spec): checklist, ciclo de m├¬s, concilia├º├úo, parceladas/recorrentes, or├ºamento, dashboard, mover m├¬s por UI, telas novas.",
++      "date": "2026-11-01"
++    }
++  ],
++  "migrations": {}
++}
+diff --git a/.agents/modules/pluto/05e-lancamento-data-livre/plan.md b/.agents/modules/pluto/05e-lancamento-data-livre/plan.md
+new file mode 100644
+index 0000000..36f0eeb
+--- /dev/null
++++ b/.agents/modules/pluto/05e-lancamento-data-livre/plan.md
+@@ -0,0 +1,190 @@
++# Plano de Implementa├º├úo ÔÇö Patch 05e: Lan├ºamento com Data Livre (Calend├írio sem Trava do M├¬s)
++
++**Feature:** `pluto/05e-lancamento-data-livre` (patch da feature 5 ÔÇö Cadastro de transa├º├Áes)
++**M├│dulo:** Pluto (Finan├ºas Familiares)
++**Spec de refer├¬ncia:** `.agents/modules/pluto/05e-lancamento-data-livre/spec.md` (aprovada ÔÇö checkpoint 1)
++**Data:** 2026-11-01
++**Agente:** Atena (Planejamento ÔÇö Olympus)
++
++---
++
++## Vis├úo Geral
++
++O patch separa "data do lan├ºamento" de "m├¬s de c├ílculo". A coluna `date` de `public.transactions` passa a ser apenas atributo de exibi├º├úo e ordena├º├úo (data do cart├úo/extrato); o m├¬s de c├ílculo vira dado pr├│prio do lan├ºamento, persistido nas colunas novas `period_year` + `period_month`, fixadas no m├¬s da tela onde o form foi aberto. A trava de "m├¬s aberto" em criar/editar/excluir passa a avaliar o m├¬s de c├ílculo gravado; a busca da tela passa a filtrar por `period_year` + `period_month` em vez de intervalo de `date`; o campo de data do modal perde `min`/`max` e o r├│tulo "Limitada a". Os c├ílculos (saldo, entradas/sa├¡das, or├ºado ├ù realizado, agrega├º├úo por conta) herdam o novo filtro da lista sem nenhuma l├│gica pr├│pria nova ÔÇö eles somam a lista que a p├ígina carrega.
++
++Escopo exato da spec (se├º├úo 7 fora de escopo respeitada): nenhuma tela nova, nenhuma regra nova de checklist/m├¬s/or├ºamento/concilia├º├úo/parceladas, nenhuma UI para mover lan├ºamento de m├¬s, nenhum modelo de conta novo.
++
++---
++
++## Mapeamento Schema ÔåÆ C├│digo
++
++| Tabela | Coluna | Migra├º├úo | Reposit├│rio | Hook | Componente |
++|---|---|---|---|---|---|
++| public.transactions | period_year (inteiro, novo, obrigat├│rio) | migration-0018-pluto-lancamento-data-livre.sql (cria├º├úo + backfill + NOT NULL + auditoria) | lib/pluto/repositories/transactions.ts ÔÇö create grava e valida por ela; getTransactionsByMonth filtra por ela; update/delete validam o valor gravado | lib/pluto/hooks/useTransactionForm.ts ÔÇö envia selectedYear do m├¬s da tela no create | components/pluto/TransactionModal.tsx ÔÇö campo de data sem limites |
++| public.transactions | period_month (inteiro, novo, obrigat├│rio) | migration-0018-pluto-lancamento-data-livre.sql (cria├º├úo + backfill + NOT NULL + auditoria) | lib/pluto/repositories/transactions.ts ÔÇö mesmo fluxo de period_year | lib/pluto/hooks/useTransactionForm.ts ÔÇö envia selectedMonth do m├¬s da tela no create | components/pluto/TransactionModal.tsx ÔÇö r├│tulo "Data" sem "Limitada a" |
++| public.transactions | date (sem DDL; muda s├│ de sem├óntica: data do cart├úo/extrato) | nenhuma (coluna existente intacta) | lib/pluto/repositories/transactions.ts ÔÇö valida├º├úo de per├¡odo sai de date; ordena├º├úo por date crescente mantida | lib/pluto/hooks/usePlutoData.ts ÔÇö deriva├º├úo minDateStr/maxDateStr removida | app/pluto/transactions/page.tsx ÔÇö deixa de repassar limites ao modal |
++| public.monthly_periods | year, month, status (sem DDL; ├║nica refer├¬ncia de trava, agora sobre o m├¬s de c├ílculo) | nenhuma | lib/pluto/repositories/transactions.ts ÔÇö checagem "aberto" em criar/editar/excluir usa period_year/period_month; mensagens preservadas | lib/pluto/hooks/useTransactionModals.ts ÔÇö deps trocam minDateStr por selectedYear/selectedMonth | components/pluto/DeleteConfirmModal.tsx ÔÇö fluxo intacto (s├│ herda valida├º├úo nova do reposit├│rio) |
++
++Consequ├¬ncia derivada (sem decis├úo nova): `lib/pluto/hooks/useBudgetComparison.ts`, `lib/pluto/hooks/useAccountAggregation.ts` e o banner de saldo somam a lista `transactions` da tela ÔÇö refletem o m├¬s de c├ílculo automaticamente, sem altera├º├úo de c├│digo pr├│prio.
++
++---
++
++## Contratos Completos
++
++### Tipos ÔÇö `lib/pluto/types.ts` (fonte ├║nica)
++
++- **`TransactionRow`** ÔÇö campos atuais inalterados + `period_year: number` (obrigat├│rio) + `period_month: number` (obrigat├│rio).
++- **`TransactionInput`** (entrada de cria├º├úo) ÔÇö campos atuais inalterados + `period_year: number` + `period_month: number` (obrigat├│rios).
++- **`TransactionUpdateInput`** (novo) ÔÇö apenas campos edit├íveis: `description: string`, `amount: number`, `type: "receita" | "despesa"`, `is_refund: boolean`, `date: string`, `category_id: string`, `account_id: string`. **Sem** campos de per├¡odo ÔÇö a edi├º├úo n├úo pode mover o lan├ºamento de m├¬s nem estruturalmente (garantia de tipo da decis├úo D6).
++- **`TransactionWithDetails`** ÔÇö campos atuais inalterados + `period_year: number` + `period_month: number`.
++- **Remo├º├úo de tipos mortos** (sem importadores em c├│digo vivo hoje, verificados por busca): `CreateTransactionFormData`, `UpdateTransactionFormData`, `CreateTransactionDTO`, `UpdateTransactionDTO`. Mant├¬-los ap├│s a mudan├ºa criaria tipos desatualizados sem per├¡odo.
++
++### Contrato de reposit├│rio ÔÇö `lib/pluto/repositories/interfaces.ts`
++
++- `ITransactionRepository.updateTransaction(id: string, input: TransactionUpdateInput): Promise<TransactionWithDetails>` ÔÇö assinatura muda de `TransactionInput` para `TransactionUpdateInput`.
++- Demais m├®todos mant├¬m assinatura: `getTransactionsByMonth(year, month)`, `createTransaction(input: TransactionInput, email)`, `deleteTransaction(id)`.
++
++### Reposit├│rio real ÔÇö `lib/pluto/repositories/transactions.ts` (DDL/l├│gica de persist├¬ncia aqui; nunca `@supabase/*` fora de `lib/shared`)
++
++- **`getTransactionsByMonth(db, year, month)`** ÔÇö remove o filtro `gte/lte` sobre `date` (e o uso de `getMonthRange`) e passa a filtrar por igualdade em `period_year` = year e `period_month` = month. Ordena├º├úo mantida: `date` crescente, desempate por `id` crescente. Enriquecimento de nomes inalterado.
++- **`createTransaction(db, input, email)`** ÔÇö remove `parseYearMonth(input.date)`; valida `monthly_periods` por `input.period_year`/`input.period_month` (mensagem preservada: "N├úo ├® poss├¡vel registrar transa├º├Áes no per├¡odo {m├¬s}/{ano} pois ele n├úo est├í aberto."); o `insert` passa a gravar tamb├®m `period_year` e `period_month`.
++- **`updateTransaction(db, id, input: TransactionUpdateInput)`** ÔÇö passa a buscar a linha primeiro (seleciona `id, period_year, period_month`; linha ausente ÔåÆ erro "Transa├º├úo n├úo encontrada.", alinhando o reposit├│rio real ao fake); valida o per├¡odo aberto pelo **m├¬s de c├ílculo gravado** (mensagem preservada: "N├úo ├® poss├¡vel alterar transa├º├Áes no per├¡odo {m├¬s}/{ano} pois ele n├úo est├í aberto."); o `update` escreve apenas os campos edit├íveis ÔÇö nunca `period_year`/`period_month`.
++- **`deleteTransaction(db, id)`** ÔÇö a busca inicial seleciona `id, period_year, period_month` em vez de `id, date`; a valida├º├úo usa o m├¬s de c├ílculo gravado (mensagem preservada: "N├úo ├® poss├¡vel excluir transa├º├Áes no per├¡odo {m├¬s}/{ano} pois ele n├úo est├í aberto."); o `delete` ├® inalterado.
++- O arquivo deixa de importar `getMonthRange` e `parseYearMonth` (busca por `parseYearMonth` retorna 0 em `lib/pluto/repositories/transactions.ts`).
++
++### Fake ÔÇö `lib/pluto/repositories/fakes/fakeTransactionRepository.ts` (espelho obrigat├│rio do contrato real)
++
++- `getTransactionsByMonth` filtra por `tx.period_year === year && tx.period_month === month` (mant├®m ordena├º├úo date/id).
++- `createTransaction` valida o per├¡odo aberto por `input.period_year`/`input.period_month` e grava os campos no registro criado.
++- `updateTransaction(id, input: TransactionUpdateInput)` busca a existente primeiro (erro "Transa├º├úo n├úo encontrada."), valida pelo m├¬s de c├ílculo gravado e n├úo altera os campos de per├¡odo.
++- `deleteTransaction` valida pelo m├¬s de c├ílculo gravado.
++- Os helpers locais `function getMonthRange` e `function parseYearMonth` do fim do arquivo s├úo removidos (busca por `parseYearMonth` retorna 0 em `lib/pluto/repositories/fakes/`).
++- `seed()`/construtor continuam aceitando `TransactionWithDetails[]` ÔÇö os fixtures ganham os campos de per├¡odo (necess├írio para os cen├írios de update/delete em per├¡odo encerrado).
++
++### Harness de integra├º├úo ÔÇö `__tests__/integration/repositories.ts`
++
++- `SupabaseTransactionRepository` adapta a nova assinatura de `updateTransaction` (delega sem mapeamento de per├¡odo) e o `mapInput` mant├®m mapeamento de aliases de categoria/conta; `TransactionInput` com per├¡odo passa direto. Nenhuma mudan├ºa de produ├º├úo.
++
++### Hooks ÔÇö `lib/pluto/hooks/`
++
++- **`usePlutoData.ts`** ÔÇö remove `minDateStr`/`maxDateStr` da interface `PlutoData`, do retorno e da deriva├º├úo via `getMonthRange` (linha 183); remove o import de `getMonthRange`. Todo o resto (single-flight, sele├º├úo de m├¬s aberto, demais cargas) intacto. A chamada `getTransactionsByMonth(db, year, month)` n├úo muda de forma ÔÇö muda de sem├óntica por baixo.
++- **`useTransactionForm.ts`** ÔÇö `UseTransactionFormOptions` troca `minDateStr: string` por `selectedYear: number` e `selectedMonth: number`. `handleOpenTxModal` pr├®-preenche `date` com o primeiro dia do m├¬s da tela (via `getMonthRange(selectedYear, selectedMonth).startDate` ÔÇö ├║nico uso vivo remanescente de `getMonthRange`, que portanto permanece em `lib/shared/date.ts`). Ambos os fluxos de cria├º├úo (`handleSaveTransaction` e `handleSaveTransactionAndAddAnother`) enviam `period_year: selectedYear` e `period_month: selectedMonth` no input. O fluxo de edi├º├úo envia `TransactionUpdateInput` (sem per├¡odo). "Salvar e Adicionar Outro" preserva a data digitada e os resets do 05d intactos. Prefill do checklist inalterado (`setDate(prefill.date)` ÔÇö sem limites para conflitar).
++- **`useTransactionModals.ts`** ÔÇö `TransactionModalsDeps` troca `minDateStr` por `selectedYear`/`selectedMonth` e repassa ao `useTransactionForm`; composi├º├úo dos 3 modais intacta.
++- **`useDeleteTransaction.ts`** ÔÇö nenhuma mudan├ºa de c├│digo (herda a nova valida├º├úo do reposit├│rio).
++
++### Componente e p├ígina
++
++- **`components/pluto/TransactionModal.tsx`** ÔÇö `TransactionModalProps` remove `minDateStr`, `maxDateStr`, `selectedYear` e `selectedMonth` (todos usados s├│ pelos limites/r├│tulo); r├│tulo do campo passa a ser "Data"; o `Input type="date"` perde `min` e `max`; remove o import de `MONTH_NAMES` (busca por `Limitada a` retorna 0 em `components/`, busca por `MONTH_NAMES` retorna 0 em `components/pluto/TransactionModal.tsx`). Demais campos/fluxos intactos.
++- **`components/pluto/TransactionModal.stories.tsx`** e **`components/pluto/storybook.fixtures.ts`** ÔÇö args/fixtures atualizados sem as props removidas; `storyTransactions` ganha `period_year`/`period_month`.
++- **`app/pluto/transactions/page.tsx`** ÔÇö deixa de desestruturar/repassar `minDateStr`/`maxDateStr`; passa `selectedYear`/`selectedMonth` ao `useTransactionModals`; demais composi├º├úo e c├ílculos intactos.
++- **`components/pluto/ChecklistCard.tsx`** ÔÇö nenhuma mudan├ºa (o prefill j├í monta a data do vencimento; sem limites para conflitar).
++
++### Mensagens preservadas (formato literal atual)
++
++- "N├úo ├® poss├¡vel registrar transa├º├Áes no per├¡odo {m├¬s}/{ano} pois ele n├úo est├í aberto."
++- "N├úo ├® poss├¡vel alterar transa├º├Áes no per├¡odo {m├¬s}/{ano} pois ele n├úo est├í aberto."
++- "N├úo ├® poss├¡vel excluir transa├º├Áes no per├¡odo {m├¬s}/{ano} pois ele n├úo est├í aberto."
++- "Transa├º├úo n├úo encontrada."
++- "Transa├º├úo salva com sucesso!" (05d intacto).
++
++---
++
++## Migra├º├Áes
++
++**N├║mero reservado pela Atena:** `0018` (pr├│ximo livre ap├│s 0017, conforme AGENTS.md).
++**Arquivo:** `utils/migrations/migration-0018-pluto-lancamento-data-livre.sql` ÔÇö nome ├║nico, kebab-case, sem sufixo de vers├úo; criado por Hefesto conforme conte├║do deste plano. V├¡nculo com a feature-m├úe via `spec_id` = `pluto-05e` e `spec_name` = `Lan├ºamento com Data Livre`.
++
++**Tipo:** DDL incremental aditiva, em transa├º├úo ├║nica, com quatro passos ordenados (a ordem importa ÔÇö as colunas nascem anul├íveis para o backfill poder rodar):
++
++1. Cria├º├úo das colunas: `ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS period_year integer;` e `ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS period_month integer;`
++2. Backfill retroativo: `UPDATE public.transactions SET period_year = EXTRACT(YEAR FROM date), period_month = EXTRACT(MONTH FROM date) WHERE period_year IS NULL OR period_month IS NULL;` ÔÇö com convers├úo expl├¡cita para integer nas atribui├º├Áes. Copia o ano/m├¬s da pr├│pria `date` (decis├úo D8): saldos num├®ricos permanecem id├¬nticos, pois hoje j├í se soma pelo m├¬s da data.
++3. Obrigatoriedade: `ALTER TABLE public.transactions ALTER COLUMN period_year SET NOT NULL;` e o an├ílogo para `period_month` ÔÇö somente ap├│s o backfill.
++4. Auditoria: self-bootstrap idempotente de `public.schema_migrations` (mesmo bloco das migra├º├Áes 0008/0016: `CREATE TABLE IF NOT EXISTS` + RLS + pol├¡tica "Permitir tudo para autenticados") e `INSERT` com `spec_id` `pluto-05e`, `spec_name` `Lan├ºamento com Data Livre`, `script_name` id├¬ntico ao nome do arquivo (`migration-0018-pluto-lancamento-data-livre.sql`) e `executed_by` `joaopsroberto@gmail.com`, com conflito ignorado por `ON CONFLICT (script_name) DO NOTHING`.
++
++**Explicitamente n├úo faz:** nenhuma remo├º├úo/renomea├º├úo de coluna ou tabela; nenhuma pol├¡tica RLS nova em `transactions`; nenhum ├¡ndice novo (tabela de uso dom├®stico com 2 usu├írios ÔÇö YAGNI; reavaliar apenas se o volume crescer); nenhum CHECK de faixa em `period_month` (a ├║nica escrita vem do reposit├│rio, que envia o m├¬s selecionado da tela, restrito a 1ÔÇô12 pela UI de sele├º├úo).
++
++**Rollback (em coment├írio no rodap├® do arquivo, padr├úo 0016):** aplic├ível somente onde a 0018 ainda n├úo foi promovida ÔÇö `ALTER TABLE public.transactions DROP COLUMN IF EXISTS period_year;` e o an├ílogo para `period_month`. Nunca editar nem renomear arquivo j├í aplicado; corre├º├úo exige arquivo novo.
++
++**Verifica├º├úo p├│s-aplica├º├úo (consultas documentadas em coment├írio no pr├│prio script):** contagem de linhas de `transactions` com `period_year` ou `period_month` nulo deve ser zero; compara├º├úo da soma de `amount` agrupada por ano/m├¬s de `date` antes e depois do backfill deve mostrar diferen├ºa zero (saldos preservados).
++
++**Ordem de CI:** o CI aplica `utils/migrations` em ordem lexicogr├ífica; `migration-0018-*` roda ap├│s 0017. O binding de integra├º├úo (`__tests__/integration/repositories.ts`) s├│ passa a seedar/crudar transa├º├Áes com per├¡odo ap├│s a coluna existir no banco de integra├º├úo ÔÇö por isso a task de reposit├│rio consome a task da migra├º├úo.
++
++---
++
++## C├│digo Legado/Remov├¡vel
++
++Cada remo├º├úo traz crit├®rio de verifica├º├úo por busca (em c├│digo vivo = `app/`, `components/`, `lib/`):
++
++1. **`minDateStr` e `maxDateStr`** ÔÇö em `PlutoData` (usePlutoData), `UseTransactionFormOptions`/`useTransactionForm`, `TransactionModalsDeps`/`useTransactionModals`, `TransactionModalProps`/`TransactionModal` e `page.tsx`. Crit├®rio: busca por `minDateStr` retorna 0 em c├│digo vivo; busca por `maxDateStr` retorna 0 em c├│digo vivo.
++2. **Atributos de limite e r├│tulo** ÔÇö `min={minDateStr}`, `max={maxDateStr}` e o texto "Limitada a" no modal. Crit├®rio: busca por `Limitada a` retorna 0 em c├│digo vivo (inclusive `__tests__/`).
++3. **Helpers locais do fake** ÔÇö `function getMonthRange` e `function parseYearMonth` em `fakeTransactionRepository.ts`. Crit├®rio: busca por `parseYearMonth` retorna 0 em `lib/pluto/repositories/fakes/`.
++4. **Uso de `parseYearMonth`/`getMonthRange` no reposit├│rio real** ÔÇö Crit├®rio: busca por `parseYearMonth` retorna 0 em `lib/pluto/repositories/transactions.ts`.
++5. **Tipos mortos** ÔÇö `CreateTransactionFormData`, `UpdateTransactionFormData`, `CreateTransactionDTO`, `UpdateTransactionDTO` em `lib/pluto/types.ts` (hoje sem nenhum importador, verificado por busca). Crit├®rio: busca por `CreateTransactionDTO` retorna 0 em c├│digo vivo (j├í vale antes da remo├º├úo ÔÇö a remo├º├úo evita tipos obsoletos sem per├¡odo).
++6. **Import de `MONTH_NAMES` no modal** ÔÇö Crit├®rio: busca por `MONTH_NAMES` retorna 0 em `components/pluto/TransactionModal.tsx`.
++
++**Decis├úo de perman├¬ncia (spec se├º├úo 9):** `getMonthRange` permanece em `lib/shared/date.ts` (com re-exports em `lib/pluto/utils.ts` e `lib/pluto/types.ts`) porque `useTransactionForm` passa a us├í-lo para o primeiro dia do m├¬s da tela. `parseYearMonth` permanece exportado em `lib/shared/date.ts` com seus re-exports ÔÇö a spec determina verificar usos, n├úo remover a utilidade compartilhada; ap├│s este patch ela n├úo tem uso vivo, o que fica registrado aqui.
++
++---
++
++## Arquivos Afetados
++
++**Produ├º├úo:**
++- `utils/migrations/migration-0018-pluto-lancamento-data-livre.sql` (novo)
++- `lib/pluto/types.ts`
++- `lib/pluto/repositories/interfaces.ts`
++- `lib/pluto/repositories/transactions.ts`
++- `lib/pluto/repositories/fakes/fakeTransactionRepository.ts`
++- `lib/pluto/hooks/usePlutoData.ts`
++- `lib/pluto/hooks/useTransactionForm.ts`
++- `lib/pluto/hooks/useTransactionModals.ts`
++- `components/pluto/TransactionModal.tsx`
++- `components/pluto/TransactionModal.stories.tsx`
++- `components/pluto/storybook.fixtures.ts`
++- `app/pluto/transactions/page.tsx`
++
++**Testes (ajuste do comportamento atual + fixtures com campos de per├¡odo):**
++- `__tests__/lib/pluto/repositories/contract-transactions.test.ts`
++- `__tests__/lib/pluto/repositories/fake-transaction.test.ts`
++- `__tests__/lib/pluto/db/transactions.test.ts`
++- `__tests__/integration/repositories.ts`
++- `__tests__/lib/pluto/hooks/usePlutoData.test.ts`
++- `__tests__/lib/pluto/hooks/useTransactionForm.test.ts`
++- `__tests__/lib/pluto/hooks/useTransactionModals.test.ts`
++- `__tests__/lib/pluto/hooks/useDeleteTransaction.test.ts` (fixtures)
++- `__tests__/lib/pluto/hooks/useAccountAggregation.test.ts` (fixtures)
++- `__tests__/lib/pluto/hooks/useBudgetComparison.test.ts` (fixtures)
++- `__tests__/components/pluto/TransactionModal.test.tsx`
++- `__tests__/components/pluto/AccountCardGrid.test.tsx` (fixtures)
++- `__tests__/components/pluto/DeleteConfirmModal.test.tsx` (fixtures)
++- `__tests__/app/pluto/transactions-page.test.tsx`
++- `__tests__/app/pluto/transactions/page.test.tsx`
++- `__tests__/app/pluto/transactions-checklist.test.tsx`
++- `__tests__/app/pluto/critical-flows.test.tsx`
++
++**Intocados por decis├úo:** `components/pluto/ChecklistCard.tsx`, `lib/pluto/hooks/useDeleteTransaction.ts`, `lib/pluto/hooks/useBudgetComparison.ts`, `lib/pluto/hooks/useAccountAggregation.ts`, `lib/shared/date.ts`, `lib/pluto/db/transactions.ts` (barrel `export *` absorve as novas assinaturas sem mudan├ºa).
++
++---
++
++## Tasks
++
++DAG ac├¡clico em 8 tasks (espelho exato do `tasks.json`; RED primeiro por Minos, implementa├º├úo por Hefesto, conforme fluxo Olympus):
++
++- **T1 ÔÇö Migra├º├úo 0018** (hefesto) ÔÇö cria o arquivo da migra├º├úo com DDL/backfill/auditoria/rollback conforme se├º├úo Migra├º├Áes. Independentepadr├úo.
++- **T2 ÔÇö Contrato RED de transa├º├Áes** (minos) ÔÇö atualiza `contract-transactions.test.ts`, `fake-transaction.test.ts` e `db/transactions.test.ts` para o novo contrato (per├¡odo de c├ílculo, data livre, edi├º├úo n├úo move m├¬s) e os faz falhar contra o fake atual.
++- **T3 ÔÇö Tipos + reposit├│rio real + fake GREEN** (hefesto) ÔÇö types, interfaces, `repositories/transactions.ts`, `fakeTransactionRepository.ts` e harness de integra├º├úo; remove tipos mortos e helpers legados; roda T2 verde. Consome T1 (integra├º├úo exige colunas no banco) e T2.
++- **T4 ÔÇö Contrato RED dos hooks** (minos) ÔÇö atualiza `usePlutoData.test.ts`, `useTransactionForm.test.ts` e `useTransactionModals.test.ts` para o novo contrato de op├º├Áes/retorno e os faz falhar contra os hooks atuais. Consome T3.
++- **T5 ÔÇö Hooks GREEN** (hefesto) ÔÇö implementa as mudan├ºas nos 3 hooks; roda T4 verde; `minDateStr`/`maxDateStr` zerados em `lib/pluto/hooks/`.
++- **T6 ÔÇö Contrato RED da UI + fixtures** (minos) ÔÇö atualiza testes de componente/p├ígina (`TransactionModal.test.tsx`, `critical-flows.test.tsx`, `transactions-page`, `transactions/page`, `transactions-checklist`) e os fixtures `TransactionWithDetails` dos demais testes; RED documentado. Consome T3.
++- **T7 ÔÇö UI GREEN** (hefesto) ÔÇö `TransactionModal.tsx` + stories/fixtures + `page.tsx`; roda T6 verde e `tsc --noEmit` limpo. Consome T5 e T6.
++- **T8 ÔÇö Su├¡te completa e cobertura** (minos) ÔÇö su├¡te unit├íria verde, coverage ÔëÑ 80%, `test-report.json` (`failed` 0) e `test-scenarios.md` (s├│ cen├írios manuais). Consome T1, T5 e T7.
++
++Nada al├®m destas tasks: sem telas novas, sem ├¡ndice novo, sem CHECK novo, sem altera├º├úo de checklist/m├¬s/or├ºamento/dashboard, sem UI de mover m├¬s (YAGNI conforme spec se├º├úo 7).
++
++---
++
++## Verifica├º├úo e Riscos
++
++- **Gates:** guardian `node .agents/scripts/guardian.js .agents/modules/pluto/05e-lancamento-data-livre PLAN_APPROVED` ap├│s o `approve-plan` humano; RED por task sem erro de sintaxe/tipo (valida├º├úo do guardian em CODING); `npm run test`, `npx tsc --noEmit`, `npx eslint .` verdes; build do Storybook verde ap├│s mudan├ºa de props do modal.
++- **Risco de migra├º├úo x deploy:** entre aplicar a migra├º├úo e deployar o c├│digo, inserts antigos (sem per├¡odo) falhariam por NOT NULL ÔÇö irrelevante aqui pois o backfill cobre o hist├│rico e o deploy ├® at├┤mico com o novo c├│digo; o reorder dos passos (backfill antes do NOT NULL) torna a migra├º├úo segura para dados existentes.
++- **Edi├º├úo em m├¬s reaberto:** valida├º├úo pelo m├¬s gravado permite editar lan├ºamento antigo quando o m├¬s dele foi reaberto ÔÇö comportamento desejado (ciclo de vida do m├¬s intacto, spec regra 13).
++- **Integra├º├úo:** `__tests__/integration/transactions.test.ts` roda s├│ no CI (`npm run test:integration`) com migra├º├Áes aplicadas; T3 consome T1 justamente para o banco de integra├º├úo ter as colunas.
+diff --git a/.agents/modules/pluto/05e-lancamento-data-livre/spec.md b/.agents/modules/pluto/05e-lancamento-data-livre/spec.md
+new file mode 100644
+index 0000000..a150906
+--- /dev/null
++++ b/.agents/modules/pluto/05e-lancamento-data-livre/spec.md
+@@ -0,0 +1,195 @@
++# Especifica├º├úo ÔÇö Patch 05e: Lan├ºamento com Data Livre (Calend├írio sem Trava do M├¬s)
++
++**Status:** Em Especifica├º├úo (SPEC_DRAFT)
++**Item do Backlog:** #26 ÔÇö Lan├ºamento com data livre (calend├írio sem trava do m├¬s)
++**Feature:** `pluto/05e-lancamento-data-livre` (patch da feature 5 ÔÇö Cadastro de transa├º├Áes)
++**M├│dulo:** Pluto (Finan├ºas Familiares)
++**Data:** 2026-11-01
++**Agente:** Hera (Discovery & Spec ÔÇö Olympus)
++
++---
++
++## 1. Dor e Objetivo (confirmado pelo humano)
++
++Hoje, ao abrir o modal de lan├ºamento em `/pluto/transactions`, o campo de data ├® travado ao m├¬s da tela: o navegador nem deixa digitar outra data. Isso impede registrar lan├ºamentos cujas datas s├úo de outros per├¡odos ÔÇö o caso real ├® a **fatura do cart├úo de cr├®dito**: voc├¬ est├í na tela de Novembro lan├ºando a fatura, mas as datas das compras s├úo de Outubro (ou anteriores), e em compras parceladas podem ser at├® futuras.
++
++**Objetivo desta feature:** remover a trava do calend├írio ÔÇö **qualquer data passa a ser aceita** ÔÇö mantendo o calend├írio **abrindo por padr├úo no m├¬s que est├í sendo editado** e mantendo **todos os c├ílculos (saldo, resumo e or├ºado ├ù realizado) presos ao m├¬s da tela que est├í sendo editado**, nunca ├á data digitada.
++
++O que muda, em uma frase: **a data vira apenas "data do cart├úo/extrato" (atributo de exibi├º├úo e ordena├º├úo), enquanto o m├¬s de c├ílculo passa a ser um dado pr├│prio do lan├ºamento, fixado no m├¬s da tela onde ele foi criado.**
++
++---
++
++## 2. Premissas T├®cnicas Validadas (evid├¬ncia de c├│digo lida, n├úo inferida)
++
++1. **A trava ├® apenas de interface.** O input de data do modal aplica `min` e `max` (`components/pluto/TransactionModal.tsx`, linhas 104ÔÇô105), e o r├│tulo do campo exibe o texto "Data (Limitada a {m├¬s}/{ano})" (linha 99 do mesmo arquivo).
++2. **Os limites v├¬m do m├¬s selecionado na tela.** `lib/pluto/hooks/usePlutoData.ts` (linha 183) deriva `minDateStr`/`maxDateStr` de `getMonthRange(selectedYear, selectedMonth)` e os repassa ├á p├ígina (`app/pluto/transactions/page.tsx`, linhas 169ÔÇô170), que os injeta no modal.
++3. **O formul├írio abre com o primeiro dia do m├¬s da tela.** `lib/pluto/hooks/useTransactionForm.ts` (linha 59) inicializa a data com `minDateStr`.
++4. **A valida├º├úo de "m├¬s aberto" hoje olha a data, n├úo a tela.** `lib/pluto/repositories/transactions.ts` extrai ano/m├¬s da data em criar (linha 40), editar (linha 92) e excluir (linha 152), e exige status `aberto` em `monthly_periods` para aquele ano/m├¬s ÔÇö mensagem: "N├úo ├® poss├¡vel registrar transa├º├Áes no per├¡odo {m├¬s}/{ano} pois ele n├úo est├í aberto."
++5. **A agrega├º├úo mensal hoje ├® por intervalo de datas.** `getTransactionsByMonth` (`lib/pluto/repositories/transactions.ts`) filtra pela coluna `date` entre o primeiro e o ├║ltimo dia do m├¬s e ordena por `date` crescente.
++6. **A tela s├│ lista meses abertos.** `usePlutoData.ts` carrega os per├¡odos via `getAllOpenMonthlyPeriods` e ajusta a sele├º├úo para um m├¬s aberto ÔÇö n├úo h├í UI de lan├ºamento sobre m├¬s encerrado.
++7. **O ciclo de vida do m├¬s existe e permanece:** `monthly_periods` com status `aberto` ou `encerrado` (`lib/pluto/types.ts`; encerrar/reabrir em `lib/pluto/repositories/months.ts`).
++8. **"Salvar e Adicionar Outro" (patch 05d) preserva a data** digitada e limpa descri├º├úo, valor, categoria e reembolso (`useTransactionForm.ts`).
++9. **Prefill do checklist:** ao virar lan├ºamento a partir do checklist, a data do vencimento ├® pr├®-preenchida no form (`useTransactionForm.ts`), hoje em conflito potencial com o `min`/`max` quando o vencimento cai fora do m├¬s.
++10. **O m├¬s da tela alimenta tudo na p├ígina:** or├ºado ├ù realizado (`useBudgetComparison`) e agrega├º├úo por conta (`useAccountAggregation`) somam a lista de transa├º├Áes carregada para o m├¬s selecionado (`app/pluto/transactions/page.tsx`) ÔÇö ou seja, trocar o que a lista carrega troca automaticamente os totais.
++11. **O fake espelha o reposit├│rio real:** `lib/pluto/repositories/fakes/fakeTransactionRepository.ts` reproduz filtro por intervalo e valida├º├úo por data; `__tests__/integration/repositories.ts` delega ao reposit├│rio real.
++
++---
++
++## 3. Modelo de Dom├¡nio (diagrama textual de entidades)
++
++**Entidade `transactions` (tabela `public.transactions`)** ÔÇö campos existentes (sem mudan├ºa de significado):
++
++- `id` (UUID, chave prim├íria)
++- `description` (texto, obrigat├│rio) ÔÇö descri├º├úo do lan├ºamento.
++- `amount` (num├®rico, obrigat├│rio, maior que zero) ÔÇö valor sempre positivo.
++- `type` (texto: `receita` ou `despesa`).
++- `is_refund` (booleano, padr├úo falso) ÔÇö marca estorno/reembolso.
++- `date` (data, obrigat├│ria) ÔÇö **passa a ser tratada como data do cart├úo/extrato**: s├│ exibi├º├úo, ordena├º├úo e leitura; **n├úo** determina o m├¬s de c├ílculo.
++- `category_id` (FK ÔåÆ `categories`, restri├º├úo `RESTRICT`).
++- `account_id` (FK ÔåÆ `financial_accounts`, restri├º├úo `RESTRICT`).
++- `created_at` (timestamp, padr├úo de agora) / `created_by` (e-mail do usu├írio).
++
++**Novos campos de `transactions` (criados por esta feature):**
++
++- `period_year` (inteiro, obrigat├│rio) ÔÇö ano do m├¬s da tela onde o lan├ºamento foi criado.
++- `period_month` (inteiro, obrigat├│rio) ÔÇö m├¬s (1 a 12) do m├¬s da tela onde o lan├ºamento foi criado.
++- Juntos formam o **m├¬s de c├ílculo** do lan├ºamento: ├® por eles que a tela encontra, lista e soma os lan├ºamentos. Todo lan├ºamento precisa ter esse par preenchido (inclusive os j├í existentes ÔÇö ver migra├º├úo na se├º├úo 5).
++
++**Entidade `monthly_periods`** (sem mudan├ºa): identifica o ciclo de vida de cada m├¬s (`year`, `month`, `status` = `aberto` | `encerrado`). Passa a ser a **├║nica** refer├¬ncia de trava ao salvar/editar/excluir, avaliando o **m├¬s de c├ílculo**, e n├úo mais a data.
++
++**Entidades relacionadas sem mudan├ºa:** `categories`, `financial_accounts` (com tipo `conta`/`cartao`), `budget`/ajustes de or├ºamento, itens do checklist de contas a pagar.
++
++**Relacionamentos descritos:**
++`transactions` pertence a uma `category` (1:N, restri├º├úo) e a uma `financial_account` (1:N, restri├º├úo); cada lan├ºamento referencia implicitamente um m├¬s de `monthly_periods` pelo par `period_year` + `period_month` ÔÇö sem chave estrangeira nova (o v├¡nculo ├® l├│gico, validado na grava├º├úo).
++
++---
++
++## 4. Decis├Áes Tomadas e Alternativas Rejeitadas
++
++Todas as decis├Áes abaixo foram confirmadas explicitamente pelo humano no discovery; nenhuma foi inferida pelo agente.
++
++1. **M├¬s de c├ílculo = m├¬s da tela** (n├úo a data do lan├ºamento).
++   - *Alternativa rejeitada:* contabilizar pelo m├¬s da data do lan├ºamento ÔÇö era o que o c├│digo faria naturalmente ao s├│ remover o `min`/`max`, e foi descartada porque a fatura de Outubro lan├ºada na tela de Novembro deve contar em Novembro.
++2. **Persist├¬ncia do m├¬s de c├ílculo em duas colunas novas** (`period_year` + `period_month`).
++   - *Alternativa rejeitada:* uma ├║nica coluna de data guardando o primeiro dia do m├¬s da tela ÔÇö rejeitada por exigir convers├úo de ano/m├¬s em data a cada filtro.
++3. **Qualquer data aceita; a trava de "m├¬s aberto" migra da data para o m├¬s da tela.**
++   - *Alternativa rejeitada:* manter uma trava parcial (s├│ datas de meses abertos) ÔÇö rejeitada por contradizer o calend├írio livre; a fatura de Outubro estaria bloqueada se Outubro j├í estivesse encerrado.
++4. **Data inicial do form = primeiro dia do m├¬s da tela** (calend├írio abre no m├¬s editado; comportamento atual preservado).
++   - *Alternativas rejeitadas:* data de hoje (abriria o calend├írio num m├¬s que pode divergir da tela) e campo vazio (obrigaria a escolha sempre e tiraria o m├¬s inicial do calend├írio).
++5. **Corre├º├úo de m├¬s errado = excluir e relan├ºar na tela certa**; a edi├º├úo n├úo altera o m├¬s de c├ílculo.
++   - *Alternativa rejeitada:* permitir trocar o per├¡odo na edi├º├úo ÔÇö rejeitada por ampliar a feature e criar novos casos de m├¬s destino aberto/encerrado.
++6. **Extrato ordenado por data crescente** (mantida a ordena├º├úo atual).
++   - *Alternativa rejeitada:* ordenar por ordem de cria├º├úo ÔÇö rejeitada por quebrar a leitura cronol├│gica do extrato.
++7. **Backfill dos lan├ºamentos existentes copiando ano/m├¬s da pr├│pria `date`.**
++   - *Alternativa rejeitada:* deixar pendente de revis├úo manual ÔÇö rejeitada por manter saldos indefinidos ap├│s o deploy; com o backfill, os saldos num├®ricos atuais permanecem id├¬nticos, porque hoje j├í se soma pelo m├¬s da data.
++8. **Limites de data: livre total**, passado ou futuro, sem `min`/`max` e sem o r├│tulo "Limitada a".
++   - *Alternativa rejeitada:* piso no passado (linha de corte antes do primeiro m├¬s aberto) ÔÇö rejeitada por criar uma exce├º├úo a lembrar.
++9. **"Salvar e Adicionar Outro" preserva a data digitada** (comportamento do patch 05d mantido).
++   - *Alternativa rejeitada:* resetar para o primeiro dia do m├¬s da tela a cada item ÔÇö rejeitada por obrigar a redigitar a data a cada item da mesma fatura.
++10. **Fora de escopo conforme lista confirmada** (se├º├úo 7).
++
++---
++
++## 5. Regras de Neg├│cio
++
++1. **Data livre:** o campo de data do modal de lan├ºamento n├úo exibe `min` nem `max`, e o r├│tulo passa a ser simplesmente "Data". Qualquer data passada ou futura ├® aceita.
++2. **Abertura do calend├írio:** ao abrir o modal para lan├ºar, a data inicial ├® o primeiro dia do m├¬s da tela; o calend├írio aparece aberto naquele m├¬s. Ao trocar a data para outro m├¬s, o calend├írio segue normalmente (comportamento nativo do campo de data).
++3. **Grava├º├úo do m├¬s de c├ílculo:** ao criar um lan├ºamento, `period_year` e `period_month` recebem o ano e o m├¬s **da tela onde o form foi aberto**, independentemente da data digitada.
++4. **Trava de m├¬s aberto (criar/editar/excluir):** a checagem de `monthly_periods` passa a avaliar o **m├¬s de c├ílculo** gravado (hoje avalia a data). Como a tela s├│ lista meses abertos, o lan├ºamento normal ├® sempre permitido; o backend revalida de qualquer forma. A mensagem de erro mant├®m o formato atual, referenciando o m├¬s de c├ílculo.
++5. **Leitura do m├¬s:** a lista da tela passa a buscar por `period_year` + `period_month` em vez de intervalo de `date`. Consequ├¬ncias j├í decididas: um lan├ºamento datado de Outubro **aparece** na tela de Novembro e **n├úo aparece** na tela de Outubro, mesmo que Outubro esteja aberto.
++6. **C├ílculos:** saldo do m├¬s, cards de entradas/sa├¡das, resultado, or├ºado ├ù realizado e agrega├º├úo por conta somam a lista da tela ÔÇö portanto, todos passam a refletir o m├¬s de c├ílculo, e **nunca** a data digitada. Nenhuma dessas telas recebe l├│gica pr├│pria nova.
++7. **Ordena├º├úo do extrato:** por data crescente (a ordena├º├úo atual), com datas de meses diferentes convivendo na mesma tabela.
++8. **Edi├º├úo:** altera data, descri├º├úo, valor, tipo, reembolso, conta e categoria; o m├¬s de c├ílculo **permanece o da tela onde o lan├ºamento foi criado**. Mudar a data n├úo move o lan├ºamento de m├¬s.
++9. **Exclus├úo:** liberada para lan├ºamentos da tela corrente, com a valida├º├úo de m├¬s de c├ílculo aberto.
++10. **Salvar e Adicionar Outro:** preserva a data digitada; limpa descri├º├úo, valor, categoria e reembolso; foco volta ao campo descri├º├úo (05d intacto).
++11. **Prefill do checklist:** a data de vencimento pr├®-preenchida passa a ser aceita sem conflito com limites do campo, mesmo quando cai fora do m├¬s da tela; o m├¬s de c├ílculo continua sendo o da tela.
++12. **Dados existentes:** a migra├º├úo preenche `period_year`/`period_month` de todos os lan├ºamentos j├í gravados copiando o ano/m├¬s da pr├│pria `date`, preservando integralmente os saldos atuais.
++13. **M├¬s encerrado:** inalterado. A tela continua listando apenas meses abertos, e n├úo existe caminho de UI para lan├ºar em m├¬s encerrado.
++
++---
++
++## 6. Migra├º├úo de Banco de Dados
++
++- **Tipo:** migra├º├úo DDL incremental aditiva ÔÇö cria as duas colunas obrigat├│rias em `public.transactions` e aplica o preenchimento retroativo (backfill) descrito na regra 12. Nenhuma coluna ou tabela existente ├® removida ou renomeada; nenhuma pol├¡tica RLS nova ├® necess├íria.
++- **Arquivo:** `utils/migrations/migration-NNNN-pluto-<slug>.sql`, seguindo a conven├º├úo do AGENTS.md (sequ├¬ncia global em 4 d├¡gitos, chave do m├│dulo `pluto`, slug kebab-case). O AGENTS.md indica o pr├│ximo inteiro livre como `0018`; **a numera├º├úo ├® reservada pela Atena no `plan.md`** ÔÇö esta spec n├úo consome o inteiro.
++- **Auditoria:** o script registra sua execu├º├úo em `public.schema_migrations` com o nome id├¬ntico ao do arquivo; conflito ignorado pelo nome do script.
++- **Verifica├º├úo p├│s-aplica├º├úo:** contagem de lan├ºamentos com m├¬s de c├ílculo nulo deve ser zero, e a compara├º├úo dos saldos por m├¬s antes e depois da migra├º├úo deve mostrar diferen├ºa zero.
++
++---
++
++## 7. Fora de Escopo (lista confirmada pelo humano)
++
++1. Checklist de contas a pagar ÔÇö nenhuma mudan├ºa de regra (s├│ deixa de sofrer o efeito da trava na data pr├®-preenchida).
++2. Encerramento/reabertura de m├¬s (item 13) e hist├│rico de meses (item 14) ÔÇö ciclo de vida do m├¬s intacto.
++3. Concilia├º├úo de saldo (item 12) ÔÇö n├úo entra.
++4. Compras parceladas (item 7) e transa├º├Áes recorrentes (item 15) ÔÇö n├úo entra.
++5. Or├ºamento anual e ajustes (itens 1 e 2) ÔÇö continuam vigendo por m├¬s de calend├írio.
++6. Dashboard or├ºado ├ù realizado (item 11) ÔÇö nenhuma altera├º├úo de c├│digo pr├│pria (s├│ passa a receber a lista do m├¬s de c├ílculo).
++7. Mover lan├ºamento de m├¬s pela UI ÔÇö descartado (corre├º├úo por exclus├úo + relan├ºamento).
++8. Sem telas novas, sem modelo novo de contas (corrente/cart├úo), sem integra├º├úo banc├íria.
++
++---
++
++## 8. Cen├írios de Edge Case (Dado / Quando / Ent├úo)
++
++1. **Fatura de m├¬s anterior:** Dado que a tela est├í em Novembro/2026 e Outubro est├í encerrado, Quando o usu├írio salvar uma despesa com data 20/10/2026, Ent├úo o lan├ºamento ├® gravado com m├¬s de c├ílculo Novembro/2026 e aparece no extrato, no saldo e no or├ºado ├ù realizado de Novembro ÔÇö sem nenhum erro por Outubro estar encerrado.
++2. **Lan├ºamento n├úo vaza para outro m├¬s:** Dado que Outubro tamb├®m est├í aberto e existe um lan├ºamento gravado pela tela de Novembro com data 05/10/2026, Quando o usu├írio abrir a tela de Outubro, Ent├úo aquele lan├ºamento **n├úo** aparece em Outubro nem em nenhum total dele.
++3. **Data futura:** Dado que a tela est├í em Novembro/2026, Quando o usu├írio salvar um lan├ºamento com data 15/03/2027, Ent├úo o lan├ºamento ├® gravado e soma em Novembro/2026, com o campo de data sem nenhuma mensagem de restri├º├úo.
++4. **Data muito antiga:** Dado que a tela est├í em Novembro/2026, Quando o usu├írio salvar um lan├ºamento com data de anos anteriores ao plano, Ent├úo ├® aceito normalmente (livre total) e soma em Novembro/2026.
++5. **Edi├º├úo n├úo move de m├¬s:** Dado um lan├ºamento com m├¬s de c├ílculo Novembro/2026 e data 20/10/2026 exibido na tela de Novembro, Quando o usu├írio edit├í-lo e mudar a data para 25/10/2026, Ent├úo o m├¬s de c├ílculo continua Novembro/2026 e o lan├ºamento permanece na tela de Novembro.
++6. **Corre├º├úo de tela errada:** Dado um lan├ºamento que deveria ser de Outubro mas foi gravado pela tela de Novembro, Quando o usu├írio o excluir e abrir um novo lan├ºamento na tela de Outubro (se ela estiver aberta), Ent├úo o novo lan├ºamento nasce com m├¬s de c├ílculo Outubro/2026.
++7. **Trava de m├¬s fechado preservada:** Dado que nenhum m├¬s est├í aberto ou a tela est├í num cen├írio em que o m├¬s de c├ílculo n├úo est├í aberto, Quando tentar salvar, Ent├úo o sistema rejeita com a mensagem atual de per├¡odo n├úo aberto, referenciando o m├¬s de c├ílculo.
++8. **Ordem do extrato:** Dado a tela de Novembro com lan├ºamentos datados de 28/10, 01/11 e 05/11, Ent├úo a tabela exibe 28/10 primeiro, depois 01/11 e 05/11 (data crescente).
++9. **Salvar e Adicionar Outro:** Dado o modal aberto em Novembro com data digitada 20/10/2026, Quando o usu├írio salvar e adicionar outro, Ent├úo o modal permanece aberto com a data ainda em 20/10/2026 e descri├º├úo/valor/categoria/reembolso limpos.
++10. **Abrir do modal:** Dado a tela de Novembro/2026, Quando o usu├írio clicar em novo lan├ºamento, Ent├úo o campo de data vem com 01/11/2026 e o calend├írio aparece aberto em Novembro/2026.
++11. **Prefill do checklist:** Dado um item do checklist com vencimento em data de outro m├¬s, Quando o usu├írio gerar o lan├ºamento a partir dele, Ent├úo a data v├¬m pr├®-preenchida sem conflito com limites do campo e o m├¬s de c├ílculo ├® o da tela.
++12. **Backfill sem mudan├ºa de saldo:** Dado o banco com lan├ºamentos existentes, Quando a migra├º├úo for aplicada, Ent├úo todos recebem m├¬s de c├ílculo igual ao ano/m├¬s da sua data e os totais por m├¬s permanecem numericamente id├¬nticos aos de antes.
++13. **Exclus├úo:** Dado um lan├ºamento na tela de Novembro, Quando o usu├írio exclu├¡-lo, Ent├úo a exclus├úo ├® validada pelo m├¬s de c├ílculo (Novembro aberto) e remove o registro.
++
++---
++
++## 9. Pontos de Impacto na Codebase (para orientar o plano ÔÇö sem decis├úo de implementa├º├úo)
++
++- `components/pluto/TransactionModal.tsx` ÔÇö remo├º├úo dos atributos de limite do campo de data e do r├│tulo "Limitada a"; revis├úo das propriedades de limites/r├│tulo que deixam de ter uso.
++- `lib/pluto/hooks/usePlutoData.ts` ÔÇö a deriva├º├úo dos limites de data para a UI deixa de ser usada; a busca do m├¬s passa a refletir o m├¬s de c├ílculo.
++- `lib/pluto/hooks/useTransactionForm.ts` ÔÇö envio do m├¬s da tela junto ao salvamento; valida├º├Áes de campo permanecem; data inicial e preserva├º├úo no "Salvar e Adicionar Outro" inalteradas.
++- `lib/pluto/repositories/transactions.ts` ÔÇö busca do m├¬s por m├¬s de c├ílculo em vez de intervalo de data; valida├º├úo de `monthly_periods` sobre o m├¬s de c├ílculo em criar/editar/excluir.
++- `lib/pluto/repositories/fakes/fakeTransactionRepository.ts` e `__tests__/integration/repositories.ts` ÔÇö espelhamento do mesmo contrato (fakes e contrato mudam em conjunto).
++- `app/pluto/transactions/page.tsx` ÔÇö deixa de repassar limites de data ao modal; totais e agrega├º├Áes herdam a nova lista sem l├│gica pr├│pria.
++- Testes existentes que fixam o comportamento atual (`__tests__/lib/pluto/repositories/contract-transactions.test.ts`, `fake-transaction.test.ts`, `db/transactions.test.ts`, `usePlutoData.test.ts`, `useTransactionForm.test.ts`, `__tests__/app/pluto/transactions*`, `critical-flows.test.tsx`) ÔÇö ajustados para o novo contrato pelo plano.
++- `lib/shared/date.ts` (`getMonthRange`, `parseYearMonth`) ÔÇö verificar no plano quais usos restam ap├│s a mudan├ºa; nenhuma remo├º├úo ├® determinada por esta spec.
++
++---
++
++## 10. Crit├®rios de Aceite
++
++- [ ] O campo de data do modal n├úo tem `min` nem `max`, e nenhuma mensagem de limita├º├úo aparece no r├│tulo.
++- [ ] Abrir o modal pela tela de um m├¬s pr├®-preenche o primeiro dia desse m├¬s e o calend├írio abre nele.
++- [ ] ├ë poss├¡vel gravar lan├ºamento com data de qualquer m├¬s, passado ou futuro, pela tela de qualquer m├¬s aberto.
++- [ ] Ao criar, `period_year`/`period_month` recebem o ano/m├¬s da tela, independentemente da data digitada.
++- [ ] A lista da tela e todos os totais (entradas, sa├¡das, resultado, saldo, or├ºado ├ù realizado, agrega├º├úo por conta) refletem o m├¬s de c├ílculo, nunca a data.
++- [ ] Um lan├ºamento datado em outro m├¬s n├úo aparece na tela do m├¬s da sua data.
++- [ ] A valida├º├úo de "m├¬s aberto" em criar/editar/excluir usa o m├¬s de c├ílculo e mant├®m a mensagem atual.
++- [ ] A edi├º├úo n├úo altera o m├¬s de c├ílculo; n├úo h├í UI para mover lan├ºamento de m├¬s.
++- [ ] O extrato segue ordenado por data crescente, com datas de meses diferentes na mesma tabela.
++- [ ] "Salvar e Adicionar Outro" preserva a data digitada; demais resets do 05d intactos.
++- [ ] O prefill do checklist n├úo sofre conflito de limites de data.
++- [ ] A migra├º├úo cria as duas colunas, preenche todos os lan├ºamentos existentes a partir da `date` e audita em `public.schema_migrations`; saldo por m├¬s id├¬ntico antes e depois.
++- [ ] M├¬s encerrado segue inacess├¡vel para lan├ºamento pela UI; ciclo de vida do m├¬s intocado.
++- [ ] Spec 100% em texto natural, sem blocos de c├│digo (gate do guardian).
++- [ ] Suite completa verde com cobertura ÔëÑ 80% (gate de TESTING ÔåÆ REVIEW).
++
++---
++
++## 11. Checklist de Discovery (todas as dimens├Áes confirmadas pelo humano)
++
++| Dimens├úo | Confirma├º├úo |
++|---|---|
++| Dor / usu├írio | Confirmada ÔÇö trava do calend├írio impede lan├ºar faturas/extratos com datas de outros per├¡odos; c├ílculos devem ficar no m├¬s da tela |
++| Jornada | Confirmada ÔÇö abrir modal com 1┬║ dia do m├¬s da tela, digitar qualquer data, salvar, ver no extrato/totais do m├¬s da tela; "Salvar e Adicionar Outro" preserva data; corre├º├úo por excluir e relan├ºar |
++| Valida├º├Áes | Confirmadas ÔÇö qualquer data aceita; trava de m├¬s aberto s├│ sobre o m├¬s de c├ílculo, mantida no banco |
++| Destrutivas / cascata | Confirmadas ÔÇö migra├º├úo aditiva com backfill que preserva saldos; nenhuma exclus├úo/renomea├º├úo de dado; RLS intacta; exclus├úo de lan├ºamento validada pelo m├¬s de c├ílculo |
++| Limites | Confirmados ÔÇö livre total (qualquer data); sem telas novas; sem modelo de conta novo; sem integra├º├úo banc├íria |
++| YAGNI | Confirmado ÔÇö os 8 pontos da se├º├úo 7 fora de escopo; nenhuma regra nova al├®m das se├º├Áes 4 e 5 |
++
++**Validada com Humano? Sim** ÔÇö as 6 dimens├Áes do checklist acima e as 10 decis├Áes da se├º├úo 4 foram confirmadas pelo humano, uma por turno, no discovery encerrado em 2026-11-01; nenhuma confirma├º├úo adicional foi inventada nesta spec.
+diff --git a/.agents/modules/pluto/05e-lancamento-data-livre/tasks.json b/.agents/modules/pluto/05e-lancamento-data-livre/tasks.json
+new file mode 100644
+index 0000000..b406f89
+--- /dev/null
++++ b/.agents/modules/pluto/05e-lancamento-data-livre/tasks.json
+@@ -0,0 +1,207 @@
++{
++  "tasks": [
++    {
++      "id": "T0",
++      "title": "RED do conte├║do da migra├º├úo 0018",
++      "assignee": "minos",
++      "status": "completed",
++      "description": "Estabelecer em teste RED o contrato de conte├║do da migra├º├úo 0018 (utils/migrations/migration-0018-pluto-lancamento-data-livre.sql, ainda inexistente), no padr├úo de __tests__/lib/milon/migration-0016.test.ts e __tests__/lib/milon/migration-0017.test.ts: ADD COLUMN das duas colunas anul├íveis em public.transactions; backfill pela pr├│pria date com convers├úo expl├¡cita para integer ANTES do SET NOT NULL; auditoria em public.schema_migrations com script_name id├¬ntico ao nome do arquivo e ON CONFLICT DO NOTHING; self-bootstrap idempotente de schema_migrations antes do INSERT; rollback em texto no rodap├®; consultas de verifica├º├úo documentadas; e asser├º├Áes negativas (n├úo remove/renomeia, sem RLS nova, sem ├¡ndice novo). Fonte: plan.md ┬ºMigra├º├Áes (passos 1ÔÇô4, explicitamente n├úo faz, rollback e verifica├º├úo). Minos escreve apenas o teste; nenhum arquivo de produ├º├úo ├® tocado.",
++      "acceptanceCriteria": [
++        "npx vitest run __tests__/lib/pluto/migration-0018.test.ts --reporter=verbose ÔåÆ FAIL esperado (readFileSync do arquivo da migra├º├úo inexistente lan├ºa ENOENT) sem SyntaxError/TS2 no output",
++        "Caso RED: ADD COLUMN IF NOT EXISTS period_year integer e period_month integer (colunas novas anul├íveis) em public.transactions",
++        "Caso RED: backfill ANTES do SET NOT NULL ÔÇö UPDATE que copia o ano/m├¬s da pr├│pria coluna date (EXTRACT(YEAR/MONTH FROM date) com convers├úo expl├¡cita para integer) nas duas colunas novas",
++        "Caso RED: SET NOT NULL nas duas colunas (period_year e period_month) somente ap├│s o backfill",
++        "Caso RED: auditoria em public.schema_migrations com script_name 'migration-0018-pluto-lancamento-data-livre.sql' (id├¬ntico ao nome do arquivo), spec_id 'pluto-05e', spec_name 'Lan├ºamento com Data Livre' e ON CONFLICT (script_name) DO NOTHING",
++        "Caso RED: self-bootstrap idempotente de public.schema_migrations (CREATE TABLE IF NOT EXISTS + RLS + pol├¡tica padr├úo) aparece antes do INSERT de auditoria",
++        "Caso RED: rollback em texto no rodap├® com DROP COLUMN IF EXISTS das duas colunas",
++        "Caso RED: consultas de verifica├º├úo documentadas em coment├írio no pr├│prio script: contagem de transactions com period_year ou period_month nulo = 0 e soma de amount agrupada por ano/m├¬s de date antes/depois com diferen├ºa zero",
++        "Caso RED negativo: o script n├úo remove nem renomeia coluna/tabela existente, n├úo cria pol├¡tica RLS nova em transactions e n├úo cria ├¡ndice novo",
++        "Nenhum arquivo de produ├º├úo ├® tocado por esta task (apenas o arquivo de teste ├® criado)"
++      ],
++      "files": [
++        "__tests__/lib/pluto/migration-0018.test.ts"
++      ],
++      "consumes": [],
++      "produces": ["migracao-0018-red"]
++    },
++    {
++      "id": "T1",
++      "title": "Migra├º├úo 0018: colunas period_year/period_month + backfill + auditoria em public.transactions",
++      "assignee": "hefesto",
++      "status": "completed",
++      "description": "Criar utils/migrations/migration-0018-pluto-lancamento-data-livre.sql conforme a se├º├úo 'Migra├º├Áes' do plan.md: ADD COLUMN period_year/period_month (inteiros anul├íveis), backfill copiando ano/m├¬s da pr├│pria date com convers├úo expl├¡cita para integer, SET NOT NULL nas duas colunas ap├│s o backfill, self-bootstrap idempotente de public.schema_migrations e INSERT de auditoria com script_name id├¬ntico ao nome do arquivo (ON CONFLICT DO NOTHING), rollback em coment├írio no rodap├® e consultas de verifica├º├úo documentadas. Nenhuma remo├º├úo/renomea├º├úo, nenhuma RLS nova, nenhum ├¡ndice novo.",
++      "acceptanceCriteria": [
++        "O arquivo utils/migrations/migration-0018-pluto-lancamento-data-livre.sql existe e ├® o ├║nico consumidor do inteiro 0018",
++        "O script cria period_year e period_month em public.transactions, aplica o backfill a partir de date ANTES de impor SET NOT NULL nas duas colunas",
++        "A auditoria registra script_name 'migration-0018-pluto-lancamento-data-livre.sql' (id├¬ntico ao nome do arquivo) com ON CONFLICT (script_name) DO NOTHING em public.schema_migrations",
++        "O script cont├®m coment├írio de rollback (DROP COLUMN das duas colunas) e as consultas de verifica├º├úo: contagem de meses de c├ílculo nulo = 0 e soma por m├¬s antes/depois com diferen├ºa zero",
++        "O script n├úo remove nem renomeia coluna/tabela existente e n├úo cria pol├¡tica RLS nova",
++        "node .agents/scripts/guardian.js .agents/modules/pluto/05e-lancamento-data-livre TASKS_READY n├úo acusa conflito de ordem de migra├º├úo (0018 > 0017)"
++      ],
++      "files": [
++        "utils/migrations/migration-0018-pluto-lancamento-data-livre.sql"
++      ],
++      "consumes": ["migracao-0018-red"],
++      "produces": ["migracao-0018-aplicavel"]
++    },
++    {
++      "id": "T2",
++      "title": "RED do contrato de transa├º├Áes: m├¬s de c├ílculo, data livre e edi├º├úo que n├úo move m├¬s",
++      "assignee": "minos",
++      "status": "completed",
++      "description": "Atualizar os testes de contrato para o novo comportamento (falham contra o fake/reposit├│rio atual): getTransactionsByMonth filtra por period_year/period_month; create grava per├¡odo da tela independente da data e aceita data de qualquer m├¬s; valida├º├úo de m├¬s aberto usa o m├¬s de c├ílculo (criar/editar/excluir) com as mensagens atuais; update n├úo altera period_year/period_month mesmo mudando a data; ordena├º├úo por data crescente mantida com datas de meses diferentes.",
++      "acceptanceCriteria": [
++        "__tests__/lib/pluto/repositories/contract-transactions.test.ts inclui caso: lan├ºamento criado com per├¡odo 2026/3 e data 2026-04-10 aparece em getTransactionsByMonth(2026, 3) e N├âO aparece em getTransactionsByMonth(2026, 4)",
++        "O contrato inclui caso: create com data de per├¡odo encerrado mas per├¡odo de c├ílculo aberto ├® aceito (trava avalia period_year/period_month, n├úo date)",
++        "O contrato inclui caso: update que muda a data para outro m├¬s preserva period_year/period_month originais no registro retornado",
++        "O contrato inclui caso: rejei├º├úo de criar/editar/excluir usa a mensagem atual referenciando o m├¬s de c├ílculo (regex /n├úo est├í aberto/ com m├¬s/ano do per├¡odo gravado)",
++        "A ordena├º├úo por data crescente com desempate por id permanece coberta no contrato",
++        "Rodar npx vitest run __tests__/lib/pluto/repositories/contract-transactions.test.ts --reporter=verbose produz falhas (RED) sem SyntaxError/TS2 no output"
++      ],
++      "files": [
++        "__tests__/lib/pluto/repositories/contract-transactions.test.ts"
++      ],
++      "consumes": [],
++      "produces": ["contrato-transacoes-red"]
++    },
++    {
++      "id": "T3",
++      "title": "GREEN: tipos + reposit├│rio real + fake + harness de integra├º├úo sobre o m├¬s de c├ílculo",
++      "assignee": "hefesto",
++      "status": "completed",
++      "description": "Implementar conforme 'Contratos Completos' do plan.md: TransactionRow/TransactionInput/TransactionWithDetails ganham period_year/period_month; novo TransactionUpdateInput sem campos de per├¡odo; ITransactionRepository.updateTransaction muda a assinatura; repositories/transactions.ts filtra por per├¡odo de c├ílculo, valida monthly_periods pelo per├¡odo gravado (criar/editar/excluir) e grava o per├¡odo no insert; fake espelha o contrato e perde os helpers locais getMonthRange/parseYearMonth; __tests__/integration/repositories.ts adapta a assinatura; remover tipos mortos CreateTransactionFormData/UpdateTransactionFormData/CreateTransactionDTO/UpdateTransactionDTO. Persist├¬ncia s├│ nos repositories via IDatabaseClient.",
++      "acceptanceCriteria": [
++        "T2 verde: npx vitest run __tests__/lib/pluto/repositories/contract-transactions.test.ts --reporter=verbose sem falhas",
++        "npx vitest run __tests__/lib/pluto/repositories/fake-transaction.test.ts __tests__/lib/pluto/db/transactions.test.ts verde com os testes ajustados ao novo contrato",
++        "Busca por 'parseYearMonth' retorna 0 em lib/pluto/repositories/transactions.ts e 0 em lib/pluto/repositories/fakes/ (c├│digo vivo)",
++        "Busca por 'CreateTransactionDTO' retorna 0 em c├│digo vivo",
++        "updateTransaction aceita somente TransactionUpdateInput (sem period_year/period_month no tipo) e n├úo altera os campos de per├¡odo em nenhuma rota",
++        "npx tsc --noEmit sem erros ap├│s a mudan├ºa das assinaturas"
++      ],
++      "files": [
++        "lib/pluto/types.ts",
++        "lib/pluto/repositories/interfaces.ts",
++        "lib/pluto/repositories/transactions.ts",
++        "lib/pluto/repositories/fakes/fakeTransactionRepository.ts",
++        "__tests__/integration/repositories.ts",
++        "__tests__/lib/pluto/repositories/fake-transaction.test.ts",
++        "__tests__/lib/pluto/db/transactions.test.ts"
++      ],
++      "consumes": ["migracao-0018-aplicavel", "contrato-transacoes-red"],
++      "produces": ["repositorio-periodo-green"]
++    },
++    {
++      "id": "T4",
++      "title": "RED dos hooks: depend├¬ncias do formul├írio sem minDateStr e data inicial no m├¬s da tela",
++      "assignee": "minos",
++      "status": "completed",
++      "description": "Atualizar os testes dos hooks para o novo contrato (falham contra os hooks atuais): UseTransactionFormOptions/TransactionModalsDeps recebem selectedYear/selectedMonth em vez de minDateStr; handleOpenTxModal pr├®-preenche a data com o primeiro dia do m├¬s da tela; create envia period_year/period_month do m├¬s da tela; update envia payload sem campos de per├¡odo; usePlutoData n├úo exp├Áe mais minDateStr/maxDateStr; fluxo 05d preserva a data no 'Salvar e Adicionar Outro'; prefill do checklist mant├®m a data vencimento.",
++      "acceptanceCriteria": [
++        "__tests__/lib/pluto/hooks/useTransactionForm.test.ts: o teste de abertura espera data igual ao primeiro dia do m├¬s da tela selecionado (ex.: 2026-03-01 para selectedMonth 3) e as op├º├Áes do hook n├úo cont├¬m minDateStr",
++        "O teste de cria├º├úo assera que createTransaction recebe period_year/period_month do m├¬s da tela quando a data digitada ├® de outro m├¬s",
++        "O teste de edi├º├úo assera que updateTransaction ├® chamado sem period_year/period_month no payload",
++        "O teste de 'salvar e adicionar outro' assera que a data digitada ├® preservada ap├│s salvar",
++        "__tests__/lib/pluto/hooks/usePlutoData.test.ts: teste de delimitadores minDateStr/maxDateStr removido (retorna 0 matches de 'minDateStr' nesse arquivo)",
++        "__tests__/lib/pluto/hooks/useTransactionModals.test.ts: deps usam selectedYear/selectedMonth em vez de minDateStr",
++        "Rodar npx vitest run nos tr├¬s arquivos de hook --reporter=verbose produz falhas (RED) sem SyntaxError/TS2 no output"
++      ],
++      "files": [
++        "__tests__/lib/pluto/hooks/useTransactionForm.test.ts",
++        "__tests__/lib/pluto/hooks/usePlutoData.test.ts",
++        "__tests__/lib/pluto/hooks/useTransactionModals.test.ts"
++      ],
++      "consumes": ["repositorio-periodo-green"],
++      "produces": ["hooks-red"]
++    },
++    {
++      "id": "T5",
++      "title": "GREEN dos hooks: usePlutoData sem limites, useTransactionForm com m├¬s da tela, useTransactionModals repassando",
++      "assignee": "hefesto",
++      "status": "completed",
++      "description": "Implementar conforme 'Contratos Completos' do plan.md: usePlutoData remove minDateStr/maxDateStr (interface, retorno e deriva├º├úo getMonthRange); useTransactionForm troca minDateStr por selectedYear/selectedMonth, usa getMonthRange(...).startDate na abertura, envia period_year/period_month no create e TransactionUpdateInput no update, mantendo valida├º├Áes de campo, foco e resets do 05d; useTransactionModals troca a depend├¬ncia e repassa. Sem l├│gica pr├│pria nova em useBudgetComparison/useAccountAggregation.",
++      "acceptanceCriteria": [
++        "T4 verde: npx vitest run nos tr├¬s arquivos de hook --reporter=verbose sem falhas",
++        "Busca por 'minDateStr' retorna 0 em lib/pluto/ e app/ (c├│digo vivo)",
++        "Busca por 'maxDateStr' retorna 0 em lib/pluto/ e app/ (c├│digo vivo)",
++        "usePlutoData continua exportando selectedYear/selectedMonth/fetchData/transactions com a mesma sem├óntica de single-flight (testes existentes de single-flight verdes)",
++        "npx tsc --noEmit sem erros"
++      ],
++      "files": [
++        "lib/pluto/hooks/usePlutoData.ts",
++        "lib/pluto/hooks/useTransactionForm.ts",
++        "lib/pluto/hooks/useTransactionModals.ts"
++      ],
++      "consumes": ["hooks-red"],
++      "produces": ["hooks-green"]
++    },
++    {
++      "id": "T6",
++      "title": "RED da UI: modal sem limites de data, r├│tulo 'Data' e fixtures com m├¬s de c├ílculo",
++      "assignee": "minos",
++      "status": "completed",
++      "description": "Atualizar testes de componente e p├ígina para o novo contrato (falham contra o c├│digo atual): TransactionModal sem props minDateStr/maxDateStr/selectedYear/selectedMonth, input de date sem min/max, r├│tulo 'Data' (0 matches de 'Limitada a'); critical-flows deixa de procurar 'Data (Limitada a' e espera createTransaction com period fields do m├¬s da tela; fixtures TransactionWithDetails dos testes de p├ígina/componentes/hooks ganham period_year/period_month.",
++      "acceptanceCriteria": [
++        "__tests__/components/pluto/TransactionModal.test.tsx: makeProps sem minDateStr/maxDateStr/selectedYear/selectedMonth e novo caso que assera aus├¬ncia dos atributos min e max no input de date e r├│tulo exato 'Data'",
++        "__tests__/app/pluto/critical-flows.test.tsx: nenhuma ocorr├¬ncia de 'Limitada a' e o createTransaction ├® esperado com objectContaining period_year/period_month do m├¬s da tela selecionado nos mocks",
++        "Fixtures TransactionWithDetails em transactions-page.test.tsx, transactions/page.test.tsx, transactions-checklist.test.tsx, critical-flows.test.tsx, AccountCardGrid.test.tsx, DeleteConfirmModal.test.tsx, useDeleteTransaction.test.ts, useAccountAggregation.test.ts, useBudgetComparison.test.ts cont├¬m period_year/period_month (npx tsc --noEmit sem erro de propriedade obrigat├│ria ausente)",
++        "Rodar npx vitest run nos arquivos de componente/p├ígina --reporter=verbose produz falhas (RED) sem SyntaxError/TS2 no output"
++      ],
++      "files": [
++        "__tests__/components/pluto/TransactionModal.test.tsx",
++        "__tests__/app/pluto/critical-flows.test.tsx",
++        "__tests__/app/pluto/transactions-page.test.tsx",
++        "__tests__/app/pluto/transactions/page.test.tsx",
++        "__tests__/app/pluto/transactions-checklist.test.tsx",
++        "__tests__/components/pluto/AccountCardGrid.test.tsx",
++        "__tests__/components/pluto/DeleteConfirmModal.test.tsx",
++        "__tests__/lib/pluto/hooks/useDeleteTransaction.test.ts",
++        "__tests__/lib/pluto/hooks/useAccountAggregation.test.ts",
++        "__tests__/lib/pluto/hooks/useBudgetComparison.test.ts"
++      ],
++      "consumes": ["repositorio-periodo-green"],
++      "produces": ["ui-red"]
++    },
++    {
++      "id": "T7",
++      "title": "GREEN da UI: TransactionModal sem limites, stories e p├ígina sem repasse de limites",
++      "assignee": "hefesto",
++      "status": "completed",
++      "description": "Implementar conforme 'Contratos Completos' do plan.md: TransactionModal.tsx remove props minDateStr/maxDateStr/selectedYear/selectedMonth, atributos min/max, texto 'Limitada a' e import de MONTH_NAMES (r├│tulo 'Data'); TransactionModal.stories.tsx e storybook.fixtures.ts atualizam args/fixtures (storyTransactions com per├¡odo); app/pluto/transactions/page.tsx deixa de desestruturar/repassar limites e passa selectedYear/selectedMonth ao useTransactionModals.",
++      "acceptanceCriteria": [
++        "T6 verde: npx vitest run nos arquivos de componente/p├ígina --reporter=verbose sem falhas",
++        "Busca por 'Limitada a' retorna 0 em c├│digo vivo (inclusive __tests__/)",
++        "Busca por 'MONTH_NAMES' retorna 0 em components/pluto/TransactionModal.tsx",
++        "Busca por 'minDateStr' retorna 0 em components/ e app/ (c├│digo vivo)",
++        "npx tsc --noEmit sem erros e build do Storybook verde (npx storybook build) ap├│s mudan├ºa de props"
++      ],
++      "files": [
++        "components/pluto/TransactionModal.tsx",
++        "components/pluto/TransactionModal.stories.tsx",
++        "components/pluto/storybook.fixtures.ts",
++        "app/pluto/transactions/page.tsx"
++      ],
++      "consumes": ["hooks-green", "ui-red"],
++      "produces": ["ui-green"]
++    },
++    {
++      "id": "T8",
++      "title": "Su├¡te completa verde, cobertura ÔëÑ 80% e relat├│rios de teste",
++      "assignee": "minos",
++      "status": "completed",
++      "description": "Re-executar a suite completa com cobertura e emitir os artefatos de TESTING: ajustar qualquer teste remanescente que fixe o comportamento antigo, gerar test-report.json (failed 0, coverage ÔëÑ 80) e test-scenarios.md apenas com cen├írios manuais (sem tag [Automatizado] nem path __tests__/), incluindo os cen├írios de fatura de m├¬s anterior, n├úo-vazamento para o m├¬s da data, data futura, edi├º├úo que n├úo move de m├¬s, ordem do extrato, salvar-e-adicionar-outro e backfill sem mudan├ºa de saldo.",
++      "acceptanceCriteria": [
++        "npm run test completo sem falhas (summary.failed == 0)",
++        "Cobertura ÔëÑ 80% medida na execu├º├úo",
++        "test-report.json presente em .agents/modules/pluto/05e-lancamento-data-livre/ com summary.failed 0 e summary.coverage ÔëÑ 80",
++        "test-scenarios.md presente no FEATURE_DIR sem '[Automatizado]' e sem '__tests__/' (gate do guardian para REVIEW)",
++        "npx tsc --noEmit e npx eslint . sem erros na execu├º├úo final"
++      ],
++      "files": [
++        ".agents/modules/pluto/05e-lancamento-data-livre/test-report.json",
++        ".agents/modules/pluto/05e-lancamento-data-livre/test-scenarios.md"
++      ],
++      "consumes": ["migracao-0018-aplicavel", "hooks-green", "ui-green"],
++      "produces": ["testing-verde"]
++    }
++  ]
++}
+diff --git a/.agents/modules/pluto/05e-lancamento-data-livre/test-report.json b/.agents/modules/pluto/05e-lancamento-data-livre/test-report.json
+new file mode 100644
+index 0000000..c190201
+--- /dev/null
++++ b/.agents/modules/pluto/05e-lancamento-data-livre/test-report.json
+@@ -0,0 +1,150 @@
++{
++  "feature": "05e-lancamento-data-livre",
++  "date": "2026-11-05",
++  "status": "passed",
++  "byTask": {
++    "T0": "passed",
++    "T1": "passed",
++    "T2": "passed",
++    "T3": "passed",
++    "T4": "passed",
++    "T5": "passed",
++    "T6": "passed",
++    "T7": "passed",
++    "T8": "passed"
++  },
++  "commands": {
++    "suite": "npm run test (vitest run)",
++    "coverage": "npx vitest run --coverage (reporter v8)",
++    "tsc": "npx tsc --noEmit",
++    "lint": "npm run lint (eslint .)"
++  },
++  "summary": {
++    "failed": 0,
++    "passed": 1886,
++    "skipped": 0,
++    "testFiles": 141,
++    "coverage": 85.3,
++    "coverageStatements": 85.3,
++    "coverageBranches": 84.18,
++    "coverageFunctions": 76.76
++  },
++  "coverage": {
++    "lines": 85.3,
++    "statements": 85.3,
++    "branches": 84.18,
++    "functions": 76.76,
++    "reporter": "v8",
++    "note": "Execucao da T8 (2026-11-05, npx vitest run --coverage): agregacao recalculada a partir de coverage/coverage-final.json (s/b/f/l): statements 11613/13614 = 85.30, branches 2512/2984 = 84.18, functions 535/697 = 76.76, lines 11613/13614 = 85.30 (146 arquivos medidos; o reporter textual exibe functions 76.75 por arredondamento truncado). Gates lines >= 80 e branches >= 80 atendidos. M├®dia das quatro m├®tricas: 82.89."
++  },
++  "coverageByFeatureFile": {
++    "components/pluto/TransactionModal.tsx": "93.57% stmts (160/171), 75.00% branch (18/24), 44.44% funcs (4/9) ÔÇö modal sem limites de data coberto pelos casos de r├│tulo 'Data' e aus├¬ncia de min/max",
++    "app/pluto/transactions/page.tsx": "100% stmts (164/164), 100% branch (14/14), 100% funcs (1/1)",
++    "lib/pluto/hooks/useTransactionForm.ts": "94.81% stmts (201/212), 68.75% branch (22/32), 100% funcs (7/7) ÔÇö abertura no 1┬║ dia do m├¬s da tela, period no create e update sem per├¡odo",
++    "lib/pluto/hooks/usePlutoData.ts": "91.67% stmts (110/120), 65.85% branch (27/41), 100% funcs (2/2) ÔÇö sem minDateStr/maxDateStr",
++    "lib/pluto/hooks/useTransactionModals.ts": "100% stmts (49/49), 100% branch (1/1), 100% funcs (1/1)",
++    "lib/pluto/repositories/fakes/fakeTransactionRepository.ts": "98.35% stmts (119/121), 86.49% branch (32/37), 100% funcs (10/10) ÔÇö espelho do contrato (fakes-only, decis├úo 57)",
++    "lib/pluto/repositories/transactions.ts": "0.00% stmts (0/135), 100% branch (1/1), 100% funcs (1/1) ÔÇö regime fakes-only pr├®-existente (decis├úo 57: contratos rodam sobre a fake; ver gaps)",
++    "lib/shared/date.ts": "82.35% stmts (28/34), 50.00% branch (2/4), 66.67% funcs (2/3) ÔÇö getMonthRange/parseYearMonth",
++    "lib/pluto/types.ts": "45.45% stmts (5/11) ÔÇö s├│ tipos + 1 fun├º├úo (legado, pr├®-existente)"
++  },
++  "featureTestCounts": {
++    "__tests__/lib/pluto/migration-0018.test.ts": "9 testes (T0: conte├║do da migra├º├úo 0018)",
++    "__tests__/lib/pluto/repositories/contract-transactions.test.ts": "11 testes (T2: m├¬s de c├ílculo, data livre, edi├º├úo que n├úo move m├¬s, ordena├º├úo)",
++    "__tests__/lib/pluto/repositories/fake-transaction.test.ts": "8 testes (T3)",
++    "__tests__/lib/pluto/db/transactions.test.ts": "7 testes (T3)",
++    "__tests__/lib/pluto/hooks/useTransactionForm.test.ts": "9 testes (T4/T5)",
++    "__tests__/lib/pluto/hooks/usePlutoData.test.ts": "5 testes (T4/T5: sem minDateStr/maxDateStr)",
++    "__tests__/lib/pluto/hooks/useTransactionModals.test.ts": "8 testes (T4/T5)",
++    "__tests__/components/pluto/TransactionModal.test.tsx": "6 testes (T6/T7/T8: makeProps sem limites, r├│tulo 'Data', input sem min/max)",
++    "__tests__/app/pluto/critical-flows.test.tsx": "5 testes (T6: sem 'Limitada a', period do m├¬s da tela)",
++    "__tests__/app/pluto/transactions/page.test.tsx": "16 testes (T6)",
++    "__tests__/app/pluto/transactions-page.test.tsx": "8 testes (T6)",
++    "__tests__/app/pluto/transactions-checklist.test.tsx": "1 teste (T6: prefill do checklist)",
++    "__tests__/app/pluto/transactions-checklist-overflow.test.tsx": "6 testes (regress├úo)"
++  },
++  "gates": {
++    "suiteZeroFailures": {
++      "actual": "141 files passed (141), 1886 tests passed (1886), 0 failed, 0 skipped",
++      "expected": "0 falhas (summary.failed == 0)",
++      "status": "passed",
++      "note": "npm run test literal (exit 0, 45.96s) e npx vitest run --coverage (exit 0, 50.56s) ÔÇö mesma sele├º├úo de 141 arquivos/1886 testes nas duas execu├º├Áes em 2026-11-05. Baseline develop (milon 06, 2026-10-29): 140 arquivos / 1871 testes ÔÇö esta feature acrescenta 1 arquivo (migration-0018.test.ts) e 15 testes, sem nenhuma falha."
++    },
++    "coverageLinesGte80": {
++      "actual": 85.3,
++      "expected": "lines >= 80",
++      "status": "passed",
++      "note": "11613/13614 statements/lines na agrega├º├úo do coverage-final.json (T8, 2026-11-05)"
++    },
++    "coverageBranchesGte80": {
++      "actual": 84.18,
++      "expected": "branches >= 80",
++      "status": "passed",
++      "note": "2512/2984 na agrega├º├úo do coverage-final.json (T8, 2026-11-05)"
++    },
++    "testReportPresent": {
++      "actual": "test-report.json presente no FEATURE_DIR com summary.failed 0 e summary.coverage 85.3",
++      "expected": "failed == 0 e coverage >= 80",
++      "status": "passed",
++      "note": "crit├®rio 3 da T8; mesmas condi├º├Áes do gate REVIEW do guardian (falha se failed > 0 ou coverage < 80)"
++    },
++    "testScenariosManualOnly": {
++      "actual": "test-scenarios.md com 18 cen├írios Dado/Quando/Ent├úo; busca de '[Automatizado]' = 0 matches e de '__tests__/' = 0 matches",
++      "expected": "sem tag [Automatizado] e sem path __tests__/",
++      "status": "passed",
++      "note": "crit├®rio 4 da T8 (gate anti-mistura do guardian para REVIEW, decis├úo 2026-10-16); cobertura automatizada referenciada s├│ via test-report.json"
++    },
++    "tscExit0": {
++      "actual": "npx tsc --noEmit ÔåÆ exit 0 (2026-11-05, ap├│s remo├º├úo das props residuais selectedYear/selectedMonth do makeProps)",
++      "expected": "exit 0",
++      "status": "passed",
++      "note": "AC5 da T8; o TS2353 residual apontado na delega├º├úo (makeProps com props inexistentes em TransactionModalProps) foi corrigido em __tests__/components/pluto/TransactionModal.test.tsx"
++    },
++    "lintExit0": {
++      "actual": "npm run lint ÔåÆ exit 0, 0 errors, 73 warnings",
++      "expected": "exit 0 (0 errors)",
++      "status": "passed",
++      "note": "73 warnings = baseline das features anteriores (milon 06: id├¬nticas 73) ÔÇö nenhuma warning nova; nenhuma warning aponta para arquivo da feature"
++    },
++    "ac1T6MakePropsSemLimites": {
++      "actual": "busca por 'selectedYear|selectedMonth|minDateStr|maxDateStr' em __tests__/components/pluto/TransactionModal.test.tsx = 0 matches",
++      "expected": "makeProps sem minDateStr/maxDateStr/selectedYear/selectedMonth",
++      "status": "passed",
++      "note": "AC1 literal da T6 verificado ap├│s o ajuste residual da T8"
++    }
++  },
++  "outputs": {
++    "suiteTail": "Test Files 141 passed (141) | Tests 1886 passed (1886) | Duration 45.96s (npm run test) e 50.56s (com cobertura)",
++    "coverageTail": "All files 85.3 stmts | 84.18 branch | 76.76 funcs | 85.3 lines (reporter v8)",
++    "tscTail": "npx tsc --noEmit exit 0",
++    "lintTail": "npm run lint exit 0 ÔÇö 0 errors, 73 warnings (baseline)"
++  },
++  "spotChecks": {
++    "migration-0018": "__tests__/lib/pluto/migration-0018.test.ts ÔÇö 9 testes do conte├║do da migra├º├úo (ADD COLUMN anul├ível, backfill ANTES do SET NOT NULL com convers├úo expl├¡cita, auditoria com script_name id├¬ntico + ON CONFLICT DO NOTHING, self-bootstrap antes do INSERT, rollback, consultas de verifica├º├úo, negativos) ÔÇö verdes na suite completa",
++    "contrato-transacoes": "__tests__/lib/pluto/repositories/contract-transactions.test.ts ÔÇö 11 testes: per├¡odo 2026/3 com data 2026-04-10 aparece no m├¬s 3 e n├úo no 4; data de m├¬s encerrado aceita quando o per├¡odo de c├ílculo est├í aberto; update preserva period_*; rejei├º├úo referencia o m├¬s de c├ílculo (/n├úo est├í aberto/); ordena├º├úo por data crescente com desempate por id ÔÇö verdes na suite completa",
++    "hooks": "useTransactionForm (9) abre com primeiro dia do m├¬s da tela e envia period_* no create / TransactionUpdateInput no update; usePlutoData (5) sem minDateStr/maxDateStr; useTransactionModals (8) repassa selectedYear/selectedMonth ÔÇö verdes na suite completa",
++    "ui-modal": "__tests__/components/pluto/TransactionModal.test.tsx ÔÇö 6 testes: makeProps sem limites, r├│tulo exato 'Data', input type=date sem min/max, fluxos 05d intactos ÔÇö verdes na suite completa",
++    "pagina": "app/pluto/transactions/page.tsx 100% de cobertura; transactions/page.test.tsx (16) + transactions-page.test.tsx (8) + critical-flows.test.tsx (5) sem 'Limitada a' e com period do m├¬s da tela nos mocks ÔÇö verdes na suite completa",
++    "checklist": "__tests__/app/pluto/transactions-checklist.test.tsx (1) + transactions-checklist-overflow.test.tsx (6) ÔÇö prefill sem conflito de limites ÔÇö verdes na suite completa"
++  },
++  "gaps": [
++    "Functions global 76.76% segue abaixo de 80 (idem milon 06 com 76.68) ÔÇö os gates desta casa (e o guardian) exigem lines e branches >= 80, ambos atendidos (85.30 e 84.18).",
++    "lib/pluto/repositories/transactions.ts com 0% de statements (0/135): regime fakes-only pr├®-existente do m├│dulo (decis├úo 57 ÔÇö contract-*.test.ts rodam s├│ sobre a fake; ver AGENTS.md). O agregado legado lib/pluto/repositories est├í em 17.55% nesta execu├º├úo (17.66% no baseline da milon 06) ÔÇö arquivos legados fora do escopo, n├úo bloqueiam.",
++    "@vitest/coverage-v8 n├úo est├í declarado em package.json nem no package-lock.json (busca por 'coverage-v8' = 0 nos dois; resolve em node_modules na vers├úo 2.1.9) ÔÇö mesma situa├º├úo documentada pela milon 06; instalado --no-save apenas para medir. package.json e package-lock.json intactos no diff (git status limpo para os dois). Se a cobertura virar gate recorrente, Atena/humano podem decidir declar├í-lo.",
++    "Migra├º├úo 0018 ├® aplicada pelo humano no Supabase (padr├úo do m├│dulo ÔÇö nunca automatizada); o cen├írio de backfill sem mudan├ºa de saldo est├í declarado como manual em test-scenarios.md, com a verifica├º├úo de contagem de nulos = 0 e soma por m├¬s antes/depois com diferen├ºa zero.",
++    "Cen├írios n├úo exercit├íveis em jsdom (calend├írio nativo do navegador, navega├º├úo real de meses, estado real do banco p├│s-migra├º├úo) ficam declarados em test-scenarios.md ÔÇö sem tentativa de automatiza├º├úo falsa.",
++    "Minos tocou somente artefatos de teste nesta T8: __tests__/components/pluto/TransactionModal.test.tsx (remo├º├úo das 2 props residuais selectedYear/selectedMonth do makeProps ÔÇö ajuste de teste, sem produ├º├úo), test-scenarios.md e este test-report.json. Nenhum arquivo de produ├º├úo foi alterado por Minos; nenhum commit foi feito (Caronte atua depois)."
++  ],
++  "filesTouchedByMinosT8": [
++    "__tests__/components/pluto/TransactionModal.test.tsx",
++    ".agents/modules/pluto/05e-lancamento-data-livre/test-scenarios.md",
++    ".agents/modules/pluto/05e-lancamento-data-livre/test-report.json"
++  ],
++  "executed": [
++    "npx tsc --noEmit (exit 0 ÔÇö ap├│s o ajuste do makeProps)",
++    "npm run test (141 files, 1886 tests, 0 failed, exit 0)",
++    "npx vitest run --coverage (141 files, 1886 tests, 0 failed; lines 85.30, branches 84.18, functions 76.76)",
++    "npm run lint (exit 0, 0 errors, 73 warnings baseline)",
++    "verifica├º├Áes de gate: makeProps sem minDateStr/maxDateStr/selectedYear/selectedMonth (0 matches); test-scenarios.md sem '[Automatizado]' e sem '__tests__/' (0 matches cada)"
++  ]
++}
+diff --git a/.agents/modules/pluto/05e-lancamento-data-livre/test-scenarios.md b/.agents/modules/pluto/05e-lancamento-data-livre/test-scenarios.md
+new file mode 100644
+index 0000000..231fe71
+--- /dev/null
++++ b/.agents/modules/pluto/05e-lancamento-data-livre/test-scenarios.md
+@@ -0,0 +1,143 @@
++# Cen├írios de homologa├º├úo ÔÇö 05e Lan├ºamento com Data Livre
++
++> Derivados exclusivamente de `spec.md` (┬º5 regras de neg├│cio, ┬º8 cen├írios de edge case, ┬º6 migra├º├úo, ┬º10 crit├®rios de aceite). Sem cen├írios de Atena (n├úo gerada por ela, sem vi├®s).
++> **Somente cen├írios manuais** (decis├úo 2026-10-16): a cobertura automatizada vive na su├¡te e no `test-report.json`; este arquivo ├® o roteiro do port├úo manual de homologa├º├úo.
++> Textos das features citados entre aspas exatas quando relevantes ÔÇö sem par├ífrase nova.
++> Estado da su├¡te desta entrega: ver `test-report.json` (su├¡te completa com 0 falhas e cobertura ÔëÑ 80%).
++
++**Pr├®-requisitos comuns (homologa├º├úo em produ├º├úo/staging):**
++- Migra├º├úo `migration-0018-pluto-lancamento-data-livre.sql` **aplicada pelo humano no Supabase** (padr├úo do m├│dulo ÔÇö aplica├º├úo manual, nunca automatizada), com a linha auditada em `public.schema_migrations` sob o nome id├¬ntico ao do arquivo.
++- Dois meses abertos consecutivos para os principais casos: ex. **Outubro/2026** e **Novembro/2026** (a tela de Novembro ├® a tela corrente nos exemplos abaixo).
++- Pelo menos um item de checklist de contas a pagar com vencimento em data de outro m├¬s (para o cen├írio de prefill).
++
++---
++
++## Regra 1 ÔÇö Campo de data livre (r├│tulo e limites)
++
++### Cen├írio 1: Modal sem limites de data
++**Dado** a tela de Novembro/2026 com o modal de novo lan├ºamento aberto
++**Quando** a pessoa observa o campo de data
++**Ent├úo** o r├│tulo ├® exatamente `Data`, o campo n├úo exibe nenhuma mensagem de limita├º├úo (nada de "Limitada a") e o calend├írio aceita selecionar qualquer data ÔÇö sem restri├º├úo vis├¡vel de m├¡nimo ou m├íximo
++
++---
++
++## Regra 2 ÔÇö Abertura do modal no m├¬s da tela
++
++### Cen├írio 2: Data inicial ├® o primeiro dia do m├¬s da tela
++**Dado** a tela em Novembro/2026
++**Quando** a pessoa toca em novo lan├ºamento
++**Ent├úo** o campo de data vem com 01/11/2026 e o calend├írio aparece aberto em Novembro/2026
++
++---
++
++## Regras 3 e 5 ÔÇö M├¬s de c├ílculo gravado ├® o da tela; leitura por m├¬s de c├ílculo
++
++### Cen├írio 3: Fatura de m├¬s anterior (tela em Novembro, data em Outubro encerrado)
++**Dado** a tela em Novembro/2026 e Outubro/2026 encerrado
++**Quando** a pessoa salva uma despesa com data 20/10/2026
++**Ent├úo** o lan├ºamento ├® gravado com m├¬s de c├ílculo Novembro/2026 e aparece no extrato, no saldo e no or├ºado ├ù realizado de Novembro ÔÇö sem nenhum erro por Outubro estar encerrado
++
++### Cen├írio 4: Lan├ºamento n├úo vaza para o m├¬s da data
++**Dado** Outubro/2026 tamb├®m aberto e um lan├ºamento gravado pela tela de Novembro com data 05/10/2026
++**Quando** a pessoa abre a tela de Outubro
++**Ent├úo** aquele lan├ºamento **n├úo** aparece em Outubro nem em nenhum total dele (entradas, sa├¡das, resultado, saldo e or├ºado ├ù realizado de Outubro permanecem sem ele)
++
++### Cen├írio 5: Data futura ├® aceita e soma no m├¬s da tela
++**Dado** a tela em Novembro/2026
++**Quando** a pessoa salva um lan├ºamento com data 15/03/2027
++**Ent├úo** o lan├ºamento ├® gravado e soma em Novembro/2026, com o campo de data sem nenhuma mensagem de restri├º├úo
++
++### Cen├írio 6: Data muito antiga ├® aceita e soma no m├¬s da tela
++**Dado** a tela em Novembro/2026
++**Quando** a pessoa salva um lan├ºamento com data de anos anteriores ao plano (ex.: 10/07/2019)
++**Ent├úo** ├® aceito normalmente (livre total) e soma em Novembro/2026
++
++### Cen├írio 7: Ordem do extrato com datas de meses diferentes
++**Dado** a tela de Novembro com lan├ºamentos datados de 28/10, 01/11 e 05/11
++**Quando** a pessoa abre o extrato
++**Ent├úo** a tabela exibe 28/10 primeiro, depois 01/11 e 05/11 (data crescente, datas de meses diferentes convivendo na mesma tabela)
++
++---
++
++## Regra 8 ÔÇö Edi├º├úo que n├úo move de m├¬s
++
++### Cen├írio 8: Edi├º├úo n├úo move o m├¬s de c├ílculo
++**Dado** um lan├ºamento com m├¬s de c├ílculo Novembro/2026 e data 20/10/2026 exibido na tela de Novembro
++**Quando** a pessoa edit├í-lo e muda a data para 25/10/2026
++**Ent├úo** o m├¬s de c├ílculo continua Novembro/2026 e o lan├ºamento permanece na tela de Novembro
++
++### Cen├írio 9: Corre├º├úo de tela errada por excluir + relan├ºar
++**Dado** um lan├ºamento que deveria ser de Outubro mas foi gravado pela tela de Novembro
++**Quando** a pessoa o exclui e abre um novo lan├ºamento na tela de Outubro (com Outubro aberto)
++**Ent├úo** o novo lan├ºamento nasce com m├¬s de c├ílculo Outubro/2026 (n├úo existe UI para mover lan├ºamento de m├¬s ÔÇö a corre├º├úo ├® excluir e relan├ºar)
++
++---
++
++## Regra 10 ÔÇö Salvar e Adicionar Outro
++
++### Cen├írio 10: Salvar-e-adicionar-outro preserva a data digitada
++**Dado** o modal aberto em Novembro com data digitada 20/10/2026 e descri├º├úo/valor/categoria preenchidos
++**Quando** a pessoa toca em `Salvar e Adicionar Outro`
++**Ent├úo** o modal permanece aberto com a data ainda em 20/10/2026, descri├º├úo/valor/categoria/reembolso limpos e o foco volta ao campo descri├º├úo (05d intacto)
++
++---
++
++## Regra 11 ÔÇö Prefill do checklist
++
++### Cen├írio 11: Prefill do checklist sem conflito de limites
++**Dado** um item do checklist com vencimento em data de outro m├¬s (ex.: vencimento em Outubro com a tela em Novembro)
++**Quando** a pessoa gera o lan├ºamento a partir dele
++**Ent├úo** a data vem pr├®-preenchida sem nenhum conflito/restri├º├úo de limites do campo e o m├¬s de c├ílculo gravado ├® o da tela (Novembro/2026)
++
++---
++
++## Regra 4 e 13 ÔÇö Trava de m├¬s aberto preservada e exclus├úo
++
++### Cen├írio 12: Trava de m├¬s fechado usa o m├¬s de c├ílculo
++**Dado** um cen├írio em que o m├¬s de c├ílculo do lan├ºamento n├úo est├í aberto (nenhum m├¬s aberto / backend revalidando)
++**Quando** a pessoa tenta salvar (criar, editar ou excluir)
++**Ent├úo** o sistema rejeita com a mensagem atual de per├¡odo n├úo aberto, referenciando o **m├¬s de c├ílculo** (ano/m├¬s gravado), e n├úo a data digitada
++
++### Cen├írio 13: Exclus├úo validada pelo m├¬s de c├ílculo
++**Dado** um lan├ºamento na tela de Novembro (m├¬s de c├ílculo Novembro/2026 aberto)
++**Quando** a pessoa exclui o lan├ºamento e confirma
++**Ent├úo** a exclus├úo ├® validada pelo m├¬s de c├ílculo (Novembro aberto) e o registro ├® removido da tela
++
++### Cen├írio 14: M├¬s encerrado segue inacess├¡vel pela UI
++**Dado** a tela listando apenas meses abertos (ciclo de vida do m├¬s intacto)
++**Quando** a pessoa percorre a navega├º├úo de meses
++**Ent├úo** n├úo existe caminho de UI para lan├ºar em m├¬s encerrado ÔÇö apenas o m├¬s de c├ílculo (m├¬s da tela) ├® us├ível; encerramento/reabertura de m├¬s permanece como estava
++
++---
++
++## Regra 12 / ┬º6 ÔÇö Migra├º├úo e backfill (verifica├º├úo p├│s-migra├º├úo)
++
++> **Aplica├º├úo manual pelo humano no Supabase** (padr├úo do m├│dulo): o script `migration-0018-pluto-lancamento-data-livre.sql` n├úo ├® executado por automa├º├úo nenhuma desta entrega.
++
++### Cen├írio 15: Backfill sem mudan├ºa de saldo (verifica├º├úo p├│s-migra├º├úo)
++**Dado** o banco com lan├ºamentos existentes e uma c├│pia dos totais por m├¬s (soma de valores agrupada por ano/m├¬s) capturada **antes** da aplica├º├úo
++**Quando** o humano aplica a migra├º├úo 0018 no Supabase (auditoria registrada em `public.schema_migrations` com o nome id├¬ntico ao do arquivo)
++**Ent├úo** todos os lan├ºamentos existentes recebem m├¬s de c├ílculo igual ao ano/m├¬s da pr├│pria data, a contagem de lan├ºamentos com m├¬s de c├ílculo nulo ├® zero e a soma por m├¬s depois da migra├º├úo ├® **numericamente id├¬ntica** ├á de antes (diferen├ºa zero ÔÇö saldos inalterados)
++
++### Cen├írio 16: Lan├ºamentos p├│s-migra├º├úo usam as colunas novas
++**Dado** a migra├º├úo 0018 aplicada e auditada
++**Quando** a pessoa cria, edita e exclui lan├ºamentos pelas telas
++**Ent├úo** cria├º├úo grava m├¬s de c├ílculo da tela, edi├º├úo preserva o m├¬s gravado e a lista do m├¬s l├¬ por m├¬s de c├ílculo ÔÇö sem efeito colateral em nenhuma outra tela (dashboard, or├ºamento, checklist e concilia├º├úo permanecem com os mesmos valores para os lan├ºamentos antigos)
++
++---
++
++## Regra 6 ÔÇö Totais refletem o m├¬s de c├ílculo
++
++### Cen├írio 17: Todos os totais da tela seguem o m├¬s de c├ílculo
++**Dado** a tela de Novembro com lan├ºamentos gravados por ela (alguns com datas de Outubro)
++**Quando** a pessoa compara extrato, entradas, sa├¡das, resultado, saldo, or├ºado ├ù realizado e agrega├º├úo por conta
++**Ent├úo** todos somam a lista da tela (m├¬s de c├ílculo Novembro) e **nunca** a data digitada ÔÇö nenhuma dessas telas exibe l├│gica ou r├│tulo novo
++
++---
++
++## Regress├úo ÔÇö nada al├®m do calend├írio mudou
++
++### Cen├írio 18: Regress├úo dos fluxos existentes do Pluto com a feature ativa
++**Dado** o Pluto com o patch 05e aplicado
++**Quando** a pessoa percorre os fluxos habituais: abrir modal pela tela do m├¬s, criar/editar/excluir lan├ºamento, salvar-e-adicionar-outro, checklist de contas a pagar, or├ºamento, dashboard e navega├º├úo de meses
++**Ent├úo** textos, modais, valida├º├Áes de campo e demais comportamentos permanecem id├¬nticos aos anteriores ├á feature; a ├║nica diferen├ºa ├® a data livre (sem limites, r├│tulo `Data`) e o m├¬s de c├ílculo descrito nos cen├írios acima
+diff --git a/.agents/modules/pluto/backlog.md b/.agents/modules/pluto/backlog.md
+index ba47951..ae7239e 100644
+--- a/.agents/modules/pluto/backlog.md
++++ b/.agents/modules/pluto/backlog.md
+@@ -71,6 +71,7 @@ Esta ordem reflete **depend├¬ncia de constru├º├úo** (o que precisa existir antes
+ | 19 | **Divis├úo entre os dois usu├írios** | Mostra quanto cada um dos dois usu├írios lan├ºou ou contribuiu no m├¬s, ├║til para conversas sobre divis├úo de despesas. | |  |  |
+ | 20 | **Metas de economia** | Permite definir uma meta de economia (ex: guardar R$500/m├¬s) e acompanhar o progresso ao longo do tempo. | |  |  |
+ | 21 | **Exporta├º├úo de dados** | Exporta os lan├ºamentos em CSV/Excel, para backup ou an├ílise fora da ferramenta. | |  |  |
++| 26 | **Lan├ºamento com data livre (calend├írio sem trava do m├¬s)** | Mudan├ºa de regra sobre o cadastro de transa├º├Áes (item 5, patch candidato `05e`): hoje a data do lan├ºamento ├® travada ao m├¬s selecionado ÔÇö `components/pluto/TransactionModal.tsx` aplica `min`/`max` no input de data, calculados em `lib/pluto/hooks/usePlutoData.ts` via `getMonthRange(selectedYear, selectedMonth)`, e o form abre com a data default em `minDateStr`. A mudan├ºa remove essa restri├º├úo: o calend├írio continua **abrindo por padr├úo no m├¬s que est├í sendo editado**, mas **permite lan├ºar em qualquer data**. Pontos a validar em discovery (Hera): em qual m├¬s um lan├ºamento datado em outro per├¡odo ├® contabilizado no saldo/m├¬s e no or├ºado vs. realizado; intera├º├úo com meses encerrados/reabertos; default de data continua no m├¬s selecionado? | Pendente |  |  |
+ 
+ ---
+ 
+diff --git a/__tests__/app/pluto/critical-flows.test.tsx b/__tests__/app/pluto/critical-flows.test.tsx
+index 720abb3..4ed1730 100644
+--- a/__tests__/app/pluto/critical-flows.test.tsx
++++ b/__tests__/app/pluto/critical-flows.test.tsx
+@@ -123,8 +123,13 @@ describe("Fluxos cr├¡ticos (intera├º├úo ponta a ponta)", () => {
+     await waitFor(() => {
+       expect(screen.queryByLabelText("Ano:")).not.toBeNull();
+     });
++    // M├¬s de c├ílculo da tela: s├│ abre o modal depois do seletor assentar
++    // no m├¬s aberto dispon├¡vel (05e: o create grava o per├¡odo da tela).
++    await waitFor(() => {
++      expect((screen.getByLabelText("M├¬s:") as HTMLSelectElement).value).toBe("3");
++    });
+     await clickConnectedButton(/\+ Nova Transa├º├úo/i);
+-    await screen.findByLabelText(/Data \(Limitada a/i);
++    await screen.findByLabelText("Data");
+ 
+     fireEvent.change(screen.getByLabelText(/Descri├º├úo/i), { target: { value: "Lanche" } });
+     fireEvent.change(screen.getByLabelText(/Valor \(R\$\)/i), { target: { value: "25" } });
+@@ -141,6 +146,8 @@ describe("Fluxos cr├¡ticos (intera├º├úo ponta a ponta)", () => {
+           type: "despesa",
+           account_id: "a1",
+           category_id: "c1",
++          period_year: 2026,
++          period_month: 3,
+         }),
+         "teste@hestia.com"
+       );
+@@ -162,6 +169,8 @@ describe("Fluxos cr├¡ticos (intera├º├úo ponta a ponta)", () => {
+         date: "2026-03-15",
+         category_id: "c1",
+         account_id: "a1",
++        period_year: 2026,
++        period_month: 3,
+         created_at: "2026-03-15T00:00:00Z",
+         created_by: "teste@hestia.com",
+         category_name: "Alimenta├º├úo",
+@@ -205,6 +214,8 @@ describe("Fluxos cr├¡ticos (intera├º├úo ponta a ponta)", () => {
+         date: "2026-03-15",
+         category_id: "c1",
+         account_id: "a1",
++        period_year: 2026,
++        period_month: 3,
+         created_at: "2026-03-15T00:00:00Z",
+         created_by: "teste@hestia.com",
+         category_name: "Alimenta├º├úo",
+diff --git a/__tests__/app/pluto/transactions-page.test.tsx b/__tests__/app/pluto/transactions-page.test.tsx
+index f953146..d3b298d 100644
+--- a/__tests__/app/pluto/transactions-page.test.tsx
++++ b/__tests__/app/pluto/transactions-page.test.tsx
+@@ -88,6 +88,8 @@ describe("P├ígina de Cadastro de Transa├º├Áes /pluto/transactions", () => {
+         type: "despesa",
+         is_refund: false,
+         date: "2026-03-15",
++        period_year: 2026,
++        period_month: 3,
+         category_name: "Alimenta├º├úo",
+         account_name: "Ita├║ Corrente",
+         created_by: "teste@hestia.com",
+@@ -167,6 +169,8 @@ describe("P├ígina de Cadastro de Transa├º├Áes /pluto/transactions", () => {
+         type: "despesa",
+         is_refund: false,
+         date: "2026-03-15",
++        period_year: 2026,
++        period_month: 3,
+         category_name: "Alimenta├º├úo",
+         account_name: "Ita├║ Corrente",
+         created_by: "teste@hestia.com",
+@@ -206,6 +210,8 @@ describe("P├ígina de Cadastro de Transa├º├Áes /pluto/transactions", () => {
+         type: "despesa",
+         is_refund: false,
+         date: "2026-03-15",
++        period_year: 2026,
++        period_month: 3,
+         category_name: "Alimenta├º├úo",
+         account_name: "Ita├║ Corrente",
+         created_by: "teste@hestia.com",
+@@ -248,6 +254,8 @@ describe("P├ígina de Cadastro de Transa├º├Áes /pluto/transactions", () => {
+         type: "receita",
+         is_refund: false,
+         date: "2026-03-15",
++        period_year: 2026,
++        period_month: 3,
+         category_name: "Sal├írio",
+         account_name: "Ita├║ Corrente",
+         created_by: "teste@hestia.com",
+@@ -259,6 +267,8 @@ describe("P├ígina de Cadastro de Transa├º├Áes /pluto/transactions", () => {
+         type: "despesa",
+         is_refund: false,
+         date: "2026-03-15",
++        period_year: 2026,
++        period_month: 3,
+         category_name: "Alimenta├º├úo",
+         account_name: "Ita├║ Corrente",
+         created_by: "teste@hestia.com",
+@@ -297,6 +307,8 @@ describe("P├ígina de Cadastro de Transa├º├Áes /pluto/transactions", () => {
+         type: "despesa",
+         is_refund: false,
+         date: "2026-03-15",
++        period_year: 2026,
++        period_month: 3,
+         category_name: "Alimenta├º├úo",
+         account_name: "Ita├║ Corrente",
+         created_by: "teste@hestia.com",
+diff --git a/__tests__/app/pluto/transactions/page.test.tsx b/__tests__/app/pluto/transactions/page.test.tsx
+index 5a79463..2b8cca7 100644
+--- a/__tests__/app/pluto/transactions/page.test.tsx
++++ b/__tests__/app/pluto/transactions/page.test.tsx
+@@ -117,6 +117,8 @@ const mockHasData: TransactionsPageMockData = {
+       date: '2026-03-15',
+       category_id: 'c1',
+       account_id: 'a1',
++      period_year: 2026,
++      period_month: 3,
+       category_name: 'Alimenta├º├úo',
+       account_name: 'Ita├║ Corrente',
+       created_at: '2026-03-15T00:00:00Z',
+diff --git a/__tests__/components/pluto/AccountCardGrid.test.tsx b/__tests__/components/pluto/AccountCardGrid.test.tsx
+index 8cb0ba7..ad4dc35 100644
+--- a/__tests__/components/pluto/AccountCardGrid.test.tsx
++++ b/__tests__/components/pluto/AccountCardGrid.test.tsx
+@@ -16,6 +16,8 @@ const cards: AccountCardData[] = [
+         date: "2026-03-15",
+         category_id: "c1",
+         account_id: "a1",
++        period_year: 2026,
++        period_month: 3,
+         created_at: "2026-03-15T00:00:00Z",
+         created_by: "t@t.com",
+         category_name: "Alimenta├º├úo",
+diff --git a/__tests__/components/pluto/DeleteConfirmModal.test.tsx b/__tests__/components/pluto/DeleteConfirmModal.test.tsx
+index a875684..bed6273 100644
+--- a/__tests__/components/pluto/DeleteConfirmModal.test.tsx
++++ b/__tests__/components/pluto/DeleteConfirmModal.test.tsx
+@@ -12,6 +12,8 @@ const tx: TransactionWithDetails = {
+   date: "2026-03-15",
+   category_id: "c1",
+   account_id: "a1",
++  period_year: 2026,
++  period_month: 3,
+   created_at: "2026-03-15T00:00:00Z",
+   created_by: "t@t.com",
+   category_name: "Alimenta├º├úo",
+diff --git a/__tests__/components/pluto/TransactionModal.test.tsx b/__tests__/components/pluto/TransactionModal.test.tsx
+index d9d4794..2a77d58 100644
+--- a/__tests__/components/pluto/TransactionModal.test.tsx
++++ b/__tests__/components/pluto/TransactionModal.test.tsx
+@@ -18,10 +18,7 @@ function makeProps(overrides: Partial<TransactionModalProps> = {}): TransactionM
+     txSuccessMsg: null,
+     accounts: [{ id: "a1", name: "Ita├║", type: "conta", created_at: null, created_by: null }],
+     categories: [{ id: "c1", name: "Alimenta├º├úo", type: "despesa", created_at: "x", created_by: "y" }],
+-    selectedYear: 2026,
+-    selectedMonth: 3,
+-    minDateStr: "2026-03-01",
+-    maxDateStr: "2026-03-31",
++    // 05e: o modal n├úo recebe limites de data nem m├¬s da tela (data livre).
+     descInputRef: createRef<HTMLInputElement>(),
+     onClose: vi.fn(),
+     onSave: vi.fn((e: React.FormEvent) => e.preventDefault()),
+@@ -67,6 +64,8 @@ describe("TransactionModal", () => {
+             date: "2026-03-15",
+             category_id: "c1",
+             account_id: "a1",
++            period_year: 2026,
++            period_month: 3,
+             created_at: "x",
+             created_by: "y",
+             category_name: "Alimenta├º├úo",
+@@ -91,6 +90,16 @@ describe("TransactionModal", () => {
+     expect(props.onClose).toHaveBeenCalled();
+   });
+ 
++  it("campo de data livre: r├│tulo exato 'Data' e input sem atributos min/max", () => {
++    render(<TransactionModal {...makeProps()} />);
++
++    // Regra 1 da spec: sem min/max no campo e r├│tulo simples "Data".
++    const dateInput = screen.getByLabelText("Data") as HTMLInputElement;
++    expect(dateInput).toHaveAttribute("type", "date");
++    expect(dateInput).not.toHaveAttribute("min");
++    expect(dateInput).not.toHaveAttribute("max");
++  });
++
+   it("mostra checkbox de reembolso s├│ para despesa", () => {
+     const { rerender } = render(<TransactionModal {...makeProps({ type: "despesa" })} />);
+     expect(screen.getByLabelText(/Reembolso/i)).toBeInTheDocument();
+diff --git a/__tests__/integration/repositories.ts b/__tests__/integration/repositories.ts
+index 56ac181..df51384 100644
+--- a/__tests__/integration/repositories.ts
++++ b/__tests__/integration/repositories.ts
+@@ -2,12 +2,15 @@
+  * Binding Supabase dos contracts (item 8): wrappers finos que implementam
+  * `I*Repository` delegando ├ás fun├º├Áes reais de `lib/pluto/repositories/*`.
+  *
+- * Duas adapta├º├Áes, ambas restritas a este harness (zero mudan├ºa em produ├º├úo):
++ * Adapta├º├Áes, todas restritas a este harness (zero mudan├ºa em produ├º├úo):
+  * 1. `gate`: os contracts chamam `build()` ÔåÆ `reset()` ÔåÆ `seed()` de forma
+  *    s├¡ncrona no `beforeEach`, mas reset/seed reais s├úo async ÔÇö cada m├®todo
+  *    aguarda a chain antes de delegar (constru├º├úo s├¡ncrona, execu├º├úo ordenada).
+  * 2. `AliasIds`: traduz aliases dos contracts ("cat-1") para UUIDs no input
+  *    e remapeia `month_id`/`parent_id` de volta nas sa├¡das com assert literal.
++ * 3. Transa├º├Áes (T3 ÔÇö 05e): `seedTransactions` planta lan├ºamentos com m├¬s de
++ *    c├ílculo (seed `transactions` do contract) e `resolveId` traduz o id de
++ *    update/delete ÔÇö alias vira UUID; UUID real (do create) passa direto.
+  */
+ import type { IDatabaseClient } from "@/lib/shared/database";
+ import type {
+@@ -25,6 +28,8 @@ import type {
+   ChecklistItemInput,
+   MonthlyPeriod,
+   TransactionInput,
++  TransactionUpdateInput,
++  TransactionWithDetails,
+ } from "@/lib/pluto/types";
+ import * as transactions from "@/lib/pluto/repositories/transactions";
+ import * as budget from "@/lib/pluto/repositories/budget";
+@@ -96,6 +101,33 @@ export async function seedPeriods(ids: AliasIds, rows: MonthlyPeriod[]): Promise
+   }
+ }
+ 
++/**
++ * Plantio direto de lan├ºamentos do contract (seed `transactions` adicionado na
++ * T2): permite cen├írios de m├¬s de c├ílculo encerrado, imposs├¡veis de criar via
++ * `createTransaction` (a trava rejeita). Depende de categorias/contas j├í
++ * plantadas (FK) ÔÇö ordem do callback de seed do contract.
++ */
++export async function seedTransactions(ids: AliasIds, rows: TransactionWithDetails[]): Promise<void> {
++  for (const t of rows) {
++    await insertRow("transactions", {
++      id: ids.to(t.id),
++      description: t.description,
++      amount: t.amount,
++      type: t.type,
++      is_refund: t.is_refund,
++      date: t.date,
++      category_id: ids.to(t.category_id),
++      account_id: ids.to(t.account_id),
++      period_year: t.period_year,
++      period_month: t.period_month,
++      created_at: t.created_at,
++      created_by: t.created_by,
++    });
++  }
++}
++
++const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
++
+ /**
+  * Garante a linha do per├¡odo antes de escritas com `month_id`: o contract
+  * de checklist s├│ semeia categorias (o fake n├úo imp├Áe FK), mas no banco
+@@ -138,17 +170,26 @@ export class SupabaseTransactionRepository implements ITransactionRepository {
+     return transactions.createTransaction(this.db, this.mapInput(input), email);
+   }
+ 
+-  async updateTransaction(id: string, input: TransactionInput) {
++  async updateTransaction(id: string, input: TransactionUpdateInput) {
+     await this.gate();
+-    return transactions.updateTransaction(this.db, id, this.mapInput(input));
++    return transactions.updateTransaction(this.db, this.resolveId(id), this.mapInput(input));
+   }
+ 
+   async deleteTransaction(id: string) {
+     await this.gate();
+-    return transactions.deleteTransaction(this.db, id);
++    return transactions.deleteTransaction(this.db, this.resolveId(id));
++  }
++
++  /**
++   * Contracts referenciam ids plantados por alias ("tx-periodo-encerrado");
++   * ids j├í reais (retornados pelo create) passam direto ÔÇö `to()` em um UUID
++   * real geraria outro UUID e a linha n├úo seria encontrada.
++   */
++  private resolveId(id: string): string {
++    return UUID_PATTERN.test(id) ? id : this.ids.to(id);
+   }
+ 
+-  private mapInput(input: TransactionInput): TransactionInput {
++  private mapInput<T extends TransactionInput | TransactionUpdateInput>(input: T): T {
+     return {
+       ...input,
+       category_id: this.ids.to(input.category_id),
+diff --git a/__tests__/integration/transactions.test.ts b/__tests__/integration/transactions.test.ts
+index 51f3577..0c84707 100644
+--- a/__tests__/integration/transactions.test.ts
++++ b/__tests__/integration/transactions.test.ts
+@@ -9,7 +9,14 @@ import {
+   type TransactionContractSeed,
+ } from "../lib/pluto/repositories/contract-transactions.test";
+ import { AliasIds, getIntegrationDb } from "./supabase";
+-import { SupabaseTransactionRepository, createGate, seedAccounts, seedCategories, seedPeriods } from "./repositories";
++import {
++  SupabaseTransactionRepository,
++  createGate,
++  seedAccounts,
++  seedCategories,
++  seedPeriods,
++  seedTransactions,
++} from "./repositories";
+ 
+ let db: IDatabaseClient;
+ let ids: AliasIds;
+@@ -34,6 +41,11 @@ defineTransactionRepositoryContract("Supabase (integration)", () => {
+         await seedCategories(ids, data.categories);
+         await seedAccounts(ids, data.accounts);
+         await seedPeriods(ids, data.monthlyPeriods);
++        // Plantio direto (T2): lan├ºamentos de m├¬s de c├ílculo encerrado n├úo
++        // passam pela trava do create ÔÇö FKs exigem categorias/contas acima.
++        if (data.transactions?.length) {
++          await seedTransactions(ids, data.transactions);
++        }
+       });
+     },
+   };
+diff --git a/__tests__/lib/pluto/db/transactions.test.ts b/__tests__/lib/pluto/db/transactions.test.ts
+index efc7c12..59cc0c1 100644
+--- a/__tests__/lib/pluto/db/transactions.test.ts
++++ b/__tests__/lib/pluto/db/transactions.test.ts
+@@ -36,6 +36,8 @@ describe("Servi├ºo de Transa├º├Áes (Transactions)", () => {
+           date: "2026-03-15",
+           category_id: "cat-1",
+           account_id: "acc-1",
++          period_year: 2026,
++          period_month: 3,
+           created_at: "2026-03-15T10:00:00Z",
+           created_by: "joao@email.com",
+           category_name: "Alimenta├º├úo",
+@@ -50,15 +52,17 @@ describe("Servi├ºo de Transa├º├Áes (Transactions)", () => {
+     expect(txs[0].category_name).toBe("Alimenta├º├úo");
+   });
+ 
+-  it("deve lancar erro se o m├¬s da data da transa├º├úo nao estiver aberto", async () => {
++  it("deve lancar erro se o m├¬s de c├ílculo da transa├º├úo nao estiver aberto", async () => {
+     const input: TransactionInput = {
+       description: "Aluguel",
+       amount: 1200,
+       type: "despesa",
+       is_refund: false,
+-      date: "2026-04-10", // April is closed
++      date: "2026-04-10",
+       category_id: "cat-1",
+       account_id: "acc-1",
++      period_year: 2026,
++      period_month: 4, // April is closed
+     };
+ 
+     await expect(repo.createTransaction(input, "joao@email.com")).rejects.toThrow(
+@@ -75,6 +79,8 @@ describe("Servi├ºo de Transa├º├Áes (Transactions)", () => {
+       date: "2026-03-20",
+       category_id: "cat-2",
+       account_id: "acc-2",
++      period_year: 2026,
++      period_month: 3,
+     };
+ 
+     const result = await repo.createTransaction(input, "joao@email.com");
+@@ -97,6 +103,8 @@ describe("Servi├ºo de Transa├º├Áes (Transactions)", () => {
+         date: "2026-03-15",
+         category_id: "cat-1",
+         account_id: "acc-1",
++        period_year: 2026,
++        period_month: 3,
+       },
+       "joao@email.com"
+     );
+@@ -126,21 +134,31 @@ describe("Servi├ºo de Transa├º├Áes (Transactions)", () => {
+         date: "2026-03-15",
+         category_id: "cat-1",
+         account_id: "acc-1",
++        period_year: 2026,
++        period_month: 3,
+       },
+       "joao@email.com"
+     );
+ 
++    // Close the month (a trava avalia o m├¬s de c├ílculo gravado, n├úo a data)
++    repo.seed({
++      monthlyPeriods: [
++        { id: "m-1", year: 2026, month: 3, status: "encerrado", created_at: "2026-03-01T00:00:00Z", created_by: "test@test.com" },
++      ],
++      transactions: [created],
++    });
++
+     await expect(
+       repo.updateTransaction(created.id, {
+         description: "Supermercado Editado",
+         amount: 200,
+         type: "despesa",
+         is_refund: false,
+-        date: "2026-04-15", // April is closed
++        date: "2026-03-15",
+         category_id: "cat-1",
+         account_id: "acc-1",
+       })
+-    ).rejects.toThrow("N├úo ├® poss├¡vel alterar transa├º├Áes no per├¡odo 4/2026 pois ele n├úo est├í aberto.");
++    ).rejects.toThrow("N├úo ├® poss├¡vel alterar transa├º├Áes no per├¡odo 3/2026 pois ele n├úo est├í aberto.");
+   });
+ 
+   it("deve excluir transa├º├úo com sucesso se o m├¬s estiver aberto", async () => {
+@@ -153,6 +171,8 @@ describe("Servi├ºo de Transa├º├Áes (Transactions)", () => {
+         date: "2026-03-15",
+         category_id: "cat-1",
+         account_id: "acc-1",
++        period_year: 2026,
++        period_month: 3,
+       },
+       "joao@email.com"
+     );
+@@ -173,6 +193,8 @@ describe("Servi├ºo de Transa├º├Áes (Transactions)", () => {
+         date: "2026-03-15",
+         category_id: "cat-1",
+         account_id: "acc-1",
++        period_year: 2026,
++        period_month: 3,
+       },
+       "joao@email.com"
+     );
+diff --git a/__tests__/lib/pluto/hooks/useAccountAggregation.test.ts b/__tests__/lib/pluto/hooks/useAccountAggregation.test.ts
+index e9bdf7a..fd74b53 100644
+--- a/__tests__/lib/pluto/hooks/useAccountAggregation.test.ts
++++ b/__tests__/lib/pluto/hooks/useAccountAggregation.test.ts
+@@ -12,6 +12,8 @@ function makeTx(overrides: Partial<TransactionWithDetails> & { id: string }): Tr
+     date: "2026-03-15",
+     category_id: "cat-1",
+     account_id: "acc-1",
++    period_year: 2026,
++    period_month: 3,
+     created_at: "2026-03-15T00:00:00Z",
+     created_by: "test@example.com",
+     category_name: "Alimenta├º├úo",
+diff --git a/__tests__/lib/pluto/hooks/useBudgetComparison.test.ts b/__tests__/lib/pluto/hooks/useBudgetComparison.test.ts
+index 1b420da..8d29009 100644
+--- a/__tests__/lib/pluto/hooks/useBudgetComparison.test.ts
++++ b/__tests__/lib/pluto/hooks/useBudgetComparison.test.ts
+@@ -12,6 +12,8 @@ function makeTx(overrides: Partial<TransactionWithDetails> & { id: string }): Tr
+     date: "2026-03-15",
+     category_id: "cat-1",
+     account_id: "acc-1",
++    period_year: 2026,
++    period_month: 3,
+     created_at: "2026-03-15T00:00:00Z",
+     created_by: "test@example.com",
+     category_name: "Alimenta├º├úo",
+diff --git a/__tests__/lib/pluto/hooks/useDeleteTransaction.test.ts b/__tests__/lib/pluto/hooks/useDeleteTransaction.test.ts
+index b4dd120..57e8684 100644
+--- a/__tests__/lib/pluto/hooks/useDeleteTransaction.test.ts
++++ b/__tests__/lib/pluto/hooks/useDeleteTransaction.test.ts
+@@ -11,7 +11,7 @@ vi.mock("@/lib/pluto/db/transactions", () => ({
+   deleteTransaction: vi.fn(),
+ }));
+ 
+-const tx = { id: "t1", description: "Supermercado" } as never;
++const tx = { id: "t1", description: "Supermercado", period_year: 2026, period_month: 3 } as never;
+ 
+ function renderFlow() {
+   const fetchData = vi.fn(() => Promise.resolve());
+diff --git a/__tests__/lib/pluto/hooks/usePlutoData.test.ts b/__tests__/lib/pluto/hooks/usePlutoData.test.ts
+index 0b4c4da..728ee36 100644
+--- a/__tests__/lib/pluto/hooks/usePlutoData.test.ts
++++ b/__tests__/lib/pluto/hooks/usePlutoData.test.ts
+@@ -74,15 +74,22 @@ describe("usePlutoData", () => {
+     expect(result.current.errorMsg).toBeNull();
+   });
+ 
+-  it("exp├Áe delimitadores de data do m├¬s selecionado", async () => {
++  it("n├úo exp├Áe delimitadores de data no retorno (m├¬s de c├ílculo sem trava de data)", async () => {
+     const { result } = renderHook(() => usePlutoData());
+ 
+     await waitFor(() => {
+       expect(result.current.loading).toBe(false);
+     });
+ 
+-    expect(result.current.minDateStr).toBe("2026-03-01");
+-    expect(result.current.maxDateStr).toBe("2026-03-31");
++    // Contrato 05e (plan ┬ºHooks): a interface/retorno deixa de expor os
++    // delimitadores que travavam o campo de data no m├¬s da tela.
++    const delimiters = Object.keys(result.current).filter((key) => key.endsWith("DateStr"));
++    expect(delimiters).toEqual([]);
++
++    // O que permanece: sele├º├úo do m├¬s da tela e a lista carregada por m├¬s de c├ílculo.
++    expect(result.current.selectedYear).toBe(2026);
++    expect(result.current.selectedMonth).toBe(3);
++    expect(result.current.transactions).toEqual([]);
+   });
+ 
+   it("estado vazio quando nenhum m├¬s est├í aberto", async () => {
+diff --git a/__tests__/lib/pluto/hooks/useTransactionForm.test.ts b/__tests__/lib/pluto/hooks/useTransactionForm.test.ts
+index 7eb103e..b88859b 100644
+--- a/__tests__/lib/pluto/hooks/useTransactionForm.test.ts
++++ b/__tests__/lib/pluto/hooks/useTransactionForm.test.ts
+@@ -1,6 +1,9 @@
+ import { describe, it, expect, vi, beforeEach } from "vitest";
+ import { renderHook, act } from "@testing-library/react";
+-import { useTransactionForm } from "@/lib/pluto/hooks/useTransactionForm";
++import {
++  useTransactionForm,
++  type UseTransactionFormOptions,
++} from "@/lib/pluto/hooks/useTransactionForm";
+ import {
+   createTransaction,
+   updateTransaction,
+@@ -31,20 +34,29 @@ const EMAIL = "teste@hestia.com";
+ const acc: Account = { id: "a1", name: "Ita├║", type: "conta", created_at: null, created_by: null };
+ const categories = [{ id: "c1", name: "Alimenta├º├úo", type: "despesa" }] as never;
+ 
+-function renderForm() {
++// Contrato 05e (plan ┬ºHooks): as op├º├Áes do formul├írio recebem o m├¬s da tela
++// (selectedYear/selectedMonth) e N├âO mais os delimitadores minDateStr/maxDateStr.
++function makeFormOptions() {
+   const fetchData = vi.fn(() => Promise.resolve());
+   const setErrorMsg = vi.fn();
+-  const hook = renderHook(() =>
+-    useTransactionForm({
+-      db: {} as IDatabaseClient,
+-      userEmail: EMAIL,
+-      categories,
+-      minDateStr: "2026-03-01",
+-      fetchData,
+-      setErrorMsg,
+-    })
+-  );
+-  return { ...hook, fetchData, setErrorMsg };
++  return {
++    db: {} as IDatabaseClient,
++    userEmail: EMAIL,
++    categories,
++    selectedYear: 2026,
++    selectedMonth: 3,
++    fetchData,
++    setErrorMsg,
++  };
++}
++
++function renderForm(options: ReturnType<typeof makeFormOptions> = makeFormOptions()) {
++  // Cast ponte: o contrato novo (selectedYear/selectedMonth) ainda n├úo existe
++  // nos tipos do hook atual ÔÇö ├® exatamente o que o RED desta task fixa; o
++  // cast desaparece em termos de efeito quando o hook migrar na T5.
++  const hookOptions = options as unknown as UseTransactionFormOptions;
++  const hook = renderHook(() => useTransactionForm(hookOptions));
++  return { ...hook, options, fetchData: options.fetchData, setErrorMsg: options.setErrorMsg };
+ }
+ 
+ function fillValid(result: { current: ReturnType<typeof useTransactionForm> }) {
+@@ -57,6 +69,18 @@ function fillValid(result: { current: ReturnType<typeof useTransactionForm> }) {
+   });
+ }
+ 
++function openEditModal(result: { current: ReturnType<typeof useTransactionForm> }) {
++  act(() => {
++    result.current.handleOpenEditModal({
++      id: "t1", description: "Supermercado", amount: 200, type: "despesa",
++      is_refund: false, date: "2026-03-15", category_id: "c1", account_id: "a1",
++      period_year: 2026, period_month: 3,
++      category_name: "Alimenta├º├úo", account_name: "Ita├║",
++      created_at: "2026-03-15T00:00:00Z", created_by: EMAIL,
++    });
++  });
++}
++
+ describe("useTransactionForm", () => {
+   beforeEach(() => {
+     vi.clearAllMocks();
+@@ -66,8 +90,15 @@ describe("useTransactionForm", () => {
+     vi.mocked(updateTransaction).mockResolvedValue({} as never);
+   });
+ 
+-  it("abre nova transa├º├úo pr├®-fixando conta e data m├¡nima", () => {
+-    const { result } = renderForm();
++  it("abre nova transa├º├úo com a data no primeiro dia do m├¬s da tela (op├º├Áes sem minDateStr)", () => {
++    const options = makeFormOptions();
++
++    // Contrato 05e: as op├º├Áes carregam o m├¬s da tela e N├âO cont├¬m minDateStr.
++    expect(Object.keys(options)).not.toContain("minDateStr");
++    expect(options.selectedYear).toBe(2026);
++    expect(options.selectedMonth).toBe(3);
++
++    const { result } = renderForm(options);
+ 
+     act(() => {
+       result.current.handleOpenTxModal(acc);
+@@ -75,10 +106,23 @@ describe("useTransactionForm", () => {
+ 
+     expect(result.current.isTxModalOpen).toBe(true);
+     expect(result.current.accountInput).toBe("Ita├║");
++    // Regra 2 / cen├írio 10: tela em 2026-03 abre com 2026-03-01.
+     expect(result.current.date).toBe("2026-03-01");
+     expect(result.current.editingTransaction).toBeNull();
+   });
+ 
++  it("abre nova transa├º├úo no primeiro dia do m├¬s da tela escolhido (selectedMonth 11)", () => {
++    const options = { ...makeFormOptions(), selectedMonth: 11 };
++
++    const { result } = renderForm(options);
++
++    act(() => {
++      result.current.handleOpenTxModal(acc);
++    });
++
++    expect(result.current.date).toBe("2026-11-01");
++  });
++
+   it("recusa salvar com campos vazios", async () => {
+     const { result, setErrorMsg } = renderForm();
+ 
+@@ -118,31 +162,59 @@ describe("useTransactionForm", () => {
+     expect(fetchData).toHaveBeenCalled();
+   });
+ 
+-  it("edita transa├º├úo existente via updateTransaction", async () => {
++  it("cria com period_year/period_month do m├¬s da tela mesmo quando a data digitada ├® de outro m├¬s", async () => {
+     const { result } = renderForm();
++    fillValid(result);
+ 
++    // Regra 3 / cen├írio 1: fatura datada de outro m├¬s lan├ºada na tela de 2026-03.
+     act(() => {
+-      result.current.handleOpenEditModal({
+-        id: "t1", description: "Supermercado", amount: 200, type: "despesa",
+-        is_refund: false, date: "2026-03-15", category_id: "c1", account_id: "a1",
+-        category_name: "Alimenta├º├úo", account_name: "Ita├║",
+-        created_at: "2026-03-15T00:00:00Z", created_by: EMAIL,
+-      });
++      result.current.setDate("2026-04-10");
++    });
++
++    await act(async () => {
++      await result.current.handleSaveTransaction({ preventDefault: () => {} } as never);
+     });
++
++    expect(createTransaction).toHaveBeenCalledWith(
++      expect.anything(),
++      expect.objectContaining({
++        date: "2026-04-10",
++        period_year: 2026,
++        period_month: 3,
++      }),
++      EMAIL
++    );
++  });
++
++  it("edita transa├º├úo existente sem reenviar period_year/period_month no payload", async () => {
++    const { result } = renderForm();
++    openEditModal(result);
++
+     expect(result.current.editingTransaction?.id).toBe("t1");
+ 
+     await act(async () => {
+       await result.current.handleSaveTransaction({ preventDefault: () => {} } as never);
+     });
+ 
+-    expect(updateTransaction).toHaveBeenCalledWith(expect.anything(), "t1", expect.objectContaining({ amount: 200 }));
++    expect(updateTransaction).toHaveBeenCalledTimes(1);
++    const payload = vi.mocked(updateTransaction).mock.calls[0][2];
++    // Regra 8 / decis├úo D6: a edi├º├úo n├úo move o lan├ºamento de m├¬s ÔÇö o payload
++    // ├® TransactionUpdateInput, sem campos de per├¡odo.
++    expect(payload).not.toHaveProperty("period_year");
++    expect(payload).not.toHaveProperty("period_month");
++    expect(payload).toMatchObject({ amount: 200, date: "2026-03-15" });
+     expect(createTransaction).not.toHaveBeenCalled();
+   });
+ 
+-  it("salvar e adicionar mant├®m aberto com mensagem de sucesso", async () => {
++  it("salvar e adicionar outro mant├®m aberto, preserva a data digitada e zera os campos do 05d", async () => {
+     const { result } = renderForm();
+     fillValid(result);
+ 
++    // Regra 10 / cen├írio 9: data digitada de outro m├¬s permanece ap├│s salvar.
++    act(() => {
++      result.current.setDate("2026-04-10");
++    });
++
+     await act(async () => {
+       await result.current.handleSaveTransactionAndAddAnother({ preventDefault: () => {} } as never);
+     });
+@@ -150,7 +222,11 @@ describe("useTransactionForm", () => {
+     expect(createTransaction).toHaveBeenCalled();
+     expect(result.current.isTxModalOpen).toBe(true);
+     expect(result.current.txSuccessMsg).toBe("Transa├º├úo salva com sucesso!");
++    expect(result.current.date).toBe("2026-04-10");
+     expect(result.current.description).toBe("");
++    expect(result.current.amount).toBe("");
++    expect(result.current.categoryInput).toBe("");
++    expect(result.current.isRefund).toBe(false);
+   });
+ 
+   it("prefill do checklist resolve nome da categoria", () => {
+diff --git a/__tests__/lib/pluto/hooks/useTransactionModals.test.ts b/__tests__/lib/pluto/hooks/useTransactionModals.test.ts
+index 02130cc..0d3f5cd 100644
+--- a/__tests__/lib/pluto/hooks/useTransactionModals.test.ts
++++ b/__tests__/lib/pluto/hooks/useTransactionModals.test.ts
+@@ -1,6 +1,9 @@
+ import { describe, it, expect, vi, beforeEach } from "vitest";
+ import { renderHook, act } from "@testing-library/react";
+-import { useTransactionModals } from "@/lib/pluto/hooks/useTransactionModals";
++import {
++  useTransactionModals,
++  type TransactionModalsDeps,
++} from "@/lib/pluto/hooks/useTransactionModals";
+ import {
+   createTransaction,
+   updateTransaction,
+@@ -33,17 +36,28 @@ vi.mock("@/lib/pluto/db/categories", () => ({
+ const EMAIL = "teste@hestia.com";
+ const acc: Account = { id: "a1", name: "Ita├║", type: "conta", created_at: null, created_by: null };
+ 
+-function renderModals() {
+-  return renderHook(() =>
+-    useTransactionModals({
+-      db: {} as IDatabaseClient,
+-      userEmail: EMAIL,
+-      categories: [],
+-      minDateStr: "2026-03-01",
+-      fetchData: vi.fn(() => Promise.resolve()),
+-      setErrorMsg: vi.fn(),
+-    })
+-  );
++// Contrato 05e (plan ┬ºHooks): TransactionModalsDeps recebe o m├¬s da tela
++// (selectedYear/selectedMonth) em vez dos delimitadores minDateStr/maxDateStr
++// e repassa ao useTransactionForm.
++function makeDeps() {
++  const fetchData = vi.fn(() => Promise.resolve());
++  const setErrorMsg = vi.fn();
++  return {
++    db: {} as IDatabaseClient,
++    userEmail: EMAIL,
++    categories: [] as never[],
++    selectedYear: 2026,
++    selectedMonth: 3,
++    fetchData,
++    setErrorMsg,
++  };
++}
++
++function renderModals(deps: ReturnType<typeof makeDeps> = makeDeps()) {
++  // Cast ponte: o contrato novo das deps ainda n├úo existe nos tipos do hook
++  // atual ÔÇö ├® exatamente o que o RED desta task fixa.
++  const hookDeps = deps as unknown as TransactionModalsDeps;
++  return { ...renderHook(() => useTransactionModals(hookDeps)), deps };
+ }
+ 
+ describe("useTransactionModals", () => {
+@@ -51,8 +65,15 @@ describe("useTransactionModals", () => {
+     vi.clearAllMocks();
+   });
+ 
+-  it("abre o modal de nova transa├º├úo pr├®-fixando conta e data m├¡nima", () => {
+-    const { result } = renderModals();
++  it("abre o modal de nova transa├º├úo pr├®-fixando conta e a data do m├¬s da tela (deps sem minDateStr)", () => {
++    const deps = makeDeps();
++
++    // Contrato 05e: as deps carregam o m├¬s da tela e N├âO cont├¬m minDateStr.
++    expect(Object.keys(deps)).not.toContain("minDateStr");
++    expect(deps.selectedYear).toBe(2026);
++    expect(deps.selectedMonth).toBe(3);
++
++    const { result } = renderModals(deps);
+     expect(result.current.isTxModalOpen).toBe(false);
+ 
+     act(() => {
+@@ -61,6 +82,7 @@ describe("useTransactionModals", () => {
+ 
+     expect(result.current.isTxModalOpen).toBe(true);
+     expect(result.current.accountInput).toBe("Ita├║");
++    // Regra 2 / cen├írio 10: tela em 2026-03 abre com 2026-03-01.
+     expect(result.current.date).toBe("2026-03-01");
+     expect(result.current.editingTransaction).toBeNull();
+   });
+@@ -78,6 +100,8 @@ describe("useTransactionModals", () => {
+         date: "2026-03-15",
+         category_id: "c1",
+         account_id: "a1",
++        period_year: 2026,
++        period_month: 3,
+         created_at: "x",
+         created_by: EMAIL,
+         category_name: "Alimenta├º├úo",
+@@ -106,17 +130,8 @@ describe("useTransactionModals", () => {
+   });
+ 
+   it("salva nova transa├º├úo e recarrega", async () => {
+-    const fetchData = vi.fn(() => Promise.resolve());
+-    const { result } = renderHook(() =>
+-      useTransactionModals({
+-        db: {} as IDatabaseClient,
+-        userEmail: EMAIL,
+-        categories: [],
+-        minDateStr: "2026-03-01",
+-        fetchData,
+-        setErrorMsg: vi.fn(),
+-      })
+-    );
++    const deps = makeDeps();
++    const { result } = renderModals(deps);
+     vi.mocked(getOrCreateAccount).mockResolvedValue("a1");
+     vi.mocked(getOrCreateCategory).mockResolvedValue("c1");
+     vi.mocked(createTransaction).mockResolvedValue({} as never);
+@@ -137,7 +152,7 @@ describe("useTransactionModals", () => {
+ 
+     expect(createTransaction).toHaveBeenCalled();
+     expect(result.current.isTxModalOpen).toBe(false);
+-    expect(fetchData).toHaveBeenCalled();
++    expect(deps.fetchData).toHaveBeenCalled();
+   });
+ 
+   it("salva edi├º├úo via updateTransaction", async () => {
+@@ -156,6 +171,8 @@ describe("useTransactionModals", () => {
+         date: "2026-03-15",
+         category_id: "c1",
+         account_id: "a1",
++        period_year: 2026,
++        period_month: 3,
+         created_at: "x",
+         created_by: EMAIL,
+         category_name: "Y",
+@@ -172,17 +189,8 @@ describe("useTransactionModals", () => {
+   });
+ 
+   it("exclus├úo confirma, fecha e recarrega", async () => {
+-    const fetchData = vi.fn(() => Promise.resolve());
+-    const { result } = renderHook(() =>
+-      useTransactionModals({
+-        db: {} as IDatabaseClient,
+-        userEmail: EMAIL,
+-        categories: [],
+-        minDateStr: "2026-03-01",
+-        fetchData,
+-        setErrorMsg: vi.fn(),
+-      })
+-    );
++    const deps = makeDeps();
++    const { result } = renderModals(deps);
+ 
+     act(() => {
+       result.current.handleOpenDeleteModal({
+@@ -194,6 +202,8 @@ describe("useTransactionModals", () => {
+         date: "2026-03-15",
+         category_id: "c1",
+         account_id: "a1",
++        period_year: 2026,
++        period_month: 3,
+         created_at: "x",
+         created_by: EMAIL,
+         category_name: "Y",
+@@ -208,21 +218,12 @@ describe("useTransactionModals", () => {
+ 
+     expect(deleteTransaction).toHaveBeenCalledWith(expect.anything(), "t1");
+     expect(result.current.isDeleteModalOpen).toBe(false);
+-    expect(fetchData).toHaveBeenCalled();
++    expect(deps.fetchData).toHaveBeenCalled();
+   });
+ 
+   it("conta: abre, salva e fecha", async () => {
+-    const fetchData = vi.fn(() => Promise.resolve());
+-    const { result } = renderHook(() =>
+-      useTransactionModals({
+-        db: {} as IDatabaseClient,
+-        userEmail: EMAIL,
+-        categories: [],
+-        minDateStr: "2026-03-01",
+-        fetchData,
+-        setErrorMsg: vi.fn(),
+-      })
+-    );
++    const deps = makeDeps();
++    const { result } = renderModals(deps);
+     vi.mocked(getOrCreateAccount).mockResolvedValue("a9");
+ 
+     act(() => {
+@@ -240,7 +241,7 @@ describe("useTransactionModals", () => {
+ 
+     expect(getOrCreateAccount).toHaveBeenCalledWith(expect.anything(), "Nubank", EMAIL, "conta");
+     expect(result.current.isAccModalOpen).toBe(false);
+-    expect(fetchData).toHaveBeenCalled();
++    expect(deps.fetchData).toHaveBeenCalled();
+   });
+ 
+   it("prefill do checklist preenche o formul├írio", () => {
+diff --git a/__tests__/lib/pluto/migration-0018.test.ts b/__tests__/lib/pluto/migration-0018.test.ts
+new file mode 100644
+index 0000000..754bc02
+--- /dev/null
++++ b/__tests__/lib/pluto/migration-0018.test.ts
+@@ -0,0 +1,235 @@
++import { describe, it, expect } from "vitest";
++import fs from "node:fs";
++import path from "node:path";
++
++// ---------------------------------------------------------------------------
++// Contrato da T0 (Pluto 05e, Lan├ºamento com Data Livre) ÔÇö teste de conte├║do
++// RED da migra├º├úo 0018, no padr├úo EXATO de
++// `__tests__/lib/milon/migration-0017.test.ts`.
++// Fontes: `plan.md` ┬º"Migra├º├Áes" (plan.md:94-110 ÔÇö n├║mero reservado 0018;
++// quatro passos ordenados: 1) ADD COLUMN IF NOT EXISTS period_year/period_month
++// integer ANUL├üVEIS em public.transactions; 2) backfill retroativo copiando
++// ano/m├¬s da pr├│pria `date` com CONVERS├âO EXPL├ìCITA para integer nas
++// atribui├º├Áes, WHERE period_year IS NULL OR period_month IS NULL; 3) SET NOT NULL
++// nas duas colunas SOMENTE ap├│s o backfill; 4) auditoria com self-bootstrap
++// idempotente de public.schema_migrations (CREATE TABLE IF NOT EXISTS + RLS +
++// pol├¡tica "Permitir tudo para autenticados", mesmo bloco das migra├º├Áes
++// 0008/0016) e INSERT com spec_id `pluto-05e`, spec_name `Lan├ºamento com Data
++// Livre`, script_name id├¬ntico ao nome do arquivo e executed_by
++// joaopsroberto@gmail.com, com ON CONFLICT (script_name) DO NOTHING;
++// "explicitamente n├úo faz": nenhuma remo├º├úo/renomea├º├úo de coluna ou tabela,
++// nenhuma pol├¡tica RLS nova em transactions, nenhum ├¡ndice novo; rollback em
++// texto no rodap├® (DROP COLUMN IF EXISTS das duas colunas); verifica├º├úo
++// p├│s-aplica├º├úo documentada em coment├írio no pr├│prio script ÔÇö contagem de
++// linhas com m├¬s de c├ílculo nulo = 0 e soma de amount agrupada por ano/m├¬s de
++// `date` antes/depois com diferen├ºa zero) + `tasks.json` T0
++// (acceptanceCriteria 1-10) + `spec.md` ┬º6 (migra├º├úo aditiva; auditoria com
++// nome id├¬ntico ao arquivo; verifica├º├úo de saldos por m├¬s).
++//
++// RED ESPERADO (Gate 3, antes de Hefesto/T1): o arquivo
++// utils/migrations/migration-0018-pluto-lancamento-data-livre.sql ├® produzido
++// apenas na T1 e ainda N├âO existe ÔÇö logo `readFileSync` lan├ºa ENOENT e TODOS
++// os casos falham pelo motivo certo (arquivo da migra├º├úo inexistente), sem
++// SyntaxError/TS2 no output. Nenhum arquivo de produ├º├úo ├® tocado por esta task.
++// ---------------------------------------------------------------------------
++
++const SCRIPT_NAME = "migration-0018-pluto-lancamento-data-livre.sql";
++
++function loadMigrationSql(): string {
++  const file = path.resolve(
++    __dirname,
++    "../../../utils/migrations",
++    SCRIPT_NAME,
++  );
++  return fs.readFileSync(file, "utf8");
++}
++
++/** Remove coment├írios de linha (`-- ...`) para as asser├º├Áes negativas n├úo trocarem em texto de rollback/header. */
++function stripSqlComments(sql: string): string {
++  return sql
++    .split(/\r?\n/)
++    .map((line) => line.replace(/--.*$/, ""))
++    .join("\n");
++}
++
++/** Extrai apenas o texto de coment├írios (linhas com `--`), para as consultas de verifica├º├úo em coment├írio. */
++function extractCommentLines(sql: string): string {
++  return sql
++    .split(/\r?\n/)
++    .filter((line) => line.includes("--"))
++    .join("\n");
++}
++
++/** Extrai um comando SQL a partir do match at├® o `;` seguinte (inclusive). */
++function extractStatement(sql: string, search: RegExp): string {
++  const start = sql.search(search);
++  if (start < 0) return "";
++  const end = sql.indexOf(";", start);
++  return end < 0 ? sql.slice(start) : sql.slice(start, end + 1);
++}
++
++describe("Pluto 05e T0 ÔÇö migra├º├úo 0018 (lan├ºamento com data livre, m├¬s de c├ílculo)", () => {
++  it("adiciona as colunas period_year e period_month inteiras e anul├íveis em public.transactions", () => {
++    const sql = loadMigrationSql();
++    const addYear = extractStatement(
++      sql,
++      /ALTER\s+TABLE\s+public\.transactions\s+ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\s+period_year/i,
++    );
++    const addMonth = extractStatement(
++      sql,
++      /ALTER\s+TABLE\s+public\.transactions\s+ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\s+period_month/i,
++    );
++    expect(addYear).not.toBe("");
++    expect(addMonth).not.toBe("");
++    expect(addYear).toMatch(/\binteger\b/i);
++    expect(addMonth).toMatch(/\binteger\b/i);
++    // Anul├íveis na cria├º├úo: o backfill precisa rodar antes de impor obrigatoriedade
++    expect(addYear).not.toMatch(/NOT\s+NULL/i);
++    expect(addMonth).not.toMatch(/NOT\s+NULL/i);
++  });
++
++  it("faz o backfill pela pr├│pria date com convers├úo expl├¡cita para integer, ANTES do SET NOT NULL", () => {
++    const sql = loadMigrationSql();
++    const backfill = extractStatement(
++      sql,
++      /UPDATE\s+public\.transactions\s+SET\s+period_year\s*=/i,
++    );
++    expect(backfill).not.toBe("");
++    // Copia ano/m├¬s da pr├│pria coluna date (decis├úo D8)
++    expect(backfill).toMatch(
++      /period_year\s*=\s*(?:EXTRACT\s*\(\s*YEAR\s+FROM\s+date\s*\)\s*::\s*(?:integer|int)\b|CAST\s*\(\s*EXTRACT\s*\(\s*YEAR\s+FROM\s+date\s*\)\s+AS\s+(?:integer|int)\s*\))/i,
++    );
++    expect(backfill).toMatch(
++      /period_month\s*=\s*(?:EXTRACT\s*\(\s*MONTH\s+FROM\s+date\s*\)\s*::\s*(?:integer|int)\b|CAST\s*\(\s*EXTRACT\s*\(\s*MONTH\s+FROM\s+date\s*\)\s+AS\s+(?:integer|int)\s*\))/i,
++    );
++    // S├│ nas linhas ainda sem per├¡odo calculado (idempotente)
++    expect(backfill).toMatch(
++      /WHERE\s+period_year\s+IS\s+NULL\s+OR\s+period_month\s+IS\s+NULL/i,
++    );
++    // Ordem: backfill ANTES da imposi├º├úo de obrigatoriedade (passos 2 ÔåÆ 3)
++    const backfillIdx = sql.search(
++      /UPDATE\s+public\.transactions\s+SET\s+period_year\s*=/i,
++    );
++    const notNullYearIdx = sql.search(
++      /ALTER\s+TABLE\s+public\.transactions\s+ALTER\s+COLUMN\s+period_year\s+SET\s+NOT\s+NULL/i,
++    );
++    const notNullMonthIdx = sql.search(
++      /ALTER\s+TABLE\s+public\.transactions\s+ALTER\s+COLUMN\s+period_month\s+SET\s+NOT\s+NULL/i,
++    );
++    expect(backfillIdx).toBeGreaterThanOrEqual(0);
++    expect(notNullYearIdx).toBeGreaterThan(backfillIdx);
++    expect(notNullMonthIdx).toBeGreaterThan(backfillIdx);
++  });
++
++  it("imp├Áe SET NOT NULL nas duas colunas somente ap├│s o backfill", () => {
++    const sql = loadMigrationSql();
++    const setNotNullYear = extractStatement(
++      sql,
++      /ALTER\s+TABLE\s+public\.transactions\s+ALTER\s+COLUMN\s+period_year\s+SET\s+NOT\s+NULL/i,
++    );
++    const setNotNullMonth = extractStatement(
++      sql,
++      /ALTER\s+TABLE\s+public\.transactions\s+ALTER\s+COLUMN\s+period_month\s+SET\s+NOT\s+NULL/i,
++    );
++    expect(setNotNullYear).not.toBe("");
++    expect(setNotNullMonth).not.toBe("");
++    // O SET NOT NULL chega depois do backfill, nunca na cria├º├úo (ver tamb├®m o caso anterior sobre ordem)
++    const backfillIdx = sql.search(
++      /UPDATE\s+public\.transactions\s+SET\s+period_year\s*=/i,
++    );
++    const notNullYearIdx = sql.search(
++      /ALTER\s+TABLE\s+public\.transactions\s+ALTER\s+COLUMN\s+period_year\s+SET\s+NOT\s+NULL/i,
++    );
++    const notNullMonthIdx = sql.search(
++      /ALTER\s+TABLE\s+public\.transactions\s+ALTER\s+COLUMN\s+period_month\s+SET\s+NOT\s+NULL/i,
++    );
++    expect(notNullYearIdx).toBeGreaterThan(backfillIdx);
++    expect(notNullMonthIdx).toBeGreaterThan(backfillIdx);
++  });
++
++  it("garante self-bootstrap idempotente de schema_migrations (tabela + RLS + pol├¡tica) antes da auditoria", () => {
++    const sql = loadMigrationSql();
++    expect(
++      sql,
++      "CREATE TABLE IF NOT EXISTS public.schema_migrations",
++    ).toMatch(/CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+public\.schema_migrations/i);
++    expect(
++      sql,
++      "RLS habilitado em public.schema_migrations",
++    ).toMatch(
++      /ALTER\s+TABLE\s+public\.schema_migrations\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY/i,
++    );
++    expect(
++      sql,
++      'pol├¡tica "Permitir tudo para autenticados" em public.schema_migrations',
++    ).toMatch(
++      /CREATE\s+POLICY\s+"Permitir tudo para autenticados"\s+ON\s+public\.schema_migrations/i,
++    );
++    const bootstrapIdx = sql.search(
++      /CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+public\.schema_migrations/i,
++    );
++    const auditIdx = sql.search(/INSERT\s+INTO\s+public\.schema_migrations/i);
++    expect(bootstrapIdx).toBeGreaterThanOrEqual(0);
++    expect(auditIdx).toBeGreaterThan(bootstrapIdx);
++  });
++
++  it("registra a auditoria com spec_id pluto-05e, spec_name, script_name id├¬ntico ao arquivo, executed_by e ON CONFLICT DO NOTHING", () => {
++    const sql = loadMigrationSql();
++    expect(sql).toMatch(/INSERT\s+INTO\s+public\.schema_migrations/i);
++    expect(sql).toContain(SCRIPT_NAME);
++    expect(sql).toMatch(/pluto-05e/);
++    expect(sql).toContain("Lan├ºamento com Data Livre");
++    expect(sql).toContain("joaopsroberto@gmail.com");
++    expect(sql).toMatch(/ON\s+CONFLICT\s*\(\s*script_name\s*\)\s+DO\s+NOTHING/i);
++  });
++
++  it("documenta o rollback em texto (DROP COLUMN IF EXISTS das duas colunas, no rodap├®)", () => {
++    const sql = loadMigrationSql();
++    expect(sql).toMatch(
++      /ALTER\s+TABLE\s+public\.transactions\s+DROP\s+COLUMN\s+IF\s+EXISTS\s+period_year/i,
++    );
++    expect(sql).toMatch(
++      /ALTER\s+TABLE\s+public\.transactions\s+DROP\s+COLUMN\s+IF\s+EXISTS\s+period_month/i,
++    );
++    // O rollback ├® s├│ texto: fora de coment├írios n├úo h├í DROP algum (ver tamb├®m as negativas)
++    const executable = stripSqlComments(sql);
++    expect(executable).not.toMatch(/\bDROP\s+COLUMN\b/i);
++  });
++
++  it("documenta em coment├írio as consultas de verifica├º├úo (nulos = 0; soma por m├¬s antes/depois com diferen├ºa zero)", () => {
++    const comments = extractCommentLines(loadMigrationSql());
++    // Contagem de transactions com period_year ou period_month nulo deve ser zero
++    expect(comments).toMatch(/count\s*\(/i);
++    expect(comments).toMatch(/period_year\s+IS\s+NULL/i);
++    expect(comments).toMatch(/period_month\s+IS\s+NULL/i);
++    expect(comments).toMatch(/=\s*0\b|deve ser\s+(?:0|zero)|\bzero\b/i);
++    // Soma de amount agrupada por ano/m├¬s de date, comparada antes e depois do backfill
++    expect(comments).toMatch(/sum\s*\(\s*amount\s*\)/i);
++    expect(comments).toMatch(/EXTRACT\s*\(\s*YEAR\s+FROM\s+date\s*\)/i);
++    expect(comments).toMatch(/EXTRACT\s*\(\s*MONTH\s+FROM\s+date\s*\)/i);
++    expect(comments).toMatch(/group\s+by/i);
++    expect(comments).toMatch(/antes/i);
++    expect(comments).toMatch(/depois/i);
++    expect(comments).toMatch(/diferen[├ºc]a/i);
++  });
++
++  it("asser├º├Áes negativas: nenhuma remo├º├úo ou renomea├º├úo de coluna/tabela existente (rollback s├│ em coment├írio)", () => {
++    const sql = stripSqlComments(loadMigrationSql());
++    expect(sql).not.toMatch(/\bDROP\s+(?:TABLE|COLUMN)\b/i);
++    expect(sql).not.toMatch(/\bRENAME\b/i);
++  });
++
++  it("asser├º├Áes negativas: nenhuma pol├¡tica RLS nova em transactions e nenhum ├¡ndice novo", () => {
++    const sql = stripSqlComments(loadMigrationSql());
++    // RLS de transactions intocado (nenhuma pol├¡tica nova, nenhum ENABLE/DROP de pol├¡tica)
++    expect(sql).not.toMatch(
++      /CREATE\s+POLICY\b[^;]*ON\s+public\.transactions/i,
++    );
++    expect(sql).not.toMatch(
++      /ALTER\s+TABLE\s+public\.transactions\s+(?:ENABLE|DISABLE)\s+ROW\s+LEVEL\s+SECURITY/i,
++    );
++    expect(sql).not.toMatch(/DROP\s+POLICY\b[^;]*ON\s+public\.transactions/i);
++    // Nenhum ├¡ndice novo em lugar nenhum (bootstrap de schema_migrations n├úo cria ├¡ndice; tabela dom├®stica ÔÇö YAGNI)
++    expect(sql).not.toMatch(/\bCREATE\s+(?:UNIQUE\s+)?INDEX\b/i);
++  });
++});
+diff --git a/__tests__/lib/pluto/repositories/contract-transactions.test.ts b/__tests__/lib/pluto/repositories/contract-transactions.test.ts
+index 38574bf..dda6757 100644
+--- a/__tests__/lib/pluto/repositories/contract-transactions.test.ts
++++ b/__tests__/lib/pluto/repositories/contract-transactions.test.ts
+@@ -5,13 +5,58 @@ import type {
+   Category,
+   MonthlyPeriod,
+   TransactionInput,
++  TransactionWithDetails,
+ } from "@/lib/pluto/types";
+ import { FakeTransactionRepository } from "@/lib/pluto/repositories/fakes";
+ 
++/**
++ * Contrato de ITransactionRepository ÔÇö feature pluto/05e (Lan├ºamento com Data Livre).
++ *
++ * Fonte do contrato (T2): tasks.json (6 acceptanceCriteria) + plan.md ┬ºContratos
++ * Completos + spec.md ┬º┬º4/5/8. O m├¬s de c├ílculo (period_year + period_month) ├® o
++ * dado que a trava de "m├¬s aberto" avalia em criar/editar/excluir e por qual a
++ * lista do m├¬s filtra; a coluna `date` vira apenas atributo de exibi├º├úo e
++ * ordena├º├úo (data livre ÔÇö decis├úo D3).
++ *
++ * Contra o fake/reposit├│rio ATUAL (contrato velho: filtro por intervalo de `date`,
++ * valida├º├úo de m├¬s aberto pela data, update sem no├º├úo de per├¡odo) estes casos
++ * devem falhar por comportamento (RED) ÔÇö nunca por SyntaxError/TS2.
++ */
++
++/** Entrada de cria├º├úo com o m├¬s de c├ílculo (plan.md T3: TransactionInput + per├¡odo). */
++export type PeriodicTransactionInput = TransactionInput & {
++  period_year: number;
++  period_month: number;
++};
++
++/** Registro com o m├¬s de c├ílculo gravado (plan.md T3: TransactionWithDetails + per├¡odo). */
++export type PeriodicTransaction = TransactionWithDetails & {
++  period_year: number;
++  period_month: number;
++};
++
++/**
++ * Campos edit├íveis na edi├º├úo ÔÇö sem campos de per├¡odo (plan.md T3:
++ * TransactionUpdateInput; a edi├º├úo nunca move o lan├ºamento de m├¬s ÔÇö decis├úo D6).
++ * Estrutura local para o teste compilar tamb├®m contra a assinatura antiga
++ * `updateTransaction(id, TransactionInput)` enquanto o contrato velho vigorar.
++ */
++export interface EditableTransactionFields {
++  description: string;
++  amount: number;
++  type: "receita" | "despesa";
++  is_refund: boolean;
++  date: string;
++  category_id: string;
++  account_id: string;
++}
++
+ export interface TransactionContractSeed {
+   categories: Category[];
+   accounts: Account[];
+   monthlyPeriods: MonthlyPeriod[];
++  /** Lan├ºamentos plantados diretamente com m├¬s de c├ílculo (bypassa a valida├º├úo de criar). */
++  transactions?: PeriodicTransaction[];
+ }
+ 
+ export interface TransactionContractBuild {
+@@ -33,7 +78,31 @@ export function defineTransactionRepositoryContract(
+     const EMAIL = "contrato@hestia.com";
+     let ctx: TransactionContractBuild;
+ 
+-    const baseInput: TransactionInput = {
++    /**
++     * Per├¡odos do cen├írio:
++     * - 2026/2, 2026/3 e 2026/4 ABERTOS ÔÇö 2026/4 aberto de prop├│sito: um lan├ºamento
++     *   de m├¬s de c├ílculo 2026/3 com data em abril n├úo pode vazar para abril
++     *   mesmo com abril aberto (spec cen├írio 2);
++     * - 2026/5 ENCERRADO ÔÇö a trava nova deve rejeitar citando 5/2026;
++     * - 2026/6 n├úo existe (per├¡odo inexistente).
++     */
++    const baseSeed = (): TransactionContractSeed => ({
++      categories: [
++        { id: "cat-1", name: "Alimenta├º├úo", type: "despesa", created_at: "2026-01-01T00:00:00Z", created_by: EMAIL },
++      ],
++      accounts: [
++        { id: "acc-1", name: "Ita├║", type: "conta", created_at: null, created_by: null },
++      ],
++      monthlyPeriods: [
++        { id: "per-2026-2", year: 2026, month: 2, status: "aberto", created_at: "2026-02-01T00:00:00Z", created_by: EMAIL },
++        { id: "per-2026-3", year: 2026, month: 3, status: "aberto", created_at: "2026-03-01T00:00:00Z", created_by: EMAIL },
++        { id: "per-2026-4", year: 2026, month: 4, status: "aberto", created_at: "2026-04-01T00:00:00Z", created_by: EMAIL },
++        { id: "per-2026-5", year: 2026, month: 5, status: "encerrado", created_at: "2026-05-01T00:00:00Z", created_by: EMAIL },
++      ],
++    });
++
++    /** M├¬s de c├ílculo padr├úo: 2026/3 (aberto); data padr├úo dentro de mar├ºo. */
++    const baseInput: PeriodicTransactionInput = {
+       description: "Supermercado",
+       amount: 150,
+       type: "despesa",
+@@ -41,83 +110,143 @@ export function defineTransactionRepositoryContract(
+       date: "2026-03-15",
+       category_id: "cat-1",
+       account_id: "acc-1",
++      period_year: 2026,
++      period_month: 3,
+     };
+ 
++    const input = (overrides: Partial<PeriodicTransactionInput>): PeriodicTransactionInput => ({
++      ...baseInput,
++      ...overrides,
++    });
++
++    /** Payload de edi├º├úo sem campos de per├¡odo (TransactionUpdateInput ÔÇö plan.md T3). */
++    const edit = (overrides: Partial<EditableTransactionFields> = {}): EditableTransactionFields => ({
++      description: baseInput.description,
++      amount: baseInput.amount,
++      type: baseInput.type,
++      is_refund: baseInput.is_refund,
++      date: baseInput.date,
++      category_id: baseInput.category_id,
++      account_id: baseInput.account_id,
++      ...overrides,
++    });
++
++    /**
++     * Lan├ºamento plantado com m├¬s de c├ílculo 2026/5 (encerrado) e data em mar├ºo
++     * (m├¬s aberto): sob o contrato velho a valida├º├úo olharia a data e deixaria
++     * passar; sob o novo, a trava rejeita citando 5/2026.
++     */
++    const closedPeriodTx = (): PeriodicTransaction => ({
++      id: "tx-periodo-encerrado",
++      description: "Lan├ºamento de m├¬s de c├ílculo encerrado",
++      amount: 99.9,
++      type: "despesa",
++      is_refund: false,
++      date: "2026-03-15",
++      category_id: "cat-1",
++      account_id: "acc-1",
++      created_at: "2026-05-01T00:00:00Z",
++      created_by: EMAIL,
++      category_name: "Alimenta├º├úo",
++      account_name: "Ita├║",
++      period_year: 2026,
++      period_month: 5,
++    });
++
+     beforeEach(() => {
+       ctx = build();
+       ctx.reset();
+-      ctx.seed({
+-        categories: [
+-          { id: "cat-1", name: "Alimenta├º├úo", type: "despesa", created_at: "2026-01-01T00:00:00Z", created_by: EMAIL },
+-        ],
+-        accounts: [
+-          { id: "acc-1", name: "Ita├║", type: "conta", created_at: null, created_by: null },
+-        ],
+-        monthlyPeriods: [
+-          { id: "per-2026-3", year: 2026, month: 3, status: "aberto", created_at: "2026-03-01T00:00:00Z", created_by: EMAIL },
+-          { id: "per-2026-4", year: 2026, month: 4, status: "encerrado", created_at: "2026-04-01T00:00:00Z", created_by: EMAIL },
+-        ],
+-      });
+-    });
+-
+-    it("create + getByMonth roundtrip preserva campos e enriquece nomes", async () => {
++      ctx.seed(baseSeed());
++    });
++
++    it("create + getByMonth roundtrip preserva campos, grava o m├¬s de c├ílculo e enriquece nomes", async () => {
+       const created = await ctx.repo.createTransaction(baseInput, EMAIL);
+       expect(created.id).toBeTruthy();
+       expect(created.description).toBe("Supermercado");
+       expect(created.category_name).toBe("Alimenta├º├úo");
+       expect(created.account_name).toBe("Ita├║");
+ 
++      const persisted = created as PeriodicTransaction;
++      expect(persisted.period_year).toBe(2026);
++      expect(persisted.period_month).toBe(3);
++
+       const txs = await ctx.repo.getTransactionsByMonth(2026, 3);
+       expect(txs).toHaveLength(1);
+       expect(txs[0].id).toBe(created.id);
+     });
+ 
+-    it("rejeita create em per├¡odo encerrado", async () => {
+-      await expect(
+-        ctx.repo.createTransaction({ ...baseInput, date: "2026-04-10" }, EMAIL)
+-      ).rejects.toThrow(/n├úo est├í aberto/);
++    it("crit├®rio 1: per├¡odo 2026/3 com data 2026-04-10 aparece em getTransactionsByMonth(2026, 3) e N├âO em (2026, 4)", async () => {
++      const created = await ctx.repo.createTransaction(input({ date: "2026-04-10" }), EMAIL);
++
++      const march = await ctx.repo.getTransactionsByMonth(2026, 3);
++      const april = await ctx.repo.getTransactionsByMonth(2026, 4);
++
++      expect(march.map((t) => t.id)).toContain(created.id);
++      expect(april.map((t) => t.id)).not.toContain(created.id);
+     });
+ 
+-    it("rejeita create em per├¡odo inexistente", async () => {
+-      await expect(
+-        ctx.repo.createTransaction({ ...baseInput, date: "2026-05-10" }, EMAIL)
+-      ).rejects.toThrow(/n├úo est├í aberto/);
++    it("crit├®rio 2: aceita create com data de per├¡odo encerrado quando o m├¬s de c├ílculo est├í aberto", async () => {
++      const created = await ctx.repo.createTransaction(input({ date: "2026-05-10" }), EMAIL);
++
++      const persisted = created as PeriodicTransaction;
++      expect(persisted.period_year).toBe(2026);
++      expect(persisted.period_month).toBe(3);
+     });
+ 
+-    it("update altera campos em per├¡odo aberto", async () => {
++    it("crit├®rio 3: update que muda a data para outro m├¬s preserva period_year/period_month originais", async () => {
+       const created = await ctx.repo.createTransaction(baseInput, EMAIL);
+-      const updated = await ctx.repo.updateTransaction(created.id, {
+-        ...baseInput,
+-        description: "Supermercado Editado",
+-        amount: 200,
+-      });
+-      expect(updated.description).toBe("Supermercado Editado");
+-      expect(updated.amount).toBe(200);
++
++      const updated = await ctx.repo.updateTransaction(
++        created.id,
++        edit({ date: "2026-04-20" })
++      );
++
++      expect(updated.date).toBe("2026-04-20");
++      const persisted = updated as PeriodicTransaction;
++      expect(persisted.period_year).toBe(2026);
++      expect(persisted.period_month).toBe(3);
+     });
+ 
+-    it("rejeita update em per├¡odo encerrado", async () => {
+-      const created = await ctx.repo.createTransaction(baseInput, EMAIL);
+-      await expect(
+-        ctx.repo.updateTransaction(created.id, { ...baseInput, date: "2026-04-10" })
+-      ).rejects.toThrow(/n├úo est├í aberto/);
++    it("crit├®rio 4 (criar): rejei├º├úo usa a mensagem atual referenciando o m├¬s de c├ílculo", async () => {
++      const attempt = ctx.repo.createTransaction(
++        input({ period_month: 5, date: "2026-03-15" }),
++        EMAIL
++      );
++      await expect(attempt).rejects.toThrow(/n├úo est├í aberto/);
++      await expect(attempt).rejects.toThrow(/5\/2026/);
+     });
+ 
+-    it("delete remove; delete de id inexistente rejeita", async () => {
+-      const created = await ctx.repo.createTransaction(baseInput, EMAIL);
+-      await ctx.repo.deleteTransaction(created.id);
+-      expect(await ctx.repo.getTransactionsByMonth(2026, 3)).toHaveLength(0);
++    it("crit├®rio 4 (editar): rejei├º├úo usa a mensagem atual referenciando o m├¬s de c├ílculo gravado", async () => {
++      ctx.seed({ ...baseSeed(), transactions: [closedPeriodTx()] });
+ 
+-      await expect(ctx.repo.deleteTransaction("inexistente")).rejects.toThrow();
++      const attempt = ctx.repo.updateTransaction(
++        "tx-periodo-encerrado",
++        edit({ description: "Editado" })
++      );
++      await expect(attempt).rejects.toThrow(/n├úo est├í aberto/);
++      await expect(attempt).rejects.toThrow(/5\/2026/);
++    });
++
++    it("crit├®rio 4 (excluir): rejei├º├úo usa a mensagem atual referenciando o m├¬s de c├ílculo gravado", async () => {
++      ctx.seed({ ...baseSeed(), transactions: [closedPeriodTx()] });
++
++      const attempt = ctx.repo.deleteTransaction("tx-periodo-encerrado");
++      await expect(attempt).rejects.toThrow(/n├úo est├í aberto/);
++      await expect(attempt).rejects.toThrow(/5\/2026/);
++
++      // a rejei├º├úo n├úo remove o lan├ºamento
++      expect(await ctx.repo.getTransactionsByMonth(2026, 5)).toHaveLength(1);
+     });
+ 
+-    it("ordena por data crescente e, em empate, por id crescente", async () => {
+-      await ctx.repo.createTransaction({ ...baseInput, description: "B", date: "2026-03-15" }, EMAIL);
+-      await ctx.repo.createTransaction({ ...baseInput, description: "A", date: "2026-03-15" }, EMAIL);
+-      await ctx.repo.createTransaction({ ...baseInput, description: "C", date: "2026-03-10" }, EMAIL);
++    it("crit├®rio 5: ordena por data crescente com desempate por id, com datas de meses diferentes convivendo", async () => {
++      await ctx.repo.createTransaction(input({ description: "Fatura", date: "2026-04-10" }), EMAIL);
++      await ctx.repo.createTransaction(input({ description: "Antigo A", date: "2026-02-28" }), EMAIL);
++      await ctx.repo.createTransaction(input({ description: "Antigo B", date: "2026-02-28" }), EMAIL);
+ 
+       const txs = await ctx.repo.getTransactionsByMonth(2026, 3);
+       expect(txs).toHaveLength(3);
+-      expect(txs[0].description).toBe("C");
++      expect(txs[0].date).toBe("2026-02-28");
++      expect(txs[2].date).toBe("2026-04-10");
+       for (let i = 1; i < txs.length; i++) {
+         expect(txs[i].date.localeCompare(txs[i - 1].date)).toBeGreaterThanOrEqual(0);
+         if (txs[i].date === txs[i - 1].date) {
+@@ -126,10 +255,31 @@ export function defineTransactionRepositoryContract(
+       }
+     });
+ 
+-    it("filtra estritamente pelo m├¬s consultado", async () => {
+-      await ctx.repo.createTransaction(baseInput, EMAIL);
+-      expect(await ctx.repo.getTransactionsByMonth(2026, 4)).toHaveLength(0);
+-      expect(await ctx.repo.getTransactionsByMonth(2026, 3)).toHaveLength(1);
++    it("rejeita create quando o m├¬s de c├ílculo n├úo existe", async () => {
++      const attempt = ctx.repo.createTransaction(
++        input({ period_month: 6, date: "2026-03-15" }),
++        EMAIL
++      );
++      await expect(attempt).rejects.toThrow(/n├úo est├í aberto/);
++      await expect(attempt).rejects.toThrow(/6\/2026/);
++    });
++
++    it("update altera campos em per├¡odo aberto sem tocar no m├¬s de c├ílculo", async () => {
++      const created = await ctx.repo.createTransaction(baseInput, EMAIL);
++      const updated = await ctx.repo.updateTransaction(
++        created.id,
++        edit({ description: "Supermercado Editado", amount: 200 })
++      );
++      expect(updated.description).toBe("Supermercado Editado");
++      expect(updated.amount).toBe(200);
++    });
++
++    it("delete remove; delete de id inexistente rejeita", async () => {
++      const created = await ctx.repo.createTransaction(baseInput, EMAIL);
++      await ctx.repo.deleteTransaction(created.id);
++      expect(await ctx.repo.getTransactionsByMonth(2026, 3)).toHaveLength(0);
++
++      await expect(ctx.repo.deleteTransaction("inexistente")).rejects.toThrow();
+     });
+   });
+ }
+diff --git a/__tests__/lib/pluto/repositories/fake-transaction.test.ts b/__tests__/lib/pluto/repositories/fake-transaction.test.ts
+index 4aa0e3c..9364ff3 100644
+--- a/__tests__/lib/pluto/repositories/fake-transaction.test.ts
++++ b/__tests__/lib/pluto/repositories/fake-transaction.test.ts
+@@ -37,6 +37,8 @@ describe("FakeTransactionRepository", () => {
+           date: "2026-03-15",
+           category_id: "cat-1",
+           account_id: "acc-1",
++          period_year: 2026,
++          period_month: 3,
+           created_at: "2026-03-15T10:00:00Z",
+           created_by: "joao@email.com",
+           category_name: "Alimenta├º├úo",
+@@ -51,15 +53,17 @@ describe("FakeTransactionRepository", () => {
+     expect(txs[0].category_name).toBe("Alimenta├º├úo");
+   });
+ 
+-  it("deve lan├ºar erro se o m├¬s da data da transa├º├úo n├úo estiver aberto", async () => {
++  it("deve lan├ºar erro se o m├¬s de c├ílculo da transa├º├úo n├úo estiver aberto", async () => {
+     const input: TransactionInput = {
+       description: "Aluguel",
+       amount: 1200,
+       type: "despesa",
+       is_refund: false,
+-      date: "2026-04-10", // April is closed
++      date: "2026-04-10",
+       category_id: "cat-1",
+       account_id: "acc-1",
++      period_year: 2026,
++      period_month: 4, // April is closed
+     };
+ 
+     await expect(repo.createTransaction(input, "joao@email.com")).rejects.toThrow(
+@@ -76,6 +80,8 @@ describe("FakeTransactionRepository", () => {
+       date: "2026-03-20",
+       category_id: "cat-2",
+       account_id: "acc-2",
++      period_year: 2026,
++      period_month: 3,
+     };
+ 
+     const result = await repo.createTransaction(input, "joao@email.com");
+@@ -99,6 +105,8 @@ describe("FakeTransactionRepository", () => {
+         date: "2026-03-15",
+         category_id: "cat-1",
+         account_id: "acc-1",
++        period_year: 2026,
++        period_month: 3,
+       },
+       "joao@email.com"
+     );
+@@ -129,22 +137,31 @@ describe("FakeTransactionRepository", () => {
+         date: "2026-03-15",
+         category_id: "cat-1",
+         account_id: "acc-1",
++        period_year: 2026,
++        period_month: 3,
+       },
+       "joao@email.com"
+     );
+ 
+-    // Try to update with date in closed month
++    // Close the month (a trava avalia o m├¬s de c├ílculo gravado, n├úo a data)
++    repo.seed({
++      monthlyPeriods: [
++        { id: "m-1", year: 2026, month: 3, status: "encerrado", created_at: "2026-03-01T00:00:00Z", created_by: "test@test.com" },
++      ],
++      transactions: [created],
++    });
++
+     await expect(
+       repo.updateTransaction(created.id, {
+         description: "Supermercado Editado",
+         amount: 200,
+         type: "despesa",
+         is_refund: false,
+-        date: "2026-04-15", // April is closed
++        date: "2026-03-15",
+         category_id: "cat-1",
+         account_id: "acc-1",
+       })
+-    ).rejects.toThrow("N├úo ├® poss├¡vel alterar transa├º├Áes no per├¡odo 4/2026 pois ele n├úo est├í aberto.");
++    ).rejects.toThrow("N├úo ├® poss├¡vel alterar transa├º├Áes no per├¡odo 3/2026 pois ele n├úo est├í aberto.");
+   });
+ 
+   it("deve excluir transa├º├úo com sucesso se o m├¬s estiver aberto", async () => {
+@@ -157,6 +174,8 @@ describe("FakeTransactionRepository", () => {
+         date: "2026-03-15",
+         category_id: "cat-1",
+         account_id: "acc-1",
++        period_year: 2026,
++        period_month: 3,
+       },
+       "joao@email.com"
+     );
+@@ -178,6 +197,8 @@ describe("FakeTransactionRepository", () => {
+         date: "2026-03-15",
+         category_id: "cat-1",
+         account_id: "acc-1",
++        period_year: 2026,
++        period_month: 3,
+       },
+       "joao@email.com"
+     );
+@@ -205,6 +226,8 @@ describe("FakeTransactionRepository", () => {
+         date: "2026-03-15",
+         category_id: "cat-1",
+         account_id: "acc-1",
++        period_year: 2026,
++        period_month: 3,
+       },
+       "joao@email.com"
+     );
+@@ -217,6 +240,8 @@ describe("FakeTransactionRepository", () => {
+         date: "2026-03-15",
+         category_id: "cat-1",
+         account_id: "acc-1",
++        period_year: 2026,
++        period_month: 3,
+       },
+       "joao@email.com"
+     );
+@@ -229,6 +254,8 @@ describe("FakeTransactionRepository", () => {
+         date: "2026-03-10",
+         category_id: "cat-1",
+         account_id: "acc-1",
++        period_year: 2026,
++        period_month: 3,
+       },
+       "joao@email.com"
+     );
+diff --git a/app/pluto/transactions/page.tsx b/app/pluto/transactions/page.tsx
+index a24f56b..73f449f 100644
+--- a/app/pluto/transactions/page.tsx
++++ b/app/pluto/transactions/page.tsx
+@@ -23,7 +23,7 @@ export default function TransactionsPage() {
+     db, selectedYear, setSelectedYear, selectedMonth, setSelectedMonth, userEmail,
+     availableYears, openMonths, transactions, budgetItems, accounts, categories,
+     checklistItems, globalChecklistItems, setChecklistItems, loading, errorMsg,
+-    setErrorMsg, fetchData, minDateStr, maxDateStr,
++    setErrorMsg, fetchData,
+   } = usePlutoData();
+ 
+   const {
+@@ -37,7 +37,8 @@ export default function TransactionsPage() {
+     db,
+     userEmail,
+     categories,
+-    minDateStr,
++    selectedYear,
++    selectedMonth,
+     fetchData,
+     setErrorMsg,
+   });
+@@ -164,10 +165,6 @@ export default function TransactionsPage() {
+         txSuccessMsg={modals.txSuccessMsg}
+         accounts={accounts}
+         categories={categories}
+-        selectedYear={selectedYear}
+-        selectedMonth={selectedMonth}
+-        minDateStr={minDateStr}
+-        maxDateStr={maxDateStr}
+         descInputRef={modals.descInputRef}
+         onClose={modals.handleCloseTxModal}
+         onSave={modals.handleSaveTransaction}
+diff --git a/components/pluto/TransactionModal.stories.tsx b/components/pluto/TransactionModal.stories.tsx
+index 803ab90..7b250e4 100644
+--- a/components/pluto/TransactionModal.stories.tsx
++++ b/components/pluto/TransactionModal.stories.tsx
+@@ -24,10 +24,6 @@ const baseArgs = {
+   txSuccessMsg: null,
+   accounts: storyAccounts,
+   categories: storyCategories,
+-  selectedYear: 2026,
+-  selectedMonth: 3,
+-  minDateStr: "2026-03-01",
+-  maxDateStr: "2026-03-31",
+   descInputRef: createRef<HTMLInputElement>(),
+   onClose: fn(),
+   onSave: fn(),
+diff --git a/components/pluto/TransactionModal.tsx b/components/pluto/TransactionModal.tsx
+index 6ea7b4f..6fa69c3 100644
+--- a/components/pluto/TransactionModal.tsx
++++ b/components/pluto/TransactionModal.tsx
+@@ -4,7 +4,6 @@ import type { MutableRefObject } from "react";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+-import { MONTH_NAMES } from "@/lib/pluto/types";
+ import type {
+   Account,
+   Category,
+@@ -25,10 +24,6 @@ export interface TransactionModalProps {
+   txSuccessMsg: string | null;
+   accounts: Account[];
+   categories: Category[];
+-  selectedYear: number;
+-  selectedMonth: number;
+-  minDateStr: string;
+-  maxDateStr: string;
+   descInputRef: MutableRefObject<HTMLInputElement | null>;
+   onClose: () => void;
+   onSave: (e: React.FormEvent) => void;
+@@ -60,10 +55,6 @@ export default function TransactionModal({
+   txSuccessMsg,
+   accounts,
+   categories,
+-  selectedYear,
+-  selectedMonth,
+-  minDateStr,
+-  maxDateStr,
+   descInputRef,
+   onClose,
+   onSave,
+@@ -96,13 +87,11 @@ export default function TransactionModal({
+         <form onSubmit={onSave} className="flex flex-col gap-4">
+           <div className="flex flex-col gap-1.5">
+             <Label htmlFor="tx-date" className="text-xs font-semibold">
+-              Data (Limitada a {MONTH_NAMES[selectedMonth - 1]}/{selectedYear})
++              Data
+             </Label>
+             <Input
+               id="tx-date"
+               type="date"
+-              min={minDateStr}
+-              max={maxDateStr}
+               value={date}
+               onChange={(e) => onDateChange(e.target.value)}
+               required
+diff --git a/components/pluto/storybook.fixtures.ts b/components/pluto/storybook.fixtures.ts
+index 239c8e1..ea130bb 100644
+--- a/components/pluto/storybook.fixtures.ts
++++ b/components/pluto/storybook.fixtures.ts
+@@ -30,6 +30,8 @@ export const storyTransactions: TransactionWithDetails[] = [
+     date: "2026-03-15",
+     category_id: "cat-1",
+     account_id: "acc-1",
++    period_year: 2026,
++    period_month: 3,
+     created_at: "2026-03-15T00:00:00Z",
+     created_by: "story@hestia.com",
+     category_name: "Alimenta├º├úo",
+@@ -44,6 +46,8 @@ export const storyTransactions: TransactionWithDetails[] = [
+     date: "2026-03-05",
+     category_id: "cat-2",
+     account_id: "acc-1",
++    period_year: 2026,
++    period_month: 3,
+     created_at: "2026-03-05T00:00:00Z",
+     created_by: "story@hestia.com",
+     category_name: "Sal├írio",
+diff --git a/lib/pluto/hooks/usePlutoData.ts b/lib/pluto/hooks/usePlutoData.ts
+index 7c5ecce..836a32f 100644
+--- a/lib/pluto/hooks/usePlutoData.ts
++++ b/lib/pluto/hooks/usePlutoData.ts
+@@ -20,7 +20,6 @@ import type {
+   MonthlyPeriod,
+   TransactionWithDetails,
+ } from "@/lib/pluto/types";
+-import { getMonthRange } from "@/lib/pluto/types";
+ import { parseErrorMessage } from "@/lib/utils";
+ 
+ export interface PlutoData {
+@@ -43,8 +42,6 @@ export interface PlutoData {
+   errorMsg: string | null;
+   setErrorMsg: (msg: string | null) => void;
+   fetchData: () => Promise<void>;
+-  minDateStr: string;
+-  maxDateStr: string;
+ }
+ 
+ /**
+@@ -179,9 +176,6 @@ export function usePlutoData(): PlutoData {
+     return loadForSelection(selectionRef.current.year, selectionRef.current.month);
+   }, [loadForSelection]);
+ 
+-  // Delimitadores do Date Input para travar dentro do M├¬s e Ano selecionados
+-  const { startDate: minDateStr, endDate: maxDateStr } = getMonthRange(selectedYear, selectedMonth);
+-
+   return {
+     db,
+     selectedYear,
+@@ -202,7 +196,5 @@ export function usePlutoData(): PlutoData {
+     errorMsg,
+     setErrorMsg,
+     fetchData,
+-    minDateStr,
+-    maxDateStr,
+   };
+ }
+diff --git a/lib/pluto/hooks/useTransactionForm.ts b/lib/pluto/hooks/useTransactionForm.ts
+index c509115..b37b945 100644
+--- a/lib/pluto/hooks/useTransactionForm.ts
++++ b/lib/pluto/hooks/useTransactionForm.ts
+@@ -13,6 +13,7 @@ import type {
+   Category,
+   TransactionWithDetails,
+ } from "@/lib/pluto/types";
++import { getMonthRange } from "@/lib/pluto/types";
+ import { parseErrorMessage } from "@/lib/utils";
+ import type { TransactionModalPrefill } from "./useTransactionModals";
+ 
+@@ -20,7 +21,8 @@ export interface UseTransactionFormOptions {
+   db: IDatabaseClient;
+   userEmail: string;
+   categories: Category[];
+-  minDateStr: string;
++  selectedYear: number;
++  selectedMonth: number;
+   fetchData: () => Promise<void>;
+   setErrorMsg: (msg: string | null) => void;
+ }
+@@ -34,7 +36,8 @@ export function useTransactionForm({
+   db,
+   userEmail,
+   categories,
+-  minDateStr,
++  selectedYear,
++  selectedMonth,
+   fetchData,
+   setErrorMsg,
+ }: UseTransactionFormOptions) {
+@@ -56,7 +59,9 @@ export function useTransactionForm({
+   // Abertura do Modal de Transa├º├úo pr├®-fixado para a conta escolhida (Nova Transa├º├úo)
+   const handleOpenTxModal = (acc: Account) => {
+     setEditingTransaction(null);
+-    setDate(minDateStr);
++    // Regra 2/3 (05e): o calend├írio abre no primeiro dia do m├¬s da tela; o
++    // m├¬s de c├ílculo gravado no create ├® o da tela, independente da data.
++    setDate(getMonthRange(selectedYear, selectedMonth).startDate);
+     setDescription("");
+     setAmount("");
+     setType("despesa");
+@@ -155,6 +160,8 @@ export function useTransactionForm({
+             date,
+             account_id: accountId,
+             category_id: categoryId,
++            period_year: selectedYear,
++            period_month: selectedMonth,
+           },
+           userEmail
+         );
+@@ -207,6 +214,8 @@ export function useTransactionForm({
+           date,
+           account_id: accountId,
+           category_id: categoryId,
++          period_year: selectedYear,
++          period_month: selectedMonth,
+         },
+         userEmail
+       );
+diff --git a/lib/pluto/hooks/useTransactionModals.ts b/lib/pluto/hooks/useTransactionModals.ts
+index f3d4dfe..527a244 100644
+--- a/lib/pluto/hooks/useTransactionModals.ts
++++ b/lib/pluto/hooks/useTransactionModals.ts
+@@ -22,7 +22,8 @@ export interface TransactionModalsDeps {
+   db: IDatabaseClient;
+   userEmail: string;
+   categories: Category[];
+-  minDateStr: string;
++  selectedYear: number;
++  selectedMonth: number;
+   fetchData: () => Promise<void>;
+   setErrorMsg: (msg: string | null) => void;
+ }
+@@ -80,9 +81,9 @@ export interface TransactionModals {
+  * consumidores permanecem id├¬nticos.
+  */
+ export function useTransactionModals(deps: TransactionModalsDeps): TransactionModals {
+-  const { db, userEmail, categories, minDateStr, fetchData, setErrorMsg } = deps;
++  const { db, userEmail, categories, selectedYear, selectedMonth, fetchData, setErrorMsg } = deps;
+ 
+-  const txForm = useTransactionForm({ db, userEmail, categories, minDateStr, fetchData, setErrorMsg });
++  const txForm = useTransactionForm({ db, userEmail, categories, selectedYear, selectedMonth, fetchData, setErrorMsg });
+   const accForm = useAccountForm({ db, userEmail, fetchData, setErrorMsg });
+   const delFlow = useDeleteTransaction({ db, fetchData, setErrorMsg });
+ 
+diff --git a/lib/pluto/repositories/fakes/fakeTransactionRepository.ts b/lib/pluto/repositories/fakes/fakeTransactionRepository.ts
+index b537b41..8c3eeaa 100644
+--- a/lib/pluto/repositories/fakes/fakeTransactionRepository.ts
++++ b/lib/pluto/repositories/fakes/fakeTransactionRepository.ts
+@@ -1,6 +1,7 @@
+ import type { ITransactionRepository } from "../interfaces";
+ import type {
+   TransactionInput,
++  TransactionUpdateInput,
+   TransactionWithDetails,
+   Category,
+   Account,
+@@ -70,11 +71,10 @@ export class FakeTransactionRepository implements ITransactionRepository {
+   }
+ 
+   async getTransactionsByMonth(year: number, month: number): Promise<TransactionWithDetails[]> {
+-    const { startDate, endDate } = getMonthRange(year, month);
+     const results: TransactionWithDetails[] = [];
+ 
+     for (const tx of this.transactions.values()) {
+-      if (tx.date >= startDate && tx.date <= endDate) {
++      if (tx.period_year === year && tx.period_month === month) {
+         results.push(tx);
+       }
+     }
+@@ -88,8 +88,7 @@ export class FakeTransactionRepository implements ITransactionRepository {
+   }
+ 
+   async createTransaction(input: TransactionInput, email: string): Promise<TransactionWithDetails> {
+-    const { year, month } = parseYearMonth(input.date);
+-    this.checkPeriodOpen(year, month, "registrar");
++    this.checkPeriodOpen(input.period_year, input.period_month, "registrar");
+ 
+     const id = this.generateId();
+     const now = new Date().toISOString();
+@@ -106,6 +105,8 @@ export class FakeTransactionRepository implements ITransactionRepository {
+       date: input.date,
+       category_id: input.category_id,
+       account_id: input.account_id,
++      period_year: input.period_year,
++      period_month: input.period_month,
+       created_at: now,
+       created_by: email,
+       category_name: category?.name ?? "Sem categoria",
+@@ -116,15 +117,14 @@ export class FakeTransactionRepository implements ITransactionRepository {
+     return transaction;
+   }
+ 
+-  async updateTransaction(id: string, input: TransactionInput): Promise<TransactionWithDetails> {
+-    const { year, month } = parseYearMonth(input.date);
+-    this.checkPeriodOpen(year, month, "alterar");
+-
++  async updateTransaction(id: string, input: TransactionUpdateInput): Promise<TransactionWithDetails> {
+     const existing = this.transactions.get(id);
+     if (!existing) {
+       throw new Error("Transa├º├úo n├úo encontrada.");
+     }
+ 
++    this.checkPeriodOpen(existing.period_year, existing.period_month, "alterar");
++
+     const category = this.categories.get(input.category_id);
+     const account = this.accounts.get(input.account_id);
+ 
+@@ -151,21 +151,8 @@ export class FakeTransactionRepository implements ITransactionRepository {
+       throw new Error("Transa├º├úo n├úo encontrada.");
+     }
+ 
+-    const { year, month } = parseYearMonth(existing.date);
+-    this.checkPeriodOpen(year, month, "excluir");
++    this.checkPeriodOpen(existing.period_year, existing.period_month, "excluir");
+ 
+     this.transactions.delete(id);
+   }
+ }
+-
+-function getMonthRange(year: number, month: number): { startDate: string; endDate: string } {
+-  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+-  const endDay = new Date(year, month, 0).getDate();
+-  const endDate = `${year}-${String(month).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`;
+-  return { startDate, endDate };
+-}
+-
+-function parseYearMonth(date: string): { year: number; month: number } {
+-  const [year, month] = date.split("-").map(Number);
+-  return { year, month };
+-}
+\ No newline at end of file
+diff --git a/lib/pluto/repositories/interfaces.ts b/lib/pluto/repositories/interfaces.ts
+index e6590dd..fd6b705 100644
+--- a/lib/pluto/repositories/interfaces.ts
++++ b/lib/pluto/repositories/interfaces.ts
+@@ -1,5 +1,6 @@
+ import type {
+   TransactionInput,
++  TransactionUpdateInput,
+   TransactionWithDetails,
+   Category,
+   Account,
+@@ -13,7 +14,7 @@ import type {
+ export interface ITransactionRepository {
+   getTransactionsByMonth(year: number, month: number): Promise<TransactionWithDetails[]>;
+   createTransaction(input: TransactionInput, email: string): Promise<TransactionWithDetails>;
+-  updateTransaction(id: string, input: TransactionInput): Promise<TransactionWithDetails>;
++  updateTransaction(id: string, input: TransactionUpdateInput): Promise<TransactionWithDetails>;
+   deleteTransaction(id: string): Promise<void>;
+ }
+ 
+diff --git a/lib/pluto/repositories/transactions.ts b/lib/pluto/repositories/transactions.ts
+index bdd9366..792eb2b 100644
+--- a/lib/pluto/repositories/transactions.ts
++++ b/lib/pluto/repositories/transactions.ts
+@@ -1,16 +1,18 @@
+ import { IDatabaseClient } from "@/lib/shared/database";
+-import { getMonthRange, parseYearMonth } from "../utils";
+-import type { TransactionInput, TransactionWithDetails, TransactionRow } from "../types";
++import type {
++  TransactionInput,
++  TransactionUpdateInput,
++  TransactionWithDetails,
++  TransactionRow,
++} from "../types";
+ 
+-export type { TransactionInput, TransactionWithDetails, TransactionRow };
++export type { TransactionInput, TransactionUpdateInput, TransactionWithDetails, TransactionRow };
+ 
+ export async function getTransactionsByMonth(
+   db: IDatabaseClient,
+   year: number,
+   month: number
+ ): Promise<TransactionWithDetails[]> {
+-  const { startDate, endDate } = getMonthRange(year, month);
+-
+   const { data, error } = await db
+     .from<TransactionRow>("transactions")
+     .select(`
+@@ -18,8 +20,8 @@ export async function getTransactionsByMonth(
+       categories ( name ),
+       financial_accounts ( name )
+     `)
+-    .gte("date", startDate)
+-    .lte("date", endDate)
++    .eq("period_year", year)
++    .eq("period_month", month)
+     .order("date", { ascending: true })
+     .order("id", { ascending: true });
+ 
+@@ -37,20 +39,18 @@ export async function createTransaction(
+   input: TransactionInput,
+   email: string
+ ): Promise<TransactionWithDetails> {
+-  const { year, month } = parseYearMonth(input.date);
+-
+   const { data: period, error: periodError } = await db
+     .from<{ status: string }>("monthly_periods")
+     .select("status")
+-    .eq("year", year)
+-    .eq("month", month)
++    .eq("year", input.period_year)
++    .eq("month", input.period_month)
+     .maybeSingle();
+ 
+   if (periodError) throw periodError;
+ 
+   if (!period || period.status !== "aberto") {
+     throw new Error(
+-      `N├úo ├® poss├¡vel registrar transa├º├Áes no per├¡odo ${month}/${year} pois ele n├úo est├í aberto.`
++      `N├úo ├® poss├¡vel registrar transa├º├Áes no per├¡odo ${input.period_month}/${input.period_year} pois ele n├úo est├í aberto.`
+     );
+   }
+ 
+@@ -64,6 +64,8 @@ export async function createTransaction(
+       date: input.date,
+       category_id: input.category_id,
+       account_id: input.account_id,
++      period_year: input.period_year,
++      period_month: input.period_month,
+       created_by: email,
+     })
+     .select(`
+@@ -87,22 +89,29 @@ export async function createTransaction(
+ export async function updateTransaction(
+   db: IDatabaseClient,
+   id: string,
+-  input: TransactionInput
++  input: TransactionUpdateInput
+ ): Promise<TransactionWithDetails> {
+-  const { year, month } = parseYearMonth(input.date);
++  const { data: existing, error: fetchError } = await db
++    .from<TransactionRow>("transactions")
++    .select("id, period_year, period_month")
++    .eq("id", id)
++    .maybeSingle();
++
++  if (fetchError) throw fetchError;
++  if (!existing) throw new Error("Transa├º├úo n├úo encontrada.");
+ 
+   const { data: period, error: periodError } = await db
+     .from<{ status: string }>("monthly_periods")
+     .select("status")
+-    .eq("year", year)
+-    .eq("month", month)
++    .eq("year", existing.period_year)
++    .eq("month", existing.period_month)
+     .maybeSingle();
+ 
+   if (periodError) throw periodError;
+ 
+   if (!period || period.status !== "aberto") {
+     throw new Error(
+-      `N├úo ├® poss├¡vel alterar transa├º├Áes no per├¡odo ${month}/${year} pois ele n├úo est├í aberto.`
++      `N├úo ├® poss├¡vel alterar transa├º├Áes no per├¡odo ${existing.period_month}/${existing.period_year} pois ele n├úo est├í aberto.`
+     );
+   }
+ 
+@@ -142,31 +151,28 @@ export async function deleteTransaction(
+ ): Promise<void> {
+   const { data: tx, error: fetchError } = await db
+     .from<TransactionRow>("transactions")
+-    .select("id, date")
++    .select("id, period_year, period_month")
+     .eq("id", id)
+     .single();
+ 
+   if (fetchError) throw fetchError;
+   if (!tx) throw new Error("Transa├º├úo n├úo encontrada.");
+ 
+-  const { year, month } = parseYearMonth(tx.date as string);
+-
+   const { data: period, error: periodError } = await db
+     .from<{ status: string }>("monthly_periods")
+     .select("status")
+-    .eq("year", year)
+-    .eq("month", month)
++    .eq("year", tx.period_year)
++    .eq("month", tx.period_month)
+     .maybeSingle();
+ 
+   if (periodError) throw periodError;
+ 
+   if (!period || period.status !== "aberto") {
+     throw new Error(
+-      `N├úo ├® poss├¡vel excluir transa├º├Áes no per├¡odo ${month}/${year} pois ele n├úo est├í aberto.`
++      `N├úo ├® poss├¡vel excluir transa├º├Áes no per├¡odo ${tx.period_month}/${tx.period_year} pois ele n├úo est├í aberto.`
+     );
+   }
+ 
+   const { error } = await db.from<TransactionRow>("transactions").delete().eq("id", id);
+   if (error) throw error;
+ }
+-
+diff --git a/lib/pluto/types.ts b/lib/pluto/types.ts
+index 5a45d76..0e49977 100644
+--- a/lib/pluto/types.ts
++++ b/lib/pluto/types.ts
+@@ -38,6 +38,8 @@ export interface TransactionRow {
+   date: string;
+   category_id: string;
+   account_id: string;
++  period_year: number;
++  period_month: number;
+   created_at: string;
+   created_by: string;
+   categories?: { name: string } | null;
+@@ -109,7 +111,25 @@ export interface TransactionInput {
+   amount: number;
+   type: "receita" | "despesa";
+   is_refund: boolean;
+-  date: string; // YYYY-MM-DD
++  date: string; // YYYY-MM-DD ÔÇö data do cart├úo/extrato; n├úo determina o m├¬s de c├ílculo
++  category_id: string;
++  account_id: string;
++  /** M├¬s de c├ílculo (ano) ÔÇö fixado no m├¬s da tela onde o form foi aberto. */
++  period_year: number;
++  /** M├¬s de c├ílculo (m├¬s 1-12) ÔÇö fixado no m├¬s da tela onde o form foi aberto. */
++  period_month: number;
++}
++
++/**
++ * Campos edit├íveis na edi├º├úo ÔÇö SEM campos de per├¡odo: a edi├º├úo n├úo move o
++ * lan├ºamento de m├¬s nem estruturalmente (decis├úo D6 da feature pluto/05e).
++ */
++export interface TransactionUpdateInput {
++  description: string;
++  amount: number;
++  type: "receita" | "despesa";
++  is_refund: boolean;
++  date: string; // YYYY-MM-DD ÔÇö data livre; n├úo altera o m├¬s de c├ílculo gravado
+   category_id: string;
+   account_id: string;
+ }
+@@ -141,6 +161,8 @@ export interface TransactionWithDetails {
+   date: string;
+   category_id: string;
+   account_id: string;
++  period_year: number;
++  period_month: number;
+   created_at: string;
+   created_by: string;
+   category_name: string;
+@@ -208,19 +230,6 @@ export interface BudgetItem {
+ // TIPOS DE FORMUL├üRIO/UI (FormData types - dados vindos do frontend)
+ // ============================================================================
+ 
+-export interface CreateTransactionFormData {
+-  description: string;
+-  amount: number;
+-  type: "receita" | "despesa";
+-  is_refund: boolean;
+-  date: string;
+-  account_name: string;
+-  account_type: "conta" | "cartao";
+-  category_name: string;
+-}
+-
+-export type UpdateTransactionFormData = Partial<CreateTransactionFormData>;
+-
+ export interface CreateChecklistItemFormData {
+   day: number;
+   description: string;
+@@ -244,18 +253,6 @@ export type UpdateBudgetItemFormData = Partial<CreateBudgetItemFormData>;
+ // TIPOS DE SERVI├çO/DTO (Service/DTO types - entrada dos services)
+ // ============================================================================
+ 
+-export interface CreateTransactionDTO {
+-  description: string;
+-  amount: number;
+-  type: "receita" | "despesa";
+-  is_refund: boolean;
+-  date: string;
+-  category_id: string;
+-  account_id: string;
+-}
+-
+-export type UpdateTransactionDTO = Partial<CreateTransactionDTO>;
+-
+ export interface CreateChecklistItemDTO {
+   day: number;
+   description: string;
+diff --git a/utils/migrations/migration-0018-pluto-lancamento-data-livre.sql b/utils/migrations/migration-0018-pluto-lancamento-data-livre.sql
+new file mode 100644
+index 0000000..cc61e32
+--- /dev/null
++++ b/utils/migrations/migration-0018-pluto-lancamento-data-livre.sql
+@@ -0,0 +1,69 @@
++-- Migracao Pluto 05e (2026-11-01): Lancamento com Data Livre (mes de calculo)
++-- Separa "data do lancamento" de "mes de calculo": as colunas period_year e
++-- period_month nascem obrigatorias em public.transactions, com backfill
++-- retroativo copiando ano/mes da propria coluna date (decisao D8 ÔÇö saldos
++-- numericos permanecem identicos, pois hoje ja se soma pelo mes da data).
++-- Nenhuma coluna ou tabela existente e removida ou renomeada; nenhuma
++-- politica RLS nova em transactions; nenhum indice novo (tabela domestica,
++-- YAGNI; reavaliar apenas se o volume crescer).
++-- Incremental: nunca edita migracao aplicada (0001-0017).
++
++-- 1. Criacao das colunas (ANULAVEIS: o backfill precisa rodar antes da
++--    obrigatoriedade)
++ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS period_year integer;
++ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS period_month integer;
++
++-- 2. Backfill retroativo (passo 2 ANTES do SET NOT NULL do passo 3):
++--    copia ano/mes da propria coluna date com conversao explicita para
++--    integer; protege apenas linhas ainda sem periodo calculado (idempotente)
++UPDATE public.transactions
++SET period_year = EXTRACT(YEAR FROM date)::integer,
++    period_month = EXTRACT(MONTH FROM date)::integer
++WHERE period_year IS NULL OR period_month IS NULL;
++
++-- 3. Obrigatoriedade somente apos o backfill
++ALTER TABLE public.transactions ALTER COLUMN period_year SET NOT NULL;
++ALTER TABLE public.transactions ALTER COLUMN period_month SET NOT NULL;
++
++-- Rollback em texto (aplicavel somente onde a 0018 ainda nao foi promovida;
++-- nunca editar nem renomear arquivo aplicado ÔÇö correcao exige arquivo novo):
++-- ALTER TABLE public.transactions DROP COLUMN IF EXISTS period_year;
++-- ALTER TABLE public.transactions DROP COLUMN IF EXISTS period_month;
++
++-- Verificacao pos-aplicacao (consultas documentadas; saldos preservados):
++-- Contagem de linhas de transactions com periodo de calculo nulo deve ser zero:
++--   SELECT count(*) FROM public.transactions
++--   WHERE period_year IS NULL OR period_month IS NULL;  -- deve ser 0 (zero)
++-- Comparacao da soma de amount agrupada por ano/mes de date ANTES e DEPOIS do
++-- backfill deve mostrar diferenca zero (extrato antes da migracao vs. agrupado
++-- por period_year/period_month depois da migracao):
++--   ANTES:  SELECT EXTRACT(YEAR FROM date), EXTRACT(MONTH FROM date),
++--                  sum(amount) FROM public.transactions
++--           GROUP BY 1, 2;
++--   DEPOIS: SELECT period_year, period_month, sum(amount)
++--           FROM public.transactions GROUP BY 1, 2;
++-- A diferenca entre as duas somas por mes deve ser zero.
++
++-- 4. Self-bootstrap idempotente de public.schema_migrations
++CREATE TABLE IF NOT EXISTS public.schema_migrations (
++    id SERIAL PRIMARY KEY,
++    spec_id VARCHAR(50) NOT NULL,
++    spec_name TEXT NOT NULL,
++    script_name TEXT NOT NULL UNIQUE,
++    executed_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
++    executed_by TEXT
++);
++
++ALTER TABLE public.schema_migrations ENABLE ROW LEVEL SECURITY;
++DROP POLICY IF EXISTS "Permitir tudo para autenticados" ON public.schema_migrations;
++CREATE POLICY "Permitir tudo para autenticados" ON public.schema_migrations
++    FOR ALL TO authenticated USING (true) WITH CHECK (true);
++
++-- 5. Registro de Auditoria de Migracao em schema_migrations
++INSERT INTO public.schema_migrations (spec_id, spec_name, script_name, executed_by)
++VALUES (
++  'pluto-05e',
++  'Lan├ºamento com Data Livre',
++  'migration-0018-pluto-lancamento-data-livre.sql',
++  'joaopsroberto@gmail.com'
++) ON CONFLICT (script_name) DO NOTHING;

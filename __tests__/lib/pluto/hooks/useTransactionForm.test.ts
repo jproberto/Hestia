@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useTransactionForm } from "@/lib/pluto/hooks/useTransactionForm";
+import {
+  useTransactionForm,
+  type UseTransactionFormOptions,
+} from "@/lib/pluto/hooks/useTransactionForm";
 import {
   createTransaction,
   updateTransaction,
@@ -31,20 +34,29 @@ const EMAIL = "teste@hestia.com";
 const acc: Account = { id: "a1", name: "Itaú", type: "conta", created_at: null, created_by: null };
 const categories = [{ id: "c1", name: "Alimentação", type: "despesa" }] as never;
 
-function renderForm() {
+// Contrato 05e (plan §Hooks): as opções do formulário recebem o mês da tela
+// (selectedYear/selectedMonth) e NÃO mais os delimitadores minDateStr/maxDateStr.
+function makeFormOptions() {
   const fetchData = vi.fn(() => Promise.resolve());
   const setErrorMsg = vi.fn();
-  const hook = renderHook(() =>
-    useTransactionForm({
-      db: {} as IDatabaseClient,
-      userEmail: EMAIL,
-      categories,
-      minDateStr: "2026-03-01",
-      fetchData,
-      setErrorMsg,
-    })
-  );
-  return { ...hook, fetchData, setErrorMsg };
+  return {
+    db: {} as IDatabaseClient,
+    userEmail: EMAIL,
+    categories,
+    selectedYear: 2026,
+    selectedMonth: 3,
+    fetchData,
+    setErrorMsg,
+  };
+}
+
+function renderForm(options: ReturnType<typeof makeFormOptions> = makeFormOptions()) {
+  // Cast ponte: o contrato novo (selectedYear/selectedMonth) ainda não existe
+  // nos tipos do hook atual — é exatamente o que o RED desta task fixa; o
+  // cast desaparece em termos de efeito quando o hook migrar na T5.
+  const hookOptions = options as unknown as UseTransactionFormOptions;
+  const hook = renderHook(() => useTransactionForm(hookOptions));
+  return { ...hook, options, fetchData: options.fetchData, setErrorMsg: options.setErrorMsg };
 }
 
 function fillValid(result: { current: ReturnType<typeof useTransactionForm> }) {
@@ -57,6 +69,18 @@ function fillValid(result: { current: ReturnType<typeof useTransactionForm> }) {
   });
 }
 
+function openEditModal(result: { current: ReturnType<typeof useTransactionForm> }) {
+  act(() => {
+    result.current.handleOpenEditModal({
+      id: "t1", description: "Supermercado", amount: 200, type: "despesa",
+      is_refund: false, date: "2026-03-15", category_id: "c1", account_id: "a1",
+      period_year: 2026, period_month: 3,
+      category_name: "Alimentação", account_name: "Itaú",
+      created_at: "2026-03-15T00:00:00Z", created_by: EMAIL,
+    });
+  });
+}
+
 describe("useTransactionForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -66,8 +90,15 @@ describe("useTransactionForm", () => {
     vi.mocked(updateTransaction).mockResolvedValue({} as never);
   });
 
-  it("abre nova transação pré-fixando conta e data mínima", () => {
-    const { result } = renderForm();
+  it("abre nova transação com a data no primeiro dia do mês da tela (opções sem minDateStr)", () => {
+    const options = makeFormOptions();
+
+    // Contrato 05e: as opções carregam o mês da tela e NÃO contêm minDateStr.
+    expect(Object.keys(options)).not.toContain("minDateStr");
+    expect(options.selectedYear).toBe(2026);
+    expect(options.selectedMonth).toBe(3);
+
+    const { result } = renderForm(options);
 
     act(() => {
       result.current.handleOpenTxModal(acc);
@@ -75,8 +106,21 @@ describe("useTransactionForm", () => {
 
     expect(result.current.isTxModalOpen).toBe(true);
     expect(result.current.accountInput).toBe("Itaú");
+    // Regra 2 / cenário 10: tela em 2026-03 abre com 2026-03-01.
     expect(result.current.date).toBe("2026-03-01");
     expect(result.current.editingTransaction).toBeNull();
+  });
+
+  it("abre nova transação no primeiro dia do mês da tela escolhido (selectedMonth 11)", () => {
+    const options = { ...makeFormOptions(), selectedMonth: 11 };
+
+    const { result } = renderForm(options);
+
+    act(() => {
+      result.current.handleOpenTxModal(acc);
+    });
+
+    expect(result.current.date).toBe("2026-11-01");
   });
 
   it("recusa salvar com campos vazios", async () => {
@@ -118,30 +162,58 @@ describe("useTransactionForm", () => {
     expect(fetchData).toHaveBeenCalled();
   });
 
-  it("edita transação existente via updateTransaction", async () => {
+  it("cria com period_year/period_month do mês da tela mesmo quando a data digitada é de outro mês", async () => {
     const { result } = renderForm();
+    fillValid(result);
 
+    // Regra 3 / cenário 1: fatura datada de outro mês lançada na tela de 2026-03.
     act(() => {
-      result.current.handleOpenEditModal({
-        id: "t1", description: "Supermercado", amount: 200, type: "despesa",
-        is_refund: false, date: "2026-03-15", category_id: "c1", account_id: "a1",
-        category_name: "Alimentação", account_name: "Itaú",
-        created_at: "2026-03-15T00:00:00Z", created_by: EMAIL,
-      });
+      result.current.setDate("2026-04-10");
     });
+
+    await act(async () => {
+      await result.current.handleSaveTransaction({ preventDefault: () => {} } as never);
+    });
+
+    expect(createTransaction).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        date: "2026-04-10",
+        period_year: 2026,
+        period_month: 3,
+      }),
+      EMAIL
+    );
+  });
+
+  it("edita transação existente sem reenviar period_year/period_month no payload", async () => {
+    const { result } = renderForm();
+    openEditModal(result);
+
     expect(result.current.editingTransaction?.id).toBe("t1");
 
     await act(async () => {
       await result.current.handleSaveTransaction({ preventDefault: () => {} } as never);
     });
 
-    expect(updateTransaction).toHaveBeenCalledWith(expect.anything(), "t1", expect.objectContaining({ amount: 200 }));
+    expect(updateTransaction).toHaveBeenCalledTimes(1);
+    const payload = vi.mocked(updateTransaction).mock.calls[0][2];
+    // Regra 8 / decisão D6: a edição não move o lançamento de mês — o payload
+    // é TransactionUpdateInput, sem campos de período.
+    expect(payload).not.toHaveProperty("period_year");
+    expect(payload).not.toHaveProperty("period_month");
+    expect(payload).toMatchObject({ amount: 200, date: "2026-03-15" });
     expect(createTransaction).not.toHaveBeenCalled();
   });
 
-  it("salvar e adicionar mantém aberto com mensagem de sucesso", async () => {
+  it("salvar e adicionar outro mantém aberto, preserva a data digitada e zera os campos do 05d", async () => {
     const { result } = renderForm();
     fillValid(result);
+
+    // Regra 10 / cenário 9: data digitada de outro mês permanece após salvar.
+    act(() => {
+      result.current.setDate("2026-04-10");
+    });
 
     await act(async () => {
       await result.current.handleSaveTransactionAndAddAnother({ preventDefault: () => {} } as never);
@@ -150,7 +222,11 @@ describe("useTransactionForm", () => {
     expect(createTransaction).toHaveBeenCalled();
     expect(result.current.isTxModalOpen).toBe(true);
     expect(result.current.txSuccessMsg).toBe("Transação salva com sucesso!");
+    expect(result.current.date).toBe("2026-04-10");
     expect(result.current.description).toBe("");
+    expect(result.current.amount).toBe("");
+    expect(result.current.categoryInput).toBe("");
+    expect(result.current.isRefund).toBe(false);
   });
 
   it("prefill do checklist resolve nome da categoria", () => {

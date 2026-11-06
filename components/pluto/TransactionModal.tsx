@@ -4,7 +4,6 @@ import type { MutableRefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MONTH_NAMES } from "@/lib/pluto/types";
 import type {
   Account,
   Category,
@@ -25,10 +24,6 @@ export interface TransactionModalProps {
   txSuccessMsg: string | null;
   accounts: Account[];
   categories: Category[];
-  selectedYear: number;
-  selectedMonth: number;
-  minDateStr: string;
-  maxDateStr: string;
   descInputRef: MutableRefObject<HTMLInputElement | null>;
   onClose: () => void;
   onSave: (e: React.FormEvent) => void;
@@ -60,10 +55,6 @@ export default function TransactionModal({
   txSuccessMsg,
   accounts,
   categories,
-  selectedYear,
-  selectedMonth,
-  minDateStr,
-  maxDateStr,
   descInputRef,
   onClose,
   onSave,
@@ -96,13 +87,11 @@ export default function TransactionModal({
         <form onSubmit={onSave} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="tx-date" className="text-xs font-semibold">
-              Data (Limitada a {MONTH_NAMES[selectedMonth - 1]}/{selectedYear})
+              Data
             </Label>
             <Input
               id="tx-date"
               type="date"
-              min={minDateStr}
-              max={maxDateStr}
               value={date}
               onChange={(e) => onDateChange(e.target.value)}
               required

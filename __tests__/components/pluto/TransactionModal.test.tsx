@@ -18,10 +18,7 @@ function makeProps(overrides: Partial<TransactionModalProps> = {}): TransactionM
     txSuccessMsg: null,
     accounts: [{ id: "a1", name: "Itaú", type: "conta", created_at: null, created_by: null }],
     categories: [{ id: "c1", name: "Alimentação", type: "despesa", created_at: "x", created_by: "y" }],
-    selectedYear: 2026,
-    selectedMonth: 3,
-    minDateStr: "2026-03-01",
-    maxDateStr: "2026-03-31",
+    // 05e: o modal não recebe limites de data nem mês da tela (data livre).
     descInputRef: createRef<HTMLInputElement>(),
     onClose: vi.fn(),
     onSave: vi.fn((e: React.FormEvent) => e.preventDefault()),
@@ -67,6 +64,8 @@ describe("TransactionModal", () => {
             date: "2026-03-15",
             category_id: "c1",
             account_id: "a1",
+            period_year: 2026,
+            period_month: 3,
             created_at: "x",
             created_by: "y",
             category_name: "Alimentação",
@@ -89,6 +88,16 @@ describe("TransactionModal", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(props.onClose).toHaveBeenCalled();
+  });
+
+  it("campo de data livre: rótulo exato 'Data' e input sem atributos min/max", () => {
+    render(<TransactionModal {...makeProps()} />);
+
+    // Regra 1 da spec: sem min/max no campo e rótulo simples "Data".
+    const dateInput = screen.getByLabelText("Data") as HTMLInputElement;
+    expect(dateInput).toHaveAttribute("type", "date");
+    expect(dateInput).not.toHaveAttribute("min");
+    expect(dateInput).not.toHaveAttribute("max");
   });
 
   it("mostra checkbox de reembolso só para despesa", () => {

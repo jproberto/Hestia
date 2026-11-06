@@ -117,7 +117,10 @@ jobs:
             echo "::error::POSTGRES_URL vazia após supabase status -o env; abortando antes do psql."
             exit 1
           fi
-          for f in $(ls utils/migrations/migration-*.sql | sort); do
+          # Scripts congelados migration-feature-* (equivalentes aos inteiros 0001-0006)
+          # precedem os migration-NNNN-*: a sort lexicográfica pura colocaria
+          # "feature" depois de "0018" ('f' > '0') e quebraria o replay do zero.
+          for f in $(ls utils/migrations/migration-feature-*.sql | sort) $(ls utils/migrations/migration-[0-9]*.sql | sort); do
             echo "Aplicando $f..."
             psql "$POSTGRES_URL" -v ON_ERROR_STOP=1 -f "$f"
           done

@@ -1,0 +1,150 @@
+{
+  "feature": "05e-lancamento-data-livre",
+  "date": "2026-11-05",
+  "status": "passed",
+  "byTask": {
+    "T0": "passed",
+    "T1": "passed",
+    "T2": "passed",
+    "T3": "passed",
+    "T4": "passed",
+    "T5": "passed",
+    "T6": "passed",
+    "T7": "passed",
+    "T8": "passed"
+  },
+  "commands": {
+    "suite": "npm run test (vitest run)",
+    "coverage": "npx vitest run --coverage (reporter v8)",
+    "tsc": "npx tsc --noEmit",
+    "lint": "npm run lint (eslint .)"
+  },
+  "summary": {
+    "failed": 0,
+    "passed": 1886,
+    "skipped": 0,
+    "testFiles": 141,
+    "coverage": 85.3,
+    "coverageStatements": 85.3,
+    "coverageBranches": 84.18,
+    "coverageFunctions": 76.76
+  },
+  "coverage": {
+    "lines": 85.3,
+    "statements": 85.3,
+    "branches": 84.18,
+    "functions": 76.76,
+    "reporter": "v8",
+    "note": "Execucao da T8 (2026-11-05, npx vitest run --coverage): agregacao recalculada a partir de coverage/coverage-final.json (s/b/f/l): statements 11613/13614 = 85.30, branches 2512/2984 = 84.18, functions 535/697 = 76.76, lines 11613/13614 = 85.30 (146 arquivos medidos; o reporter textual exibe functions 76.75 por arredondamento truncado). Gates lines >= 80 e branches >= 80 atendidos. Média das quatro métricas: 82.89."
+  },
+  "coverageByFeatureFile": {
+    "components/pluto/TransactionModal.tsx": "93.57% stmts (160/171), 75.00% branch (18/24), 44.44% funcs (4/9) — modal sem limites de data coberto pelos casos de rótulo 'Data' e ausência de min/max",
+    "app/pluto/transactions/page.tsx": "100% stmts (164/164), 100% branch (14/14), 100% funcs (1/1)",
+    "lib/pluto/hooks/useTransactionForm.ts": "94.81% stmts (201/212), 68.75% branch (22/32), 100% funcs (7/7) — abertura no 1º dia do mês da tela, period no create e update sem período",
+    "lib/pluto/hooks/usePlutoData.ts": "91.67% stmts (110/120), 65.85% branch (27/41), 100% funcs (2/2) — sem minDateStr/maxDateStr",
+    "lib/pluto/hooks/useTransactionModals.ts": "100% stmts (49/49), 100% branch (1/1), 100% funcs (1/1)",
+    "lib/pluto/repositories/fakes/fakeTransactionRepository.ts": "98.35% stmts (119/121), 86.49% branch (32/37), 100% funcs (10/10) — espelho do contrato (fakes-only, decisão 57)",
+    "lib/pluto/repositories/transactions.ts": "0.00% stmts (0/135), 100% branch (1/1), 100% funcs (1/1) — regime fakes-only pré-existente (decisão 57: contratos rodam sobre a fake; ver gaps)",
+    "lib/shared/date.ts": "82.35% stmts (28/34), 50.00% branch (2/4), 66.67% funcs (2/3) — getMonthRange/parseYearMonth",
+    "lib/pluto/types.ts": "45.45% stmts (5/11) — só tipos + 1 função (legado, pré-existente)"
+  },
+  "featureTestCounts": {
+    "__tests__/lib/pluto/migration-0018.test.ts": "9 testes (T0: conteúdo da migração 0018)",
+    "__tests__/lib/pluto/repositories/contract-transactions.test.ts": "11 testes (T2: mês de cálculo, data livre, edição que não move mês, ordenação)",
+    "__tests__/lib/pluto/repositories/fake-transaction.test.ts": "8 testes (T3)",
+    "__tests__/lib/pluto/db/transactions.test.ts": "7 testes (T3)",
+    "__tests__/lib/pluto/hooks/useTransactionForm.test.ts": "9 testes (T4/T5)",
+    "__tests__/lib/pluto/hooks/usePlutoData.test.ts": "5 testes (T4/T5: sem minDateStr/maxDateStr)",
+    "__tests__/lib/pluto/hooks/useTransactionModals.test.ts": "8 testes (T4/T5)",
+    "__tests__/components/pluto/TransactionModal.test.tsx": "6 testes (T6/T7/T8: makeProps sem limites, rótulo 'Data', input sem min/max)",
+    "__tests__/app/pluto/critical-flows.test.tsx": "5 testes (T6: sem 'Limitada a', period do mês da tela)",
+    "__tests__/app/pluto/transactions/page.test.tsx": "16 testes (T6)",
+    "__tests__/app/pluto/transactions-page.test.tsx": "8 testes (T6)",
+    "__tests__/app/pluto/transactions-checklist.test.tsx": "1 teste (T6: prefill do checklist)",
+    "__tests__/app/pluto/transactions-checklist-overflow.test.tsx": "6 testes (regressão)"
+  },
+  "gates": {
+    "suiteZeroFailures": {
+      "actual": "141 files passed (141), 1886 tests passed (1886), 0 failed, 0 skipped",
+      "expected": "0 falhas (summary.failed == 0)",
+      "status": "passed",
+      "note": "npm run test literal (exit 0, 45.96s) e npx vitest run --coverage (exit 0, 50.56s) — mesma seleção de 141 arquivos/1886 testes nas duas execuções em 2026-11-05. Baseline develop (milon 06, 2026-10-29): 140 arquivos / 1871 testes — esta feature acrescenta 1 arquivo (migration-0018.test.ts) e 15 testes, sem nenhuma falha."
+    },
+    "coverageLinesGte80": {
+      "actual": 85.3,
+      "expected": "lines >= 80",
+      "status": "passed",
+      "note": "11613/13614 statements/lines na agregação do coverage-final.json (T8, 2026-11-05)"
+    },
+    "coverageBranchesGte80": {
+      "actual": 84.18,
+      "expected": "branches >= 80",
+      "status": "passed",
+      "note": "2512/2984 na agregação do coverage-final.json (T8, 2026-11-05)"
+    },
+    "testReportPresent": {
+      "actual": "test-report.json presente no FEATURE_DIR com summary.failed 0 e summary.coverage 85.3",
+      "expected": "failed == 0 e coverage >= 80",
+      "status": "passed",
+      "note": "critério 3 da T8; mesmas condições do gate REVIEW do guardian (falha se failed > 0 ou coverage < 80)"
+    },
+    "testScenariosManualOnly": {
+      "actual": "test-scenarios.md com 18 cenários Dado/Quando/Então; busca de '[Automatizado]' = 0 matches e de '__tests__/' = 0 matches",
+      "expected": "sem tag [Automatizado] e sem path __tests__/",
+      "status": "passed",
+      "note": "critério 4 da T8 (gate anti-mistura do guardian para REVIEW, decisão 2026-10-16); cobertura automatizada referenciada só via test-report.json"
+    },
+    "tscExit0": {
+      "actual": "npx tsc --noEmit → exit 0 (2026-11-05, após remoção das props residuais selectedYear/selectedMonth do makeProps)",
+      "expected": "exit 0",
+      "status": "passed",
+      "note": "AC5 da T8; o TS2353 residual apontado na delegação (makeProps com props inexistentes em TransactionModalProps) foi corrigido em __tests__/components/pluto/TransactionModal.test.tsx"
+    },
+    "lintExit0": {
+      "actual": "npm run lint → exit 0, 0 errors, 73 warnings",
+      "expected": "exit 0 (0 errors)",
+      "status": "passed",
+      "note": "73 warnings = baseline das features anteriores (milon 06: idênticas 73) — nenhuma warning nova; nenhuma warning aponta para arquivo da feature"
+    },
+    "ac1T6MakePropsSemLimites": {
+      "actual": "busca por 'selectedYear|selectedMonth|minDateStr|maxDateStr' em __tests__/components/pluto/TransactionModal.test.tsx = 0 matches",
+      "expected": "makeProps sem minDateStr/maxDateStr/selectedYear/selectedMonth",
+      "status": "passed",
+      "note": "AC1 literal da T6 verificado após o ajuste residual da T8"
+    }
+  },
+  "outputs": {
+    "suiteTail": "Test Files 141 passed (141) | Tests 1886 passed (1886) | Duration 45.96s (npm run test) e 50.56s (com cobertura)",
+    "coverageTail": "All files 85.3 stmts | 84.18 branch | 76.76 funcs | 85.3 lines (reporter v8)",
+    "tscTail": "npx tsc --noEmit exit 0",
+    "lintTail": "npm run lint exit 0 — 0 errors, 73 warnings (baseline)"
+  },
+  "spotChecks": {
+    "migration-0018": "__tests__/lib/pluto/migration-0018.test.ts — 9 testes do conteúdo da migração (ADD COLUMN anulável, backfill ANTES do SET NOT NULL com conversão explícita, auditoria com script_name idêntico + ON CONFLICT DO NOTHING, self-bootstrap antes do INSERT, rollback, consultas de verificação, negativos) — verdes na suite completa",
+    "contrato-transacoes": "__tests__/lib/pluto/repositories/contract-transactions.test.ts — 11 testes: período 2026/3 com data 2026-04-10 aparece no mês 3 e não no 4; data de mês encerrado aceita quando o período de cálculo está aberto; update preserva period_*; rejeição referencia o mês de cálculo (/não está aberto/); ordenação por data crescente com desempate por id — verdes na suite completa",
+    "hooks": "useTransactionForm (9) abre com primeiro dia do mês da tela e envia period_* no create / TransactionUpdateInput no update; usePlutoData (5) sem minDateStr/maxDateStr; useTransactionModals (8) repassa selectedYear/selectedMonth — verdes na suite completa",
+    "ui-modal": "__tests__/components/pluto/TransactionModal.test.tsx — 6 testes: makeProps sem limites, rótulo exato 'Data', input type=date sem min/max, fluxos 05d intactos — verdes na suite completa",
+    "pagina": "app/pluto/transactions/page.tsx 100% de cobertura; transactions/page.test.tsx (16) + transactions-page.test.tsx (8) + critical-flows.test.tsx (5) sem 'Limitada a' e com period do mês da tela nos mocks — verdes na suite completa",
+    "checklist": "__tests__/app/pluto/transactions-checklist.test.tsx (1) + transactions-checklist-overflow.test.tsx (6) — prefill sem conflito de limites — verdes na suite completa"
+  },
+  "gaps": [
+    "Functions global 76.76% segue abaixo de 80 (idem milon 06 com 76.68) — os gates desta casa (e o guardian) exigem lines e branches >= 80, ambos atendidos (85.30 e 84.18).",
+    "lib/pluto/repositories/transactions.ts com 0% de statements (0/135): regime fakes-only pré-existente do módulo (decisão 57 — contract-*.test.ts rodam só sobre a fake; ver AGENTS.md). O agregado legado lib/pluto/repositories está em 17.55% nesta execução (17.66% no baseline da milon 06) — arquivos legados fora do escopo, não bloqueiam.",
+    "@vitest/coverage-v8 não está declarado em package.json nem no package-lock.json (busca por 'coverage-v8' = 0 nos dois; resolve em node_modules na versão 2.1.9) — mesma situação documentada pela milon 06; instalado --no-save apenas para medir. package.json e package-lock.json intactos no diff (git status limpo para os dois). Se a cobertura virar gate recorrente, Atena/humano podem decidir declará-lo.",
+    "Migração 0018 é aplicada pelo humano no Supabase (padrão do módulo — nunca automatizada); o cenário de backfill sem mudança de saldo está declarado como manual em test-scenarios.md, com a verificação de contagem de nulos = 0 e soma por mês antes/depois com diferença zero.",
+    "Cenários não exercitáveis em jsdom (calendário nativo do navegador, navegação real de meses, estado real do banco pós-migração) ficam declarados em test-scenarios.md — sem tentativa de automatização falsa.",
+    "Minos tocou somente artefatos de teste nesta T8: __tests__/components/pluto/TransactionModal.test.tsx (remoção das 2 props residuais selectedYear/selectedMonth do makeProps — ajuste de teste, sem produção), test-scenarios.md e este test-report.json. Nenhum arquivo de produção foi alterado por Minos; nenhum commit foi feito (Caronte atua depois)."
+  ],
+  "filesTouchedByMinosT8": [
+    "__tests__/components/pluto/TransactionModal.test.tsx",
+    ".agents/modules/pluto/05e-lancamento-data-livre/test-scenarios.md",
+    ".agents/modules/pluto/05e-lancamento-data-livre/test-report.json"
+  ],
+  "executed": [
+    "npx tsc --noEmit (exit 0 — após o ajuste do makeProps)",
+    "npm run test (141 files, 1886 tests, 0 failed, exit 0)",
+    "npx vitest run --coverage (141 files, 1886 tests, 0 failed; lines 85.30, branches 84.18, functions 76.76)",
+    "npm run lint (exit 0, 0 errors, 73 warnings baseline)",
+    "verificações de gate: makeProps sem minDateStr/maxDateStr/selectedYear/selectedMonth (0 matches); test-scenarios.md sem '[Automatizado]' e sem '__tests__/' (0 matches cada)"
+  ]
+}

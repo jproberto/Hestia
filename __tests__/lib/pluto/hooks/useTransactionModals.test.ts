@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useTransactionModals } from "@/lib/pluto/hooks/useTransactionModals";
+import {
+  useTransactionModals,
+  type TransactionModalsDeps,
+} from "@/lib/pluto/hooks/useTransactionModals";
 import {
   createTransaction,
   updateTransaction,
@@ -33,17 +36,28 @@ vi.mock("@/lib/pluto/db/categories", () => ({
 const EMAIL = "teste@hestia.com";
 const acc: Account = { id: "a1", name: "Itaú", type: "conta", created_at: null, created_by: null };
 
-function renderModals() {
-  return renderHook(() =>
-    useTransactionModals({
-      db: {} as IDatabaseClient,
-      userEmail: EMAIL,
-      categories: [],
-      minDateStr: "2026-03-01",
-      fetchData: vi.fn(() => Promise.resolve()),
-      setErrorMsg: vi.fn(),
-    })
-  );
+// Contrato 05e (plan §Hooks): TransactionModalsDeps recebe o mês da tela
+// (selectedYear/selectedMonth) em vez dos delimitadores minDateStr/maxDateStr
+// e repassa ao useTransactionForm.
+function makeDeps() {
+  const fetchData = vi.fn(() => Promise.resolve());
+  const setErrorMsg = vi.fn();
+  return {
+    db: {} as IDatabaseClient,
+    userEmail: EMAIL,
+    categories: [] as never[],
+    selectedYear: 2026,
+    selectedMonth: 3,
+    fetchData,
+    setErrorMsg,
+  };
+}
+
+function renderModals(deps: ReturnType<typeof makeDeps> = makeDeps()) {
+  // Cast ponte: o contrato novo das deps ainda não existe nos tipos do hook
+  // atual — é exatamente o que o RED desta task fixa.
+  const hookDeps = deps as unknown as TransactionModalsDeps;
+  return { ...renderHook(() => useTransactionModals(hookDeps)), deps };
 }
 
 describe("useTransactionModals", () => {
@@ -51,8 +65,15 @@ describe("useTransactionModals", () => {
     vi.clearAllMocks();
   });
 
-  it("abre o modal de nova transação pré-fixando conta e data mínima", () => {
-    const { result } = renderModals();
+  it("abre o modal de nova transação pré-fixando conta e a data do mês da tela (deps sem minDateStr)", () => {
+    const deps = makeDeps();
+
+    // Contrato 05e: as deps carregam o mês da tela e NÃO contêm minDateStr.
+    expect(Object.keys(deps)).not.toContain("minDateStr");
+    expect(deps.selectedYear).toBe(2026);
+    expect(deps.selectedMonth).toBe(3);
+
+    const { result } = renderModals(deps);
     expect(result.current.isTxModalOpen).toBe(false);
 
     act(() => {
@@ -61,6 +82,7 @@ describe("useTransactionModals", () => {
 
     expect(result.current.isTxModalOpen).toBe(true);
     expect(result.current.accountInput).toBe("Itaú");
+    // Regra 2 / cenário 10: tela em 2026-03 abre com 2026-03-01.
     expect(result.current.date).toBe("2026-03-01");
     expect(result.current.editingTransaction).toBeNull();
   });
@@ -78,6 +100,8 @@ describe("useTransactionModals", () => {
         date: "2026-03-15",
         category_id: "c1",
         account_id: "a1",
+        period_year: 2026,
+        period_month: 3,
         created_at: "x",
         created_by: EMAIL,
         category_name: "Alimentação",
@@ -106,17 +130,8 @@ describe("useTransactionModals", () => {
   });
 
   it("salva nova transação e recarrega", async () => {
-    const fetchData = vi.fn(() => Promise.resolve());
-    const { result } = renderHook(() =>
-      useTransactionModals({
-        db: {} as IDatabaseClient,
-        userEmail: EMAIL,
-        categories: [],
-        minDateStr: "2026-03-01",
-        fetchData,
-        setErrorMsg: vi.fn(),
-      })
-    );
+    const deps = makeDeps();
+    const { result } = renderModals(deps);
     vi.mocked(getOrCreateAccount).mockResolvedValue("a1");
     vi.mocked(getOrCreateCategory).mockResolvedValue("c1");
     vi.mocked(createTransaction).mockResolvedValue({} as never);
@@ -137,7 +152,7 @@ describe("useTransactionModals", () => {
 
     expect(createTransaction).toHaveBeenCalled();
     expect(result.current.isTxModalOpen).toBe(false);
-    expect(fetchData).toHaveBeenCalled();
+    expect(deps.fetchData).toHaveBeenCalled();
   });
 
   it("salva edição via updateTransaction", async () => {
@@ -156,6 +171,8 @@ describe("useTransactionModals", () => {
         date: "2026-03-15",
         category_id: "c1",
         account_id: "a1",
+        period_year: 2026,
+        period_month: 3,
         created_at: "x",
         created_by: EMAIL,
         category_name: "Y",
@@ -172,17 +189,8 @@ describe("useTransactionModals", () => {
   });
 
   it("exclusão confirma, fecha e recarrega", async () => {
-    const fetchData = vi.fn(() => Promise.resolve());
-    const { result } = renderHook(() =>
-      useTransactionModals({
-        db: {} as IDatabaseClient,
-        userEmail: EMAIL,
-        categories: [],
-        minDateStr: "2026-03-01",
-        fetchData,
-        setErrorMsg: vi.fn(),
-      })
-    );
+    const deps = makeDeps();
+    const { result } = renderModals(deps);
 
     act(() => {
       result.current.handleOpenDeleteModal({
@@ -194,6 +202,8 @@ describe("useTransactionModals", () => {
         date: "2026-03-15",
         category_id: "c1",
         account_id: "a1",
+        period_year: 2026,
+        period_month: 3,
         created_at: "x",
         created_by: EMAIL,
         category_name: "Y",
@@ -208,21 +218,12 @@ describe("useTransactionModals", () => {
 
     expect(deleteTransaction).toHaveBeenCalledWith(expect.anything(), "t1");
     expect(result.current.isDeleteModalOpen).toBe(false);
-    expect(fetchData).toHaveBeenCalled();
+    expect(deps.fetchData).toHaveBeenCalled();
   });
 
   it("conta: abre, salva e fecha", async () => {
-    const fetchData = vi.fn(() => Promise.resolve());
-    const { result } = renderHook(() =>
-      useTransactionModals({
-        db: {} as IDatabaseClient,
-        userEmail: EMAIL,
-        categories: [],
-        minDateStr: "2026-03-01",
-        fetchData,
-        setErrorMsg: vi.fn(),
-      })
-    );
+    const deps = makeDeps();
+    const { result } = renderModals(deps);
     vi.mocked(getOrCreateAccount).mockResolvedValue("a9");
 
     act(() => {
@@ -240,7 +241,7 @@ describe("useTransactionModals", () => {
 
     expect(getOrCreateAccount).toHaveBeenCalledWith(expect.anything(), "Nubank", EMAIL, "conta");
     expect(result.current.isAccModalOpen).toBe(false);
-    expect(fetchData).toHaveBeenCalled();
+    expect(deps.fetchData).toHaveBeenCalled();
   });
 
   it("prefill do checklist preenche o formulário", () => {

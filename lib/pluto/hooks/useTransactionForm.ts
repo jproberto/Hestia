@@ -13,6 +13,7 @@ import type {
   Category,
   TransactionWithDetails,
 } from "@/lib/pluto/types";
+import { getMonthRange } from "@/lib/pluto/types";
 import { parseErrorMessage } from "@/lib/utils";
 import type { TransactionModalPrefill } from "./useTransactionModals";
 
@@ -20,7 +21,8 @@ export interface UseTransactionFormOptions {
   db: IDatabaseClient;
   userEmail: string;
   categories: Category[];
-  minDateStr: string;
+  selectedYear: number;
+  selectedMonth: number;
   fetchData: () => Promise<void>;
   setErrorMsg: (msg: string | null) => void;
 }
@@ -34,7 +36,8 @@ export function useTransactionForm({
   db,
   userEmail,
   categories,
-  minDateStr,
+  selectedYear,
+  selectedMonth,
   fetchData,
   setErrorMsg,
 }: UseTransactionFormOptions) {
@@ -56,7 +59,9 @@ export function useTransactionForm({
   // Abertura do Modal de Transação pré-fixado para a conta escolhida (Nova Transação)
   const handleOpenTxModal = (acc: Account) => {
     setEditingTransaction(null);
-    setDate(minDateStr);
+    // Regra 2/3 (05e): o calendário abre no primeiro dia do mês da tela; o
+    // mês de cálculo gravado no create é o da tela, independente da data.
+    setDate(getMonthRange(selectedYear, selectedMonth).startDate);
     setDescription("");
     setAmount("");
     setType("despesa");
@@ -155,6 +160,8 @@ export function useTransactionForm({
             date,
             account_id: accountId,
             category_id: categoryId,
+            period_year: selectedYear,
+            period_month: selectedMonth,
           },
           userEmail
         );
@@ -207,6 +214,8 @@ export function useTransactionForm({
           date,
           account_id: accountId,
           category_id: categoryId,
+          period_year: selectedYear,
+          period_month: selectedMonth,
         },
         userEmail
       );

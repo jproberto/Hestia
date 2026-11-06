@@ -1,6 +1,7 @@
 import type { ITransactionRepository } from "../interfaces";
 import type {
   TransactionInput,
+  TransactionUpdateInput,
   TransactionWithDetails,
   Category,
   Account,
@@ -70,11 +71,10 @@ export class FakeTransactionRepository implements ITransactionRepository {
   }
 
   async getTransactionsByMonth(year: number, month: number): Promise<TransactionWithDetails[]> {
-    const { startDate, endDate } = getMonthRange(year, month);
     const results: TransactionWithDetails[] = [];
 
     for (const tx of this.transactions.values()) {
-      if (tx.date >= startDate && tx.date <= endDate) {
+      if (tx.period_year === year && tx.period_month === month) {
         results.push(tx);
       }
     }
@@ -88,8 +88,7 @@ export class FakeTransactionRepository implements ITransactionRepository {
   }
 
   async createTransaction(input: TransactionInput, email: string): Promise<TransactionWithDetails> {
-    const { year, month } = parseYearMonth(input.date);
-    this.checkPeriodOpen(year, month, "registrar");
+    this.checkPeriodOpen(input.period_year, input.period_month, "registrar");
 
     const id = this.generateId();
     const now = new Date().toISOString();
@@ -106,6 +105,8 @@ export class FakeTransactionRepository implements ITransactionRepository {
       date: input.date,
       category_id: input.category_id,
       account_id: input.account_id,
+      period_year: input.period_year,
+      period_month: input.period_month,
       created_at: now,
       created_by: email,
       category_name: category?.name ?? "Sem categoria",
@@ -116,14 +117,13 @@ export class FakeTransactionRepository implements ITransactionRepository {
     return transaction;
   }
 
-  async updateTransaction(id: string, input: TransactionInput): Promise<TransactionWithDetails> {
-    const { year, month } = parseYearMonth(input.date);
-    this.checkPeriodOpen(year, month, "alterar");
-
+  async updateTransaction(id: string, input: TransactionUpdateInput): Promise<TransactionWithDetails> {
     const existing = this.transactions.get(id);
     if (!existing) {
       throw new Error("Transação não encontrada.");
     }
+
+    this.checkPeriodOpen(existing.period_year, existing.period_month, "alterar");
 
     const category = this.categories.get(input.category_id);
     const account = this.accounts.get(input.account_id);
@@ -151,21 +151,8 @@ export class FakeTransactionRepository implements ITransactionRepository {
       throw new Error("Transação não encontrada.");
     }
 
-    const { year, month } = parseYearMonth(existing.date);
-    this.checkPeriodOpen(year, month, "excluir");
+    this.checkPeriodOpen(existing.period_year, existing.period_month, "excluir");
 
     this.transactions.delete(id);
   }
-}
-
-function getMonthRange(year: number, month: number): { startDate: string; endDate: string } {
-  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-  const endDay = new Date(year, month, 0).getDate();
-  const endDate = `${year}-${String(month).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`;
-  return { startDate, endDate };
-}
-
-function parseYearMonth(date: string): { year: number; month: number } {
-  const [year, month] = date.split("-").map(Number);
-  return { year, month };
 }

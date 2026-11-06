@@ -8,8 +8,15 @@ import {
   defineTransactionRepositoryContract,
   type TransactionContractSeed,
 } from "../lib/pluto/repositories/contract-transactions.test";
-import { AliasIds, getIntegrationDb } from "./supabase";
-import { SupabaseTransactionRepository, createGate, seedAccounts, seedCategories, seedPeriods } from "./repositories";
+import { AliasIds, getIntegrationDb, resetDatabase } from "./supabase";
+import {
+  SupabaseTransactionRepository,
+  createGate,
+  seedAccounts,
+  seedCategories,
+  seedPeriods,
+  seedTransactions,
+} from "./repositories";
 
 let db: IDatabaseClient;
 let ids: AliasIds;
@@ -31,9 +38,17 @@ defineTransactionRepositoryContract("Supabase (integration)", () => {
     reset,
     seed: (data: TransactionContractSeed) => {
       seed(async () => {
+        // Semântica do fake: seed substitui o estado (reset antes de plantar) —
+        // contracts podem chamar seed mais de uma vez no mesmo teste.
+        await resetDatabase();
         await seedCategories(ids, data.categories);
         await seedAccounts(ids, data.accounts);
         await seedPeriods(ids, data.monthlyPeriods);
+        // Plantio direto (T2): lançamentos de mês de cálculo encerrado não
+        // passam pela trava do create — FKs exigem categorias/contas acima.
+        if (data.transactions?.length) {
+          await seedTransactions(ids, data.transactions);
+        }
       });
     },
   };

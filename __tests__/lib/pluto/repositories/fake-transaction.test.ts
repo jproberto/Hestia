@@ -37,6 +37,8 @@ describe("FakeTransactionRepository", () => {
           date: "2026-03-15",
           category_id: "cat-1",
           account_id: "acc-1",
+          period_year: 2026,
+          period_month: 3,
           created_at: "2026-03-15T10:00:00Z",
           created_by: "joao@email.com",
           category_name: "Alimentação",
@@ -51,15 +53,17 @@ describe("FakeTransactionRepository", () => {
     expect(txs[0].category_name).toBe("Alimentação");
   });
 
-  it("deve lançar erro se o mês da data da transação não estiver aberto", async () => {
+  it("deve lançar erro se o mês de cálculo da transação não estiver aberto", async () => {
     const input: TransactionInput = {
       description: "Aluguel",
       amount: 1200,
       type: "despesa",
       is_refund: false,
-      date: "2026-04-10", // April is closed
+      date: "2026-04-10",
       category_id: "cat-1",
       account_id: "acc-1",
+      period_year: 2026,
+      period_month: 4, // April is closed
     };
 
     await expect(repo.createTransaction(input, "joao@email.com")).rejects.toThrow(
@@ -76,6 +80,8 @@ describe("FakeTransactionRepository", () => {
       date: "2026-03-20",
       category_id: "cat-2",
       account_id: "acc-2",
+      period_year: 2026,
+      period_month: 3,
     };
 
     const result = await repo.createTransaction(input, "joao@email.com");
@@ -99,6 +105,8 @@ describe("FakeTransactionRepository", () => {
         date: "2026-03-15",
         category_id: "cat-1",
         account_id: "acc-1",
+        period_year: 2026,
+        period_month: 3,
       },
       "joao@email.com"
     );
@@ -129,22 +137,31 @@ describe("FakeTransactionRepository", () => {
         date: "2026-03-15",
         category_id: "cat-1",
         account_id: "acc-1",
+        period_year: 2026,
+        period_month: 3,
       },
       "joao@email.com"
     );
 
-    // Try to update with date in closed month
+    // Close the month (a trava avalia o mês de cálculo gravado, não a data)
+    repo.seed({
+      monthlyPeriods: [
+        { id: "m-1", year: 2026, month: 3, status: "encerrado", created_at: "2026-03-01T00:00:00Z", created_by: "test@test.com" },
+      ],
+      transactions: [created],
+    });
+
     await expect(
       repo.updateTransaction(created.id, {
         description: "Supermercado Editado",
         amount: 200,
         type: "despesa",
         is_refund: false,
-        date: "2026-04-15", // April is closed
+        date: "2026-03-15",
         category_id: "cat-1",
         account_id: "acc-1",
       })
-    ).rejects.toThrow("Não é possível alterar transações no período 4/2026 pois ele não está aberto.");
+    ).rejects.toThrow("Não é possível alterar transações no período 3/2026 pois ele não está aberto.");
   });
 
   it("deve excluir transação com sucesso se o mês estiver aberto", async () => {
@@ -157,6 +174,8 @@ describe("FakeTransactionRepository", () => {
         date: "2026-03-15",
         category_id: "cat-1",
         account_id: "acc-1",
+        period_year: 2026,
+        period_month: 3,
       },
       "joao@email.com"
     );
@@ -178,6 +197,8 @@ describe("FakeTransactionRepository", () => {
         date: "2026-03-15",
         category_id: "cat-1",
         account_id: "acc-1",
+        period_year: 2026,
+        period_month: 3,
       },
       "joao@email.com"
     );
@@ -205,6 +226,8 @@ describe("FakeTransactionRepository", () => {
         date: "2026-03-15",
         category_id: "cat-1",
         account_id: "acc-1",
+        period_year: 2026,
+        period_month: 3,
       },
       "joao@email.com"
     );
@@ -217,6 +240,8 @@ describe("FakeTransactionRepository", () => {
         date: "2026-03-15",
         category_id: "cat-1",
         account_id: "acc-1",
+        period_year: 2026,
+        period_month: 3,
       },
       "joao@email.com"
     );
@@ -229,6 +254,8 @@ describe("FakeTransactionRepository", () => {
         date: "2026-03-10",
         category_id: "cat-1",
         account_id: "acc-1",
+        period_year: 2026,
+        period_month: 3,
       },
       "joao@email.com"
     );

@@ -22,7 +22,8 @@ export interface TransactionModalsDeps {
   db: IDatabaseClient;
   userEmail: string;
   categories: Category[];
-  minDateStr: string;
+  selectedYear: number;
+  selectedMonth: number;
   fetchData: () => Promise<void>;
   setErrorMsg: (msg: string | null) => void;
 }
@@ -80,9 +81,9 @@ export interface TransactionModals {
  * consumidores permanecem idênticos.
  */
 export function useTransactionModals(deps: TransactionModalsDeps): TransactionModals {
-  const { db, userEmail, categories, minDateStr, fetchData, setErrorMsg } = deps;
+  const { db, userEmail, categories, selectedYear, selectedMonth, fetchData, setErrorMsg } = deps;
 
-  const txForm = useTransactionForm({ db, userEmail, categories, minDateStr, fetchData, setErrorMsg });
+  const txForm = useTransactionForm({ db, userEmail, categories, selectedYear, selectedMonth, fetchData, setErrorMsg });
   const accForm = useAccountForm({ db, userEmail, fetchData, setErrorMsg });
   const delFlow = useDeleteTransaction({ db, fetchData, setErrorMsg });
 

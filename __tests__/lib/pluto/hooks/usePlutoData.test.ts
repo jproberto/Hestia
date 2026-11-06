@@ -74,15 +74,22 @@ describe("usePlutoData", () => {
     expect(result.current.errorMsg).toBeNull();
   });
 
-  it("expõe delimitadores de data do mês selecionado", async () => {
+  it("não expõe delimitadores de data no retorno (mês de cálculo sem trava de data)", async () => {
     const { result } = renderHook(() => usePlutoData());
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.minDateStr).toBe("2026-03-01");
-    expect(result.current.maxDateStr).toBe("2026-03-31");
+    // Contrato 05e (plan §Hooks): a interface/retorno deixa de expor os
+    // delimitadores que travavam o campo de data no mês da tela.
+    const delimiters = Object.keys(result.current).filter((key) => key.endsWith("DateStr"));
+    expect(delimiters).toEqual([]);
+
+    // O que permanece: seleção do mês da tela e a lista carregada por mês de cálculo.
+    expect(result.current.selectedYear).toBe(2026);
+    expect(result.current.selectedMonth).toBe(3);
+    expect(result.current.transactions).toEqual([]);
   });
 
   it("estado vazio quando nenhum mês está aberto", async () => {

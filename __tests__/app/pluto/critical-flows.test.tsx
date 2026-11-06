@@ -123,8 +123,13 @@ describe("Fluxos críticos (interação ponta a ponta)", () => {
     await waitFor(() => {
       expect(screen.queryByLabelText("Ano:")).not.toBeNull();
     });
+    // Mês de cálculo da tela: só abre o modal depois do seletor assentar
+    // no mês aberto disponível (05e: o create grava o período da tela).
+    await waitFor(() => {
+      expect((screen.getByLabelText("Mês:") as HTMLSelectElement).value).toBe("3");
+    });
     await clickConnectedButton(/\+ Nova Transação/i);
-    await screen.findByLabelText(/Data \(Limitada a/i);
+    await screen.findByLabelText("Data");
 
     fireEvent.change(screen.getByLabelText(/Descrição/i), { target: { value: "Lanche" } });
     fireEvent.change(screen.getByLabelText(/Valor \(R\$\)/i), { target: { value: "25" } });
@@ -141,6 +146,8 @@ describe("Fluxos críticos (interação ponta a ponta)", () => {
           type: "despesa",
           account_id: "a1",
           category_id: "c1",
+          period_year: 2026,
+          period_month: 3,
         }),
         "teste@hestia.com"
       );
@@ -162,6 +169,8 @@ describe("Fluxos críticos (interação ponta a ponta)", () => {
         date: "2026-03-15",
         category_id: "c1",
         account_id: "a1",
+        period_year: 2026,
+        period_month: 3,
         created_at: "2026-03-15T00:00:00Z",
         created_by: "teste@hestia.com",
         category_name: "Alimentação",
@@ -205,6 +214,8 @@ describe("Fluxos críticos (interação ponta a ponta)", () => {
         date: "2026-03-15",
         category_id: "c1",
         account_id: "a1",
+        period_year: 2026,
+        period_month: 3,
         created_at: "2026-03-15T00:00:00Z",
         created_by: "teste@hestia.com",
         category_name: "Alimentação",

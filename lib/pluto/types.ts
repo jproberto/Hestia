@@ -38,6 +38,8 @@ export interface TransactionRow {
   date: string;
   category_id: string;
   account_id: string;
+  period_year: number;
+  period_month: number;
   created_at: string;
   created_by: string;
   categories?: { name: string } | null;
@@ -109,7 +111,25 @@ export interface TransactionInput {
   amount: number;
   type: "receita" | "despesa";
   is_refund: boolean;
-  date: string; // YYYY-MM-DD
+  date: string; // YYYY-MM-DD — data do cartão/extrato; não determina o mês de cálculo
+  category_id: string;
+  account_id: string;
+  /** Mês de cálculo (ano) — fixado no mês da tela onde o form foi aberto. */
+  period_year: number;
+  /** Mês de cálculo (mês 1-12) — fixado no mês da tela onde o form foi aberto. */
+  period_month: number;
+}
+
+/**
+ * Campos editáveis na edição — SEM campos de período: a edição não move o
+ * lançamento de mês nem estruturalmente (decisão D6 da feature pluto/05e).
+ */
+export interface TransactionUpdateInput {
+  description: string;
+  amount: number;
+  type: "receita" | "despesa";
+  is_refund: boolean;
+  date: string; // YYYY-MM-DD — data livre; não altera o mês de cálculo gravado
   category_id: string;
   account_id: string;
 }
@@ -141,6 +161,8 @@ export interface TransactionWithDetails {
   date: string;
   category_id: string;
   account_id: string;
+  period_year: number;
+  period_month: number;
   created_at: string;
   created_by: string;
   category_name: string;
@@ -208,19 +230,6 @@ export interface BudgetItem {
 // TIPOS DE FORMULÁRIO/UI (FormData types - dados vindos do frontend)
 // ============================================================================
 
-export interface CreateTransactionFormData {
-  description: string;
-  amount: number;
-  type: "receita" | "despesa";
-  is_refund: boolean;
-  date: string;
-  account_name: string;
-  account_type: "conta" | "cartao";
-  category_name: string;
-}
-
-export type UpdateTransactionFormData = Partial<CreateTransactionFormData>;
-
 export interface CreateChecklistItemFormData {
   day: number;
   description: string;
@@ -243,18 +252,6 @@ export type UpdateBudgetItemFormData = Partial<CreateBudgetItemFormData>;
 // ============================================================================
 // TIPOS DE SERVIÇO/DTO (Service/DTO types - entrada dos services)
 // ============================================================================
-
-export interface CreateTransactionDTO {
-  description: string;
-  amount: number;
-  type: "receita" | "despesa";
-  is_refund: boolean;
-  date: string;
-  category_id: string;
-  account_id: string;
-}
-
-export type UpdateTransactionDTO = Partial<CreateTransactionDTO>;
 
 export interface CreateChecklistItemDTO {
   day: number;

@@ -1,0 +1,53 @@
+{
+  "status": "approved",
+  "findings": [
+    {
+      "severity": "minor",
+      "category": "spec",
+      "file": ".agents/modules/pluto/05e-lancamento-data-livre/plan.md",
+      "line": 170,
+      "evidence": "plan.md:170 \"DAG acíclico em 8 tasks (espelho exato do tasks.json)\" vs tasks.json com 9 tasks (T0-T8, todas completed)",
+      "impact": "Desvio documental do plano; DAG real é válida e completa — não afeta implementação",
+      "suggestion": "Corrigir o texto para 9 tasks (T0-T8) no backlog/correção de docs por Mnemósine"
+    },
+    {
+      "severity": "minor",
+      "category": "spec",
+      "file": ".agents/modules/pluto/05e-lancamento-data-livre/plan.md",
+      "line": 97,
+      "evidence": "plan.md:97 \"DDL incremental aditiva, em transação única\" vs migration-0018-pluto-lancamento-data-livre.sql sem BEGIN/COMMIT (linhas 13-26: ADD COLUMN IF NOT EXISTS → backfill → SET NOT NULL; audit linha 69 ON CONFLICT DO NOTHING; único precedente com BEGIN no repo é migration-0013)",
+      "impact": "Passos são idempotentes e re-executáveis (ADD IF NOT EXISTS + backfill só em NULLs); falha intermediária deixa colunas anuláveis e a re-execução completa — sem risco de perda, mas o texto do plano não descreve o arquivo real",
+      "suggestion": "Ajustar plan.md para descrever passos idempotentes sem transação explícita, ou justificar por que não usar BEGIN/COMMIT"
+    },
+    {
+      "severity": "minor",
+      "category": "spec",
+      "file": ".agents/modules/pluto/05e-lancamento-data-livre/plan.md",
+      "line": 145,
+      "evidence": "plan.md:145-162 (lista \"Testes\") omite __tests__/lib/pluto/migration-0018.test.ts (diff.patch:1973) e __tests__/integration/transactions.test.ts (diff.patch:1378), ambos presentes no diff de 39 arquivos",
+      "impact": "Plano subestima o escopo de testes entregues; rastreabilidade plan-vs-diff incompleta (sem efeito no código)",
+      "suggestion": "Completar a lista de arquivos de teste no plano na correção de docs"
+    },
+    {
+      "severity": "minor",
+      "category": "test",
+      "file": "__tests__/lib/pluto/hooks/useTransactionForm.test.ts",
+      "line": 54,
+      "evidence": "linhas 54-57: comentário RED obsoleto \"o contrato novo (selectedYear/selectedMonth) ainda não existe nos tipos do hook atual ... o cast desaparece ... na T5\" + cast `options as unknown as UseTransactionFormOptions`; espelho em useTransactionModals.test.ts:57-59 (`deps as unknown as TransactionModalsDeps`) — T5 concluída, contrato novo existe e o cast é redundante",
+      "impact": "Comentário/ cast pós-T5 enganoso para quem ler a suíte; cast cobre erro de tipo caso o contrato mude de novo",
+      "suggestion": "Remover casts e comentários obsoletos em follow-up de backlog (não bloqueia)"
+    }
+  ],
+  "blockers": [],
+  "testGaps": [
+    "lib/pluto/repositories/transactions.ts com 0% de cobertura unitária (linhas 0/11-178 na execução independente de cobertura) — regime fakes-only por decisão 57; o repo real só é exercitado por __tests__/integration/transactions.test.ts (CI). Contrato coberto por contract-transactions.test.ts + fake.",
+    "functions 76.76% < 80 (linhas 85.30 / branches 84.18 verificados por re-execução independente `npx vitest run --coverage`, batendo exatamente com test-report.json) — gate da casa é linhas+branches ≥80 (mesmo precedente da milon 06); functions fica como gap conhecido.",
+    "Migração 0018 (backfill ::integer + SET NOT NULL em produção) e comportamento do date-picker nativo (desktop/mobile) só cobertos manualmente em test-scenarios.md (18 cenários, gate limpo: 0 tags [Automatizado], 0 paths __tests__/); DDL contra Postgres real não roda localmente (CI aplica migrations com ON_ERROR_STOP=1).",
+    "Mensagem de erro de período (linha 84 do repositório, origem 'período') sem teste automatizado de caso-limite — verificação manual no cenário de datas inválidas."
+  ],
+  "questions": [
+    "Homologação manual dos 18 cenários de test-scenarios.md é pendência do humano antes do approve-review — confirmar se será executada agora.",
+    "Após merge, a migração 0018 roda via CI em produção? Confirmar aplicação + auditoria em public.schema_migrations com script_name idêntico (pendência humana, precedente da 0017).",
+    "As 3 correções de documentação do plan.md (8→9 tasks, 'transação única', lista de arquivos de teste) entram como backlog pós-review ou correção antes do approve-review? (Argos não corrige — decisão humana/Zeus.)"
+  ]
+}

@@ -23,7 +23,7 @@ export default function TransactionsPage() {
     db, selectedYear, setSelectedYear, selectedMonth, setSelectedMonth, userEmail,
     availableYears, openMonths, transactions, budgetItems, accounts, categories,
     checklistItems, globalChecklistItems, setChecklistItems, loading, errorMsg,
-    setErrorMsg, fetchData, minDateStr, maxDateStr,
+    setErrorMsg, fetchData,
   } = usePlutoData();
 
   const {
@@ -37,7 +37,8 @@ export default function TransactionsPage() {
     db,
     userEmail,
     categories,
-    minDateStr,
+    selectedYear,
+    selectedMonth,
     fetchData,
     setErrorMsg,
   });
@@ -164,10 +165,6 @@ export default function TransactionsPage() {
         txSuccessMsg={modals.txSuccessMsg}
         accounts={accounts}
         categories={categories}
-        selectedYear={selectedYear}
-        selectedMonth={selectedMonth}
-        minDateStr={minDateStr}
-        maxDateStr={maxDateStr}
         descInputRef={modals.descInputRef}
         onClose={modals.handleCloseTxModal}
         onSave={modals.handleSaveTransaction}

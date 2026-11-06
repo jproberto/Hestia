@@ -1,0 +1,20 @@
+{
+  "sessionId": null,
+  "feature": "pluto/11-categorias-sem-distincao-caixa",
+  "objective": "Comparar nomes de categoria sem distinção de maiúsculas/minúsculas — getOrCreateCategory (lib/pluto/repositories/categories.ts) hoje só faz trim e compara com igualdade exata, então 'Mercaria' e 'mercaria' viram duas categorias — item 11 do backlog do Pluto; discovery decide consolidação de duplicatas já existentes e se a regra vale também para contas.",
+  "currentPhase": "SPEC_DRAFT",
+  "history": [
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-06T00:00:00.000Z",
+      "note": "Item #11 do backlog do Pluto; FEATURE_DIR criado por Zeus. Alterações não commitadas em develop (renumeração do backlog pós-05e + correção de referências de itens na spec/context do 05e) devem ser levadas para a branch nova e commitadas junto com a feature (pedido humano 2026-11-06)."
+    }
+  ],
+  "approvals": {
+    "spec": "pending",
+    "plan": "pending",
+    "review": "pending"
+  },
+  "decisions": [],
+  "migrations": {}
+}

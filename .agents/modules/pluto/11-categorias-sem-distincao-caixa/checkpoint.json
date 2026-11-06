@@ -1,0 +1,23 @@
+{
+  "currentPhase": "SPEC_DRAFT",
+  "validTransitions": {
+    "SPEC_DRAFT": ["SPEC_APPROVED"],
+    "SPEC_APPROVED": ["PLAN_READY", "SPEC_DRAFT"],
+    "PLAN_READY": ["PLAN_APPROVED", "SPEC_APPROVED"],
+    "PLAN_APPROVED": ["TASKS_READY", "PLAN_READY", "SPEC_DRAFT"],
+    "TASKS_READY": ["CODING", "PLAN_APPROVED", "PLAN_READY"],
+    "CODING": ["TESTING", "TASKS_READY"],
+    "TESTING": ["REVIEW", "CODING"],
+    "REVIEW": ["APPROVED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
+    "APPROVED": ["COMMITTED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
+    "COMMITTED": ["CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"]
+  },
+  "phaseHistory": [
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-06T00:00:00.000Z",
+      "note": "FEATURE_DIR criado por Zeus; aguardando Step 0 (Caronte: branch com as alterações não commitadas carregadas) e discovery (Hera)."
+    }
+  ],
+  "lastUpdated": "2026-11-06T00:00:00.000Z"
+}

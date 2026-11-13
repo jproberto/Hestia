@@ -35,6 +35,7 @@ const baseArgs = {
   onDateChange: fn(),
   onAccountInputChange: fn(),
   onCategoryInputChange: fn(),
+  onCategoryBlur: fn(),
 };
 
 export const Criar: Story = {

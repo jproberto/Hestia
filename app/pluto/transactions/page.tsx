@@ -37,6 +37,7 @@ export default function TransactionsPage() {
     db,
     userEmail,
     categories,
+    accounts,
     selectedYear,
     selectedMonth,
     fetchData,
@@ -155,6 +156,7 @@ export default function TransactionsPage() {
         isOpen={modals.isTxModalOpen}
         editingTransaction={modals.editingTransaction}
         accountInput={modals.accountInput}
+        accountTypeInput={modals.accountTypeInput}
         description={modals.description}
         amount={modals.amount}
         type={modals.type}
@@ -174,8 +176,9 @@ export default function TransactionsPage() {
         onTypeChange={modals.setType}
         onIsRefundChange={modals.setIsRefund}
         onDateChange={modals.setDate}
-        onAccountInputChange={modals.setAccountInput}
+        onAccountInputChange={modals.handleAccountInputChange}
         onCategoryInputChange={modals.setCategoryInput}
+        onCategoryBlur={modals.handleCategoryBlur}
       />
 
       <DeleteConfirmModal

@@ -221,6 +221,22 @@ describe("FakeBudgetRepository", () => {
       expect(budgets[0].category_name).toBe("Nova Categoria");
       expect(budgets[0].category_type).toBe("receita");
     });
+
+    // --- T2 RED (Pluto 11): a variante de acento reaproveita a categoria — R1 ---
+
+    it("deve reaproveitar a categoria existente na variante de acento do nome", async () => {
+      await repo.adjustBudgetItem(2026, 4, "Alimentação", "despesa", 800.0, "teste@hestia.com");
+      await repo.adjustBudgetItem(2026, 4, "alimentacao", "despesa", 950.0, "teste@hestia.com");
+
+      // Uma única categoria — a linha original com a grafia crua preservada
+      expect(repo.getCategories()).toHaveLength(1);
+      expect(repo.getCategories()[0].name).toBe("Alimentação");
+
+      const budgets = await repo.getBudgets(2026, 4);
+      expect(budgets).toHaveLength(1);
+      expect(budgets[0].category_name).toBe("Alimentação");
+      expect(budgets[0].amount).toBe(950.0);
+    });
   });
 
   it("reset deve limpar todos os dados", async () => {

@@ -72,6 +72,45 @@ describe("FakeCategoryRepository", () => {
     expect(id2).toBe("cat-1");
   });
 
+  // --- T2 RED (Pluto 11): acento, Unicode e tipo — R1/R2 ---
+
+  it("deve ser insensível a acentos ao buscar categoria existente", async () => {
+    repo.seed([
+      { id: "cat-1", name: "Alimentação", type: "despesa", created_at: "2026-01-01T00:00:00Z", created_by: "test@test.com" },
+    ]);
+
+    const id1 = await repo.getOrCreateCategory("alimentacao", "despesa", "teste@hestia.com");
+    const id2 = await repo.getOrCreateCategory("ALIMENTAÇÃO", "despesa", "teste@hestia.com");
+    expect(id1).toBe("cat-1");
+    expect(id2).toBe("cat-1");
+    expect(await repo.getCategories("despesa")).toHaveLength(1);
+  });
+
+  it("deve igualar as formas Unicode composta e decomposta do mesmo nome", async () => {
+    const composto = "Alimentação"; // ca/ã em forma composta (NFC)
+    const decomposto = composto.normalize("NFD");
+    // fixture sanity: as duas formas precisam realmente ser diferentes
+    expect(decomposto).not.toBe(composto);
+
+    repo.seed([
+      { id: "cat-1", name: composto, type: "despesa", created_at: "2026-01-01T00:00:00Z", created_by: "test@test.com" },
+    ]);
+
+    const id = await repo.getOrCreateCategory(decomposto, "despesa", "teste@hestia.com");
+    expect(id).toBe("cat-1");
+    expect(await repo.getCategories("despesa")).toHaveLength(1);
+  });
+
+  it("deve criar linha própria quando o nome é igual mas o tipo é diferente", async () => {
+    repo.seed([
+      { id: "cat-receita", name: "Salário", type: "receita", created_at: "2026-01-01T00:00:00Z", created_by: "test@test.com" },
+    ]);
+
+    const id = await repo.getOrCreateCategory("Salário", "despesa", "teste@hestia.com");
+    expect(id).not.toBe("cat-receita");
+    expect(await repo.getCategories()).toHaveLength(2);
+  });
+
   it("reset deve limpar todos os dados", async () => {
     repo.seed([
       { id: "cat-1", name: "Teste", type: "despesa", created_at: "2026-01-01T00:00:00Z", created_by: "test@test.com" },

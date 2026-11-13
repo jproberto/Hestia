@@ -14,6 +14,7 @@ import type {
   TransactionWithDetails,
 } from "@/lib/pluto/types";
 import { getMonthRange } from "@/lib/pluto/types";
+import { normalizeName } from "@/lib/pluto/utils";
 import { parseErrorMessage } from "@/lib/utils";
 import type { TransactionModalPrefill } from "./useTransactionModals";
 
@@ -21,6 +22,12 @@ export interface UseTransactionFormOptions {
   db: IDatabaseClient;
   userEmail: string;
   categories: Category[];
+  /**
+   * Registros de conta já carregados pela tela — fonte do tipo em edição e
+   * na escolha do select (F1/R4, emenda 2026-11-08). Sem fetch novo: a
+   * lista vive em usePlutoData e chega via composição da página.
+   */
+  accounts?: Account[];
   selectedYear: number;
   selectedMonth: number;
   fetchData: () => Promise<void>;
@@ -36,6 +43,7 @@ export function useTransactionForm({
   db,
   userEmail,
   categories,
+  accounts = [],
   selectedYear,
   selectedMonth,
   fetchData,
@@ -55,6 +63,16 @@ export function useTransactionForm({
   const [savingTx, setSavingTx] = useState<boolean>(false);
   const [txSuccessMsg, setTxSuccessMsg] = useState<string | null>(null);
   const descInputRef = useRef<HTMLInputElement>(null);
+
+  // F1/R4 (emenda 2026-11-08): a identidade da conta é (nome normalizado,
+  // tipo) — o tipo é SEMPRE resolvido no registro da lista já carregada,
+  // nunca herdado do estado anterior do formulário.
+  const resolveAccountType = (name: string): "conta" | "cartao" | null => {
+    const match = accounts.find(
+      (acc) => normalizeName(acc.name) === normalizeName(name)
+    );
+    return match ? match.type : null;
+  };
 
   // Abertura do Modal de Transação pré-fixado para a conta escolhida (Nova Transação)
   const handleOpenTxModal = (acc: Account) => {
@@ -83,7 +101,19 @@ export function useTransactionForm({
     setType(tx.type);
     setIsRefund(tx.is_refund);
     setAccountInput(tx.account_name || "");
-    setAccountTypeInput("conta");
+    // Tipo do registro editado (F1/R4 + emenda 2026-11-11): o tipo vem do
+    // PROPRIO account_id da linha referenciada — homonimas conta x cartao
+    // (D19/R2) compartilham o nome normalizado, entao o nome nao discrimina
+    // e a primeira linha em ordem de lista nao pode vencer. Fallback: nome
+    // normalizado quando a lista nao carregou o id; sem correspondente, o
+    // padrao do formulario (mesmo comportamento anterior, nunca "cartao"
+    // fixo).
+    const accountById = tx.account_id
+      ? accounts.find((acc) => acc.id === tx.account_id)
+      : undefined;
+    setAccountTypeInput(
+      accountById?.type ?? resolveAccountType(tx.account_name) ?? "conta"
+    );
     setCategoryInput(tx.category_name || "");
     setErrorMsg(null);
     setTxSuccessMsg(null);
@@ -103,10 +133,46 @@ export function useTransactionForm({
     setAmount(prefill.amount !== null && prefill.amount !== undefined ? String(prefill.amount) : "");
     setDate(prefill.date);
     setAccountInput("");
+    // Sem escolha de conta, sem tipo herdado do fluxo anterior (F1/R4).
+    setAccountTypeInput("conta");
     setIsRefund(false);
     setEditingTransaction(null);
     setTxSuccessMsg(null);
     setIsTxModalOpen(true);
+  };
+
+  // Select/entrada de conta: nome e tipo caminham juntos (F1/R4). O value do
+  // select é discriminador (emenda 2026-11-11): id da linha quando há
+  // homônimas sob normalizeName (mesmo nome com tipo diferente, D19/R2) e a
+  // grafia do nome quando única — então o handler resolve o registro EXATO
+  // primeiro por id e só depois por nome. Sem correspondente na lista (lista
+  // vazia / texto livre), o valor vigente permanece e o tipo não muda.
+  const handleAccountInputChange = (value: string) => {
+    const chosen =
+      accounts.find((acc) => acc.id === value) ??
+      accounts.find(
+        (acc) => normalizeName(acc.name) === normalizeName(value)
+      );
+    if (chosen) {
+      setAccountInput(chosen.name);
+      setAccountTypeInput(chosen.type);
+    } else {
+      setAccountInput(value);
+    }
+  };
+
+  // R7: ao perder o foco do campo de categoria, se existir homônima do OUTRO
+  // tipo sob normalizeName, o campo assume a grafia da linha existente (só
+  // quando difere). Sem aviso, sem estado novo de mensagem. O updater lê o
+  // valor vigente do campo no momento do blur (não o do render do handler).
+  const handleCategoryBlur = () => {
+    setCategoryInput((current) => {
+      if (!current.trim()) return current;
+      const homonym = categories.find(
+        (c) => c.type !== type && normalizeName(c.name) === normalizeName(current)
+      );
+      return homonym && homonym.name !== current ? homonym.name : current;
+    });
   };
 
   const handleSaveTransaction = async (e: React.FormEvent) => {
@@ -256,6 +322,8 @@ export function useTransactionForm({
     setDate,
     accountInput,
     setAccountInput,
+    handleAccountInputChange,
+    accountTypeInput,
     categoryInput,
     setCategoryInput,
     savingTx,
@@ -267,5 +335,6 @@ export function useTransactionForm({
     handleSaveTransaction,
     handleSaveTransactionAndAddAnother,
     handleTriggerTransactionModalFromChecklist,
+    handleCategoryBlur,
   };
 }

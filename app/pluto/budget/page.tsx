@@ -82,6 +82,7 @@ function BudgetPageContent() {
                 amount={editor.amount}
                 onAmountChange={editor.setAmount}
                 onSubmit={(e) => void editor.handleSaveItem(e)}
+                onCategoryBlur={editor.handleCategoryBlur}
               />
             )}
 

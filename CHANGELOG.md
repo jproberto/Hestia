@@ -7,6 +7,9 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ## [Não lançado]
 
+### Alterado
+- **Pluto 11 — Categorias e contas sem distinção de caixa/acentos (`/pluto/transactions`, `/pluto/budget`):** a identidade de `categories` e `financial_accounts` passa a ser **(nome normalizado, tipo)** — a comparação ignora caixa, acentos e a forma Unicode do texto colado (`normalizeName` em `lib/pluto/utils.ts`), o nome gravado continua sendo o texto cru digitado e a corrida de criação relê e devolve a linha já criada sem erro visível (categorias e contas); datalist do lançamento e sugestões do orçamento casam com a nova regra e o blur do campo de categoria copia a grafia da homônima do outro tipo (sem aviso novo), com o select de conta resolvendo homônimas conta × cartão por tipo/`account_id`; migração `utils/migrations/migration-0019-pluto-categorias-contas-normalizadas.sql` funde as duplicatas legadas (sobrevivente mais usada com desempate `created_at`, colisão de `budget_items` descartada em vez de somada) e troca as travas de nome único por índice único de (nome normalizado, tipo) nas duas tabelas via wrapper IMMUTABLE criado na própria migração — **aplicada pelo humano no Supabase em 2026-11-12**. Suíte em 151 arquivos / 1965 testes, 0 falhas, coverage 85.88% lines / 84.54% branch, review aprovado (5ª re-review) e 22 cenários manuais homologados.
+
 ## [1.2.0] - 2026-11-06
 
 Pluto 05e — lançamento de transação com data livre (mês de cálculo próprio em `period_year`/`period_month` com backfill da migração 0018) + fluxo de release com congelamento (branch `release/<versão>`, auto-PR de promoção e tag automática).

@@ -1,0 +1,182 @@
+{
+  "feature": "11-categorias-sem-distincao-caixa",
+  "date": "2026-11-11",
+  "status": "passed",
+  "byTask": {
+    "T0": "passed",
+    "T1": "passed",
+    "T2": "passed",
+    "T3": "passed",
+    "T4": "passed",
+    "T5": "passed",
+    "T6": "passed"
+  },
+  "commands": {
+    "suite": "npx vitest run --coverage (execucao consolidada Minos 2026-11-11 16:19:40, antes da 4a review do Argos; npm run test = vitest run)",
+    "coverage": "npx vitest run --coverage (reporter v8 + agregacao do coverage-final.json)",
+    "tsc": "npx tsc --noEmit",
+    "lint": "npx eslint ."
+  },
+  "summary": {
+    "failed": 0,
+    "passed": 1965,
+    "skipped": 0,
+    "testFiles": 151,
+    "coverage": 85.88,
+    "coverageStatements": 85.88,
+    "coverageBranches": 84.54,
+    "coverageFunctions": 77.48
+  },
+  "coverage": {
+    "lines": 85.88,
+    "statements": 85.88,
+    "branches": 84.54,
+    "functions": 77.48,
+    "reporter": "v8",
+    "note": "Execucao de 2026-11-11 16:19:40 por Minos (npx vitest run --coverage, exit 0, 79.40s) re-executada ANTES da 4a review do Argos (norma: Minos re-executa suite + coverage e atualiza test-report antes de cada review): 151 files / 1965 tests / 0 failed / 0 skipped. Agregacao do coverage/coverage-final.json (s/b/f): statements 11801/13741 = 85.88, branches 2602/3078 = 84.54, functions 547/706 = 77.48, lines = statements (146 arquivos medidos); reporter textual 'All files 85.88 stmts | 84.53 branch | 77.47 funcs | 85.88 lines' (arredondamento proprio do reporter em branch). Gates lines >= 80 e branches >= 80 atendidos."
+  },
+  "coverageByFeatureFile": {
+    "lib/pluto/repositories/categories.ts": "100% stmts (46/46), 88.89% branch (16/18), 100% funcs (3/3) — getOrCreate normalizado por tipo com retry de corrida",
+    "lib/pluto/repositories/accounts.ts": "78.85% stmts (41/52), 86.67% branch (13/15), 66.67% funcs (2/3) — linhas 7-19 (getAccounts legado, leitura sem cobertura no regime fakes-only) explicam o resto; getOrCreate de contas coberto",
+    "lib/pluto/utils.ts": "60% stmts (9/15), 100% branch (1/1), 50% funcs (1/2) — normalizeName coberto pelos 5 testes de utils; linhas 32-37 sao getMonthLabel legado sem cobertura (pre-existente)",
+    "lib/pluto/repositories/fakes/fakeCategoryRepository.ts": "100% stmts (52/52), 100% branch (15/15), 100% funcs (6/6) — espelho completo da regra (caixa + acento + Unicode + tipo)",
+    "lib/pluto/repositories/fakes/fakeAccountRepository.ts": "100% stmts (47/47), 100% branch (13/13), 100% funcs (6/6)",
+    "lib/pluto/repositories/fakes/fakeBudgetRepository.ts": "97.33% stmts (182/187), 93.02% branch (40/43), 92.86% funcs (13/14) — bloco interno de adjustBudgetItem espelhando a regra",
+    "lib/pluto/hooks/useTransactionForm.ts": "94.80% stmts (237/250), 80.00% branch (44/55), 100% funcs (10/10) — pos-GREEN 2026-11-11 (resolveAccountType, handleAccountInputChange, prefill cobertos pelos 2 testes de homonimas); denominadores do codigo novo do GREEN",
+    "lib/pluto/hooks/useTransactionModals.ts": "100% stmts (52/52), 100% branch (1/1), 100% funcs (1/1) — repassa handleAccountInputChange/handleCategoryBlur",
+    "lib/pluto/hooks/useBudgetItemEditor.ts": "97.30% stmts (108/111), 81.48% branch (22/27), 100% funcs (5/5) — sugestoes normalizadas + handleCategoryBlur",
+    "components/pluto/TransactionModal.tsx": "93.63% stmts (191/204), 84.31% branch (43/51), 63.64% funcs (7/11) — pos-GREEN 2026-11-11 (datalist pre-filtrada + onCategoryBlur + value discriminador do select de homonimas); denominador cresceu com o select do GREEN",
+    "components/pluto/BudgetForecastForm.tsx": "100% stmts (73/73), 100% branch (8/8), 100% funcs (5/5)",
+    "app/pluto/transactions/page.tsx": "100% stmts (167/167), 100% branch (14/14), 100% funcs (1/1) — repassa onCategoryBlur/handleAccountInputChange",
+    "app/pluto/budget/page.tsx": "80.90% stmts (72/89), 55.56% branch (5/9), 33.33% funcs (3/9) — linhas 54-85 sem cobertura sao caminhos legados de modal sem mudanca desta feature"
+  },
+  "featureTestCounts": {
+    "__tests__/lib/pluto/migration-0019.test.ts": "10 testes (T0: conteudo da migracao 0019)",
+    "__tests__/lib/pluto/migration-0019-execution.test.ts": "2 testes (T0, RED de EXECUCAO do ciclo 4/re-review — replay da cadeia num PostgreSQL efemero real): (1) aplica a 0019 sem erro e valida fusao das duplicatas, troca de travas, wrapper IMMUTABLE e auditoria; (2) re-executavel apos o sucesso (tudo ou nada + idempotencia, spec §10). VERDES em 2026-11-11 16:19 com PG 18.6 subindo de verdade — NAO sao skip nesta execucao",
+    "__tests__/lib/pluto/utils.test.ts": "5 testes (T2: normalizeName — caixa, acento, Unicode composto/decomposto, trim)",
+    "__tests__/lib/pluto/repositories/contract-categories.test.ts": "8 testes (T2)",
+    "__tests__/lib/pluto/repositories/contract-accounts.test.ts": "6 testes (T2)",
+    "__tests__/lib/pluto/repositories/fake-category.test.ts": "10 testes (T2: caixa + acento + Unicode + tipo)",
+    "__tests__/lib/pluto/repositories/fake-account.test.ts": "9 testes (T2)",
+    "__tests__/lib/pluto/repositories/fake-budget.test.ts": "16 testes (T2: variante de acento em adjustBudgetItem)",
+    "__tests__/lib/pluto/repositories/categories.test.ts": "5 testes (T2: filtro por tipo, corrida, propagacao de erro)",
+    "__tests__/lib/pluto/repositories/accounts.test.ts": "5 testes (T2: mesmo quadrante para financial_accounts)",
+    "__tests__/lib/pluto/db/categories.test.ts": "4 testes (T2: espelho na barreira oficial)",
+    "__tests__/lib/pluto/db/accounts.test.ts": "5 testes (T2)",
+    "__tests__/lib/pluto/db/categories.contract.test.ts": "5 testes (contrato da barreira db)",
+    "__tests__/lib/pluto/db/accounts.contract.test.ts": "5 testes (contrato da barreira db)",
+    "__tests__/lib/pluto/hooks/useTransactionForm.test.ts": "16 testes (T4/T5: blur de homonima; 4 da emenda F1 2026-11-08: edicao cartao/conta, card cartao, checklist) — verdes",
+    "__tests__/lib/pluto/hooks/useTransactionForm-homonimas.test.ts": "2 testes (ciclo de correcao 2026-11-11, blocker findings[1]: edicao com par homonimo resolve o tipo pelo account_id e nao pelo nome) — verdes",
+    "__tests__/lib/pluto/hooks/useTransactionModals.test.ts": "9 testes (T4/T5)",
+    "__tests__/lib/pluto/hooks/useBudgetItemEditor.test.ts": "11 testes (T4/T5: sugestoes normalizadas + blur)",
+    "__tests__/components/pluto/TransactionModal.test.tsx": "11 testes (T4/T5: datalist pre-filtrada + onCategoryBlur; 11o = select discriminador de homonimas) — os 11 verdes",
+    "__tests__/components/pluto/BudgetForecastForm.test.tsx": "5 testes (T4/T5)",
+    "__tests__/app/pluto/transactions-account-flow.test.tsx": "2 testes (emenda F1 2026-11-08: select->salvar e checklist pelo FakeAccountRepository) — verdes",
+    "__tests__/app/pluto/transactions-homonimas-flow.test.tsx": "2 testes (ciclo de correcao 2026-11-11): (1) escolher a segunda homonima no select submete o account_id/tipo dela; (2) CASO NOVO do GREEN do ciclo 4 — na edicao, trocar para a outra homonima mantem o select.value na escolha (sem snap-back) e salva a escolhida (mtime 11/11 15:27). Os 2 VERDES em 2026-11-11",
+    "__tests__/integration/unique-normalized.test.ts": "fora da suite unitaria por configuracao (vitest.config.ts exclui __tests__/integration/**); roda no job integration com a 0019 aplicada — comportamento previsto na T2"
+  },
+  "gates": {
+    "suiteZeroFailures": {
+      "actual": "151 files passed (151), 1965 tests passed (1965), 0 failed, 0 skipped — execucao medida por Minos em 2026-11-11 16:19:40 (npx vitest run --coverage, exit 0, 79.40s)",
+      "expected": "0 falhas (summary.failed == 0)",
+      "status": "passed",
+      "note": "Medida real ANTES da 4a review do Argos (norma: Minos re-executa a suite e atualiza o test-report antes de cada review). Composicao: 1962 pre-existentes (medidos no GREEN) + 2 de migration-0019-execution + 1 caso novo de transactions-homonimas-flow = 1965, batendo com a mediacao do briefing (151/1965/0). O teste de execucao da 0019 NAO pulou nesta execucao: o PG efemero subiu de verdade (PostgreSQL 18.6 via embedded-postgres 18.6.0-beta.19) e os 2 casos passaram — skip != verde, e aqui houve execucao real. Ver detalhe do incidente de ambiente em 'incidente-ambiente-node-modules'."
+    },
+    "coverageLinesGte80": {
+      "actual": 85.88,
+      "expected": "lines >= 80",
+      "status": "passed",
+      "note": "11801/13741 statements/lines na agregacao do coverage-final.json (execucao Minos 16:19:40, 2026-11-11)"
+    },
+    "coverageBranchesGte80": {
+      "actual": 84.54,
+      "expected": "branches >= 80",
+      "status": "passed",
+      "note": "2602/3078 na agregacao do coverage-final.json (execucao Minos 16:19:40, 2026-11-11)"
+    },
+    "testReportPresent": {
+      "actual": "test-report.json presente no FEATURE_DIR com summary.failed 0 e summary.coverage 85.88",
+      "expected": "failed == 0 e coverage >= 80",
+      "status": "passed",
+      "note": "AC3 da T6; mesmas condicoes do gate REVIEW do guardian (falha se failed > 0 ou coverage < 80) — estado medido em 2026-11-11 16:19"
+    },
+    "testScenariosManualOnly": {
+      "actual": "test-scenarios.md com 22 cenarios Dado/Quando/Entao (mtime 08/11/2026 11:48, INTACTO nesta delegacao); busca de '[Automatizado]' = 0 matches e de '__tests__/' = 0 matches (re-executado em 2026-11-11 antes da 4a review)",
+      "expected": "sem tag [Automatizado] e sem path __tests__/",
+      "status": "passed",
+      "note": "AC4 da T6 (gate anti-mistura do guardian para REVIEW, decisao 2026-10-16); nenhum cenario manual novo neste ciclo — os 2 blockers da 3a re-review eram tecnicos (min(uuid)->ORDER BY l.id LIMIT 1 e unaccent qualificado) e nao desbloquearam criterio de aceite manual novo. D15 ja coberto pelo Cenario 18 (falha alta sem a funcao de acento)"
+    },
+    "tscExit0": {
+      "actual": "npx tsc --noEmit → exit 0 (2026-11-11, re-executado por Minos no estado final com embedded-postgres+pg presentes)",
+      "expected": "exit 0",
+      "status": "passed",
+      "note": "Durante a re-execucao houve 1 interinacao: com embedded-postgres ausente do node_modules o tsc falhava com TS2307 em migration-0019-execution.test.ts:185 (await import literal de 'embedded-postgres'). Restaurada a dependencia --no-save (como o proprio cabecalho do teste documenta), exit 0. Ver 'incidente-ambiente-node-modules'"
+    },
+    "lintExit0": {
+      "actual": "npx eslint . → exit 0, 0 errors, 73 warnings (2026-11-11, re-executado por Minos no estado final)",
+      "expected": "exit 0 (0 errors)",
+      "status": "passed",
+      "note": "73 warnings = baseline identica as features anteriores (05e)"
+    },
+    "noTestAdjustmentsNeeded": {
+      "actual": "nesta delegacao (atualizacao de relatorio pre-4a review) Minos NENHUM teste alterou e NENHUMA producao tocou: zero escrita em __tests__/ e zero escrita em app|components|lib. Integridade por mtime: os 2 arquivos do ciclo (migration-0019-execution.test.ts 11/11 15:32 e transactions-homonimas-flow.test.tsx 11/11 15:27) e o TransactionModal.test.tsx do RED anterior (11/11 11:11) permanecem com mtime anterior a esta delegacao (16:0x+); os 2 testes F1 fixados seguem com mtime 08/11 (useTransactionForm.test.ts 15:56, transactions-account-flow.test.tsx 16:01); migration-0019.test.ts segue 08/11 09:41",
+      "expected": "nao enfraquecer/ajustar testes existentes; nesta delegacao nem escrever testes",
+      "status": "passed",
+      "note": "Zero edicao em testes; zero producao tocada por Minos; zero commit (Caronte atua depois). A unica escrita de Minos nesta delegacao foi este test-report.json"
+    }
+  },
+  "incidente-ambiente-node-modules": {
+    "resumo": "A re-execucao inicial da suite em 2026-11-11 ~16:08 FALHOU com 7 erros em __tests__/lib/milon/hooks/useRestTimer.test.ts (todos vi.getTimerCount() com +1) e coverage nao gerado. Investigacao: node_modules estava FORA do package-lock.json — 458 divergencias de versao, incluindo @vitest/expect/@vitest/spy/@vitest/utils 3.2.4 no topo enquanto vitest rodava 2.1.9 (e tinyspy 4.0.6 no lugar de 3.0.2) — a cadeia de spies/fake-timers que implementa vi.getTimerCount(). Reproduzido isolado (mesmas 7 falhas so com o arquivo), provando que nao era interferencia entre arquivos nem regressao de codigo (git status limpo em lib/milon e __tests__/lib/milon).",
+    "causa-raiz": "node_modules reinstalado as 15:59 (antes desta delegacao) sem fidelidade ao lock; a reinstalacao de @vitest/coverage-v8 com 'npm install --no-save --no-package-lock' (flag que ignora o lock na LEITURA e re-resolve a arvore toda) agravou/reproduziu o estado. O proprio pacote @vitest/coverage-v8 nao consta em package.json nem no lock (situacao ja documentada pela 05e).",
+    "correcao-aplicada": "npm ci (restaura a arvore exata do lock; exit 0) + npm install --no-save @vitest/coverage-v8@2.1.9 embedded-postgres pg numa UNICA chamada. Apos: 0 divergencias de versao vs package-lock.json; @vitest/* = 2.1.9 e tinyspy = 3.0.2 (fiel); package.json e package-lock.json com git status LIMPO (nunca alterados). Prova da causa raiz: useRestTimer.test.ts passou de 7 failed para 32/32 verdes apos a restauracao.",
+    "evidencia": "Suite final exit 0 (151/1965/0). tsc exit 0. eslint exit 0. nenhuma alteracao de codigo, teste ou manifest"
+  },
+  "outputs": {
+    "suiteTail": "Test Files 151 passed (151) | Tests 1965 passed (1965) | Duration 79.40s (npx vitest run --coverage, Minos 2026-11-11 16:19:40, exit 0)",
+    "executionTestTail": "migration-0019-execution.test.ts → 2 passed (2), exit 0, 7.92s: PG 18.6 subiu em C:\\Users\\User\\AppData\\Local\\Temp\\hestia-mig0019-* e a 0019 aplicou de ponta a ponta (fusao de duplicatas com seed entre 0018/0019, troca de travas, wrapper IMMUTABLE, auditoria) + re-executabilidade",
+    "coverageTail": "All files 85.88 stmts | 84.53 branch | 77.47 funcs | 85.88 lines (reporter v8; agregacao do coverage-final.json: 85.88 / 84.54 / 77.48, 146 arquivos)",
+    "tscTail": "npx tsc --noEmit exit 0 (2026-11-11, estado final)",
+    "lintTail": "npx eslint . exit 0 — 0 errors, 73 warnings (baseline)",
+    "redTail": "(historico do ciclo RED, 2026-11-11) Test Files 3 failed | 147 passed (150) | Tests 4 failed | 1958 passed (1962) | Duration 44.45s (npx run completo APOS o RED, exit 1) — 4 falhas pelas 4 novas, pelo motivo certo, 0 SyntaxError/TS2"
+  },
+  "spotChecks": {
+    "migration-0019-execution": "NOVO no ciclo 4 (blocker CRITICAL findings[0] da 3a re-review): RED de EXECUCAO real em PostgreSQL efemero, nao so assercoes de string. RODOU NESTA EXECUCAO (nao skip): (1) aplica a 0019 sem erro validando fusao das duplicatas com SEED real entre 0018 e 0019, troca de travas, wrapper IMMUTABLE e auditoria com script_name identico; (2) re-executavel apos sucesso (tudo ou nada + idempotencia). Prova executavel de que os 2 blockers do ciclo foram resolvidos: min(uuid) -> ORDER BY l.id LIMIT 1 e unaccent qualificado aplicam em PG 18.6. Design condicionado e nunca falso-verde: sem embedded-postgres/pg o arquivo faz SKIP com aviso (ou FALHA se MIGRATION_EXECUTION_REQUIRED=1); aqui a infra existiu e os 2 passaram",
+    "migration-0019": "__tests__/lib/pluto/migration-0019.test.ts — 10 testes do conteudo da migracao (transacao tudo ou nada, unaccent antes das travas, reapontamento dos quatro ponteiros antes da exclusao, sobrevivente por contagem com desempate menor created_at, descarte de colisao de budget_items antes do DELETE, ordem fusao → troca de trava, auditoria com script_name identico, rollback e verificacoes em comentario, negativos) — verdes",
+    "contratos": "contract-categories (8) + contract-accounts (6): 'Mercaria'/'mercaria' mesmo tipo → mesmo id; 'Alimentacao'/'alimentacao'/'ALIMENTACAO' → mesmo id; acento composto/decomposto → mesmo id; nome igual em tipo diferente → id distinto — verdes",
+    "fakes": "fake-category (10) + fake-account (9) + fake-budget (16): espelho da regra completa em caixa, acento, Unicode e tipo, mantidos os casos legados de caixa — verdes",
+    "repositorios-reais": "repositories/categories.test.ts (5) + repositories/accounts.test.ts (5): busca normalizada com filtro de tipo, corrida com re-leitura devolvendo a linha ja criada, erro de leitura propaga, insert falho sem re-leitura propaga o erro original — verdes",
+    "hooks": "useTransactionForm (16, inclui blur de homonima + 4 da emenda F1) + useTransactionForm-homonimas (2) + useTransactionModals (9) + useBudgetItemEditor (11) — verdes na execucao de 16:19",
+    "ui": "TransactionModal (11) + BudgetForecastForm (5) — verdes (inclui o select discriminador de homonimas)",
+    "barreiras-db": "db/categories.test.ts (4) + db/accounts.test.ts (5) + db/categories.contract.test.ts (5) + db/accounts.contract.test.ts (5) — verdes",
+    "utils": "__tests__/lib/pluto/utils.test.ts (5): normalizeName em trim, caixa, acento e composicao/decomposto Unicode — verdes",
+    "homonimas-flow": "transactions-homonimas-flow.test.tsx = 2 casos (o do ciclo anterior + CASO NOVO do GREEN do ciclo 4, mtime 11/11 15:27): (1) escolher a option 'Itau (Cartao)' no select submete createTransaction com account_id a-cartao; (2) na EDICAO, trocar para a outra homonima mantem o select.value na escolha (sem snap-back) e salva a escolhida — os 2 VERDES na execucao de 16:19",
+    "milon-intacto": "Fora do escopo desta feature: os 7 erros de useRestTimer.test.ts que apareceram na primeira re-execucao NAO eram regressao (arquivo e producao milon com git status limpo e mtime 30/10) — eram sintoma do node_modules fora do lock; apos npm ci, 32/32 verdes"
+  },
+  "gaps": [
+    "Functions global 77.48% segue abaixo de 80 (idem 05e com 76.76 e milon 06 com 76.68) — os gates desta house (e o guardian) exigem lines e branches >= 80, ambos atendidos (85.88 e 84.54).",
+    "getMonthLabel (lib/pluto/utils.ts linhas 32-37) e getAccounts (lib/pluto/repositories/accounts.ts linhas 7-19) sem cobertura: funcoes legadas pre-existentes, fora do escopo desta feature (normalizeName e o getOrCreate de contas estao cobertos).",
+    "O agregado legado lib/pluto/repositories segue baixo por regime fakes-only (decisao 57: contract-*.test.ts rodam sobre a fake; budget.ts 0.71%, months.ts 0%, index.ts 0%) — arquivos fora do escopo, nao bloqueiam.",
+    "DEPENDENCIAS NAO DECLARADAS (3) instaladas com npm install --no-save e ausentes de package.json/package-lock: @vitest/coverage-v8@2.1.9 (reporter de coverage, mesma situacao documentada pela 05e e pela milon 06), embedded-postgres@18.6.0-beta.19 e pg@8.23.1 (infra do teste de execucao da 0019 — o proprio cabecalho do teste documenta o --no-save). RISCO OPERACIONAL: cada 'npm install --no-save' re-sincroniza a arvore com o lock e REMOVE os extras anteriores — instalar os 3 na mesma chamada; 'npm ci' os remove todos e quebra o tsc (TS2307 no import literal de 'embedded-postgres' em migration-0019-execution.test.ts:185) e deixa o teste de execucao em SKIP. package.json e package-lock.json intactos (git status vazio).",
+    "Seed da fusao NO CI: o job integration (ci.yml:112-125) aplica a cadeia de migrations do zero em banco limpo com ON_ERROR_STOP=1, SEM seed de duplicatas entre a 0018 e a 0019 — as secoes de fusao da 0019 nao sao exercitadas la. O seed agora existe no teste local de execucao (migration-0019-execution.test.ts), mas o CI continua sem esse cenario.",
+    "Cenario D15 manual (decisao 15: disponibilidade de unaccent nao assumida): o caminho FELIZ do unaccent foi exercitado de verdade no PG efemero (a 0019 aplicou com a extensao disponivel), mas o ramo 'funcao indisponivel -> falha alta clara e nada aplicado' NAO foi exercitado em PG real (o PG local tem contrib). Coberto textualmente (ordem 'unaccent antes das travas' em migration-0019.test.ts) e pelo Cenario 18 manual de rollback; a validacao real do falha-alta fica para homologacao humana (o plan.md §246 preve o mesmo caminho de decisao no CI via supabase local).",
+    "Migracao 0019 (migration-0019-pluto-categorias-contas-normalizadas.sql) segue PENDENTE de aplicacao manual no Supabase pelo humano (mesmo fluxo das 0017/0018): auditoria em public.schema_migrations com script_name identico ao do arquivo. O wrapper IMMUTABLE do finding critical ja foi entregue e agora VALIDADO por execucao real (arquivo com mtime 11/11 15:55, GREEN dos blockers).",
+    "O teste da trava real contra Supabase efemero (__tests__/integration/unique-normalized.test.ts) roda apenas no job integration com a 0019 aplicada — fora da suite unitaria por configuracao (vitest.config.ts exclui __tests__/integration/**), comportamento previsto na T2.",
+    "Cenarios nao exercitaveis em jsdom (duas abas reais concorrentes, falha de rede real, estado do banco pos-migracao, rollback com aborto do unaccent) ficam declarados em test-scenarios.md — sem tentativa de automatizacao falsa.",
+    "Trilha do value discriminador do select: GREEN entregue e suite integralmente verde (151/1965/0 medido em 2026-11-11 16:19) — os 2 testes F1 de fluxo que disparam change por nome ('Nubank'/'Itau') permanecem verdes sem ajuste (mtime 08/11, intactos); nenhum teste legado precisou ser alterado para o GREEN."
+  ],
+  "filesTouchedByMinosT6": [
+    ".agents/modules/pluto/11-categorias-sem-distincao-caixa/test-report.json",
+    ".agents/modules/pluto/11-categorias-sem-distincao-caixa/test-scenarios.md",
+    ".agents/modules/pluto/regression.md"
+  ],
+  "executed": [
+    "npx vitest run --coverage (2026-11-11 16:19:40, Minos, exit 0, 79.40s — 151 files passed (151), 1965 tests passed (1965), 0 failed, 0 skipped; reporter v8 'All files 85.88 stmts | 84.53 branch | 77.47 funcs | 85.88 lines'; agregacao do coverage-final.json: statements 11801/13741 = 85.88, branches 2602/3078 = 84.54, functions 547/706 = 77.48, 146 arquivos) — EXECUCAO FINAL de referencia para a 4a review do Argos",
+    "npx vitest run __tests__/lib/pluto/migration-0019-execution.test.ts --reporter=verbose (exit 0, 2 passed, 7.92s, 16:18:34) — isolado: PG 18.6 sobe em temp dir, cadeia da 0019 inteira aplicada + re-executabilidade; confirma que NAO ha skip nesta rodada",
+    "npx vitest run __tests__/lib/milon/hooks/useRestTimer.test.ts (isolado) — 1a tentativa 16:10:47: 7 failed / 25 passed (sintoma do node_modules fora do lock); apos npm ci: 32 passed / 32, exit 0 — prova da causa raiz",
+    "npx tsc --noEmit (estado final 2026-11-11: exit 0; com embedded-postgres ausente chegou a falhar com TS2307 em migration-0019-execution.test.ts:185)",
+    "npx eslint . (exit 0, 0 errors, 73 warnings baseline)",
+    "npm ci (exit 0) + npm install --no-save @vitest/coverage-v8@2.1.9 embedded-postgres pg — restauracao da fidelidade ao lock; auditoria pos-restauracao: 0 divergencias de versao vs package-lock.json e git status de package.json/package-lock.json vazio (manifests nunca alterados)",
+    "verificacoes de gate REVIEW do guardian (guardian.js:166-175): test-report.json com failed 0 e coverage 85.88 (>= 80) e test-scenarios.md sem '[Automatizado]' (0 matches) e sem '__tests__/' (0 matches, 22 cenarios, mtime 08/11 intacto) — as quatro condicoes do bloco next === 'REVIEW' verificadas direto nos artefatos; a fase nao foi alterada por Minos (delegacao exclusiva de atualizacao de relatorio, sem writes de fase)",
+    "ATUALIZACAO PRE-REVIEW (delegacao 2026-11-11, antes da 4a review do Argos): suite re-executada 16:19:40 = 151 files / 1965 tests / 0 failed / 0 skipped (batendo com o briefing 151/1965/0); coverage 85.88 stmts / 84.54 branch / 77.48 funcs; tsc exit 0; eslint exit 0 (0 errors, 73 warnings); test-scenarios.md intacto (22 cenarios, 0 tags proibidas). Arquivo tocado por Minos nesta delegacao: APENAS este test-report.json (zero producao, zero testes, zero commit, nenhuma fase alterada)."
+  ]
+}

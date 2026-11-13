@@ -59,3 +59,9 @@ Smokes manuais promovidos de features Pluto (Minos promove a partir de `test-sce
 1. Em `/pluto/transactions` (mês aberto), confira o banner "Saldo do Mês" = Receitas − Despesas (verde se ≥ 0).
 2. Lance uma despesa que inverta o saldo → banner fica vermelho com o valor negativo.
 3. Sem mês aberto, confira a mensagem orientando ir a `/pluto/months`.
+
+## Transactions — categoria reutiliza nome com caixa/acentos diferentes
+
+1. Em `/pluto/transactions` (mês aberto), crie uma despesa com a categoria `Mercado` (criando-a se não existir) e salve.
+2. Crie outro lançamento digitando `mercado` no campo de categoria e escolha a sugestão `Mercado` que aparece.
+3. Confira que os dois lançamentos ficam na mesma categoria e a lista de categorias não exibe `Mercado` duplicada.

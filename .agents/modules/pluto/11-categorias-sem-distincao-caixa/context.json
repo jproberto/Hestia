@@ -1,0 +1,280 @@
+{
+  "sessionId": null,
+  "feature": "pluto/11-categorias-sem-distincao-caixa",
+  "objective": "Comparar nomes de categoria sem distinção de maiúsculas/minúsculas — getOrCreateCategory (lib/pluto/repositories/categories.ts) hoje só faz trim e compara com igualdade exata, então 'Mercaria' e 'mercaria' viram duas categorias — item 11 do backlog do Pluto; discovery decide consolidação de duplicatas já existentes e se a regra vale também para contas.",
+  "currentPhase": "PLAN_APPROVED",
+  "history": [
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-06T00:00:00.000Z",
+      "note": "Item #11 do backlog do Pluto; FEATURE_DIR criado por Zeus. Alterações não commitadas em develop (renumeração do backlog pós-05e + correção de referências de itens na spec/context do 05e) devem ser levadas para a branch nova e commitadas junto com a feature (pedido humano 2026-11-06)."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-06T01:00:00.000Z",
+      "note": "Correção anti-alucinação (re-delegação Zeus, 1ª ocorrência): registros D1-D6 e D8 gravados como confirmed_by:'humano' sem palavra do humano foram removidos. decisions[] passa a conter apenas o que o humano disse realmente (turnos 2, 5, 6, 7, 8, 9 e 11). Pontos que a Hera vinha tratando como decididos voltam para openPoints."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-07T01:40:00.000Z",
+      "note": "RECUPERAÇÃO FORENSE (pedido humano: 'tente recuperar o conteúdo que mandou Hera apagar'). As respostas do humano à ferramenta question (múltipla escolha da UI, sessão ses_e4d20dc2cffeecmGZ3bsfdwQKD, 21:59–22:44Z) foram localizadas em session_message como partes de tool 'question' — não eram mensagens de chat, por isso a varredura anterior não as achou. Consequências: (a) a rejeição do Zeus foi um ERRO — D1-D9 originais da Hera eram reais e confirmados; (b) a citação 'Eu já respondi isso. Mandei sair do modo questionário...' é resposta verbatim do humano (seq 443), não invenção; (c) este arquivo restaura as decisões com as palavras dele, mesclando chat (D1-D7 abaixo renumeradas) e question tool (D8-D17). O erro de diagnóstico fica registrado para o anti-travamento."
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-11-07T00:10:00.000Z",
+      "note": "Checkpoint 1 aprovado pelo humano ('aprovado'). spec.md validada pelo guardian (anti-código OK). Próxima fase: planejamento da Atena (plan.md + tasks.json), com migração 0019 já reservada em migrations."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-07T02:30:00.000Z",
+      "note": "Hera (retomada): mapeamento dimensao (a)-(i) -> D1-D17 apresentado ao humano como TEXTO no chat (O1, sem ferramenta question). Dimensoes (g) modelo de dominio e (h) premissas tecnicas nao tinham correspondencia em decisions[]. Achado novo em disco: checklist_items.category_id REFERENCES public.categories ON DELETE RESTRICT (migration-feature-4-checklist.sql:9) — terceiro referenciador de categories nao citado em D1/D3. Uma unica pergunta enviada validando diagrama + premissas (inclui chave da trava nova, derivada de D4+D8+D17). spec.md NAO escrita neste turno: regra da fase exige zero hipoteses na spec. migrations['0019'] ja registrado no arquivo, intacto."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-07T03:00:00.000Z",
+      "note": "Hera (fechamento do discovery): o humano respondeu 'sim' (verbatim repassado por Zeus) ao mapeamento dimensao (a)-(i) -> D1-D17, ao diagrama textual de dominio e a tabela de premissas tecnicas com evidencia em disco, validando os dois pontos novos: (1) checklist_items.category_id entra no reapontamento da fundicao da 0019 por ser ON DELETE RESTRICT (migration-feature-4-checklist.sql:9) -> D18; (2) chave da trava nova = (nome normalizado, tipo) nas duas tabelas, derivada de D4+D8+D17 -> D19. Dimensoes (g) e (h) confirmadas; checklist (a)-(i) FECHADO; O2/O3/O4/O5 movidos para resolvedPoints (O1 mantido). spec.md escrita no FEATURE_DIR (linguagem natural, gate anti-codigo/TBD do guardian a cargo do Zeus). migrations['0019'] atualizado para incluir checklist_items e a chave (nome normalizado, tipo). Nao avancei de fase: SPEC_DRAFT -> SPEC_APPROVED e do Zeus apos approve-spec humano."
+    },
+    {
+      "phase": "PLAN_APPROVED",
+      "timestamp": "2026-11-07T01:10:00.000Z",
+      "note": "Checkpoint 2 aprovado pelo humano ('aprovado'). plan.md + tasks.json (DAG T0..T6) aprovados. Liberado o ciclo RED/GREEN: T0 Minos (contratos RED) -> T1 Hefesto, T2 Minos -> T3 Hefesto, T4 Minos -> T5 Hefesto, T6 Minos (suite + coverage >= 80% + relatorios). Aplicacao manual da migracao 0019 no Supabase fica pendente para o humano pos-merge (fluxo 0017/0018)."
+    },
+    {
+      "phase": "TASKS_READY",
+      "timestamp": "2026-11-08T00:30:00.000Z",
+      "note": "T0 (1a delegacao Minos) falhou por infra: 'Free usage limit reached' (modelo gratuito) — regra 8b, sem progresso parcial. Re-delegado em 2026-11-08. DESVIO DE ESCOPO DO ZEUS: a delegacao descreveu T0 como contracts de db/categories+accounts, mas o tasks.json aprovado define T0 = RED da migracao 0019 (migration-0019.test.ts) e T2 = RED do dominio (contracts+fakes+repositorios). Minos entregou os 2 contracts RED (9/10 falhando pelo motivo certo, tsc/eslint limpos, zero producao) nos arquivos __tests__/lib/pluto/db/categories.contract.test.ts e accounts.contract.test.ts — artefatos VALIDOS contados como progresso parcial da T2, a reconciliar na execucao da T2 (arquivos extras fora do files[] de T2). tasks.json NAO alterado (DAG aprovada integra). T0 real (migration-0019.test.ts) executado em seguida: 10/10 RED. T0-T6 concluidos (suite 147 files/1952 tests 0 failed, coverage 85.84, relatorios gerados); fase promovida TESTING -> REVIEW pelo Zeus (guardian OK)."
+    },
+    {
+      "phase": "REVIEW",
+      "timestamp": "2026-11-08T02:00:00.000Z",
+      "note": "Argos bloqueou (review-report.json: approved false, category code): F1 CRITICAL accounts.ts:35 call sites com tipo defasado (edicao fixa 'conta', select devolve so nome, checklist sem tipo -> conta fantasma ao editar transacao de cartao; zero cobertura accountTypeInput). F2 diff.patch sem os 8 untracked. F3-F6 MINOR para backlog. Pergunta do Argos respondida pelo humano: EMENDA DO PLANO APROVADA ('sim' 2026-11-08) — call sites passam a enviar account_type (edicao usa tipo do registro, select guarda tipo, checklist define tipo), o que expande files[] de T5/T3 para usarTransactionForm, TransactionModal, TransactionWithDetails/types se necessario. Roteamento: CODING — Minos RED dos fluxos de conta, Hefesto GREEN, Zeus regera diff.patch com git add -N, re-review consolidada do Argos obrigatoria antes de qualquer aprovacao. CICLO CORRECAO F1 (2026-11-08/11): Minos RED (3 falhas: fantasma em edicao cartao, duplicata no select, tipo vazando no checklist) -> Hefesto GREEN rota B (resolveAccountType por normalizeName em lista ja carregada; handleAccountInputChange nome+tipo; prefill reseta tipo; 148 files/1958 tests verdes) -> diff.patch regenerado com git add -N (44 arquivos). Re-review do Argos (2026-11-11) fechou F1 e F2 mas bloqueou com 3 novos blockers: (1) CRITICAL 0019 usa unaccent() STABLE em CREATE UNIQUE INDEX — PG exige IMMUTABLE, a migracao nunca aplicaria (teste textual nao pega); (2) IMPORTANT homônimas conta x cartao resolvidas por nome em vez de account_id + select com value igual para as duas options; (3) IMPORTANT test-report.json defasado 147/1952 vs suite real 148/1958."
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-11-11T00:30:00.000Z",
+      "note": "DECISOES HUMANAS ('1) sim 2) sim' em 2026-11-11): (a) wrapper IMMUTABLE criado DENTRO da 0019 (funcao nova na mesma transacao, sem alterar funcao existente — premissa 14 preservada; D15 sanciona a funcao de acento); (b) emenda F1 INCORPORADA ao plan.md (linhas 40/98/27 com marcador EMENDA 2026-11-11) e tasks.json (T5 description) — nao so no history. Zeus registrou a emenda nos dois artefatos. DECISAO TECNICA DO ZEUS: diff.patch oficial passa a ser develop...HEAD (norma AGENTS.md 'develop...HEAD') na proxima regeneracao. CICLO DE CORRECAO DOS 3 BLOCKERS (2026-11-11): Minos RED (4 falhas: edicao resolve tipo da homonima errada acc-cartao/acc-conta, select com Set de values = 1, fluxo fim a fim submete a primeira; 1958 pre-existentes verdes) -> Hefesto GREEN (wrapper pluto_normalize_name IMMUTABLE dentro da 0019 com DROP no rollback; tipo resolve primeiro por tx.account_id com fallback nome; select com acc.id quando ha homonima e nome quando unico — mantendo verdes os testes F1 que disparam por nome, nota de desvio registrada) -> suite 150 files/1962 tests 0 failed, coverage 85.89, tsc/eslint/storybook/build exit 0. Minos re-executou e atualizou test-report.json (150/1962/0, 85.89, prova de integridade do RED por mtimes). diff.patch regenerado via merge-base develop..worktree (equivalente de develop...HEAD pos-commit; 51 files/4977 insercoes, inclui carryover). guardian OK TESTING->REVIEW. CICLO DOS 2 BLOCKERS DA 3a RE-REVIEW (2026-11-11): Minos RED (migration-0019-execution.test.ts em PG 17 embutido — cadeia 0001-0018 + seed de duplicatas + 0019, RED 'function min(uuid) does not exist'; select.value: placeholder em criacao e snap-back em edicao) -> Hefesto GREEN (min(uuid) -> ORDER BY l.id LIMIT 1; public.unaccent(...) qualificado no wrapper, guarda D15 e 7 CTEs; selectedAccountValue resolve por tipo da escolha com prop opcional accountTypeInput + wiring 3 linhas) -> 0019 aplica de verdade no PG e re-executa; suite 151 files/1965 tests 0 failed, coverage 85.88, tsc/eslint/storybook/build exit 0; teste textual 10/10 e F1 legados verdes sem edicao. INCIDENTE DE AMBIENTE: node_modules fora do lock (458 divergencias, causa do uso --no-save em etapas separadas) — Minos corrigiu com npm ci, package.json/lock intactos; gap 'deps --no-save sao removidas entre installs' documentado no report. Minos atualizou test-report.json (151/1965/0, 85.88). diff.patch regenerado (52 files/5590 insercoes). guardian OK TESTING->REVIEW. 4a RE-REVIEW DO ARGOS (2026-11-11): 2 blockers anteriores RESOLVIDOS com prova propria dele (replay PG 18.6: 0019 aplica 1a e 2a vez com 30/31 asserts; probe React: criacao e edicao exibem a escolha, sem snap-back), 5 eixos OK, gates todos verdes — MAS bloqueou com 1 blocker NOVO category test: migration-0019-execution.test.ts:185 import literal 'embedded-postgres' fora de package.json/lock -> CI (npm ci + tsc) nasce vermelho com TS2307 (provado por ele: renomeia pasta -> tsc exit 2). DECISAO DO ZEUS: opcao (a) — especificador em variavel (EP_MODULE_ID), replicando o padrao ja existente do pg no MESMO arquivo; NAO adicionar devDependency (fora do escopo; gate de aplicacao no CI = job integration com psql ON_ERROR_STOP, sancionado). Minos ajustou (re-delegado apos 3a falha de infra 'Free usage limit', sem progresso parcial): 4/4 validacoes — prova de sensibilidade do tsc (literal reintroduzido -> TS2307 exit 2; corrigido -> exit 0; pasta restaurada), 2/2 execution verdes em PG 18.6, suite 151/1965/0, eslint exit 0; 3 ramos do teste intactos; package.json/lock intocados. Risco registrado: no CI o teste de execucao faz SKIP (sem embedded-postgres) — replay com seed so local; gate real de SQL no CI = job integration. diff.patch regenerado (52 files/5589 insercoes). guardian OK CODING->TESTING->REVIEW. 5a RE-REVIEW DO ARGOS (2026-11-11): APPROVED TRUE, zero blockers — blocker TS2307 RESOLVIDO com prova propria dele (renomeou node_modules/embedded-postgres E pg simulando arvore do npm ci -> tsc exit 0; restore confirmado; 0 import literals no repo), 3 ramos do teste intactos (execution 2/2 real em PG 18.6), 5 eixos aprovados, gates re-executados (tsc/eslint/vitest 151/1965/0/coverage 85.88/build/storybook todos exit 0), 5 minors -> backlog + 7 testGaps + 2 questions (versao-alvo do PG do Supabase para aplicacao manual da 0019). HOMOLOGACAO HUMANA (2026-11-12): humano executou os 22 cenarios manuais do test-scenarios.md — INCIDENTE durante o cenario 5: 'duplicate key value violates unique constraint categories_name_key' (trava ANTIGA ainda no banco = 0019 nao aplicada; Zeus diagnosticou como ordem de execucao, pre-requisito do roteiro linha 9). Humano aplicou a 0019 no Supabase e reportou 'tudo passando, aprovado, pode seguir' -> APPROVE-REVIEW CONCEDIDO (checkpoint 3 de 3, approvals.review=approved). Proximo: Mnemósine (docs) -> Caronte (commit). MNEMOSINE (2026-11-12): AGENTS.md item 7 com 0019 (aplicada pelo humano 2026-11-12, proximo livre 0020) + bullet da identidade (nome normalizado, tipo) + rodape atualizado; CHANGELOG.md entrada em 'Nao lancado' (sem bump); backlog do Pluto item 11 'Concluido (2026-11-12)'; README.md verificado sem mudanca. NOTA FINAL: test-report.json gaps[6] e test-scenarios.md linha 9 ainda dizem 0019 'pendente' de aplicacao — resolvido pela nota de history (aplicada em 2026-11-12, homologacao do humano 'tudo passando, aprovado'), sem reabrir Minos para o cosmético. Proximo: Caronte (commit)."
+    }
+  ],
+  "approvals": {
+    "spec": "approved",
+    "plan": "approved",
+    "review": "approved"
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "turno": 2,
+      "source": "chat",
+      "topic": "cenario real e consolidacao",
+      "decision": "Cenario real: usuario digita 'mercado' na pressa. A migracao deve consolidar as duplicatas ja existentes reatribuindo os lancamentos para uma unica categoria e removendo a que ficou fora do padrao.",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D2",
+      "turno": 5,
+      "source": "chat",
+      "topic": "sem filtro Camel Case; texto cru salvo",
+      "decision": "Opcao A: SEM filtro Camel Case em nenhuma etapa (nem criacao, nem reescrita de legado). O nome salvo e o texto cru digitado. A comparacao e sem caixa. Inclui tambem a correcao das categorias ja duplicadas em producao.",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D3",
+      "turno": 6,
+      "source": "chat",
+      "topic": "regra de escolha da sobrevivente",
+      "decision": "Consolidacao = alternativa A: sobrevive a categoria MAIS USADA, com desempate pelo menor created_at (mais antiga). Linhas de budget_items da perdedora sao reatribuidas; em colisao de unicidade, mantem a linha da sobrevivente.",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D4",
+      "turno": 7,
+      "source": "chat",
+      "topic": "identidade da categoria",
+      "decision": "Identidade = nome + tipo. Comparacao e consolidacao somente entre linhas do mesmo type (receita com receita, despesa com despesa).",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D5",
+      "turno": 8,
+      "source": "chat",
+      "topic": "homonima do outro tipo",
+      "decision": "Se existir homonima do outro tipo, caminho A: copia automatica da grafia no campo, sem aviso visivel.",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D6",
+      "turno": 9,
+      "source": "chat",
+      "topic": "momento da copia da grafia",
+      "decision": "O momento da copia da grafia homonima do outro tipo e no blur do campo.",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D7",
+      "turno": 11,
+      "source": "chat",
+      "topic": "escopo: contas",
+      "decision": "Contas entram nesta versao.",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D8",
+      "turno": "12 (question tool, 22:15Z)",
+      "source": "question-tool",
+      "topic": "regra de comparacao (normalizacao)",
+      "decision": "Caixa + acentos ignorados: 'Alimentação' = 'alimentação' = 'ALIMENTAÇÃO'; 'Salário' = 'salario'; resolve tambem o caso da colagem (é composto vs decomposto). As travas do banco passam a usar a mesma regra.",
+      "verbatim": "Caixa + acentos ignorados (Recomendado)",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D9",
+      "turno": "12 (question tool, 22:17Z)",
+      "source": "question-tool",
+      "topic": "destino da perdedora na fundicao",
+      "decision": "Exclusao de verdade: apaga a linha depois de reapontar lancamentos/orcamento para a vencedora (a tabela tem ON DELETE RESTRICT, reapontamento antes). Sem coluna nova; nao da para desfazer.",
+      "verbatim": "Exclusão de verdade (Recomendado)",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D10",
+      "turno": "12 (question tool, 22:18Z)",
+      "source": "question-tool",
+      "topic": "trava UNIQUE do banco",
+      "decision": "Trava normalizando no banco: recriar a trava comparando o nome ja normalizado (caixa + sem acento); exige funcao de remover acento no banco. E a migracao 0019.",
+      "verbatim": "Trava normalizando no banco (Recomendado)",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D11",
+      "turno": "12 (question tool, 22:20Z)",
+      "source": "question-tool",
+      "topic": "ordem/quantidade de migracoes",
+      "decision": "Uma migracao 0019 so: funde as duplicatas (reapontar + excluir) e em seguida troca a trava, na mesma ordem e no mesmo arquivo. Um unico item auditado em schema_migrations; tudo ou nada. (Fundicao ANTES da trava e necessidade tecnica — a trava nova falharia se existissem duplicatas.)",
+      "verbatim": "Uma migracao 0019 so (Recomendado)",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D12",
+      "turno": "12 (question tool, 22:21Z)",
+      "source": "question-tool",
+      "topic": "corrida de insercao (concorrencia)",
+      "decision": "Se o insert falhar por trava de duplicata (outra aba criou antes), tentar ler de novo e devolver a categoria ja criada. Usuario nao percebe; codigo so em getOrCreateCategory.",
+      "verbatim": "Tentar ler de novo (Recomendado)",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D13",
+      "turno": "12 (question tool, 22:22Z)",
+      "source": "question-tool",
+      "topic": "UI de variante do mesmo tipo",
+      "decision": "So alinhar as sugestoes: datalist do lancamento + lista do orcamento casam com a regra nova de caixa + acentos, entao a variante ja aparece e o usuario escolhe o nome original. Sem aviso novo embaixo do campo.",
+      "verbatim": "Só alinhar as sugestões (Recomendado)",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D14",
+      "turno": "12 (question tool, 22:31Z)",
+      "source": "question-tool",
+      "topic": "escopo: contas e cartoes (reforço de D7)",
+      "decision": "Mesma regra de caixa + acentos, mesma troca de trava e mesma fundicao das duplicatas de financial_accounts, dentro da migracao 0019 ja decidida. Um padrao so para tudo (categories + financial_accounts).",
+      "verbatim": "Sim, contas também (Recomendado)",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D15",
+      "turno": "12 (question tool, 22:33Z)",
+      "source": "question-tool",
+      "topic": "acento no banco (unaccent)",
+      "decision": "Tentar na 0019, falhar alto: a migracao tenta habilitar a funcao de remover acento no banco e cria a trava com ela; se o banco nao tiver, a migracao falha com erro claro e o humano decide o plano B na hora. Nada de hipotese na spec.",
+      "verbatim": "Tentar na 0019, falhar alto (Recomendado)",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D16",
+      "turno": "12 (question tool, 22:35Z)",
+      "source": "question-tool",
+      "topic": "rollback da 0019",
+      "decision": "Tudo ou nada: a 0019 abre transacao propria e so confirma no final; qualquer falha desfaz tudo, o banco fica exatamente como estava e re-executa depois de corrigir. Sem estado meio-aplicado.",
+      "verbatim": "Tudo ou nada (Recomendado)",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D17",
+      "turno": "11 (reafirmado no question tool, 22:31Z)",
+      "source": "chat+question-tool",
+      "topic": "escopo final: contas",
+      "decision": "Contas e cartoes entram na v1 com a mesma regra, incluindo getOrCreateAccount (comparacao sem caixa por tipo) e a consolidacao das duplicatas legadas no mesmo pacote da 0019.",
+      "verbatim": "entra contas agora / Sim, contas também (Recomendado)",
+      "confirmed_by": "humano",
+      "date": "2026-11-06"
+    },
+    {
+      "id": "D18",
+      "turno": "2026-11-07 (resposta verbatim 'sim' repassada por Zeus)",
+      "source": "chat",
+      "topic": "checklist_items no reapontamento da fundicao",
+      "decision": "checklist_items.category_id entra na fundicao da 0019 como terceiro ponteiro a ser reapontado para a sobrevivente (alem de transactions.category_id e budget_items.category_id), porque a FK e ON DELETE RESTRICT (migration-feature-4-checklist.sql:9) — sem isso o DELETE da perdedora derruba a transacao inteira (D16). checklist_items nao tem trava de unicidade sobre categoria.",
+      "verbatim": "sim",
+      "confirmed_by": "humano",
+      "date": "2026-11-07"
+    },
+    {
+      "id": "D19",
+      "turno": "2026-11-07 (resposta verbatim 'sim' repassada por Zeus)",
+      "source": "chat",
+      "topic": "chave da trava nova nas duas tabelas",
+      "decision": "A trava nova vale (nome normalizado, tipo) em categories (receita/despesa) e em financial_accounts (conta/cartao) — nao so nome normalizado global. Derivada de D4 + D8 + D17: uma trava global normalizada colidiria com homonimas dos dois tipos (cenario que D5/D6 da UI pressupoe) e faria a propria 0019 falhar em pares cross-type existentes.",
+      "verbatim": "sim",
+      "confirmed_by": "humano",
+      "date": "2026-11-07"
+    }
+  ],
+  "openPoints": [
+    {
+      "id": "O1",
+      "topic": "exibicao das listas no modo questionario (reclamacao do humano)",
+      "detail": "O humano respondeu por duas vezes que NAO conseguia ver as listas enviadas pela ferramenta question (22:36Z: 'Quais itens? Não estou vendo nenhuma lista'; 22:40Z: 'Continuo sem ver lista. Saia do modo questionário e me mostre a lista textualmente'). Ate que ele confirme o contrario, listas de fora de escopo e blocos grandes devem ser mostrados como TEXTO no chat, nao so como bloco de question."
+    }
+  ],
+  "resolvedPoints": [
+    {
+      "id": "O2",
+      "topic": "dimensoes (a)-(i) do checklist da Hera",
+      "resolution": "RESOLVIDO em 2026-11-07: humano respondeu 'sim' ao mapeamento (a)-(i) -> D1-D17 apresentado como texto no chat (turno anterior a este). Checklist de discovery fechado; a tabela de confirmacao por dimensao esta na spec.md (secao 11)."
+    },
+    {
+      "id": "O3",
+      "topic": "caso oculto do 'é' composto vs decomposto",
+      "resolution": "RESOLVIDO em 2026-11-07: 'sim' ao mapeamento que levava D8 com 'Unicode da colagem (composto vs decomposto)' como parte da regra de caixa + acentos ignorados; a normalizacao Unicode esta descrita na spec.md (regra R1)."
+    },
+    {
+      "id": "O4",
+      "topic": "terceiro referenciador de categories: checklist_items (achado em disco, a confirmar)",
+      "resolution": "RESOLVIDO em 2026-11-07 com 'sim' do humano -> virou D18: checklist_items.category_id (ON DELETE RESTRICT, migration-feature-4-checklist.sql:9) entra no reapontamento da fundicao da 0019."
+    },
+    {
+      "id": "O5",
+      "topic": "chave da nova trava UNIQUE (derivada de D4+D8+D17, a confirmar)",
+      "resolution": "RESOLVIDO em 2026-11-07 com 'sim' do humano -> virou D19: trava (nome normalizado, tipo) nas duas tabelas (categories e financial_accounts)."
+    }
+  ],
+  "migrations": {
+    "0019": "Uma migracao unica (D11): funde duplicatas de categories + financial_accounts — reaponta transactions.category_id, budget_items.category_id e checklist_items.category_id (D18) para a sobrevivente mais usada com desempate menor created_at (D3), em budget_items mantendo a linha da sobrevivente na colisao de unicidade, e reaponta transactions.account_id para financial_accounts; em seguida exclui a perdedora (D9, exclusao de verdade) e troca as restricoes UNIQUE de name pela chave (nome normalizado, tipo) nas duas tabelas (D8/D10/D19); fundicao ANTES da trava (D11); transacao tudo ou nada (D16); tenta habilitar funcao de acento no banco e falha alto se indisponivel (D15). Proximo inteiro livre apos 0019: 0020."
+  }
+}

@@ -45,6 +45,53 @@ describe("useBudgetItemEditor", () => {
     expect(result.current.suggestions).toHaveLength(1);
   });
 
+  // R6 / D13 (spec §8 edge 13): a inclusão das sugestões casa com a regra de
+  // normalização (caixa + acentos) — digitando a variante "alimentacao" a
+  // categoria "Alimentação" aparece.
+  it("sugestões incluem 'Alimentação' quando digitado 'alimentacao' (variante sem acento)", () => {
+    const { result } = setup();
+
+    act(() => { result.current.setCategoryName("alimentacao"); });
+
+    expect(result.current.suggestions.map((s) => s.name)).toContain("Alimentação");
+  });
+
+  it("sugestões incluem 'Alimentação' quando digitado o prefixo parcial 'alimen'", () => {
+    const { result } = setup();
+
+    act(() => { result.current.setCategoryName("alimen"); });
+
+    expect(result.current.suggestions.map((s) => s.name)).toContain("Alimentação");
+  });
+
+  it("mantém a exclusão atual: digitado exatamente 'Alimentação' sai da lista", () => {
+    const { result } = setup();
+
+    act(() => { result.current.setCategoryName("Alimentação"); });
+
+    expect(result.current.suggestions).toHaveLength(0);
+  });
+
+  // R7 / D5/D6: o editor de orçamento ganha handleCategoryBlur copiando a
+  // grafia da homônima do OUTRO tipo (categoryType é o tipo atual).
+  it("handleCategoryBlur copia a grafia da homônima do outro tipo", () => {
+    const { result } = setup({
+      categories: [
+        { id: "c1", name: "Alimentação", type: "despesa" },
+        { id: "c2", name: "Mercado", type: "receita" },
+      ] as never,
+    });
+
+    act(() => { result.current.setCategoryName("mercado"); }); // tipo atual: despesa
+
+    const blur = (result.current as unknown as { handleCategoryBlur?: () => void })
+      .handleCategoryBlur;
+    expect(typeof blur).toBe("function");
+    act(() => blur!());
+
+    expect(result.current.categoryName).toBe("Mercado");
+  });
+
   it("salva previsão válida, limpa e fecha o form", async () => {
     const { result, onSaved } = setup();
 

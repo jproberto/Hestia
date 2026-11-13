@@ -1,0 +1,48 @@
+{
+  "currentPhase": "APPROVED",
+  "validTransitions": {
+    "SPEC_DRAFT": ["SPEC_APPROVED"],
+    "SPEC_APPROVED": ["PLAN_READY", "SPEC_DRAFT"],
+    "PLAN_READY": ["PLAN_APPROVED", "SPEC_APPROVED"],
+    "PLAN_APPROVED": ["TASKS_READY", "PLAN_READY", "SPEC_DRAFT"],
+    "TASKS_READY": ["CODING", "PLAN_APPROVED", "PLAN_READY"],
+    "CODING": ["TESTING", "TASKS_READY"],
+    "TESTING": ["REVIEW", "CODING"],
+    "REVIEW": ["APPROVED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
+    "APPROVED": ["COMMITTED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
+    "COMMITTED": ["CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"]
+  },
+  "phaseHistory": [
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-06T00:00:00.000Z",
+      "note": "FEATURE_DIR criado por Zeus; aguardando Step 0 (Caronte: branch com as alterações não commitadas carregadas) e discovery (Hera)."
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-11-07T00:00:00.000Z",
+      "note": "Checkpoint 1 (approve-spec) concedido pelo humano: spec.md aprovada (19 decisoes D1-D19, 11 regras, 15 premissas, 16 edge cases, YAGNI 10 itens). Unico ponto levantado na aprovacao: 'mais usada' (D3) concretizada como contagem de linhas em transactions + budget_items + checklist_items com desempate menor created_at — aprovado sem ajuste."
+    },
+    {
+      "phase": "PLAN_READY",
+      "timestamp": "2026-11-07T01:00:00.000Z",
+      "note": "Atena entregou plan.md (camadas, DT-1..DT-8, migracao migration-0019-pluto-categorias-contas-normalizadas.sql com indice unico sobre expressao) e tasks.json (DAG T0..T6, RED antes de cada GREEN). Auto-verificacao anti-codigo OK."
+    },
+    {
+      "phase": "PLAN_APPROVED",
+      "timestamp": "2026-11-07T01:10:00.000Z",
+      "note": "Checkpoint 2 (approve-plan) concedido pelo humano ('aprovado'). Liberado TASKS_READY: inicio do ciclo RED/GREEN — T0 Minos (contratos RED) depois T1 Hefesto."
+    },
+    {
+      "phase": "REVIEW",
+      "timestamp": "2026-11-08T02:00:00.000Z",
+      "note": "T0-T6 concluidos (suite 147 files/1952 tests 0 failed, coverage 85.84, relatorios gerados); guardian OK TESTING→REVIEW; 1a review do Argos BLOQUEOU (F1 CRITICAL conta fantasma + F2 patch sem untracked; F3-F6 MINOR)."
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-11-11T01:00:00.000Z",
+      "note": "Re-review do Argos (2026-11-11) fechou F1/F2 mas bloqueou de novo: (1) CRITICAL 0019 unaccent() STABLE em CREATE UNIQUE INDEX (PG exige IMMUTABLE); (2) IMPORTANT homônimas conta x cartão resolvidas por nome (resolveAccountType(tx.account_name)) e select com value igual; (3) IMPORTANT test-report.json defasado 147/1952 vs suite real 148/1958. Decisões humanas 2026-11-11: wrapper IMMUTABLE DENTRO da 0019 ('1) sim') + emenda F1 incorporada ao plan.md/tasks.json ('2) sim'). guardian OK REVIEW→CODING."
+    }
+  ],
+  "lastUpdated": "2026-11-11T01:00:00.000Z"
+}

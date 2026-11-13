@@ -40,4 +40,26 @@ describe("Serviço de Contas (Accounts)", () => {
     expect(accounts[0].type).toBe("cartao");
     expect(accounts[0].created_by).toBe("joao@email.com");
   });
+
+  // --- T2 RED (Pluto 11): espelho da regra nova (R1/R2) ---
+
+  it("deve devolver o id existente na variante de acento do nome", async () => {
+    repo.seed([
+      { id: "acc-123", name: "Itaú Corrente", type: "conta", created_at: "2026-01-01T00:00:00Z", created_by: "test@test.com" },
+    ]);
+
+    const id = await repo.getOrCreateAccount("itau corrente", "joao@email.com", "conta");
+    expect(id).toBe("acc-123");
+    expect(await repo.getAccounts()).toHaveLength(1);
+  });
+
+  it("deve criar conta própria para nome igual no outro tipo", async () => {
+    repo.seed([
+      { id: "acc-conta", name: "Nubank", type: "conta", created_at: "2026-01-01T00:00:00Z", created_by: "test@test.com" },
+    ]);
+
+    const id = await repo.getOrCreateAccount("Nubank", "joao@email.com", "cartao");
+    expect(id).not.toBe("acc-conta");
+    expect(await repo.getAccounts()).toHaveLength(2);
+  });
 });

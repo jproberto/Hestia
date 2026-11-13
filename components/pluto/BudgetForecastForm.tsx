@@ -12,6 +12,7 @@ export interface BudgetForecastFormProps {
   amount: string;
   onAmountChange: (amount: string) => void;
   onSubmit: (e: React.FormEvent) => void;
+  onCategoryBlur: () => void;
 }
 
 /**
@@ -28,6 +29,7 @@ export default function BudgetForecastForm({
   amount,
   onAmountChange,
   onSubmit,
+  onCategoryBlur,
 }: BudgetForecastFormProps) {
   return (
     <form className="flex flex-col gap-4 rounded-lg border p-4 bg-card relative" onSubmit={onSubmit}>
@@ -52,6 +54,7 @@ export default function BudgetForecastForm({
             type="text"
             value={categoryName}
             onChange={(e) => onNameChange(e.target.value)}
+            onBlur={onCategoryBlur}
             placeholder="Ex: Alimentação"
             required
             autoComplete="off"

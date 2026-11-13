@@ -9,11 +9,20 @@ import type {
   Category,
   TransactionWithDetails,
 } from "@/lib/pluto/types";
+import { normalizeName } from "@/lib/pluto/utils";
 
 export interface TransactionModalProps {
   isOpen: boolean;
   editingTransaction: TransactionWithDetails | null;
   accountInput: string;
+  /**
+   * Tipo da conta escolhida no select (F1/R4 + D19/R2): com homônimas
+   * conta × cartão o nome não discrimina as linhas — o tipo sincronizado
+   * pelo form é o que mantém o value controlado casando com a option da
+   * escolha atual. Opcional: sem ele a exibição cai no fallback antigo
+   * (account_id da edição, depois o valor vigente).
+   */
+  accountTypeInput?: "conta" | "cartao";
   description: string;
   amount: string;
   type: "receita" | "despesa";
@@ -35,6 +44,7 @@ export interface TransactionModalProps {
   onDateChange: (value: string) => void;
   onAccountInputChange: (value: string) => void;
   onCategoryInputChange: (value: string) => void;
+  onCategoryBlur: () => void;
 }
 
 /**
@@ -45,6 +55,7 @@ export default function TransactionModal({
   isOpen,
   editingTransaction,
   accountInput,
+  accountTypeInput,
   description,
   amount,
   type,
@@ -66,8 +77,57 @@ export default function TransactionModal({
   onDateChange,
   onAccountInputChange,
   onCategoryInputChange,
+  onCategoryBlur,
 }: TransactionModalProps) {
   if (!isOpen) return null;
+
+  // R6/DT-7: a datalist pré-filtra por normalizeName; entrada vazia mantém a
+  // lista completa e o value de cada option continua sendo a grafia original.
+  const categoryQuery = normalizeName(categoryInput);
+  const suggestedCategories = categories.filter(
+    (cat) => !categoryQuery || normalizeName(cat.name).includes(categoryQuery)
+  );
+
+  // D19/R2 (emenda 2026-11-11): a identidade da conta é (nome normalizado,
+  // tipo) — homônimas conta × cartão compartilham o nome. O value da option
+  // discrimina a linha: a grafia do nome quando única, o id da linha quando
+  // há homônima (as duas options nunca colidem — sem colisão a segunda
+  // homônima é alcançável e o change dispara com o value da option escolhida,
+  // que o form resolve por id).
+  const nameCounts = new Map<string, number>();
+  accounts.forEach((acc) => {
+    const key = normalizeName(acc.name);
+    nameCounts.set(key, (nameCounts.get(key) ?? 0) + 1);
+  });
+  const accountOptionValue = (acc: Account): string =>
+    (nameCounts.get(normalizeName(acc.name)) ?? 0) > 1
+      ? acc.id
+      : acc.name;
+  // Valor controlado do select: resolve accountInput contra a lista — nome
+  // único é o próprio value da option; homônima se discrimina pelo TIPO da
+  // escolha (accountTypeInput, sincronizado pelo form com a linha escolhida —
+  // F1/R4), com desempate pelo account_id da edição. Assim a exibição
+  // acompanha o state do form: em criação a option escolhida permanece no
+  // select e em edição não há snap-back para a linha original (o save já
+  // gravava a escolhida; agora a tela bate). Sem correspondência
+  // (placeholder/texto livre), o valor vigente.
+  const selectedAccountValue = (): string => {
+    const nameMatches = accounts.filter(
+      (acc) => normalizeName(acc.name) === normalizeName(accountInput)
+    );
+    if (nameMatches.length === 1) return accountOptionValue(nameMatches[0]);
+    if (nameMatches.length > 1) {
+      const byType = accountTypeInput
+        ? nameMatches.filter((acc) => acc.type === accountTypeInput)
+        : [];
+      const chosen =
+        byType.find((acc) => acc.id === editingTransaction?.account_id) ??
+        byType[0] ??
+        nameMatches.find((acc) => acc.id === editingTransaction?.account_id);
+      return chosen ? accountOptionValue(chosen) : accountInput;
+    }
+    return accountInput;
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -105,14 +165,14 @@ export default function TransactionModal({
             {accounts.length > 0 ? (
               <select
                 id="tx-account"
-                value={accountInput}
+                value={selectedAccountValue()}
                 onChange={(e) => onAccountInputChange(e.target.value)}
                 required
                 className="rounded border p-2 bg-background text-foreground text-sm font-medium"
               >
                 <option value="">-- Selecione uma Conta / Cartão --</option>
                 {accounts.map((acc) => (
-                  <option key={acc.id || acc.name} value={acc.name}>
+                  <option key={acc.id || acc.name} value={accountOptionValue(acc)}>
                     {acc.name} ({acc.type === "cartao" ? "Cartão" : "Conta"})
                   </option>
                 ))}
@@ -202,10 +262,11 @@ export default function TransactionModal({
               placeholder="Selecione ou digite para criar nova categoria"
               value={categoryInput}
               onChange={(e) => onCategoryInputChange(e.target.value)}
+              onBlur={onCategoryBlur}
               required
             />
             <datalist id="categories-list">
-              {categories.map((cat) => (
+              {suggestedCategories.map((cat) => (
                 <option key={cat.id} value={cat.name} />
               ))}
             </datalist>

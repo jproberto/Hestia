@@ -1,5 +1,6 @@
 import type { ICategoryRepository } from "../interfaces";
 import type { Category } from "@/lib/pluto/types";
+import { normalizeName } from "../../utils";
 
 export class FakeCategoryRepository implements ICategoryRepository {
   private categories: Map<string, Category> = new Map();
@@ -41,10 +42,10 @@ export class FakeCategoryRepository implements ICategoryRepository {
     type: "receita" | "despesa",
     email: string
   ): Promise<string> {
-    const normalizedName = name.trim();
+    const normalizedName = normalizeName(name);
 
     for (const category of this.categories.values()) {
-      if (category.name.toLowerCase() === normalizedName.toLowerCase() && category.type === type) {
+      if (category.type === type && normalizeName(category.name) === normalizedName) {
         return category.id;
       }
     }
@@ -54,7 +55,7 @@ export class FakeCategoryRepository implements ICategoryRepository {
 
     const category: Category = {
       id,
-      name: normalizedName,
+      name: name.trim(),
       type,
       created_at: now,
       created_by: email,

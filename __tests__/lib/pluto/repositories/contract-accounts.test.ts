@@ -48,6 +48,26 @@ export function defineAccountRepositoryContract(
       const all = await ctx.repo.getAccounts();
       expect(all.find((a) => a.name === "Padrão")?.type).toBe("conta");
     });
+
+    // --- T2 RED (Pluto 11): identidade = (nome normalizado, tipo) — R1/R2 ---
+
+    it("variante de caixa/acentos no mesmo tipo devolve o mesmo id (R1)", async () => {
+      const id1 = await ctx.repo.getOrCreateAccount("Itaú", EMAIL, "conta");
+      const idSemAcento = await ctx.repo.getOrCreateAccount("itau", EMAIL, "conta");
+      const idMaiusculo = await ctx.repo.getOrCreateAccount("ITAÚ", EMAIL, "conta");
+
+      expect(idSemAcento).toBe(id1);
+      expect(idMaiusculo).toBe(id1);
+      expect(await ctx.repo.getAccounts()).toHaveLength(1);
+    });
+
+    it("mesma grafia em 'conta' e 'cartao' cria linhas distintas (R2)", async () => {
+      const idConta = await ctx.repo.getOrCreateAccount("Nubank", EMAIL, "conta");
+      const idCartao = await ctx.repo.getOrCreateAccount("Nubank", EMAIL, "cartao");
+
+      expect(idCartao).not.toBe(idConta);
+      expect(await ctx.repo.getAccounts()).toHaveLength(2);
+    });
   });
 }
 

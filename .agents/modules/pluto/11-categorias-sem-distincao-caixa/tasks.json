@@ -1,0 +1,179 @@
+{
+  "tasks": [
+    {
+      "id": "T0",
+      "title": "RED do conteúdo da migração 0019 (fusão + troca de travas)",
+      "assignee": "minos",
+      "description": "Estabelecer em teste RED o contrato de conteúdo da migração 0019 (utils/migrations/migration-0019-pluto-categorias-contas-normalizadas.sql, ainda inexistente), no padrão EXATO de __tests__/lib/pluto/migration-0018.test.ts: transação própria que só confirma no final (D16); tentativa de habilitar a função de acento com falha alta ANTES de qualquer trava nova (D15); fusão das duplicatas reapontando os quatro ponteiros (transactions.category_id, budget_items.category_id, checklist_items.category_id, transactions.account_id) com sobrevivente mais usada (contagem nas três tabelas de categories; transactions.account_id para contas) e desempate por menor created_at (D3/D18), descarte (não soma) das linhas de budget_items da perdedora que colidirem, exclusão das perdedoras SÓ após reapontar (D9/R9) e ordem fundição → troca de trava (D11); drop das travas de nome único e índice único de (nome normalizado, tipo) nas duas tabelas (D10/D19); auditoria em public.schema_migrations com script_name idêntico ao arquivo; rollback em comentário no rodapé; verificações pós-aplicação documentadas; asserções negativas (sem DROP TABLE/DROP COLUMN/RENAME, sem política RLS nova). Fonte: plan.md §Migrações e spec.md seções 5/6. Minos escreve apenas o teste; nenhum arquivo de produção é tocado.",
+      "acceptanceCriteria": [
+        "npx vitest run __tests__/lib/pluto/migration-0019.test.ts --reporter=verbose → FAIL esperado (readFileSync do arquivo da migração inexistente lança ENOENT) sem SyntaxError/TS2 no output",
+        "Caso RED: o script usa transação própria com abertura e confirmação fora de comentários (tudo ou nada — qualquer falha desfaz tudo, D16)",
+        "Caso RED: a tentativa de habilitar a função de remover acento (unaccent) com erro claro/abort aparece ANTES de qualquer índice único de normalização (falha alta, D15, sem plano B)",
+        "Caso RED: reapontamento dos quatro ponteiros — transactions.category_id, budget_items.category_id, checklist_items.category_id e transactions.account_id — antes de qualquer exclusão",
+        "Caso RED: escolha da sobrevivente por contagem de apontadores (transactions + budget_items + checklist_items) em ordem decrescente com desempate por menor created_at; para financial_accounts a contagem usa transactions.account_id",
+        "Caso RED: descarte das linhas de budget_items da perdedora que colidirem (DELETE em public.budget_items) ANTES do DELETE das perdedoras em public.categories, com comentário de que prevalece a linha da sobrevivente (não é somada)",
+        "Caso RED de ordem: todos os passos de fusão (UPDATE/DELETE das perdedoras) aparecem ANTES da troca de trava (DROP das travas de nome único em categories e financial_accounts + CREATE UNIQUE INDEX com expressão de normalização e coluna type nas duas tabelas)",
+        "Caso RED: auditoria em public.schema_migrations com script_name 'migration-0019-pluto-categorias-contas-normalizadas.sql' (idêntico ao nome do arquivo), spec_id 'pluto-11', spec_name 'Categorias e Contas sem Distinção de Caixa e Acentos', executed_by 'joaopsroberto@gmail.com' e ON CONFLICT (script_name) DO NOTHING, com self-bootstrap idempotente de schema_migrations antes do INSERT",
+        "Caso RED: rollback em comentário no rodapé (remoção dos índices novos e recriação das travas de nome originais) com a fusão documentada como irreversível (D9)",
+        "Caso RED: consultas de verificação documentadas em comentário no próprio script — zero pares do mesmo tipo com nome normalizado coincidente, total de transactions/budget_items/checklist_items inalterado (exceto colisões de budget_items), nenhum ponteiro órfão, contagem de apontadores conservada antes/depois",
+        "Caso RED negativo: fora de comentários o script não contém DROP TABLE, DROP COLUMN ou RENAME e não cria política RLS nova em nenhuma tabela",
+        "Nenhum arquivo de produção é tocado por esta task (apenas o arquivo de teste é criado)"
+      ],
+      "files": [
+        "__tests__/lib/pluto/migration-0019.test.ts"
+      ],
+      "consumes": [],
+      "produces": ["migracao-0019-red"]
+    },
+    {
+      "id": "T1",
+      "title": "Migração 0019: fusão de duplicatas + troca das travas nas duas tabelas",
+      "assignee": "hefesto",
+      "description": "Criar utils/migrations/migration-0019-pluto-categorias-contas-normalizadas.sql conforme a seção 'Migrações' do plan.md: transação própria que só confirma no final; habilitação tentada da função de acento com aborto alto se indisponível; fusão de categories (sobrevivente mais usada = contagem em transactions+budget_items+checklist_items, desempate menor created_at; budget_items colidentes descartados, linha da sobrevivente preservada) e de financial_accounts (contagem em transactions.account_id), com reapontamento dos quatro ponteiros antes da exclusão de verdade das perdedoras; em seguida substituição das travas de unicidade de name pelas travas de (nome normalizado, tipo) como índice único sobre expressão de normalização + type nas duas tabelas; auditoria com script_name idêntico ao arquivo; rollback e verificações em comentário. Nenhuma remoção de coluna/tabela, nenhuma RLS nova, nenhum nome reescrito.",
+      "acceptanceCriteria": [
+        "O arquivo utils/migrations/migration-0019-pluto-categorias-contas-normalizadas.sql existe e é o único consumidor do inteiro 0019 (próximo inteiro livre permanece 0020)",
+        "T0 verde: npx vitest run __tests__/lib/pluto/migration-0019.test.ts --reporter=verbose sem falhas",
+        "O script executa tudo numa única transação (confirma só no final) e qualquer falha deixa o banco exatamente como estava, re-executável",
+        "A habilitação da função de acento vem antes das travas e, se indisponível, aborta com erro claro antes de aplicar qualquer mudança",
+        "A fundição acontece ANTES da troca de travas e reaponta transactions.category_id, budget_items.category_id, checklist_items.category_id e transactions.account_id antes de excluir qualquer perdedora; em colisão de (ajuste, categoria) permanece a linha da sobrevivente",
+        "As travas antigas de nome único (categories_name_key e financial_accounts_name_key, confirmadas no catálogo) saem e valem as travas de (nome normalizado, tipo) nas DUAS tabelas, permitindo a mesma grafia em tipos diferentes",
+        "A auditoria registra script_name 'migration-0019-pluto-categorias-contas-normalizadas.sql' (idêntico ao nome do arquivo) com ON CONFLICT (script_name) DO NOTHING em public.schema_migrations",
+        "Rollback documentado no rodapé (recriar travas de nome originais; fusão irreversível) e verificações pós-aplicação documentadas em comentário",
+        "node .agents/scripts/guardian.js .agents/modules/pluto/11-categorias-sem-distincao-caixa TASKS_READY não acusa conflito de ordem de migração (0019 > 0018)",
+        "Nenhum outro arquivo de produção é alterado por esta task (apenas o .sql é criado)"
+      ],
+      "files": [
+        "utils/migrations/migration-0019-pluto-categorias-contas-normalizadas.sql"
+      ],
+      "consumes": ["migracao-0019-red"],
+      "produces": ["migracao-0019-aplicavel"]
+    },
+    {
+      "id": "T2",
+      "title": "RED do domínio: normalização, getOrCreate com tipo, corrida e fakes espelhando a regra",
+      "assignee": "minos",
+      "description": "Escrever os testes RED do domínio contra o código atual: (a) __tests__/lib/pluto/utils.test.ts para o novo normalizeName (caixa, acento, composto/decomposto, trim); (b) contracts de categoria/conta com caixa+acento+Unicode+tipo; (c) fakes ganhando acento/Unicode/tipo (mantendo os casos de caixa existentes); (d) testes do repositório REAL com stub de IDatabaseClient (padrão de __tests__/lib/pluto/db/checklist-create.test.ts): busca normalizada filtrando por tipo, corrida com re-leitura devolvendo a linha já criada, propagação de erro de leitura e propagação do erro original quando a re-leitura não acha nada; (e) __tests__/integration/unique-normalized.test.ts com a prova da trava real (variante no mesmo tipo rejeitada, mesma grafia em tipos diferentes aceita). Nenhum arquivo de produção é tocado.",
+      "acceptanceCriteria": [
+        "npx vitest run __tests__/lib/pluto/utils.test.ts --reporter=verbose → FAIL esperado (normalizeName ainda não existe em lib/pluto/utils.ts) sem SyntaxError/TS2",
+        "__tests__/lib/pluto/repositories/contract-categories.test.ts inclui casos novos: 'Mercaria'+'mercaria' mesmo tipo → mesmo id; 'Alimentação'+'alimentacao'+'ALIMENTAÇÃO' → mesmo id; 'é' composto e decomposto → mesmo id; nome igual em tipo diferente → id distinto (linha nova criada)",
+        "__tests__/lib/pluto/repositories/contract-accounts.test.ts inclui casos novos: variante de caixa/acento no mesmo tipo → mesmo id; mesma grafia em 'conta' e 'cartao' → ids distintos",
+        "fake-category.test.ts e fake-account.test.ts ganham casos de acento e Unicode (os casos de caixa das linhas 69–70 e 57–58 permanecem válidos); fake-budget.test.ts ganha caso de variante de acento reaproveitando a categoria em adjustBudgetItem; db/categories.test.ts e db/accounts.test.ts ganham o espelho (variante de acento devolve o id existente e nome igual no outro tipo cria linha própria)",
+        "Novo __tests__/lib/pluto/repositories/categories.test.ts (stub de IDatabaseClient) cobre: busca por nome normalizado com filtro de tipo (não reaproveita linha do outro tipo), corrida (insert falha → re-leitura devolve o id já existente sem lançar), erro de leitura propaga e insert falho sem linha na re-leitura propaga o erro original",
+        "Novo __tests__/lib/pluto/repositories/accounts.test.ts cobre os mesmos quatro cenários para financial_accounts (inclui filtro por conta/cartao, hoje ausente)",
+        "Novo __tests__/integration/unique-normalized.test.ts com os casos da trava real (insert bruto de variante no mesmo tipo é rejeitado; mesma grafia em tipos diferentes é aceita); fora do CI a execução falha apenas por requiredEnv (SUPABASE_INTEGRATION_URL ausente) — resultado esperado localmente, roda no job integration com a 0019 aplicada",
+        "Rodar npx vitest run nos arquivos de utils/contracts/fakes/repositórios acima --reporter=verbose produz falhas (RED) pelo motivo certo (regra antiga/exports ausentes), sem SyntaxError/TS2 no output",
+        "Nenhum arquivo de produção é tocado por esta task"
+      ],
+      "files": [
+        "__tests__/lib/pluto/utils.test.ts",
+        "__tests__/lib/pluto/repositories/contract-categories.test.ts",
+        "__tests__/lib/pluto/repositories/contract-accounts.test.ts",
+        "__tests__/lib/pluto/repositories/fake-category.test.ts",
+        "__tests__/lib/pluto/repositories/fake-account.test.ts",
+        "__tests__/lib/pluto/repositories/fake-budget.test.ts",
+        "__tests__/lib/pluto/db/categories.test.ts",
+        "__tests__/lib/pluto/db/accounts.test.ts",
+        "__tests__/lib/pluto/repositories/categories.test.ts",
+        "__tests__/lib/pluto/repositories/accounts.test.ts",
+        "__tests__/integration/unique-normalized.test.ts"
+      ],
+      "consumes": [],
+      "produces": ["dominio-red"]
+    },
+    {
+      "id": "T3",
+      "title": "GREEN do domínio: normalizeName + getOrCreate normalizado com retry + fakes alinhados",
+      "assignee": "hefesto",
+      "description": "Implementar conforme 'Contratos Completos' do plan.md: novo export normalizeName em lib/pluto/utils.ts (trim, mesma forma Unicode, remoção de acentos, caixa minúscula); getOrCreateCategory lê as linhas do tipo pedido, compara por normalizeName, devolve a existente ou insere o texto cru e, se o insert falhar, relê e devolve a já criada (sem erro visível), propagando erro de leitura e propagando o erro original quando a re-leitura não encontra; getOrCreateAccount com o mesmo padrão incluindo filtro por conta/cartao; fakes de categoria, conta e o bloco interno de adjustBudgetItem do fake de orçamento espelhando a regra completa. Persistência só nos repositories via IDatabaseClient; nenhuma assinatura muda.",
+      "acceptanceCriteria": [
+        "T2 verde: npx vitest run nos arquivos de utils/contracts/fakes/repositórios da T2 --reporter=verbose sem falhas",
+        "Busca literal '.eq(\"name\"' retorna 0 em lib/pluto/repositories/ (código vivo)",
+        "Busca literal 'name.toLowerCase()' retorna 0 em lib/pluto/repositories/fakes/ (código vivo)",
+        "normalizeName cobre trim + caixa + acento + composição/decomposição Unicode e é a única implementação da regra em lib/pluto/utils.ts",
+        "O nome gravado continua sendo o texto cru digitado (testes existentes de criação asserem o name exato; nenhuma renomeação)",
+        "A corrida devolve a linha já criada sem lançar erro (categoria e conta); erro de leitura e erro real de insert continuam visíveis ao formulário",
+        "npx tsc --noEmit sem erros após a mudança"
+      ],
+      "files": [
+        "lib/pluto/utils.ts",
+        "lib/pluto/repositories/categories.ts",
+        "lib/pluto/repositories/accounts.ts",
+        "lib/pluto/repositories/fakes/fakeCategoryRepository.ts",
+        "lib/pluto/repositories/fakes/fakeAccountRepository.ts",
+        "lib/pluto/repositories/fakes/fakeBudgetRepository.ts"
+      ],
+      "consumes": ["migracao-0019-aplicavel", "dominio-red"],
+      "produces": ["dominio-green"]
+    },
+    {
+      "id": "T4",
+      "title": "RED da UI e dos hooks: blur de homônima, sugestões normalizadas e datalist alinhado",
+      "assignee": "minos",
+      "description": "Escrever os testes RED contra o código atual: useTransactionForm ganha handleCategoryBlur (copia no blur a grafia da homônima do OUTRO tipo sob normalizeName, sem aviso e sem estado novo); useTransactionModals expõe e repassa o handler; useBudgetItemEditor passa a incluir nas sugestões por normalizeName mantendo a exclusão atual do nome digitado e ganha handleCategoryBlur; TransactionModal pré-filtra as opções da datalist por normalizeName (lista completa com entrada vazia) e chama a nova prop onCategoryBlur no blur, sem nenhum aviso novo; BudgetForecastForm chama onCategoryBlur (o repasse das páginas é coberto pelo gate de tsc na T5). Nenhum arquivo de produção é tocado.",
+      "acceptanceCriteria": [
+        "__tests__/lib/pluto/hooks/useTransactionForm.test.ts: caso do blur — com 'Mercado' (receita) existente e 'mercado' digitado num lançamento de despesa, handleCategoryBlur define categoryInput como 'Mercado'; com homônima do MESMO tipo o valor não muda; com entrada vazia nada muda",
+        "__tests__/lib/pluto/hooks/useTransactionModals.test.ts: o retorno expõe handleCategoryBlur vindo do useTransactionForm",
+        "__tests__/lib/pluto/hooks/useBudgetItemEditor.test.ts: sugestões incluem 'Alimentação' quando digitado 'alimentacao' (e 'alimen'), mantida a exclusão atual (digitado exatamente 'Alimentação' sai da lista); handleCategoryBlur copia a grafia da homônima do outro tipo",
+        "__tests__/components/pluto/TransactionModal.test.tsx: com categoryInput 'alimentacao' a datalist renderiza a option 'Alimentação' (valor = grafia original) e com entrada vazia renderiza a lista completa; blur do input chama onCategoryBlur; nenhum elemento/texto de aviso novo é renderizado",
+        "__tests__/components/pluto/BudgetForecastForm.test.tsx: blur do input de categoria chama onCategoryBlur e nenhuma mudança visual/nova mensagem é renderizada",
+        "Rodar npx vitest run nos arquivos de hook/componente acima --reporter=verbose produz falhas (RED) sem SyntaxError/TS2 no output",
+        "Nenhum arquivo de produção é tocado por esta task"
+      ],
+      "files": [
+        "__tests__/lib/pluto/hooks/useTransactionForm.test.ts",
+        "__tests__/lib/pluto/hooks/useTransactionModals.test.ts",
+        "__tests__/lib/pluto/hooks/useBudgetItemEditor.test.ts",
+        "__tests__/components/pluto/TransactionModal.test.tsx",
+        "__tests__/components/pluto/BudgetForecastForm.test.tsx"
+      ],
+      "consumes": ["dominio-green"],
+      "produces": ["ui-hooks-red"]
+    },
+    {
+      "id": "T5",
+      "title": "GREEN da UI e dos hooks: blur de homônima, sugestões e datalist com normalizeName",
+      "assignee": "hefesto",
+      "description": "Implementar conforme 'Contratos Completos' do plan.md: useTransactionForm.handleCategoryBlur (outro tipo, sem aviso, só atualiza se a grafia difere) repassado por useTransactionModals; useBudgetItemEditor com inclusão normalizada, exclusão atual preservada e handleCategoryBlur; TransactionModal com datalist pré-filtrado por normalizeName e prop onCategoryBlur no input; BudgetForecastForm com prop onCategoryBlur; stories do TransactionModal e páginas atualizadas. Nenhuma mensagem/aviso novo, nenhum aviso no campo de conta nem no checklist. EMENDA 2026-11-11 (aprovada pelo humano, pós-review F1): o campo de conta NÃO fica inalterado — useTransactionForm ganha accounts + resolveAccountType por account_id (edição), handleAccountInputChange sincroniza nome+tipo no select, prefill do checklist reseta o tipo, e TransactionModal usa value discriminador por account_id nas options (homônimas conta x cartao).",
+      "acceptanceCriteria": [
+        "T4 verde: npx vitest run nos arquivos de hook/componente/página da T4 --reporter=verbose sem falhas",
+        "Busca literal 'toLowerCase()' retorna 0 em lib/pluto/hooks/useBudgetItemEditor.ts (código vivo)",
+        "As interfaces dos hooks ganham apenas handleCategoryBlur — nenhum estado/proposição de aviso ou mensagem nova em useTransactionForm, useTransactionModals e useBudgetItemEditor",
+        "O blur só altera o campo quando existe homônima do outro tipo com mesmo normalizeName; sem homônima (ou mesma grafia) nada muda — sem aviso, sem bloqueio",
+        "A datalist mantém value igual ao nome original de cada option (escolher preenche a grafia existente) e lista completa com entrada vazia",
+        "npx tsc --noEmit sem erros após a mudança — a propriedade obrigatória onCategoryBlur força as duas páginas (transactions e budget) a repassarem os respectivos handlers",
+        "npx storybook build verde após a nova prop do TransactionModal"
+      ],
+      "files": [
+        "lib/pluto/hooks/useTransactionForm.ts",
+        "lib/pluto/hooks/useTransactionModals.ts",
+        "lib/pluto/hooks/useBudgetItemEditor.ts",
+        "components/pluto/TransactionModal.tsx",
+        "components/pluto/TransactionModal.stories.tsx",
+        "components/pluto/BudgetForecastForm.tsx",
+        "app/pluto/transactions/page.tsx",
+        "app/pluto/budget/page.tsx"
+      ],
+      "consumes": ["dominio-green", "ui-hooks-red"],
+      "produces": ["ui-hooks-green"]
+    },
+    {
+      "id": "T6",
+      "title": "Suíte completa verde, cobertura ≥ 80% e relatórios de teste",
+      "assignee": "minos",
+      "description": "Re-executar a suite completa com cobertura e emitir os artefatos de TESTING: ajustar qualquer teste remanescente que fixe o comportamento antigo (sem alterar produção); gerar test-report.json (failed 0, coverage ≥ 80) e test-scenarios.md apenas com cenários manuais (sem tag [Automatizado] nem path __tests__/), cobrindo os edges da spec: caixa/acentos/Unicode, identidade por tipo, homônima no blur, corrida entre abas, fusão com três apontadores, escolha da sobrevivente, colisão no orçamento, rollback, migração legada, sugestões das duas listas, estados vazios, falha de rede, trava com homônimas, checklist inalterado e contas no mesmo padrão.",
+      "acceptanceCriteria": [
+        "npm run test completo sem falhas (summary.failed == 0)",
+        "Cobertura ≥ 80% medida na execução",
+        "test-report.json presente em .agents/modules/pluto/11-categorias-sem-distincao-caixa/ com summary.failed 0 e summary.coverage ≥ 80",
+        "test-scenarios.md presente no FEATURE_DIR sem '[Automatizado]' e sem '__tests__/' (gate do guardian para REVIEW)",
+        "npx tsc --noEmit e npx eslint . sem erros na execução final"
+      ],
+      "files": [
+        ".agents/modules/pluto/11-categorias-sem-distincao-caixa/test-report.json",
+        ".agents/modules/pluto/11-categorias-sem-distincao-caixa/test-scenarios.md"
+      ],
+      "consumes": ["migracao-0019-aplicavel", "dominio-green", "ui-hooks-green"],
+      "produces": ["testing-verde"]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "sessionId": null,
   "feature": "pluto/05e-lancamento-data-livre",
-  "objective": "Remover a trava de data do calendário de lançamento de transações: o calendário abre por padrão no mês que está sendo editado, mas permite lançar em qualquer data (patch do cadastro de transações — item 26 do backlog do Pluto).",
+  "objective": "Remover a trava de data do calendário de lançamento de transações: o calendário abre por padrão no mês que está sendo editado, mas permite lançar em qualquer data (patch do cadastro de transações — item 32 do backlog do Pluto).",
   "currentPhase": "COMMITTED",
   "history": [
     {

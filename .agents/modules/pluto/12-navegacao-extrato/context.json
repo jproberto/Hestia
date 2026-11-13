@@ -1,0 +1,25 @@
+{
+  "sessionId": "ses-initial",
+  "objective": "Backlog Pluto itens 12 + 16 + 17 + 18 na mesma branch: (12) Lançamentos como primeira aba da navegação do módulo; (16) desempate da ordenação do extrato por data/hora de inclusão em vez de id; (17) contas antes dos cartões no extrato agrupado; (18) extrato em coluna única. Escopo confirmado pelo humano em 2026-11-13 (opção recomendada). Sem migração, sem regra de domínio nova.",
+  "currentPhase": "SPEC_DRAFT",
+  "history": [
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-13T00:00:00.000Z",
+      "note": "FEATURE_DIR criado; escopo de agrupamento (12+16+17+18) escolhido pelo humano via pergunta do Zeus."
+    }
+  ],
+  "approvals": {
+    "spec": "pending",
+    "plan": "pending",
+    "review": "pending"
+  },
+  "decisions": [
+    {
+      "date": "2026-11-13",
+      "decision": "Agrupar itens 12, 16, 17 e 18 na branch feature/pluto/12-navegacao-extrato — todos triviais, mesma tela de Lançamentos/extrato, sem migração. Itens 13/20 (ordenação alfabética) e 14/15 (toggles) ficam para branch(s) futura(s); item 19 (manutenção de categorias) é feature separada.",
+      "by": "humano (Zeus apresentou alternativas via question)"
+    }
+  ],
+  "migrations": {}
+}

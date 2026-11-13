@@ -1,0 +1,107 @@
+{
+  "feature": "pluto/11-categorias-sem-distincao-caixa",
+  "date": "2026-11-11",
+  "reviewer": "argos",
+  "status": "approved",
+  "approved": true,
+  "category": null,
+  "resolved": [
+    {
+      "id": "R6",
+      "severityAnterior": "critical",
+      "category": "contract",
+      "title": "0019 nao aplicava: min(uuid) em budget_items.id UUID + unaccent nao-qualificado no indice (PG16+)",
+      "resolution": "FECHADO (replay proprio, nao copiado). Codigo: min(l.id) -> SELECT l.id ... ORDER BY l.id LIMIT 1 em migration-0019:158-166 (mesmo desempate 'menor id'); public.unaccent qualificado no wrapper l.70, na guarda D15 l.45 e nas 7 CTEs (l.83,124,171,208,239,278,308) — grep do arquivo: 16 ocorrencias de unaccent(, ZERO nao-qualificaveis em codigo executavel. PROVA DE EXECUCAO RE-EXECUTADA POR ARGOS: harness proprio em temp (argos-replay-0019.js) sobe PostgreSQL 18.6 embutido, aplica a cadeia de 19 arquivos na ordem do CI (18 OK antes da 0019), seed de duplicatas, probes que REPRODUZEM os dois defeitos antigos (SELECT min(id) -> 'function min(uuid) does not exist'; CREATE INDEX com unaccent nao-qualificado -> 'function unaccent(text) does not exist'), depois aplica a 0019 (1a e 2a vez, re-executavel) com 30/31 asserts PASS: zero pares normalizados nas 2 tabelas, perdedoras excluidas, transactions 5 (3 na sobrevivente de categoria, 5 na conta sobrevivente), checklist reapontado, budget_items 2 (colisao descartada sem soma: bud1=100, bud3 reapontado, bud2 excluido), zero orfaos, wrapper provolatile='i', travas antigas 0, indices novos 2, auditoria 1x, trava bloqueia MERCARIA e permite homonima de outro tipo. (O 1 FAIL foi calibracao do MEU assert: eu havia inserido de proposito uma categoria receita para testar a trava por tipo -> 3 linhas e o esperado.) Alem disso __tests__/lib/pluto/migration-0019-execution.test.ts (2 testes) RODOU de verdade no meu npx vitest run (log do initdb/PG 18.6, 0 skipped)."
+    },
+    {
+      "id": "R7",
+      "severityAnterior": "important",
+      "category": "contract",
+      "title": "Select de homonimas nao exibia a escolha (placeholder em criacao / snap-back em edicao)",
+      "resolution": "FECHADO para a identidade D19 (nome normalizado + tipo), que e o cenario dos cenarios 14/21. Codigo: selectedAccountValue em TransactionModal.tsx:114-130 resolve nameMatches por tipo da escolha (accountTypeInput) com desempate pelo account_id da edicao e devolve accountOptionValue (id quando ha homonima, nome quando unica, l.97-105); wiring verificado no disco: app/pluto/transactions/page.tsx:159 -> useTransactionModals.ts:113 -> useTransactionForm (estado l.61, sincronia nome+tipo em handleAccountInputChange l.150-162, tipo do registro na edicao l.111-116, prefill de checklist reseta em l.137, getOrCreateAccount recebe o tipo l.196-201/265-270). PROVA DE RUNTIME PROPRIA: bundle esbuild + renderToStaticMarkup (argos-select-probe) — (a) criacao escolhendo a homonima de cartao -> selected = a-cartao; (b) edicao trocando da conta para o cartao -> selected = a-cartao, SEM snap-back; (e) nome unico -> selected = nome. RED de select.value entregue: transactions-homonimas-flow.test.tsx:207-209 (criacao) e :291-293 (edicao) asserem o valor renderido apos o change, alem do account_id submetido (:220-226, :298-304)."
+    },
+    {
+      "id": "R8",
+      "severityAnterior": "important",
+      "category": "test",
+      "title": "test-report.json defasado",
+      "resolution": "Mantido FECHADO e RE-CONFIRMADO por execucao propria: test-report.json date 2026-11-11 com 151 files / 1965 tests / 0 failed / coverage 85.88. Argos re-executou: npx vitest run = 151/1965/0 exit 0; npx vitest run --coverage exit 0 = 'All files 85.88 stmts | 84.5 branch | 77.47 funcs' e agregacao propria do coverage-final.json = statements 85.89 (11802/13741), branches 84.50 (2601/3078), functions 77.48 (547/706) — >= 80. Nota de incidente (node_modules fora do lock -> 7 falhas em useRestTimer) verificada como diagnostico coerente; package.json e package-lock.json com git status LIMPO e sem bump (versao 1.2.0). Integridade RED por mtime: testes 15:27/15:32 < producao GREEN 15:55/15:56."
+    },
+    {
+      "id": "R9",
+      "severityAnterior": "minor",
+      "category": "test",
+      "title": "F5 — migration-0019.test.ts so assercoes de string (passava com SQL nao-aplicavel)",
+      "resolution": "MITIGADO/FECHADO na pratica: o novo __tests__/lib/pluto/migration-0019-execution.test.ts executa a cadeia inteira + seed + 0019 + re-execucao em PG embutido e assera wrapper IMMUTABLE (provolatile='i'), fusao, travas e auditoria. Residuo declarado em testGaps: o gate local depende de dependencias nao declaradas (ver findings[0])."
+    },
+    {
+      "id": "R10",
+      "severityAnterior": "important",
+      "category": "test",
+      "title": "TS2307: import literal de 'embedded-postgres' fora do package.json/lock quebraria o typecheck do CI",
+      "resolution": "FECHADO com prova EXECUTADA POR ARGOS nesta 5a re-review (nao copiada do eco). (1) CODIGO EM DISCO: __tests__/lib/pluto/migration-0019-execution.test.ts:189-190 usa especificador em variavel const EP_MODULE_ID = 'embedded-postgres'; await import(/* @vite-ignore */ EP_MODULE_ID), replicando fielmente o truque do PG_MODULE_ID do MESMO arquivo (l.201-202, com comentario equivalente nos dois). Grep no repo inteiro (*.{ts,tsx,js,mjs,cjs}): ZERO import literal de 'embedded-postgres' e de 'pg' restantes. diff.patch REGENERADO (mtime 22:17, 52 files / 5589 insercoes, confirmado por Argos via git diff develop --stat) contem a correcao (EP_MODULE_ID nas linhas 3732-3733 do patch) e ZERO literais. (2) PROVA DE SENSIBILIDADE (reproduzida por Argos na 4a review): com o literal, npx tsc --noEmit falhava com TS2307 exit 2 na linha 185. (3) PROVA NOVA DESTA REVIEW: Argos renomeou node_modules/embedded-postgres E node_modules/pg (simulando a arvore npm ci do CI — nenhum dos dois consta de package.json nem do lock, grep 0) e rodou npx tsc --noEmit -> TSC_EXIT_WITHOUT_MODULES=0; restore em finally confirmado (RESTORED_EP=True, RESTORED_PG=True, sem .__argos_bak residual, git status de package.json/package-lock.json vazio). Com os modulos restaurados -> exit 0 tambem. (4) OS 3 RAMOS INTACTOS conferidos linha a linha: if (hasInfra) executa (l.158 — re-executado por Argos: initdb PostgreSQL 18.6 no log e 2 passed em 9615ms, NAO skip) / else if (EXEC_REQUIRED) falha alto com 'BLOCKED: Missing embedded-postgres/pg' (l.485-494) / else skip com console.warn + describe.skip (l.495-508); hasInfra resolvido sincronamente por moduleResolves (l.56-64), EXEC_REQUIRED l.50. (5) DECISAO DO ZEUS (opcao a) SANCAOADA e conferida: sem devDependency; gate de APLICACAO de SQL no CI = job integration (ci.yml:112-126, cadeia inteira com psql ON_ERROR_STOP=1 — lido por Argos); no CI o teste de execucao faz SKIP VISIVEL (console.warn, nao falso-verde) e MIGRATION_EXECUTION_REQUIRED=1 transforma ausencia em falha."
+    }
+  ],
+  "findings": [
+    {
+      "severity": "minor",
+      "category": "quality",
+      "file": "components/pluto/TransactionModal.tsx",
+      "line": 127,
+      "evidence": "selectedAccountValue, com nameMatches > 1 do MESMO TIPO (duplicatas legadas 'Itau' e 'Itau' ambas conta — estado possivel enquanto a 0019 nao for aplicada), faz byType[0] sem desempate por igualdade exata do nome: escolha = accountInput ('Itau' com acento) e value = id da PRIMEIRA linha da lista. PROBE DE RUNTIME PROPrio (esbuild + renderToStaticMarkup): caso (c) criacao e (d) edicao com as duplicatas do mesmo tipo -> selected = a1 (a primeira) em ambos, embora accountInput seja a segunda. Ou seja: o select renderiza A enquanto o state/save levam B (o save esta certo — getOrCreateAccount resolve por nome normalizado+tipo —, a exibicao e que aponta a linha errada).",
+      "impact": "Janela entre o deploy e a aplicacao MANUAL da 0019 (pendente, fluxo 0017/0018) e apenas com dados legados de duplicata do MESMO tipo — a app nao cria esse estado (getOrCreateAccount compara por normalizeName+tipo) e a trava nova da 0019 o proibe depois. Sem divergencia de dado (o save persiste a escolha clicada), so exibicao inconsistente (o cabecalho do modal mostra accountInput). Todos os cenarios de homologacao pressupoem a 0019 aplicada (test-scenarios.md:9), entao o portao manual nao alcanca este caso.",
+      "suggestion": "Backlog do modulo: em byType escolher primeiro o de acc.name === accountInput (desempate exato) antes de byType[0], e cobrir com teste de select.value para duplicata do mesmo tipo. Nao bloqueia: risco limitado, display-only e eliminado pela propria migracao desta feature."
+    },
+    {
+      "severity": "minor",
+      "category": "contract",
+      "file": "utils/migrations/migration-0019-pluto-categorias-contas-normalizadas.sql",
+      "line": 70,
+      "evidence": "F3 persiste depois da qualificacao: corpo do wrapper 'public.unaccent(lower(btrim(p_name)))' (l.70) vs CTEs da fusao 'lower(public.unaccent(btrim(...)))' (l.83,124,171,208,239,278,308) — ordem invertida entre as duas bordas da propria migracao. A fronteira JS x SQL tambem permanece: normalizeName (lib/pluto/utils.ts:24-30: NFD + remove marcas + toLowerCase + trim) vs btrim ASCII + dicionario unaccent + lower no banco.",
+      "impact": "Par considerado igual por uma expressao e distinto pela outra em caso-limite raro (pt-BR); sem perda de dados (D16 desfaz tudo). A qualificacao do unaccent NAO mexeu nesta ordem.",
+      "suggestion": "Backlog do modulo: alinhar wrapper e CTEs na MESMA expressao (a da trava) e exercitar os cenarios 15-19 com banco real apos a 0019 aplicada."
+    },
+    {
+      "severity": "minor",
+      "category": "test",
+      "file": ".agents/modules/pluto/11-categorias-sem-distincao-caixa/tasks.json",
+      "line": 67,
+      "evidence": "F4 persiste e cresceu com o ciclo: T0 files[] (l.67) lista apenas migration-0019.test.ts e NAO lista __tests__/lib/pluto/migration-0019-execution.test.ts (o RED central deste ciclo); T2 files[] (11 arquivos) nao inclui __tests__/lib/pluto/db/categories.contract.test.ts nem db/accounts.contract.test.ts; __tests__/app/pluto/transactions-account-flow.test.tsx, __tests__/app/pluto/transactions-homonimas-flow.test.tsx e __tests__/lib/pluto/hooks/useTransactionForm-homonimas.test.ts nao constam de NENHUM files[] (T4/T5/T6). DAG valido (7 tasks, ids T0-T6, dependencias consistentes, acceptanceCriteria preenchidos em todas).",
+      "impact": "Divergencia de tracabilidade entre DAG aprovada e arquivos entregues; sem efeito em producao e sem efeito nos gates.",
+      "suggestion": "Zeus reconcilia no proximo ciclo: expandir os files[] (T0, T2 e T4/T6) ou registrar os desvios como aceitos no context."
+    },
+    {
+      "severity": "minor",
+      "category": "spec",
+      "file": "lib/pluto/hooks/useBudgetItemEditor.ts",
+      "line": 71,
+      "evidence": "F6 inalterado: exclusao das sugestoes usa c.name.toLocaleLowerCase() !== categoryName.toLocaleLowerCase() (l.71) enquanto plan.md:167 fala em reescrita sobre normalizeName; plan.md:220 (DT-4) mantem 'igualdade sem caixa do nome digitado'. O criterio literal do plano ('toLowerCase()' retorna 0 no arquivo) esta zerado, mas o texto do plano permanece divergente entre si.",
+      "impact": "Sem efeito pratico em pt-BR; risco teorico de casing por locale e incoerencia documental.",
+      "suggestion": "Backlog do modulo; ao mexer no arquivo, unificar o texto do plano com o comportamento DT-4 mantido."
+    },
+    {
+      "severity": "minor",
+      "category": "test",
+      "file": ".agents/modules/pluto/11-categorias-sem-distincao-caixa/test-report.json",
+      "line": 159,
+      "evidence": "gaps[3] (DEPENDENCIAS NAO DECLARADAS) ainda descreve o risco como atual: \"'npm ci' os remove todos e quebra o tsc (TS2307 no import literal de 'embedded-postgres' em migration-0019-execution.test.ts:185) e deixa o teste de execucao em SKIP\" — a l.185 nao tem mais import literal (EP_MODULE_ID esta em l.189-190) e o tsc em arvore sem os modulos agora da EXIT 0 (prova de Argos nesta review). A parte 'deixa o teste em SKIP' continua correta (sancao opcao a). mtime do report 16:24:22 < correcao do teste 22:13:25: o report nao passou por atualizacao pos-correcao (os NUMEROS batem — 151/1965/0 e coverage 85.88/84.53/77.47 confirmados pela execucao propria do Argos as 22:34, exit 0).",
+      "impact": "Somente narrativa desatualizada num artefato de gate; nenhum numero de gate afetado (failed 0 e coverage >= 80 conferidos por execucao propria). Pode induzir um leitor a achar que o CI quebra no typecheck, quando nao quebra mais.",
+      "suggestion": "Na proxima passagem do Minos, reescrever gaps[3] para: 'sem os modulos o tsc passa (especificador em variavel + @vite-ignore), mas o teste de execucao faz SKIP; gate de aplicacao no CI = job integration; MIGRATION_EXECUTION_REQUIRED=1 para gate duro local' e registrar a correcao de 2026-11-11 22:13."
+    }
+  ],
+  "blockers": [],
+  "testGaps": [
+    "Gate de EXECUCAO da 0019 nao roda em CI — SANCAOADO pela decisao do Zeus (opcao a, 2026-11-11): com npm ci os modulos embedded-postgres/pg nao existem, o teste faz SKIP com console.warn (ramo l.495-508, nao falso-verde) e MIGRATION_EXECUTION_REQUIRED=1 força falha quando infra esperada faltar. No CI o gate de APLICACAO da 0019 e o replay psql do job integration (ci.yml:112-126, cadeia inteira, ON_ERROR_STOP=1 — conferido por Argos); replay COM SEED de duplicatas (fusao) roda so localmente (Minos e Argos executaram). Backlog: seed de duplicatas no job integration ou declarar devDependencies em release futura.",
+    "Duplicatas do MESMO TIPO no select de conta: nenhum teste assera select.value nesse estado (findings[0] desta revisao) — probe manual mostra byType[0] sem desempate exato; eliminado pela propria 0019 aplicada.",
+    "F4 (tracabilidade): T0 files[] (l.67) sem __tests__/lib/pluto/migration-0019-execution.test.ts; T2 files[] sem os 2 db contract test; transactions-account-flow, transactions-homonimas-flow e useTransactionForm-homonimas fora de qualquer files[].",
+    "DT-4 caso so-de-caixa: useBudgetItemEditor.test.ts nao digita a variante apenas de caixa para suprimir o ramo toLocaleLowerCase (l.71).",
+    "Fusao em banco de PRODUCAO: seed existe no teste efemero e nos cenarios manuais 15-19, mas nao no job integration; a aplicacao manual da 0019 no Supabase segue PENDENTE (fluxo 0017/0018) e todos os cenarios pressupoem a migracao aplicada (test-scenarios.md:9).",
+    "Ramo D15 'unaccent indisponivel -> falha alta e nada aplicado' nao exercitado em PG real (o PG local/efemero tem contrib); coberto textualmente (ordem unaccent antes das travas em migration-0019.test.ts) e pelo Cenario 18 manual de rollback.",
+    "Functions globais 77.47% < 80 (idem features 05e/milon 06) — gates da house sao lines (85.88) e branches (84.53) >= 80, ambos atendidos; legados fora do escopo."
+  ],
+  "questions": [
+    "Alvo de PostgreSQL do Supabase em producao (15 vs 17/18)? NAO bloqueia: a 0019 e independente de major (sem min(uuid), unaccent qualificado) e o replay foi feito em 18.6 — mas define em qual maior o humano roda primeiro a aplicacao manual (script audita 0019 em public.schema_migrations com script_name identico).",
+    "Perguntas das reviews anteriores, encerradas e nao reabertas: emenda F1 incorporada a plan.md/tasks.json ('2) sim'); wrapper dentro da 0019 ('1) sim'); escopo do diff.patch (merge-base develop..worktree com carryover — Argos confirmou 52 files / 5589 insercoes nesta review); opcao a do Zeus (variavel, sem devDependency) sancionada."
+  ],
+  "summary": "APPROVED (5a re-review consolidada, 2026-11-11), sem blockers. STATUS DO BLOCKER DA 4a RE-REVIEW (category test): RESOLVIDO com prova EXECUTADA POR ARGOS, nao copiada. O import literal de 'embedded-postgres' (era l.185) virou especificador em variavel EP_MODULE_ID (l.189-190) replicando fielmente o padrao do PG_MODULE_ID do mesmo arquivo (l.201-202); grep do repo: 0 literais de 'embedded-postgres' e de 'pg'; diff.patch regenerado (52 files/5589 insercoes, mtime 22:17) contem a correcao. PROVA DE TSC REPRODUZIDA POR ARGOS: renomeei node_modules/embedded-postgres E node_modules/pg (arvore simulada de npm ci, ambos fora do lock) -> npx tsc --noEmit EXIT 0; restore em finally confirmado, manifests intocados; com modulos -> exit 0. Os 3 RAMOS do teste intactos: execucao real (l.158 — re-executado: initdb PG 18.6, 2 passed 9615ms), REQUIRED (l.485-494, falha alta), skip (l.495-508, console.warn + describe.skip). DECISAO DO ZEUS (opcao a) SANCAOADA: sem devDependencies; gate de SQL no CI = job integration (ci.yml:112-126, psql ON_ERROR_STOP=1, conferido); no CI o teste faz SKIP visivel — nao falso-verde. GATES RE-EXECUTADOS POR ARGOS (2026-11-11 22:34+): tsc exit 0 (sem e com modulos); eslint exit 0 (0 errors, 73 warnings baseline); vitest --coverage exit 0 = 151 files / 1965 tests / 0 failed / 0 skipped, coverage 85.88 stmts / 84.53 branch / 77.47 funcs (>= 80); npm run build exit 0; build-storybook exit 0; guardian read-only: spec/plan 0 code-fence e 0 TBD/TODO, test-scenarios 0 [Automatizado] e 0 __tests__/, migration 0019 unica no catalogo (19 arquivos, proximo livre 0020); package.json/package-lock com git status vazio e sem bump (1.2.0). 5 EIXOS: 1 spec — 16 criterios de aceite cobertos (identidade nome+tipo, nome cru, corrida D12, datalist R7, blur D6, 0019 fusao->trava D11, tudo-ou-nada D16, checklist intocado), escopo_YAGNI respeitado (so o arquivo de teste mudou neste ciclo: mtime 22:13 vs producao 15:56/15:55); 2 seguranca — 0 .env e 0 segredo no diff (scan proprio: SERVICE_ROLE/jwt/PASSWORD/keys = 0 matches), RLS e policies sem mudanca nova; 3 qualidade — normalizeName unica no cliente Pluto, sem comportamento extra, sem regressao (suite integral verde, milon intacto); 4 contratos/dados — 0019 unica e auditada (script_name identico), prova de replay com fusao ja executada na 4a review e re-execucao local do teste 2/2 nesta; 5 testes/semver — gates verdes acima, test-report consistente com execucao propria, sem bump. BACKLOG REMANSCENTE (minor, nao bloqueia): findings[0] select same-type sem desempate exato (TransactionModal l.125), F3 ordem unaccent invertida wrapper vs CTEs (0019 l.70 vs l.83), F4 files[] da DAG divergentes, F6 toLocaleLowerCase vs normalizeName no texto do plano (useBudgetItemEditor l.71) + novo: gaps[3] do test-report desatualizado apos a correcao. Proximo passo: homologacao humana com test-scenarios.md (22 cenarios, a 0019 aplicada manualmente) -> approve-review."
+}

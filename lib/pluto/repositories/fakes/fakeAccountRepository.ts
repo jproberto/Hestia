@@ -1,5 +1,6 @@
 import type { IAccountRepository } from "../interfaces";
 import type { Account } from "@/lib/pluto/types";
+import { normalizeName } from "../../utils";
 
 export class FakeAccountRepository implements IAccountRepository {
   private accounts: Map<string, Account> = new Map();
@@ -34,10 +35,10 @@ export class FakeAccountRepository implements IAccountRepository {
     email: string,
     accountType: "conta" | "cartao" = "conta"
   ): Promise<string> {
-    const normalizedName = name.trim();
+    const normalizedName = normalizeName(name);
 
     for (const account of this.accounts.values()) {
-      if (account.name.toLowerCase() === normalizedName.toLowerCase()) {
+      if (account.type === accountType && normalizeName(account.name) === normalizedName) {
         return account.id;
       }
     }
@@ -47,7 +48,7 @@ export class FakeAccountRepository implements IAccountRepository {
 
     const account: Account = {
       id,
-      name: normalizedName,
+      name: name.trim(),
       type: accountType,
       created_at: now,
       created_by: email,

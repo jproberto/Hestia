@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { adjustBudgetItem } from "@/lib/pluto/db/budget";
+import { normalizeName } from "@/lib/pluto/utils";
 import type { IDatabaseClient } from "@/lib/shared/database";
 import type { BudgetAdjustment, Category } from "@/lib/pluto/types";
 
@@ -34,6 +35,7 @@ export interface BudgetItemEditor {
   handleCellClick: (categoryId: string, currentAmount: number) => void;
   handleSaveInline: (categoryId: string, categoryName: string, categoryType: "receita" | "despesa") => Promise<void>;
   setEditingCategoryId: (id: string | null) => void;
+  handleCategoryBlur: () => void;
 }
 
 /**
@@ -58,12 +60,29 @@ export function useBudgetItemEditor({
   const [tempAmount, setTempAmount] = useState<string>("");
   const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
 
+  // Inclusão das sugestões casa com a regra de normalização (R6/D13);
+  // a exclusão do nome digitado preserva o resultado atual (igualdade sem
+  // caixa — DT-4: variante só de caixa é suprimida, a de acento aparece).
+  const typedCategory = normalizeName(categoryName);
   const suggestions = categories.filter(
     (c) =>
       c.type === categoryType &&
-      c.name.toLowerCase().includes(categoryName.toLowerCase()) &&
-      c.name.toLowerCase() !== categoryName.toLowerCase()
+      normalizeName(c.name).includes(typedCategory) &&
+      c.name.toLocaleLowerCase() !== categoryName.toLocaleLowerCase()
   );
+
+  // R7: no blur, se existir homônima do OUTRO tipo sob normalizeName, o
+  // campo assume a grafia da linha existente — sem aviso, sem estado novo.
+  // O updater lê o valor vigente do campo no momento do blur.
+  const handleCategoryBlur = () => {
+    setCategoryName((current) => {
+      if (!current.trim()) return current;
+      const homonym = categories.find(
+        (c) => c.type !== categoryType && normalizeName(c.name) === normalizeName(current)
+      );
+      return homonym && homonym.name !== current ? homonym.name : current;
+    });
+  };
 
   async function handleSaveItem(e: React.FormEvent) {
     e.preventDefault();
@@ -143,5 +162,6 @@ export function useBudgetItemEditor({
     handleCellClick,
     handleSaveInline,
     setEditingCategoryId,
+    handleCategoryBlur,
   };
 }

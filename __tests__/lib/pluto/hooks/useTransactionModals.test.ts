@@ -263,4 +263,28 @@ describe("useTransactionModals", () => {
     expect(result.current.categoryInput).toBe("cat-9");
     expect(result.current.date).toBe("2026-03-10");
   });
+
+  // R7 / contrato do plano §Hooks: useTransactionModals expõe o
+  // handleCategoryBlur do useTransactionForm (a página repassa ao modal).
+  it("expõe handleCategoryBlur vindo do useTransactionForm", () => {
+    const deps = {
+      ...makeDeps(),
+      categories: [{ id: "c2", name: "Mercado", type: "receita" }] as never[],
+    };
+    const { result } = renderModals(deps);
+
+    const modals = result.current as unknown as { handleCategoryBlur?: () => void };
+    expect(typeof modals.handleCategoryBlur).toBe("function");
+
+    act(() => {
+      result.current.handleOpenTxModal(acc); // type = "despesa"
+      result.current.setCategoryInput("mercado");
+    });
+
+    act(() => modals.handleCategoryBlur!());
+
+    // Comportamento repassado do useTransactionForm: copia a grafia da
+    // homônima do outro tipo ("Mercado" receita) no blur.
+    expect(result.current.categoryInput).toBe("Mercado");
+  });
 });

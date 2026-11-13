@@ -22,6 +22,8 @@ export interface TransactionModalsDeps {
   db: IDatabaseClient;
   userEmail: string;
   categories: Category[];
+  /** Registros de conta já carregados pela página (F1/R4) — sem fetch novo. */
+  accounts?: Account[];
   selectedYear: number;
   selectedMonth: number;
   fetchData: () => Promise<void>;
@@ -44,6 +46,10 @@ export interface TransactionModals {
   setDate: (value: string) => void;
   accountInput: string;
   setAccountInput: (value: string) => void;
+  /** Nome + tipo da conta escolhida no select, juntos (F1/R4). */
+  handleAccountInputChange: (value: string) => void;
+  /** Tipo da escolha vigente — discrimina homônimas na exibição (D19/R2). */
+  accountTypeInput: "conta" | "cartao";
   categoryInput: string;
   setCategoryInput: (value: string) => void;
   savingTx: boolean;
@@ -55,6 +61,7 @@ export interface TransactionModals {
   handleSaveTransaction: (e: React.FormEvent) => Promise<void>;
   handleSaveTransactionAndAddAnother: (e: React.FormEvent) => Promise<void>;
   handleTriggerTransactionModalFromChecklist: (prefill: TransactionModalPrefill) => void;
+  handleCategoryBlur: () => void;
   // Delete modal state (props do DeleteConfirmModal)
   deletingTransaction: TransactionWithDetails | null;
   isDeleteModalOpen: boolean;
@@ -81,9 +88,9 @@ export interface TransactionModals {
  * consumidores permanecem idênticos.
  */
 export function useTransactionModals(deps: TransactionModalsDeps): TransactionModals {
-  const { db, userEmail, categories, selectedYear, selectedMonth, fetchData, setErrorMsg } = deps;
+  const { db, userEmail, categories, accounts, selectedYear, selectedMonth, fetchData, setErrorMsg } = deps;
 
-  const txForm = useTransactionForm({ db, userEmail, categories, selectedYear, selectedMonth, fetchData, setErrorMsg });
+  const txForm = useTransactionForm({ db, userEmail, categories, accounts, selectedYear, selectedMonth, fetchData, setErrorMsg });
   const accForm = useAccountForm({ db, userEmail, fetchData, setErrorMsg });
   const delFlow = useDeleteTransaction({ db, fetchData, setErrorMsg });
 
@@ -102,6 +109,8 @@ export function useTransactionModals(deps: TransactionModalsDeps): TransactionMo
     setDate: txForm.setDate,
     accountInput: txForm.accountInput,
     setAccountInput: txForm.setAccountInput,
+    handleAccountInputChange: txForm.handleAccountInputChange,
+    accountTypeInput: txForm.accountTypeInput,
     categoryInput: txForm.categoryInput,
     setCategoryInput: txForm.setCategoryInput,
     savingTx: txForm.savingTx,
@@ -113,6 +122,7 @@ export function useTransactionModals(deps: TransactionModalsDeps): TransactionMo
     handleSaveTransaction: txForm.handleSaveTransaction,
     handleSaveTransactionAndAddAnother: txForm.handleSaveTransactionAndAddAnother,
     handleTriggerTransactionModalFromChecklist: txForm.handleTriggerTransactionModalFromChecklist,
+    handleCategoryBlur: txForm.handleCategoryBlur,
     deletingTransaction: delFlow.deletingTransaction,
     isDeleteModalOpen: delFlow.isDeleteModalOpen,
     deletingTx: delFlow.deletingTx,

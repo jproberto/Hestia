@@ -4,6 +4,7 @@ import type {
   BudgetItem,
   Category,
 } from "@/lib/pluto/types";
+import { normalizeName } from "../../utils";
 
 export class FakeBudgetRepository implements IBudgetRepository {
   private budgetAdjustments: Map<string, BudgetAdjustment> = new Map();
@@ -195,10 +196,12 @@ export class FakeBudgetRepository implements IBudgetRepository {
     amount: number,
     email: string
   ): Promise<void> {
-    // Find or create category
+    // Find or create category — mesma regra de identidade do resto do
+    // domínio: (nome normalizado, tipo) via normalizeName (R1/D14).
     let categoryId: string | null = null;
+    const normalizedName = normalizeName(categoryName);
     for (const cat of this.categories.values()) {
-      if (cat.name.toLowerCase() === categoryName.toLowerCase() && cat.type === categoryType) {
+      if (cat.type === categoryType && normalizeName(cat.name) === normalizedName) {
         categoryId = cat.id;
         break;
       }

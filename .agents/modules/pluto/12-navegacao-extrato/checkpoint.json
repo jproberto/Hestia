@@ -1,5 +1,5 @@
 {
-  "currentPhase": "APPROVED",
+  "currentPhase": "COMMITTED",
   "validTransitions": {
     "SPEC_DRAFT": ["SPEC_APPROVED"],
     "SPEC_APPROVED": ["PLAN_READY", "SPEC_DRAFT"],
@@ -55,6 +55,10 @@
     },
     {
       "phase": "APPROVED",
+      "timestamp": "2026-11-15T00:00:00.000Z"
+    },
+    {
+      "phase": "COMMITTED",
       "timestamp": "2026-11-15T00:00:00.000Z"
     }
   ],

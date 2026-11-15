@@ -1,7 +1,7 @@
 {
   "sessionId": "ses-initial",
   "objective": "Backlog Pluto itens 12 + 16 + 17 + 18 na mesma branch: (12) Lançamentos como primeira aba da navegação do módulo; (16) desempate da ordenação do extrato por data/hora de inclusão em vez de id; (17) contas antes dos cartões no extrato agrupado; (18) extrato em coluna única. Escopo confirmado pelo humano em 2026-11-13 (opção recomendada). Sem migração, sem regra de domínio nova.",
-  "currentPhase": "APPROVED",
+  "currentPhase": "COMMITTED",
   "history": [
     {
       "phase": "SPEC_DRAFT",
@@ -77,6 +77,11 @@
       "phase": "APPROVED",
       "timestamp": "2026-11-15T00:00:00.000Z",
       "note": "Humano aprovou o diff via conversa (approve-review) — checkpoint 3 cumprido."
+    },
+    {
+      "phase": "COMMITTED",
+      "timestamp": "2026-11-15T00:00:00.000Z",
+      "note": "Artefatos T6 + estado commitados (d711f2d); pendente docs Mnemósine (fase 7) + push."
     }
   ],
   "approvals": {

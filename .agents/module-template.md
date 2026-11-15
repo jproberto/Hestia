@@ -25,9 +25,9 @@ components/<modulo>/
   ui/               # Componentes de UI específicos do módulo (opcional)
 
 app/<modulo>/
-  page.tsx          # Server Component (ou Client se precisar de interação)
+  page.tsx          # Ponto neutro: redirect para a aba padrão (primeira aba da nav) — norma R10 (Pluto 12)
   layout.tsx        # Layout do módulo (opcional)
-  */page.tsx        # Sub-páginas
+  */page.tsx        # Sub-páginas (páginas de conteúdo, com hooks — só composição)
 
 __tests__/lib/<modulo>/
   *.test.ts         # Testes unitários (contracts via fakes, hooks, utils)
@@ -132,7 +132,7 @@ export * from "./utils";
 - [ ] Implementar `repositories/` (acesso a dados) + `fakes/` + contract em `__tests__/lib/<modulo>/repositories/`
 - [ ] Implementar `hooks/` (busca de dados para UI, via `db/*`)
 - [ ] Criar componentes em `components/<modulo>/` + `*.stories.*`
-- [ ] Criar página em `app/<modulo>/page.tsx` usando hooks (só composição)
+- [ ] Criar `app/<modulo>/page.tsx` como **ponto neutro**: `redirect` do `next/navigation` para a aba padrão (a primeira aba da nav), server component sem conteúdo próprio — padrão `app/milon/page.tsx` → `/milon/today` e `app/pluto/page.tsx` → `/pluto/transactions` (norma R10, Pluto 12; o gerador `new-module.js` ainda scaffolda placeholder de boas-vindas + teste espelho — substituir pelo redirect); as sub-páginas `app/<modulo>/*/page.tsx` seguem usando hooks (só composição)
 - [ ] Escrever testes: contracts, hooks, componentes, página (factories de mock com defaults)
 - [ ] Rodar `npm test`, `npm run lint`, `npx tsc --noEmit` e `npm run build-storybook` - tudo deve passar
 - [ ] Atualizar `.agents/modules/hestia/backlog.md` com status do módulo

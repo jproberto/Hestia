@@ -53,7 +53,7 @@ export default function AccountCardGrid({
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {cards.map(({ account, txs }) => {
             const accountTotal = txs.reduce((acc, t) => {
               if (t.type === "receita" || t.is_refund) return acc + Number(t.amount);

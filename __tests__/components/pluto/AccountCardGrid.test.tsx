@@ -91,4 +91,27 @@ describe("AccountCardGrid", () => {
     fireEvent.click(screen.getByRole("button", { name: /Excluir lançamento Supermercado/i }));
     expect(onOpenDeleteModal).toHaveBeenCalledWith(cards[0].txs[0]);
   });
+
+  it("empilha os blocos em coluna única — contêiner sem md:grid-cols-2 (cenário 16)", () => {
+    // R7: os blocos ficam um abaixo do outro em qualquer largura; o contêiner mantém
+    // grid-cols-1 e perde a coluna extra a partir de md.
+    const { container } = render(
+      <AccountCardGrid
+        cards={cards}
+        loading={false}
+        selectedMonth={3}
+        onOpenAccModal={vi.fn()}
+        onOpenTxModal={vi.fn()}
+        onOpenEditModal={vi.fn()}
+        onOpenDeleteModal={vi.fn()}
+      />
+    );
+
+    const gridContainer = container.querySelector(".grid");
+    expect(gridContainer).not.toBeNull();
+
+    const className = gridContainer?.className ?? "";
+    expect(className).toContain("grid-cols-1");
+    expect(className).not.toContain("md:grid-cols-2");
+  });
 });

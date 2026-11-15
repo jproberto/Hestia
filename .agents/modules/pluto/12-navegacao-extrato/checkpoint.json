@@ -1,5 +1,5 @@
 {
-  "currentPhase": "SPEC_DRAFT",
+  "currentPhase": "PLAN_APPROVED",
   "validTransitions": {
     "SPEC_DRAFT": ["SPEC_APPROVED"],
     "SPEC_APPROVED": ["PLAN_READY", "SPEC_DRAFT"],
@@ -16,7 +16,27 @@
     {
       "phase": "SPEC_DRAFT",
       "timestamp": "2026-11-13T00:00:00.000Z"
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-11-14T00:00:00.000Z"
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-14T00:00:00.000Z"
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-11-14T00:00:00.000Z"
+    },
+    {
+      "phase": "PLAN_READY",
+      "timestamp": "2026-11-15T00:00:00.000Z"
+    },
+    {
+      "phase": "PLAN_APPROVED",
+      "timestamp": "2026-11-15T00:00:00.000Z"
     }
   ],
-  "lastUpdated": "2026-11-13T00:00:00.000Z"
+  "lastUpdated": "2026-11-14T00:00:00.000Z"
 }

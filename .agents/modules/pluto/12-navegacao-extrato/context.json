@@ -1,17 +1,47 @@
 {
   "sessionId": "ses-initial",
   "objective": "Backlog Pluto itens 12 + 16 + 17 + 18 na mesma branch: (12) Lançamentos como primeira aba da navegação do módulo; (16) desempate da ordenação do extrato por data/hora de inclusão em vez de id; (17) contas antes dos cartões no extrato agrupado; (18) extrato em coluna única. Escopo confirmado pelo humano em 2026-11-13 (opção recomendada). Sem migração, sem regra de domínio nova.",
-  "currentPhase": "SPEC_DRAFT",
+  "currentPhase": "PLAN_APPROVED",
   "history": [
     {
       "phase": "SPEC_DRAFT",
       "timestamp": "2026-11-13T00:00:00.000Z",
       "note": "FEATURE_DIR criado; escopo de agrupamento (12+16+17+18) escolhido pelo humano via pergunta do Zeus."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-14T00:00:00.000Z",
+      "note": "spec.md escrita por Hera (itens 12+16+17+18); amend incorporou adições aprovadas pelo humano: ponto neutro /pluto com redirect (padrão Mílon, card da home) e norma de doc de criação de módulos pela Mnemósine na fase 7."
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-11-14T00:00:00.000Z",
+      "note": "Humano aprovou spec amendada via conversa (approve-spec)."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-14T00:00:00.000Z",
+      "note": "2º amend: humano pediu dois maps (contas→cartões) com roteamento por account_id — cenário 13 (homônimos) vira literal; transição SPEC_APPROVED → SPEC_DRAFT (guardian: válida) para novo approve-spec. Atena precisará revisar plan/tasks após aprovação."
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-11-14T00:00:00.000Z",
+      "note": "Humano aprovou a spec com o 2º amend (dois maps + roteamento por account_id) via conversa (approve-spec)."
+    },
+    {
+      "phase": "PLAN_READY",
+      "timestamp": "2026-11-15T00:00:00.000Z",
+      "note": "Atena entregou plan.md + tasks.json (7 tasks, 3 trilhos RED→GREEN + suíte); revisão pós-2º amend atualizou T4/T5/T6 (dois maps, roteamento por account_id, cenários 13/26)."
+    },
+    {
+      "phase": "PLAN_APPROVED",
+      "timestamp": "2026-11-15T00:00:00.000Z",
+      "note": "Humano aprovou plan.md + tasks.json revisados via conversa (approve-plan)."
     }
   ],
   "approvals": {
-    "spec": "pending",
-    "plan": "pending",
+    "spec": "approved",
+    "plan": "approved",
     "review": "pending"
   },
   "decisions": [

@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { render, screen, within, cleanup } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
@@ -31,10 +33,11 @@ const milonNavItems = [
 ];
 
 // navItems espelham components/layout/PlutoLayout.tsx (D12 — transversal)
+// Pluto 12 — item 12 (D12): ordem Lançamentos → Orçamento Anual → Meses e Períodos.
 const plutoNavItems = [
+  { href: "/pluto/transactions", label: "Lançamentos" },
   { href: "/pluto/budget", label: "Orçamento Anual" },
   { href: "/pluto/months", label: "Meses e Períodos" },
-  { href: "/pluto/transactions", label: "Lançamentos" },
 ];
 
 function renderModuleLayout({
@@ -154,6 +157,25 @@ describe("ModuleLayout — aba ativa derivada da URL (TASK-015)", () => {
         expect(link).not.toHaveAttribute("aria-current", "page");
         expect(link).not.toHaveClass("border-b-2");
       }
+    });
+
+    // Pluto 12 — cenário 4 / DT-4: fidelidade automatizada do espelho.
+    // Lê a fonte components/layout/PlutoLayout.tsx (mesmo padrão de
+    // leitura de __tests__/app/milon/page.test.tsx: fs.readFileSync +
+    // path.resolve), extrai a sequência de pares href+label do array
+    // plutoNavItems e a compara com o espelho local. RED: a produção ainda
+    // está na ordem antiga (Orçamento Anual → Meses e Períodos → Lançamentos).
+    it("a sequência de pares href+label lida da fonte é igual ao espelho local (fidelidade)", () => {
+      const source = fs.readFileSync(
+        path.resolve(__dirname, "../../../components/layout/PlutoLayout.tsx"),
+        "utf8"
+      );
+
+      const fromSource = Array.from(
+        source.matchAll(/\{\s*href:\s*"([^"]+)",\s*label:\s*"([^"]+)"\s*\}/g)
+      ).map(([, href, label]) => ({ href, label }));
+
+      expect(fromSource).toEqual(plutoNavItems);
     });
   });
 

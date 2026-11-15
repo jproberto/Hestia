@@ -11,9 +11,9 @@ export interface PlutoLayoutProps {
 
 export function PlutoLayout({ pageTitle, pageSubtitle, children }: PlutoLayoutProps) {
   const plutoNavItems = [
+    { href: "/pluto/transactions", label: "Lançamentos" },
     { href: "/pluto/budget", label: "Orçamento Anual" },
     { href: "/pluto/months", label: "Meses e Períodos" },
-    { href: "/pluto/transactions", label: "Lançamentos" },
   ];
 
   return (

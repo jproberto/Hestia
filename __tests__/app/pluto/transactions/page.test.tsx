@@ -172,6 +172,26 @@ describe('Transactions Page /pluto/transactions - Layout & Rendering', () => {
       })
     })
 
+    // Pluto 12 — item 12 / cenário 1 (R1/D12): a nav renderizada apresenta os
+    // links na ordem Lançamentos → Orçamento Anual → Meses e Períodos. A nav
+    // (role=navigation) contém apenas os links das abas (ModuleLayout linhas
+    // 65–88) — o link "Voltar ao Dashboard" fica fora dela. RED: a produção
+    // ainda renderiza Orçamento Anual → Meses e Períodos → Lançamentos.
+    it('renders navigation links in the exact order Lançamentos → Orçamento Anual → Meses e Períodos', async () => {
+      setupMocks(mockEmptyData)
+
+      renderTransactionsPage()
+
+      await waitFor(() => {
+        const nav = screen.getByRole('navigation')
+        const labels = within(nav)
+          .getAllByRole('link')
+          .map((link) => link.textContent?.trim())
+
+        expect(labels).toEqual(['Lançamentos', 'Orçamento Anual', 'Meses e Períodos'])
+      })
+    })
+
     it('renders page title and subtitle', async () => {
       setupMocks(mockHasData)
 

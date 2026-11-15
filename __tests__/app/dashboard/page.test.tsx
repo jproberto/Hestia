@@ -73,11 +73,12 @@ describe('DashboardPage', () => {
     expect(screen.queryByText('Acesse a biblioteca de exercícios da academia.')).toBeNull()
   })
 
-  it('renders Pluto card with D13 text linking to the budget', () => {
+  it('renders Pluto card with D13 text linking to the module root (ponto neutro /pluto)', () => {
     renderDashboardWithProvider()
     const plutoLink = screen.getByRole('link', { name: /Pluto/ })
     expect(plutoLink).toBeInTheDocument()
-    expect(plutoLink).toHaveAttribute('href', '/pluto/budget')
+    // Adição 1 (T2 RED): card de Pluto navega para a raiz /pluto (ponto neutro), não para a rota de orçamento.
+    expect(plutoLink).toHaveAttribute('href', '/pluto')
     // CA-P3-08: texto exato do card Pluto (D13)
     expect(screen.getByText('Módulo Orçamentário e Financeiro')).toBeInTheDocument()
     // CA-P3-10: texto antigo removido

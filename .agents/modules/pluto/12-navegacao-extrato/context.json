@@ -1,0 +1,100 @@
+{
+  "sessionId": "ses-initial",
+  "objective": "Backlog Pluto itens 12 + 16 + 17 + 18 na mesma branch: (12) Lançamentos como primeira aba da navegação do módulo; (16) desempate da ordenação do extrato por data/hora de inclusão em vez de id; (17) contas antes dos cartões no extrato agrupado; (18) extrato em coluna única. Escopo confirmado pelo humano em 2026-11-13 (opção recomendada). Sem migração, sem regra de domínio nova.",
+  "currentPhase": "COMMITTED",
+  "history": [
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-13T00:00:00.000Z",
+      "note": "FEATURE_DIR criado; escopo de agrupamento (12+16+17+18) escolhido pelo humano via pergunta do Zeus."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-14T00:00:00.000Z",
+      "note": "spec.md escrita por Hera (itens 12+16+17+18); amend incorporou adições aprovadas pelo humano: ponto neutro /pluto com redirect (padrão Mílon, card da home) e norma de doc de criação de módulos pela Mnemósine na fase 7."
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-11-14T00:00:00.000Z",
+      "note": "Humano aprovou spec amendada via conversa (approve-spec)."
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-14T00:00:00.000Z",
+      "note": "2º amend: humano pediu dois maps (contas→cartões) com roteamento por account_id — cenário 13 (homônimos) vira literal; transição SPEC_APPROVED → SPEC_DRAFT (guardian: válida) para novo approve-spec. Atena precisará revisar plan/tasks após aprovação."
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-11-14T00:00:00.000Z",
+      "note": "Humano aprovou a spec com o 2º amend (dois maps + roteamento por account_id) via conversa (approve-spec)."
+    },
+    {
+      "phase": "PLAN_READY",
+      "timestamp": "2026-11-15T00:00:00.000Z",
+      "note": "Atena entregou plan.md + tasks.json (7 tasks, 3 trilhos RED→GREEN + suíte); revisão pós-2º amend atualizou T4/T5/T6 (dois maps, roteamento por account_id, cenários 13/26)."
+    },
+    {
+      "phase": "PLAN_APPROVED",
+      "timestamp": "2026-11-15T00:00:00.000Z",
+      "note": "Humano aprovou plan.md + tasks.json revisados via conversa (approve-plan)."
+    },
+    {
+      "phase": "TASKS_READY",
+      "timestamp": "2026-11-15T00:00:00.000Z",
+      "note": "Zeus validou tasks.json (schema, DAG acíclico T0/T2/T4 independentes → T1/T3/T5 → T6, criteria não vazios); Caronte commitou spec+plan (24fce69)."
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-11-15T00:00:00.000Z",
+      "note": "Loop CODING iniciado: trilho 1 (T0 RED → T1 GREEN), depois trilho 2 (T2/T3) e trilho 3 (T4/T5), T6 por último."
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-11-15T00:00:00.000Z",
+      "note": "Trilhos concluídos e commitados: T0+T1 (1ac8758), T2+T3 (c9286cf), T4+T5 (898d790). Suite 152 arquivos / 1984 testes, 0 falhas; lint/build verdes."
+    },
+    {
+      "phase": "TESTING",
+      "timestamp": "2026-11-15T00:00:00.000Z",
+      "note": "T6 (Minos): suíte completa + coverage ≥80 + test-report.json + test-scenarios.md."
+    },
+    {
+      "phase": "TESTING",
+      "timestamp": "2026-11-15T00:00:00.000Z",
+      "note": "T6 concluída: 152 arquivos / 1985 testes, 0 falhas, coverage 85.89 lines / 84.65 branches; tsc/eslint/storybook verdes; asserções 13/26 adicionadas em homonimas-flow; test-scenarios 26 cenários sem [Automatizado] e sem __tests__/."
+    },
+    {
+      "phase": "REVIEW",
+      "timestamp": "2026-11-15T00:00:00.000Z",
+      "note": "Gates validados por Zeus (failed=0, coverage≥80, sem tags proibidas); diff.patch gerado (develop...HEAD); Argos delegado."
+    },
+    {
+      "phase": "REVIEW",
+      "timestamp": "2026-11-15T00:00:00.000Z",
+      "note": "Argos: review-report.json status=approved, 0 blockers, 3 findings minor (T6 pendente de commit, placeholder id undefined tolerado, functions 77.51%)."
+    },
+    {
+      "phase": "APPROVED",
+      "timestamp": "2026-11-15T00:00:00.000Z",
+      "note": "Humano aprovou o diff via conversa (approve-review) — checkpoint 3 cumprido."
+    },
+    {
+      "phase": "COMMITTED",
+      "timestamp": "2026-11-15T00:00:00.000Z",
+      "note": "Artefatos T6 + estado commitados (d711f2d); pendente docs Mnemósine (fase 7) + push."
+    }
+  ],
+  "approvals": {
+    "spec": "approved",
+    "plan": "approved",
+    "review": "approved"
+  },
+  "decisions": [
+    {
+      "date": "2026-11-13",
+      "decision": "Agrupar itens 12, 16, 17 e 18 na branch feature/pluto/12-navegacao-extrato — todos triviais, mesma tela de Lançamentos/extrato, sem migração. Itens 13/20 (ordenação alfabética) e 14/15 (toggles) ficam para branch(s) futura(s); item 19 (manutenção de categorias) é feature separada.",
+      "by": "humano (Zeus apresentou alternativas via question)"
+    }
+  ],
+  "migrations": {}
+}

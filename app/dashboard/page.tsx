@@ -8,7 +8,7 @@ export default function DashboardPage() {
     <HestiaLayout pageTitle="Painel de Ferramentas" pageSubtitle="Acesse seus utilitários familiares.">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
         <Link
-          href="/pluto/budget"
+          href="/pluto"
           className="group relative overflow-hidden flex flex-col gap-2 rounded-lg border p-6 hover:bg-muted/40 transition-colors"
         >
           <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity pointer-events-none" style={{

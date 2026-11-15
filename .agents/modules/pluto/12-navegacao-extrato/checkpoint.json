@@ -1,0 +1,66 @@
+{
+  "currentPhase": "COMMITTED",
+  "validTransitions": {
+    "SPEC_DRAFT": ["SPEC_APPROVED"],
+    "SPEC_APPROVED": ["PLAN_READY", "SPEC_DRAFT"],
+    "PLAN_READY": ["PLAN_APPROVED", "SPEC_APPROVED"],
+    "PLAN_APPROVED": ["TASKS_READY", "PLAN_READY", "SPEC_DRAFT"],
+    "TASKS_READY": ["CODING", "PLAN_APPROVED", "PLAN_READY"],
+    "CODING": ["TESTING", "TASKS_READY"],
+    "TESTING": ["REVIEW", "CODING"],
+    "REVIEW": ["APPROVED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
+    "APPROVED": ["COMMITTED", "CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"],
+    "COMMITTED": ["CODING", "TASKS_READY", "PLAN_APPROVED", "PLAN_READY", "SPEC_DRAFT"]
+  },
+  "phaseHistory": [
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-13T00:00:00.000Z"
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-11-14T00:00:00.000Z"
+    },
+    {
+      "phase": "SPEC_DRAFT",
+      "timestamp": "2026-11-14T00:00:00.000Z"
+    },
+    {
+      "phase": "SPEC_APPROVED",
+      "timestamp": "2026-11-14T00:00:00.000Z"
+    },
+    {
+      "phase": "PLAN_READY",
+      "timestamp": "2026-11-15T00:00:00.000Z"
+    },
+    {
+      "phase": "PLAN_APPROVED",
+      "timestamp": "2026-11-15T00:00:00.000Z"
+    },
+    {
+      "phase": "TASKS_READY",
+      "timestamp": "2026-11-15T00:00:00.000Z"
+    },
+    {
+      "phase": "CODING",
+      "timestamp": "2026-11-15T00:00:00.000Z"
+    },
+    {
+      "phase": "TESTING",
+      "timestamp": "2026-11-15T00:00:00.000Z"
+    },
+    {
+      "phase": "REVIEW",
+      "timestamp": "2026-11-15T00:00:00.000Z"
+    },
+    {
+      "phase": "APPROVED",
+      "timestamp": "2026-11-15T00:00:00.000Z"
+    },
+    {
+      "phase": "COMMITTED",
+      "timestamp": "2026-11-15T00:00:00.000Z"
+    }
+  ],
+  "lastUpdated": "2026-11-14T00:00:00.000Z"
+}

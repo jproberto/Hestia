@@ -1,0 +1,176 @@
+{
+  "tasks": [
+    {
+      "id": "T0",
+      "title": "RED da ordem da navegação: Lançamentos primeiro + fidelidade do espelho",
+      "assignee": "minos",
+      "status": "completed",
+      "description": "Escrever os testes RED da ordem da nav contra o código atual, sem tocar em produção: (a) em __tests__/app/pluto/transactions/page.test.tsx, novo caso no describe 'PlutoLayout wrapper' que renderiza a página (padrão setupMocks/renderTransactionsPage existentes) e assera que os links dentro do role=navigation aparecem na ordem exata ['Lançamentos', 'Orçamento Anual', 'Meses e Períodos'] (cenário 1) — hoje a produção renderiza Orçamento Anual → Meses e Períodos → Lançamentos, então o caso falha; (b) em __tests__/components/layout/ModuleLayout.test.tsx, atualizar o espelho plutoNavItems (linhas 34–38) para a nova ordem (cenário 4) e adicionar caso de fidelidade que lê a fonte de components/layout/PlutoLayout.tsx com fs.readFileSync/path.resolve (padrão já usado em __tests__/app/milon/page.test.tsx), extrai a sequência de pares href+label do array e assera igual ao espelho local — RED porque a produção ainda está na ordem antiga (DT-4). Os casos existentes de aba ativa (it.each das 3 URLs e os de Mílon) permanecem verdes: aba ativa deriva da URL, não da posição (D12b). Fonte: plan.md §Contratos/§Tasks e spec.md itens 12 + cenários 1–4.",
+      "acceptanceCriteria": [
+        "npx vitest run __tests__/app/pluto/transactions/page.test.tsx --reporter=verbose → FAIL esperado no caso novo de ordem (produção ainda na ordem antiga) sem SyntaxError/TS2 no output",
+        "npx vitest run __tests__/components/layout/ModuleLayout.test.tsx --reporter=verbose → FAIL esperado no caso de fidelidade fonte×espelho (produção ≠ espelho já atualizado) sem SyntaxError/TS2 no output; os demais casos do arquivo permanecem verdes",
+        "O espelho plutoNavItems em __tests__/components/layout/ModuleLayout.test.tsx contém exatamente 3 pares href+label na ordem /pluto/transactions (Lançamentos), /pluto/budget (Orçamento Anual), /pluto/months (Meses e Períodos)",
+        "Caso comportamental: com a página renderizada, a sequência de textos dos links dentro do role=navigation é ['Lançamentos', 'Orçamento Anual', 'Meses e Períodos']",
+        "Caso de fidelidade: a sequência de pares href+label lida da fonte components/layout/PlutoLayout.tsx é igual à do espelho local (padrão de leitura de fonte de __tests__/app/milon/page.test.tsx)",
+        "Nenhum arquivo de produção é tocado por esta task (apenas os dois arquivos de teste)"
+      ],
+      "files": [
+        "__tests__/app/pluto/transactions/page.test.tsx",
+        "__tests__/components/layout/ModuleLayout.test.tsx"
+      ],
+      "dependencies": [],
+      "dependsOn": [],
+      "consumes": [],
+      "produces": ["nav-pluto-red"]
+    },
+    {
+      "id": "T1",
+      "title": "GREEN da ordem da navegação: Lançamentos como primeira aba",
+      "assignee": "hefesto",
+      "status": "completed",
+      "description": "Reordenar exclusivamente o array local plutoNavItems em components/layout/PlutoLayout.tsx para a ordem Lançamentos → Orçamento Anual → Meses e Períodos (item 12, D12: só a posição de Lançamentos muda; a ordem relativa Orçamento → Meses permanece). Nenhum href novo, nenhum rótulo novo, exatamente 3 entradas; components/layout/ModuleLayout.tsx permanece intocado (aba ativa derivada da URL, D12b). Nada mais é alterado nesta task.",
+      "acceptanceCriteria": [
+        "T0 verde: npx vitest run __tests__/app/pluto/transactions/page.test.tsx __tests__/components/layout/ModuleLayout.test.tsx --reporter=verbose sem falhas",
+        "A sequência de hrefs do array plutoNavItems em components/layout/PlutoLayout.tsx é /pluto/transactions, /pluto/budget, /pluto/months — exatamente 3 entradas com os mesmos rótulos da spec (nenhum href/rótulo novo)",
+        "Busca literal 'aria-current' retorna 0 em components/layout/PlutoLayout.tsx (a lógica de aba ativa permanece só em ModuleLayout, derivada da URL — D12b)",
+        "npx tsc --noEmit sem erros após a mudança",
+        "Nenhum arquivo além de components/layout/PlutoLayout.tsx é alterado por esta task"
+      ],
+      "files": [
+        "components/layout/PlutoLayout.tsx"
+      ],
+      "dependencies": ["T0"],
+      "dependsOn": ["T0"],
+      "consumes": ["nav-pluto-red"],
+      "produces": ["nav-pluto-green"]
+    },
+    {
+      "id": "T2",
+      "title": "RED do ponto neutro /pluto e do card da home",
+      "assignee": "minos",
+      "status": "completed",
+      "description": "Escrever os testes RED da adição 1 contra o código atual, sem tocar em produção: (a) criar __tests__/app/pluto/page.test.tsx no padrão EXATO de __tests__/app/milon/page.test.tsx — mock de next/navigation com redirect que registra a chamada e lança (semântica NEXT_REDIRECT), render da rota envolvido em try/catch, asserções de chamada com destino '/pluto/transactions' e de destino único, mais contrato estático da fonte (sem 'use client', com 0 ocorrências de '/pluto/budget', com 0 tokens de conteúdo: usePlutoData, AccountCardGrid, ChecklistCard, 'Contas e Cartões') — FAIL porque app/pluto/page.tsx ainda não existe (import falha; mesmo tipo de RED da T0 da Pluto 11 com arquivo inexistente); (b) atualizar o caso do card em __tests__/app/dashboard/page.test.tsx (linhas 76–80) para asserir href='/pluto' em vez de '/pluto/budget' (premissa 18) — FAIL contra a produção. Fonte: plan.md §Contratos/§Tasks e spec.md adição 1, cenários 22–24.",
+      "acceptanceCriteria": [
+        "npx vitest run __tests__/app/pluto/page.test.tsx --reporter=verbose → FAIL esperado (o import de @/app/pluto/page falha porque o arquivo ainda não existe) sem SyntaxError/TS2 no output",
+        "npx vitest run __tests__/app/dashboard/page.test.tsx --reporter=verbose → FAIL esperado no caso do card Pluto (produção ainda usa href=/pluto/budget) sem SyntaxError/TS2 no output; os demais casos do arquivo permanecem verdes",
+        "O teste da raiz cobre: redirect chamado com '/pluto/transactions' (mock com semântica NEXT_REDIRECT do padrão __tests__/app/milon/page.test.tsx), todas as chamadas para esse destino único, fonte sem 'use client', fonte com 0 ocorrências de '/pluto/budget' e 0 ocorrências dos tokens de conteúdo (usePlutoData, AccountCardGrid, ChecklistCard, 'Contas e Cartões')",
+        "O caso do dashboard asseri href='/pluto' no card de Pluto (e nenhum outro card muda: Mílon segue /milon)",
+        "Nenhum arquivo de produção é tocado por esta task (apenas os dois arquivos de teste)"
+      ],
+      "files": [
+        "__tests__/app/pluto/page.test.tsx",
+        "__tests__/app/dashboard/page.test.tsx"
+      ],
+      "dependencies": [],
+      "dependsOn": [],
+      "consumes": [],
+      "produces": ["ponto-neutro-red"]
+    },
+    {
+      "id": "T3",
+      "title": "GREEN do ponto neutro /pluto e do card da home",
+      "assignee": "hefesto",
+      "status": "completed",
+      "description": "Criar app/pluto/page.tsx (novo) como server component mínimo no padrão de app/milon/page.tsx: import de redirect de next/navigation, comentário de ponto neutro, chamada redirect('/pluto/transactions') como único destino e return null — sem 'use client', sem conteúdo, sem props (D12c). Trocar em app/dashboard/page.tsx o href do card de Pluto de '/pluto/budget' para '/pluto' (linha 11 — única mudança no arquivo, D12d; escopo transversal registrado na spec). Deep links existentes não mudam: nenhuma rota atual passa a redirecionar; lib/hestia/mascots.ts permanece intocado (entrada '/pluto' já existe, premissa 22); components/pluto/BudgetOverflowModal.tsx mantém o deep link /pluto/budget (§7.10).",
+      "acceptanceCriteria": [
+        "T2 verde: npx vitest run __tests__/app/pluto/page.test.tsx __tests__/app/dashboard/page.test.tsx --reporter=verbose sem falhas",
+        "app/pluto/page.tsx existe como server component (fonte sem 'use client') com redirect('/pluto/transactions') como único destino e nenhum conteúdo próprio (padrão de app/milon/page.tsx — D12c)",
+        "Busca literal '/pluto/budget' retorna 0 em app/dashboard/page.tsx e retorna 0 em __tests__/app/dashboard/page.test.tsx",
+        "Busca literal '/pluto/budget' retorna 0 em app/pluto/page.tsx",
+        "Nenhum arquivo além de app/pluto/page.tsx (novo) e app/dashboard/page.tsx é alterado — lib/hestia/mascots.ts e components/pluto/BudgetOverflowModal.tsx permanecem intocados",
+        "npx tsc --noEmit sem erros após a mudança"
+      ],
+      "files": [
+        "app/pluto/page.tsx",
+        "app/dashboard/page.tsx"
+      ],
+      "dependencies": ["T2"],
+      "dependsOn": ["T2"],
+      "consumes": ["ponto-neutro-red"],
+      "produces": ["ponto-neutro-green"]
+    },
+    {
+      "id": "T4",
+      "title": "RED do extrato: desempate por created_at, dois maps com roteamento por account_id e coluna única",
+      "assignee": "minos",
+      "status": "completed",
+      "description": "Escrever os testes RED do extrato contra o código atual, sem tocar em produção. (a) __tests__/lib/pluto/hooks/useAccountAggregation.test.ts: (1) atualizar o caso 'ordena transações do cartão por data e id' (linhas 84–96) para o novo contrato — mesma date, created_at distintos e id invertido em relação à ordem esperada → o incluído primeiro aparece primeiro (R3); o mesmo caso falharia se created_at virasse critério principal (transação de 10/03 incluída depois aparece antes da de 15/03 incluída antes — R2, guarda do 05e); (2) novo caso de tolerância — fixtures com created_at ausente (undefined) e id invertido vs ordem de entrada → nenhum erro de execução e ordem de entrada preservada (R4/D16b); (3) novo caso de partição estrutural (R5/cenário 10) — Itaú conta, Nubank cartão, Sicredi conta, Uber cartão em ordem alfabética intercalada → Itaú, Sicredi, Nubank, Uber (a ordem nasce da concatenação dos dois maps, sem filtro); (4) novo caso placeholder — bloco 'Sem Conta' (tipo conta) antes de cartão cadastrado (R6/D17b/cenário 14); (5) novo caso do CENÁRIO 13 LITERAL (2º amend) — accounts com 'Itaú' conta (id a-conta) e 'Itaú' cartão (id a-cartao) → DOIS blocos distintos ambos intitulados 'Itaú', o da conta antes do do cartão (hoje o map único allAccountsMap colapsa em um bloco só — premissa 26 —, então o caso falha); (6) novo caso do CENÁRIO 26 — lançamento L1 com account_id a-conta e account_name 'Itaú' + lançamento L2 com account_id a-cartao e account_name 'Itaú' → L1 aparece somente no bloco da conta Itaú e L2 somente no bloco do cartão Itaú, nenhum no homônimo errado (rota por account_id, não por nome — R11/D17c); (7) novo caso de fallback por nome espelhando as 5 fixtures SEM account_id de __tests__/app/pluto/transactions-page.test.tsx (premissa 24: grep account_id = 0 no arquivo) — lançamento sem account_id (ou id desconhecido das contas carregadas) com account_name 'Itaú Corrente' e conta mockada a1 'Itaú Corrente' tipo conta → acumula no bloco de mesmo nome no map de contas (D17c) e a página permanece verde; (8) novo caso de conta SEM type espelhando a fixture de __tests__/app/pluto/transactions-checklist.test.tsx linha 89 (id acc1, nome 'Itaú', sem type — premissa 25) — o que não é cartão vai para o map de contas (separação por type === 'cartao'); (9) adaptar o caso 'agrupamento é case-insensitive por nome da conta' (linhas 72–82) ao novo contrato: sob roteamento por id o nome só é consultado no fallback, então o caso passa a exercitar nomes em caixas diferentes SEM account_id equivalente → mesmo bloco placeholder (D17c); (10) guardas só-contas e só-cartões preservam a ordem atual (cenários 11/12) e os casos de agrupamento existentes permanecem verdes. (b) __tests__/components/pluto/AccountCardGrid.test.tsx: novo caso do cenário 16 — a saída renderizada não contém a classe md:grid-cols-2 e mantém grid-cols-1 no contêiner dos blocos (R7); os 3 casos existentes permanecem verdes. Fonte: plan.md §Contratos/§Tasks e spec.md itens 16/17 + 2º amend, cenários 10–16 e 26.",
+      "acceptanceCriteria": [
+        "npx vitest run __tests__/lib/pluto/hooks/useAccountAggregation.test.ts --reporter=verbose → FAIL esperado nos casos novos/atualizados (desempate ainda por id, map único colapsando homônimos, sem roteamento por id, sem partição estrutural) sem SyntaxError/TS2 no output; os casos de agrupamento existentes permanecem verdes",
+        "Caso de ordenação RED: mesma date, created_at distintos e id invertido em relação à ordem esperada → incluído primeiro aparece primeiro (R3); o mesmo caso falharia se created_at virasse critério principal — 10/03 incluída depois antes de 15/03 incluída antes (R2)",
+        "Caso de tolerância RED: fixtures com created_at ausente (undefined) e id invertido vs ordem de entrada → nenhum erro de execução e ordem de entrada preservada (R4/D16b)",
+        "Caso de partição estrutural RED: contas e cartões alfabeticamente intercalados (Itaú conta, Nubank cartão, Sicredi conta, Uber cartão) → ordem exibida Itaú, Sicredi, Nubank, Uber (R5 — ordem nasce dos dois maps, sem filtro)",
+        "Caso placeholder RED: bloco 'Sem Conta' (tipo conta) aparece antes do cartão cadastrado (R6/D17b/cenário 14)",
+        "Caso cenário 13 RED: 'Itaú' conta (a-conta) e 'Itaú' cartão (a-cartao) → DOIS blocos distintos ambos intitulados 'Itaú', o da conta antes do do cartão (falha hoje porque o map único allAccountsMap colapsa os homônimos em um bloco)",
+        "Caso cenário 26 RED: L1 (account_id a-conta, account_name 'Itaú') somente no bloco da conta Itaú e L2 (account_id a-cartao, account_name 'Itaú') somente no bloco do cartão Itaú — nenhum no bloco homônimo errado (R11/D17c)",
+        "Caso de fallback por nome (duas asserções): (a) guarda verde — lançamento sem account_id (ou id desconhecido) com account_name igual ao de uma conta carregada acumula no bloco de mesmo nome no map de contas e permanece verde após o GREEN (espelha as 5 fixtures sem account_id de transactions-page.test.tsx — premissa 24/D17c); (b) RED — lançamento cujo nome só existe entre os cartões nasce bloco placeholder à parte no map de contas, jamais dentro do bloco de cartão homônimo (hoje o map único o injeta no bloco do cartão — falha até o 2º amend ser implementado; R9)",
+        "Caso de conta sem type RED: fixture no formato de transactions-checklist.test.tsx linha 89 (sem campo type) particionada para o map de contas mesmo vindo depois de um cartão na lista de accounts — o que não é cartão vai para contas (premissa 25)",
+        "Caso case-insensitive adaptado (guarda verde): nomes em caixas diferentes sem account_id equivalente caem no mesmo bloco placeholder (D17c) — o caso antigo com account_id casando permanece verde mas deixa de ser o caso principal",
+        "Guardas verdes antes e depois: só-contas e só-cartões preservam a ordem atual (cenários 11/12); os casos de agrupamento existentes permanecem verdes",
+        "npx vitest run __tests__/components/pluto/AccountCardGrid.test.tsx --reporter=verbose → FAIL esperado no caso novo de coluna única (a saída contém md:grid-cols-2) sem SyntaxError/TS2 no output; os 3 casos existentes permanecem verdes",
+        "Nenhum arquivo de produção é tocado por esta task"
+      ],
+      "files": [
+        "__tests__/lib/pluto/hooks/useAccountAggregation.test.ts",
+        "__tests__/components/pluto/AccountCardGrid.test.tsx"
+      ],
+      "dependencies": [],
+      "dependsOn": [],
+      "consumes": [],
+      "produces": ["extrato-red"]
+    },
+    {
+      "id": "T5",
+      "title": "GREEN do extrato: desempate por created_at, dois maps com roteamento por account_id e coluna única",
+      "assignee": "hefesto",
+      "status": "completed",
+      "description": "Implementar conforme a seção Contratos Completos do plan.md. Em lib/pluto/hooks/useAccountAggregation.ts: (1) o sort de cada bloco passa a comparar date crescente e, em empate, created_at crescente tratando a ausência do campo como valor vazio nas duas pontas (nenhum erro em tempo de execução — R4), sem citar id em lugar nenhum; empate total preserva a ordem de entrada (sort estável — D16b); (2) substituir o map único allAccountsMap por DOIS maps — primeiro o das contas, depois o dos cartões — cada um com chave interna = nome da conta em minúsculas; a semente particiona accounts por type === 'cartao' (o que não é cartão vai para o map de contas — cobre fixtures sem o campo, premissa 25, e os placeholders); (3) rotear cada lançamento pelo seu account_id para o bloco da conta correspondente no map do tipo da conta — um lançamento da conta 'Itaú' nunca cai no bloco do cartão 'Itaú' (cenário 26); sem correspondência por id (lançamento sem conta ou account_id desconhecido), o lançamento vai para um bloco placeholder tipo 'conta' no map de contas identificado pelo nome minúsculo (account_name, ou 'Sem Conta' quando ausente): se já houver bloco com esse nome no map de contas acumula nele, se o nome só existir entre os cartões nasce bloco placeholder à parte — jamais injetado em bloco de cartão (D17c/R11); (4) a lista retornada é a CONCENTENÇÃO dos values do map de contas com os do map de cartões — partição estrutural, sem filtro de partição (D17); a ordem relativa interna de cada grupo é a de inserção (nomes ordenados de getAccounts; blocos placeholder/só-de-lançamento nascem ao fim do map de contas); (5) o comentário do hook (linhas 10–14) é atualizado NOS DOIS PONTOS: a ordenação deixa de dizer 'por data e id' e passa a descrever data + desempate por inclusão (created_at), e o agrupamento único por nome passa a descrever os dois maps com roteamento por account_id — a criação de placeholder mantém type 'conta' e passa a existir só no map de contas (D17b). Em components/pluto/AccountCardGrid.tsx: remover md:grid-cols-2 do contêiner dos blocos (linha 56), mantendo grid-cols-1 e gap-6 — conteúdo interno idêntico (R7). Intocados por D16/D18: repositories de transações e accounts, fakeTransactionRepository, BudgetComparisonSection.",
+      "acceptanceCriteria": [
+        "T4 verde: npx vitest run __tests__/lib/pluto/hooks/useAccountAggregation.test.ts __tests__/components/pluto/AccountCardGrid.test.tsx --reporter=verbose sem falhas",
+        "Busca literal 'localeCompare(b.id' retorna 0 em lib/pluto/hooks/useAccountAggregation.ts (id fora da ordenação visível — D16b)",
+        "Busca literal 'allAccountsMap' retorna 0 em lib/pluto/hooks/useAccountAggregation.ts (o map único foi substituído pelo par de maps contas/cartões — 2º amend)",
+        "Busca literal 'por data e id' retorna 0 em lib/pluto/hooks/useAccountAggregation.ts (comentário do hook atualizado no ponto da ordenação)",
+        "O comentário do hook (linhas 10–14) descreve, além da ordenação, o agrupamento em dois maps com roteamento por account_id (ponto do agrupamento único reescrito — D17)",
+        "Busca literal 'md:grid-cols-2' retorna 0 em components/pluto/AccountCardGrid.tsx e retorna 1 em components/pluto/BudgetComparisonSection.tsx (D18/regra R8 — guarda cruzada)",
+        "O hook mantém a assinatura useAccountAggregation(transactions, accounts), a chave interna de cada map = nome da conta em minúsculas e a criação de placeholder com type 'conta' existente apenas no map de contas (D17b)",
+        "Um lançamento sem match por id nunca é colocado em bloco de cartão: nome que só existe entre os cartões ganha bloco placeholder à parte no map de contas (D17c/R11)",
+        "lib/pluto/repositories/transactions.ts, lib/pluto/repositories/accounts.ts, lib/pluto/repositories/fakes/fakeTransactionRepository.ts e os testes de contrato/fake permanecem intocados — nenhum arquivo de repositório é alterado nesta task (D16/§7.4/§7.6)",
+        "npx tsc --noEmit sem erros após a mudança"
+      ],
+      "files": [
+        "lib/pluto/hooks/useAccountAggregation.ts",
+        "components/pluto/AccountCardGrid.tsx"
+      ],
+      "dependencies": ["T4"],
+      "dependsOn": ["T4"],
+      "consumes": ["extrato-red"],
+      "produces": ["extrato-green"]
+    },
+    {
+      "id": "T6",
+      "title": "Suíte completa verde, cobertura ≥ 80% e relatórios de teste",
+      "assignee": "minos",
+      "status": "completed",
+      "description": "Re-executar a suite completa com cobertura e emitir os artefatos de TESTING: ajustar qualquer teste remanescente que fixe o comportamento antigo (sem alterar produção); confirmar verdes os testes listados na seção 9 da spec que não mudam — transactions-page.test.tsx (fixtures sem created_at — premissa 15 — e sem account_id — premissa 24: caem no fallback por nome do map de contas, D17c), transactions-account-flow.test.tsx (sem homônimos — clickCardFooter('Itaú') inambíguo), critical-flows.test.tsx (account_id 'a1' casando com conta a1 tipo conta → roteamento por id resolve), transactions-checklist.test.tsx (conta sem type na linha 89 → vai para o map de contas, premissa 25), contract-transactions.test.ts (critério 5 da ordenação do repositório) e fake-transaction.test.ts, BudgetComparisonSection.test.tsx, budget/months/transactions page tests (aba ativa por URL), mascots.test.ts e MascotProvider.test.tsx; em transactions-homonimas-flow.test.tsx (permanece verde como está — lookups atuais usam 'Nubank' e a descrição do lançamento) ADICIONAR as asserções dos cenários 13 e 26 na página: dois blocos 'Itaú' visíveis com o da conta antes do do cartão, e L1 (account_id a-conta) somente no bloco da conta / L2 (account_id a-cartao) somente no bloco do cartão — qualquer seleção de bloco homônimo feita por tipo/id (badge 'Conta'/'Cartão' no cabeçalho), nunca só por nome (risco R8); gerar test-report.json (failed 0, coverage ≥ 80) e test-scenarios.md apenas com cenários manuais (sem tag [Automatizado] nem path __tests__/ — decisão 2026-10-16), cobrindo os cenários manuais da spec §6: ordem da nav em qualquer página, deep links com aba ativa, empates de data/inclusão, fixtures sem created_at, partição contas→cartões estrutural, dois blocos homônimos (cenário 13) e roteamento por account_id (cenário 26), placeholder Sem Conta, coluna única em desktop/mobile, conteúdo dos blocos, Orçado vs. Real em 2 colunas, estados vazio/carregando/erro, redirect da raiz, card da home, deep links preservados e a norma documental da fase 7 (R10).",
+      "acceptanceCriteria": [
+        "npm run test completo sem falhas (summary.failed == 0)",
+        "Cobertura ≥ 80% medida na execução",
+        "test-report.json presente em .agents/modules/pluto/12-navegacao-extrato/ com summary.failed 0 e summary.coverage ≥ 80",
+        "test-scenarios.md presente no FEATURE_DIR sem '[Automatizado]' e sem '__tests__/' (gate do guardian para REVIEW)",
+        "Arquivos da seção 9 da spec permanecem verdes na execução completa: __tests__/app/pluto/transactions-page.test.tsx (5 fixtures sem account_id — premissa 24), __tests__/app/pluto/transactions-account-flow.test.tsx, __tests__/app/pluto/transactions-homonimas-flow.test.tsx, __tests__/app/pluto/transactions-checklist.test.tsx (conta sem type, linha 89), __tests__/app/pluto/critical-flows.test.tsx (account_id a1), __tests__/lib/pluto/repositories/contract-transactions.test.ts (critério 5), __tests__/lib/pluto/repositories/fake-transaction.test.ts, __tests__/components/pluto/BudgetComparisonSection.test.tsx, __tests__/lib/hestia/mascots.test.ts e __tests__/lib/hestia/MascotProvider.test.tsx",
+        "transactions-homonimas-flow.test.tsx ganhou asserção do cenário 13 (dois headings 'Itaú', conta antes do cartão) e do cenário 26 (L1 só na conta, L2 no cartão), selecionando blocos homônimos por tipo/id (badge) e nunca só por nome (R8)",
+        "test-scenarios.md cobre manualmente os cenários 13 e 26 além dos cenários da lista do description (sem referência a paths de teste)",
+        "npx tsc --noEmit e npx eslint . sem erros na execução final",
+        "npx storybook build verde (nenhuma prop de componente mudou nesta feature)"
+      ],
+      "files": [
+        ".agents/modules/pluto/12-navegacao-extrato/test-report.json",
+        ".agents/modules/pluto/12-navegacao-extrato/test-scenarios.md"
+      ],
+      "dependencies": ["T1", "T3", "T5"],
+      "dependsOn": ["T1", "T3", "T5"],
+      "consumes": ["nav-pluto-green", "ponto-neutro-green", "extrato-green"],
+      "produces": ["testing-verde"]
+    }
+  ]
+}

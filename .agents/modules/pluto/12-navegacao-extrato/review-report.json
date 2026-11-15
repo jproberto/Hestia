@@ -1,0 +1,94 @@
+{
+  "feature": "pluto/12-navegacao-extrato",
+  "date": "2026-11-15",
+  "reviewer": "argos",
+  "status": "approved",
+  "approved": true,
+  "category": null,
+  "diff": {
+    "source": "git diff develop...HEAD (diff.patch, 311412 bytes / 1486 linhas, 17 arquivos, 1258 insercoes / 23 remocoes)",
+    "commits": [
+      "48d200d feat: branch feature/pluto/12-navegacao-extrato iniciada (.agents/current + checkpoint/context)",
+      "24fce69 docs(pluto): spec e plan aprovados (spec.md, plan.md, tasks.json, checkpoint, context)",
+      "1ac8758 feat(pluto): navegacao do modulo inicia em Lancamentos (T0+T1)",
+      "c9286cf feat(pluto): ponto neutro /pluto + card da home (T2+T3)",
+      "898d790 feat(pluto): extrato com desempate, homonimos em blocos separados e coluna unica (T4+T5)"
+    ],
+    "foraDeEscopo": "nenhuma mudanca fora do escopo aprovado; os docs do FEATURE_DIR no diff sao os commits de aprovacao (spec/plan/tasks/checkpoint/context) — test-report.json, test-scenarios.md, regression.md e o teste de homonimas seguem para o commit final (ver findings[0])"
+  },
+  "axes": {
+    "1_spec": {
+      "verdict": "aprovado",
+      "evidence": "R1-R11 checadas uma a uma no codigo: R1 ordem exata da nav (components/layout/PlutoLayout.tsx:13-17 = Lancamentos -> Orcamento Anual -> Meses e Periodos, 3 entradas, hrefs/rótulos inalterados); R2/R3/R4 sort de cada bloco com date como criterio principal e created_at como desempate tolerante a ausencia (lib/pluto/hooks/useAccountAggregation.ts:55-59, id nao citado); R5 particao estrutural por concatenação dos dois maps (l.22-23, l.53 [...contasMap.values(), ...cartoesMap.values()] — nenhum filtro); R6 placeholder nasce type 'conta' e so no map de contas (l.42-50); R7 coluna unica (components/pluto/AccountCardGrid.tsx:56 grid grid-cols-1 gap-6); R8 BudgetComparisonSection fora do diff e com md:grid-cols-2 = 1 no arquivo; R9 app/pluto/page.tsx (novo) so redirect('/pluto/transactions') no padrao exato de app/milon/page.tsx e app/dashboard/page.tsx:11 href='/pluto' (unico hunk do arquivo); R10 fase 7/Mnemosine — fora do diff, cenario 25 presente; R11 roteamento por account_id com blockById (l.24,30,34-38) e fallback de placeholder por nome SO no map de contas, jamais injetado em bloco de cartao (l.40-50). 12 criterios de aceite da spec §12 cobertos; §7 YAGNI: nenhum item de fora de escopo vazou (0 arquivo de repositorio, 0 migracao, 0 tela extra, dashboard so o href)."
+    },
+    "2_plan": {
+      "verdict": "aprovado",
+      "evidence": "Contratos do plan.md honrados (assinatura do hook inalterada; server component puro sem 'use client'; array de 3 entradas; grid sem md:grid-cols-2). Greps de codigo legado TODOS zerados em codigo vivo, re-executados por Argos: 'localeCompare(b.id' = 0 em useAccountAggregation.ts; 'allAccountsMap' = 0 em useAccountAggregation.ts; 'por data e id' = 0 em useAccountAggregation.ts (comentario reescrito nos dois pontos, l.11-16); 'md:grid-cols-2' = 0 em AccountCardGrid.tsx e = 1 em BudgetComparisonSection.tsx; '/pluto/budget' = 0 em app/dashboard/page.tsx e = 0 em __tests__/app/dashboard/page.test.tsx (permanece legitimamente em PlutoLayout/BudgetOverflowModal/testes de rota, conforme DT-7). Arquivos do plan §Arquivos Afetados conferidos no diff: producao Create 1/1 (app/pluto/page.tsx), Modify 4/4 (PlutoLayout, dashboard, useAccountAggregation, AccountCardGrid); testes RED 6/6; intocados por decisao confirmados ausentes do diff (ModuleLayout.tsx, BudgetComparisonSection.tsx + teste, BudgetOverflowModal.tsx, AccountCardGrid.stories.tsx, lib/pluto/types.ts, repositorios/*, usePlutoData, useBudgetComparison, lib/hestia/mascots.ts, new-module.js, utils/migrations/)."
+    },
+    "3_padroes": {
+      "verdict": "aprovado",
+      "evidence": "Camadas do AGENTS.md respeitadas: pages so composicao, componente presentacional por props, regra de agrupamento/ordenacao no hook (lib/pluto/hooks), tipos importados de lib/pluto/types.ts (intocado). AsyncState intocado (as 2 ocorrencias no diff sao texto de spec/plan, nao codigo). '@supabase' no diff = 1 ocorrencia, texto do plan (restricao global 10) — nenhum import novo; nenhum arquivo fora de lib/shared conhece supabase. Nenhuma migracao nova: git status de utils/migrations vazio, diff sem arquivos de migracao, context.json.migrations = {} — inteiro 0020 segue livre. Proibicoes da casa ausentes do codigo: 0 use-cases/, 0 schemas/, 0 mappers.ts, 0 createXService (as ocorrencias no diff sao a lista de proibicoes do plan.md). Sem .env/segredo no diff (0)."
+    },
+    "4_testes": {
+      "verdict": "aprovado",
+      "evidence": "test-report.json coerente e RE-EXECUTADO POR ARGOS: npx vitest run = 152 files / 1985 tests / 0 failed / 0 skipped, exit 0 (bate com o report); npx vitest run --coverage = 'All files 85.89 stmts | 84.65 branch | 77.51 funcs | 85.89 lines', exit 0 (bate com summary.coverage 85.89); npx tsc --noEmit exit 0; npx eslint . exit 0 com 0 errors / 73 warnings (baseline identica as features 05e/11); npm run build exit 0 com a rota '/pluto' presente no output; approvals.spec=approved e approvals.plan=approved no context.json; fase REVIEW no checkpoint. Producao tocada apenas nas tasks GREEN (commits 1ac8758/c9286cf/898d790); T0/T2/T4 tocaram so testes; T6 (Minos) nao escreveu em app|components|lib (git status). D16: nenhum arquivo de lib/pluto/repositories/ no diff (grep do patch = 0 entradas de arquivo; so menções em texto de spec/plan); D18: components/pluto/BudgetComparisonSection.tsx ausente do diff. 16 casos em useAccountAggregation.test.ts cobrindo desempate, tolerancia a created_at ausente, particao estrutural, placeholder Sem Conta, cenario 13, cenario 26, fallback por nome, conta sem type, guarda case-insensitive, so-contas/so-cartoes; 5 casos em __tests__/app/pluto/page.test.tsx; caso de ordem da nav; fidelidade fonte x espelho (fs.readFileSync); caso de coluna unica; caso do card do dashboard. test-scenarios.md = 26 cenarios Dado/Quando/Entao, 0 '[Automatizado]', 0 '__tests__/' (gate do guardian)."
+    },
+    "5_riscos": {
+      "verdict": "aprovado",
+      "evidence": "Cenarios 13/26: cobertos no hook (committed, useAccountAggregation.test.ts:190 e :208) e na pagina (transactions-homonimas-flow.test.tsx com selecao por badge de tipo, nunca so por nome — conteudo revisado por Argos e VERDE na minha execucao, porem ainda nao commitado, ver findings[0]). Fixtures legadas: transactions-page.test.tsx (5 fixtures SEM created_at e SEM account_id) = 8 verdes na minha execucao; transactions-checklist.test.tsx (conta sem type) = 1 verde; critical-flows (account_id 'a1') = 5 verdes; contract/fake de transacoes (critério 5 da ordenacao do repositorio) = 11 + 8 verdes — premissas 15/24/25 confirmadas em runtime. Deep links preservados: nenhum arquivo de app/pluto/budget ou app/pluto/months no diff; npm run build lista /pluto, /pluto/budget, /pluto/months e /pluto/transactions; /pluto e rota nova de redirect, nenhuma rota existente passa a redirecionar (D12c). Bug de homonimos (premissa 26) corrigido: dois maps com a mesma chave em mapas distintos impedem o colapso; blockById garante roteio por id. Mascotes: lib/hestia/mascots.ts intocado (entrada '/pluto' ja existe)."
+    }
+  },
+  "findings": [
+    {
+      "severity": "minor",
+      "category": "tasks",
+      "file": ".agents/modules/pluto/12-navegacao-extrato/tasks.json",
+      "line": 150,
+      "evidence": "T6 entregue mas fora do diff: (a) tasks.json T6 (l.150) nao tem campo 'status' — so T0-T5 estao 'completed' (os 6 status sao adicoes NAO commitadas, git status M tasks.json); (b) __tests__/app/pluto/transactions-homonimas-flow.test.tsx (o caso dos cenarios 13/26 exigido pelo AC6 da T6) esta modificado no working tree mas fora de develop...HEAD — o diff.patch tem 17 arquivos e nao o contem; (c) .agents/modules/pluto/regression.md (M — smoke do card atualizado) tambem fora do diff; (d) test-report.json e test-scenarios.md seguem untracked. Conteudo revisto por Argos nesta review: o caso novo existe, seleciona blocos por badge 'Conta'/'Cartao' (nunca so por nome, R8) e passou na minha execucao (152/1985/0).",
+      "impact": "O diff revisado e menor do que o estado testado: se o commit final de Caronte omitir o teste de homonimas, a branch perde as assercoes de pagina dos cenarios 13/26 (a cobertura de hook dos cenarios 13/26 permanece committed em useAccountAggregation.test.ts:190/:208); producao nao e afetada em nenhum caso. T6 sem status impede rastreabilidade DAG->commit da ultima task.",
+      "suggestion": "No commit pos-approve-review, Caronte adiciona explicitamente __tests__/app/pluto/transactions-homonimas-flow.test.tsx, .agents/modules/pluto/regression.md, test-report.json, test-scenarios.md e o flip 'status': 'completed' de T6 em tasks.json (Zeus faz o write do status no commit do Caronte, padrao da house). Se qualquer um desses ficar de fora, Argos re-revisa o diff atualizado."
+    },
+    {
+      "severity": "minor",
+      "category": "code",
+      "file": "lib/pluto/hooks/useAccountAggregation.ts",
+      "line": 47,
+      "evidence": "Bloco placeholder nasce com id = tx.account_id (l.47), que e undefined nas fixtures legadas sem account_id (transacoes-page.test.tsx — o campo e obrigatorio no tipo TransactionWithDetails mas ausente no dado de teste). A chave do map e o nome (l.41) e a key do grid e 'account.id || account.name' (AccountCardGrid), entao nada quebra hoje.",
+      "impact": "Sem efeito observavel (runtime tolera; tsc limpo porque os fixtures sao tipados de forma compativel). So fica um objeto Account com id undefined em memoria nesse caso raro.",
+      "suggestion": "Backlog do modulo: id: tx.account_id ?? '' (ou key derivada do nome) se algum dia um consumidor passar a depender do id do bloco placeholder."
+    },
+    {
+      "severity": "minor",
+      "category": "test",
+      "file": "test-report.json",
+      "line": 137,
+      "evidence": "gaps[0] functions globais 77.51% < 80 — coerente com as features 05e/11/06 e com os gates da house (lines 85.89 e branches 84.65, ambos >= 80, confirmados por execucao propria).",
+      "impact": "Nenhum gate violado; cobertura de funcoes segue como trend legado do repo.",
+      "suggestion": "Mantido como gap declarado; nao bloqueia (mesma sancao das features anteriores)."
+    }
+  ],
+  "blockers": [],
+  "testGaps": [
+    "Cenarios 13 e 26 NA PAGINA ainda nao commitados (ver findings[0]) — verdes na minha execucao, mas fora do diff revisado; o commit final precisa leva-los.",
+    "Funcoes globais 77.51% < 80 (idem 05e/11/06) — gates da house sao lines 85.89 e branches 84.65, ambos >= 80 (re-executados por Argos).",
+    "Cenario 4 da spec (fidelidade do espelho da nav) nao e executavel na interface — coberto como contrato automatizado (ModuleLayout.test.tsx le a fonte do PlutoLayout e compara com o espelho; 9 verdes).",
+    "Cenarios manuais 9-15 (particao, homonimos, placeholder) exigem dados com condicoes especificas (par homonimo Itau conta + Itau cartao) em staging/producao — o portao manual roda com esses dados.",
+    "Desempate por created_at usa localeCompare sobre a string ISO: offsets de timezone mistos (+00 vs -03) nao exercitados em teste — Supabase devolve formato consistente; teorico, padrao do plano (DT-2).",
+    "Cenario 8 da spec (edicao nao altera created_at) depende da premissa 13 do repositorio (update sem created_at) — repositório intocado por D16 e contrato/fake verdes; nao ha teste novo de edicao porque a feature nao muda edicao.",
+    "Repositorios legados com cobertura baixa (regime fakes-only, decision 57) — pre-existente, fora do escopo."
+  ],
+  "questions": [
+    "Commit final: Zeus/Caronte confirmam que o commit pos-approve-review inclui os 4 itens de findings[0] (teste de homonimas, regression.md, test-report.json, test-scenarios.md) e o flip de status da T6? Nao bloqueia a aprovacao — o conteudo foi revisado e verificado verde por Argos nesta rodada.",
+    "R10 / adicao 2 (norma de criacao de modulos pela Mnemosine na fase 7): segue pendente por design (handoff pos-approve-review, DT-8 — sem task no tasks.json); o cenario 25 de test-scenarios.md e o gate do humano."
+  ],
+  "gatesExecutedByArgos": [
+    "npx vitest run -> exit 0: 152 files / 1985 tests / 0 failed / 0 skipped (2026-11-15)",
+    "npx vitest run --coverage -> exit 0: All files 85.89 stmts | 84.65 branch | 77.51 funcs | 85.89 lines (bate com test-report.json)",
+    "npx tsc --noEmit -> exit 0",
+    "npx eslint . -> exit 0 (0 errors, 73 warnings baseline)",
+    "npm run build -> exit 0 (rotas /pluto, /pluto/budget, /pluto/months, /pluto/transactions presentes)",
+    "guardian de fase: checkpoint.json.currentPhase = REVIEW (transicao TESTING->REVIEW ja registrada); gates de REVIEW (test-report failed 0, coverage 85.89 >= 80, test-scenarios sem [Automatizado] e sem __tests__/) conferidos direto nos artefatos",
+    "greps Gate 5: localeCompare(b.id=0, allAccountsMap=0, 'por data e id'=0, md:grid-cols-2=0 em AccountCardGrid e =1 em BudgetComparisonSection, /pluto/budget=0 em dashboard+teste; diff sem entradas de lib/pluto/repositories/ e sem lib/pluto/types.ts; utils/migrations sem mudanca (0020 livre); package.json/lock com git status vazio (sem bump)"
+  ],
+  "summary": "APPROVED (1a review consolidada, 2026-11-15), sem blockers, category null. 5 EIXOS: (1) SPEC — R1-R11 todas honradas no codigo (nav reordenada, desempate por created_at tolerante, dois maps com particao estrutural por concatenação, placeholder so no map de contas, roteio por account_id via blockById com fallback de nome jamais em bloco de cartao, coluna unica so no extrato, /pluto como redirect puro no padrao da Milon, card da home em /pluto), §7 YAGNI intacto, 12 criterios de aceite cobertos; (2) PLAN — 5 greps legados zerados em codigo vivo (re-executados), arquivos Create/Modify 1+4 e intocados por decisao todos ausentes do diff; (3) PADROES — camadas respeitadas, AsyncState/types/repositories intocados, 0 @supabase fora de lib/shared, 0 migracao (inteiro 0020 livre), 0 proibicao da casa violada, 0 .env; (4) TESTES — test-report coerente e RE-EXECUTADO POR ARGOS (152/1985/0, coverage 85.89/84.65/77.51, tsc 0, eslint 0 erros, build 0 com /pluto, storybook conforme report), D16 e D18 respeitados, producao tocada so nas tasks GREEN; (5) RISCOS — fixtures legadas sem created_at/account_id e conta sem type verdes na minha execucao, cenarios 13/26 cobertos (hook committed + pagina no working tree), deep links preservados (build lista as 4 rotas), nenhum teste de posicao de bloco quebrado. ACHADOS: 3 minors (T6 sem status + artefatos da T6 fora do diff para o commit final; id potencialmente undefined no bloco placeholder; functions 77.51 declarado) — nenhum bloqueia. LACUNAS DE TESTE: 7 registradas (inclui cenarios 13/26 de pagina ainda nao commitados e cenarios manuais que exigem dados homonimos em staging). PERGUNTAS: confirmacao do commit final com os artefatos da T6 + flip de status; R10/Mnemosine segue como handoff da fase 7. Pronto para prosseguir: SIM — approve-review do humano apos execucao do test-scenarios.md (26 cenarios manuais)."
+}

@@ -303,4 +303,78 @@ describe("HOM — select de conta com homônimas conta × cartão na página de 
       );
     });
   });
+
+  /**
+   * Cenários 13 e 26 da spec (2º amend, D17/D17c): com "Itaú" conta e "Itaú"
+   * cartão, o extrato exibe DOIS blocos distintos (conta antes do cartão) e
+   * cada lançamento é roteado pelo seu account_id — L1 (a-conta) somente no
+   * bloco da conta, L2 (a-cartao) somente no bloco do cartão. Qualquer
+   * seleção de bloco homônimo é feita pelo badge de tipo ("Conta"/"Cartão"
+   * no cabeçalho), nunca só por nome (risco R8 da spec §9).
+   */
+  it("HOM — cenários 13 e 26: dois blocos 'Itaú' (conta antes do cartão) com lançamentos roteados por account_id", async () => {
+    (getTransactionsByMonth as Mock).mockResolvedValue([
+      {
+        id: "l1",
+        description: "Compra na conta Itaú",
+        amount: 50,
+        type: "despesa",
+        is_refund: false,
+        date: "2026-03-10",
+        period_year: 2026,
+        period_month: 3,
+        category_id: "c1",
+        category_name: "Alimentação",
+        account_id: "a-conta",
+        account_name: "Itaú",
+        created_at: "2026-03-10T10:00:00+00",
+        created_by: EMAIL,
+      },
+      {
+        id: "l2",
+        description: "Fatura do cartão Itaú",
+        amount: 90,
+        type: "despesa",
+        is_refund: false,
+        date: "2026-03-12",
+        period_year: 2026,
+        period_month: 3,
+        category_id: "c1",
+        category_name: "Alimentação",
+        account_id: "a-cartao",
+        account_name: "Itaú",
+        created_at: "2026-03-12T10:00:00+00",
+        created_by: EMAIL,
+      },
+    ]);
+
+    renderPage();
+    await settlePage();
+
+    // Cenário 13 — DOIS blocos distintos ambos intitulados "Itaú".
+    const headings = await screen.findAllByRole("heading", { name: "Itaú" });
+    expect(headings).toHaveLength(2);
+
+    const cards = headings.map((h) => h.closest(".rounded-lg") as HTMLElement | null);
+    expect(cards.every((c) => c !== null)).toBe(true);
+
+    // Desambiguação por badge de tipo no cabeçalho (R8 — nunca só por nome):
+    // exatamente um badge por bloco e o primeiro é a conta, o segundo o cartão.
+    const badgeOf = (card: HTMLElement): string | null => {
+      const badges = within(card).getAllByText(/^(Conta|Cartão)$/);
+      expect(badges).toHaveLength(1);
+      return badges[0].textContent;
+    };
+    expect(badgeOf(cards[0] as HTMLElement)).toBe("Conta");
+    expect(badgeOf(cards[1] as HTMLElement)).toBe("Cartão");
+
+    // Cenário 26 — roteamento por account_id, não por nome: cada lançamento
+    // aparece somente no bloco do seu account_id, nunca no homônimo errado.
+    const contaCard = cards[0] as HTMLElement;
+    const cartaoCard = cards[1] as HTMLElement;
+    expect(within(contaCard).getByText("Compra na conta Itaú")).toBeInTheDocument();
+    expect(within(contaCard).queryByText("Fatura do cartão Itaú")).toBeNull();
+    expect(within(cartaoCard).getByText("Fatura do cartão Itaú")).toBeInTheDocument();
+    expect(within(cartaoCard).queryByText("Compra na conta Itaú")).toBeNull();
+  });
 });

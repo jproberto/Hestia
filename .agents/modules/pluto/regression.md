@@ -5,7 +5,7 @@ Smokes manuais promovidos de features Pluto (Minos promove a partir de `test-sce
 ## Acesso - card de Hestia leva ao módulo
 
 1. Acesse `/dashboard` e clique no card do módulo.
-2. Confira que o usuário é redirecionado para `/pluto/budget`.
+2. Confira que o usuário cai em `/pluto` e é redirecionado para `/pluto/transactions` (Lançamentos — primeira aba da nav).
 
 ## Retorno - ícone de Home leva de volta para Héstia
 
